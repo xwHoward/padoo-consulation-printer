@@ -1,0 +1,195 @@
+/* history.less */
+
+/* 页面容器 */
+.container {
+  padding: 20rpx;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+/* 历史记录列表 */
+.history-list {
+  width: 100%;
+}
+
+/* 每日分组 */
+.daily-group {
+  margin-bottom: 30rpx;
+  background-color: #fff;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+/* 日期头部 */
+.date-header {
+  padding: 20rpx;
+  background-color: #fafafa;
+  color: #666;
+  font-size: 28rpx;
+  border-bottom: 1rpx solid #eee;
+  font-weight: 500;
+}
+
+/* 当日咨询单列表 */
+.consultation-list {
+  padding: 10rpx;
+}
+
+/* 咨询单项 */
+.consultation-item {
+  margin-bottom: 10rpx;
+  padding: 20rpx;
+  background-color: #fff;
+  border-radius: 12rpx;
+  border: 1rpx solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+/* 点击效果 */
+.consultation-item:active {
+  background-color: #f9f9f9;
+  transform: translateY(2rpx);
+}
+
+/* 已作废的咨询单 */
+.consultation-item.voided {
+  opacity: 0.6;
+  background-color: #fafafa;
+}
+
+/* 咨询单详情 */
+.consultation-details {
+  margin-bottom: 15rpx;
+}
+
+/* 基本信息 */
+.consultation-basic {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+/* 客户信息 */
+.customer-info {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+/* 项目信息 */
+.project-info {
+  font-size: 28rpx;
+  color: #666;
+  background-color: #f0f0f0;
+  padding: 4rpx 12rpx;
+  border-radius: 16rpx;
+}
+
+/* 元信息 */
+.consultation-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 技师信息 */
+.technician-info {
+  display: flex;
+  align-items: center;
+}
+
+/* 房间信息 */
+.room-info {
+  display: flex;
+  align-items: center;
+}
+
+/* 时间信息 */
+.time-info {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+/* 操作按钮容器 */
+.consultation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10rpx;
+  margin-top: 15rpx;
+  padding-top: 15rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+/* 操作按钮 */
+.action-btn {
+  padding: 8rpx 20rpx;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
+  min-height: 0;
+  height: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: 1rpx solid #d9d9d9;
+}
+
+/* 修改按钮 */
+.edit-btn {
+  color: #1890ff;
+  border-color: #1890ff;
+}
+
+.edit-btn:active {
+  background-color: rgba(24, 144, 255, 0.1);
+}
+
+/* 作废按钮 */
+.void-btn {
+  color: #ff4d4f;
+  border-color: #ff4d4f;
+}
+
+.void-btn:active {
+  background-color: rgba(255, 77, 79, 0.1);
+}
+
+/* 无记录提示 */
+.empty-hint {
+  text-align: center;
+  padding: 100rpx 20rpx;
+  color: #999;
+  font-size: 28rpx;
+  background-color: #fff;
+  border-radius: 16rpx;
+  margin: 30rpx 0;
+}
+
+/* 滚动区域 */
+.scrollarea {
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+/* 响应式设计 */
+@media (max-width: 375px) {
+  .container {
+    padding: 15rpx;
+  }
+  
+  .consultation-meta {
+    font-size: 22rpx;
+    gap: 10rpx;
+  }
+  
+  .action-btn {
+    padding: 6rpx 16rpx;
+    font-size: 22rpx;
+  }
+}

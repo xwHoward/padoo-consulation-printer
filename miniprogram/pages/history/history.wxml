@@ -1,0 +1,47 @@
+<!-- history.wxml -->
+<navigation-bar title="咨询单历史" back="{{true}}" color="black" background="#FFF"></navigation-bar>
+<scroll-view class="scrollarea" scroll-y type="list">
+  <view class="container">
+    <!-- 历史记录列表 -->
+    <view class="history-list">
+      <!-- 按天分组的历史记录 -->
+      <block wx:if="{{historyData.length > 0}}">
+        <view wx:for="{{historyData}}" wx:for-item="group" wx:key="date" class="daily-group">
+          <view class="date-header">{{group.date}}</view>
+          <!-- 当日咨询单列表 -->
+          <view class="consultation-list">
+            <view wx:for="{{group.records}}" wx:for-item="record" wx:key="id" class="consultation-item {{record.isVoided ? 'voided' : ''}}">
+              <!-- 咨询单详情 -->
+              <view class="consultation-details" bindtap="showConsultationDetail" data-record="{{record}}">
+                <view class="consultation-basic">
+                  <text class="customer-info">
+                    {{record.surname}}{{record.gender === 'male' ? '先生' : '女士'}}
+                  </text>
+                  <text class="project-info">{{record.project}}</text>
+                </view>
+                <view class="consultation-meta">
+                  <text class="technician-info">
+                    技师: {{record.technician}}{{record.dailyCount && !record.isVoided ? '(' + record.dailyCount + ')' : ''}}
+                  </text>
+                  <text class="room-info">房间: {{record.room}}</text>
+                  <text class="time-info">{{record.createdAt}}</text>
+                </view>
+              </view>
+              <!-- 操作按钮 -->
+              <view class="consultation-actions">
+                <button class="action-btn edit-btn" bindtap="editConsultation" data-record="{{record}}">
+                  修改
+                </button>
+                <button class="action-btn void-btn" bindtap="voidConsultation" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
+                  作废
+                </button>
+              </view>
+            </view>
+          </view>
+        </view>
+      </block>
+      <!-- 无记录提示 -->
+      <view wx:else class="empty-hint">暂无咨询单历史记录</view>
+    </view>
+  </view>
+</scroll-view>
