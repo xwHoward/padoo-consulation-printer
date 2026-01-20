@@ -1,6 +1,4 @@
-// index.ts
-// 获取应用实例
-const app = getApp<IAppOption>();
+const GBK = require('gbk.js');
 
 // 定义咨询单数据结构
 interface ConsultationInfo {
@@ -46,8 +44,6 @@ Component({
     printerServiceId: "",
     printerCharacteristicId: "",
     editId: "", // 正在编辑的记录ID
-    showPreview: false, // 是否显示富文本预览
-    previewHtml: "", // 富文本预览内容
   },
 
   // 组件生命周期函数，在组件实例进入页面节点树时执行
@@ -55,7 +51,7 @@ Component({
     // 获取页面参数
     const pages = getCurrentPages();
     const currentPage = pages[pages.length - 1];
-    const editId = (currentPage.options||{}).editId;
+    const editId = (currentPage.options || {}).editId;
 
     if (editId) {
       // 加载编辑数据
@@ -134,7 +130,7 @@ Component({
     // 加强部位选择（使用字段map控制）
     onBodyPartSelect(e: any) {
       const part = e.currentTarget.dataset.part;
-      const selectedParts = { ...this.data.consultationInfo.selectedParts };
+      const selectedParts: Record<string, boolean> = { ...this.data.consultationInfo.selectedParts };
       selectedParts[part] = !selectedParts[part];
 
       const updatedInfo = {
@@ -145,69 +141,6 @@ Component({
       this.setData({
         consultationInfo: updatedInfo,
       });
-    },
-
-    // 预览小票内容（富文本预览）
-    previewReceipt() {
-      const { consultationInfo } = this.data;
-
-      // 简单验证 - 姓氏为选填，验证称呼、项目、技师和房间
-      if (!consultationInfo.gender) {
-        wx.showToast({
-          title: "请选择称呼",
-          icon: "none",
-        });
-        return;
-      }
-
-      if (!consultationInfo.project) {
-        wx.showToast({
-          title: "请选择项目",
-          icon: "none",
-        });
-        return;
-      }
-
-      if (!consultationInfo.technician) {
-        wx.showToast({
-          title: "请选择技师",
-          icon: "none",
-        });
-        return;
-      }
-
-      if (!consultationInfo.room) {
-        wx.showToast({
-          title: "请选择房间",
-          icon: "none",
-        });
-        return;
-      }
-
-      // 保存咨询单数据
-      wx.setStorageSync("consultationInfo", consultationInfo);
-
-      // 生成富文本预览内容
-      const previewHtml = this.buildPreviewHtml(consultationInfo);
-
-      // 显示富文本预览
-      this.setData({
-        previewHtml,
-        showPreview: true,
-      });
-    },
-
-    // 关闭预览
-    closePreview() {
-      this.setData({
-        showPreview: false,
-      });
-    },
-
-    // 在预览中打印
-    printFromPreview() {
-      this.closePreview();
-      this.printConsultation();
     },
 
     // 连接蓝牙打印机
@@ -367,7 +300,7 @@ Component({
             services: [],
             success: () => {
               // 监听发现蓝牙设备
-              const discoveryListener = wx.onBluetoothDeviceFound((res) => {
+              wx.onBluetoothDeviceFound((res) => {
                 const devices = res.devices;
                 devices.forEach((device) => {
                   // 这里可以根据设备名称筛选打印机
@@ -379,7 +312,7 @@ Component({
                     // 停止搜索
                     wx.stopBluetoothDevicesDiscovery();
                     // 移除监听器
-                    wx.offBluetoothDeviceFound(discoveryListener);
+                    wx.offBluetoothDeviceFound();
 
                     // 连接设备
                     this.connectToDeviceWithPrint(device.deviceId);
@@ -498,7 +431,7 @@ Component({
       const printContent = this.buildPrintContent(consultationInfo);
 
       // 转换为ArrayBuffer
-      const buffer = this.stringToBuffer(printContent);
+      const buffer = new Uint8Array(GBK.encode(printContent)).buffer;
 
       // 发送打印数据
       wx.writeBLECharacteristicValue({
@@ -534,7 +467,10 @@ Component({
           if (res.confirm) {
             // 重置为初始值
             this.setData({
-              consultationInfo: { ...DefaultConsultationInfo, selectedParts: {} },
+              consultationInfo: {
+                ...DefaultConsultationInfo,
+                selectedParts: {},
+              },
 
               editId: "", // 重置编辑状态
             });
@@ -692,7 +628,7 @@ Component({
     cleanupOldData(data: DailyConsultations) {
       const today = new Date();
       const thirtyDaysAgo = new Date(
-        today.getTime() - 30 * 24 * 60 * 60 * 1000
+        today.getTime() - 30 * 24 * 60 * 60 * 1000,
       );
       const cutoffDate = this.formatDate(thirtyDaysAgo);
 
@@ -781,7 +717,7 @@ Component({
 
         // 计算技师当天的有效报钟数量（排除已作废的）
         const count = cachedData[currentDate].filter(
-          (record) => record.technician === technician && !record.isVoided
+          (record) => record.technician === technician && !record.isVoided,
         ).length;
 
         // 加1是因为当前报钟还未保存
@@ -795,15 +731,15 @@ Component({
     // 格式化报钟信息
     formatClockInInfo(info: ConsultationInfo) {
       const currentTime = new Date();
-      const startTime = this.formatTime(currentTime);
+      const startTime = this.formatTime(currentTime, false);
 
       // 解析项目时长并计算结束时间
       const projectDuration = this.parseProjectDuration(info.project);
       const totalDuration = projectDuration + 10; // 项目时长 + 10分钟
       const endTime = new Date(
-        currentTime.getTime() + totalDuration * 60 * 1000
+        currentTime.getTime() + totalDuration * 60 * 1000,
       );
-      const formattedEndTime = this.formatTime(endTime);
+      const formattedEndTime = this.formatTime(endTime, false);
 
       // 获取技师当日报钟数量
       const dailyCount = this.getTechnicianDailyCount(info.technician);
@@ -850,184 +786,32 @@ Component({
 
       let content = "\n趴岛 SPA&MASSAGE\n";
       content += "用户咨询单\n";
-      content += "==========\n";
+      content += "==========================\n";
       content += `顾客: ${info.surname}${
         info.gender === "male" ? "先生" : "女士"
       }\n`;
       content += `项目: ${info.project}\n`;
       content += `技师: ${info.technician}\n`;
       content += `房间: ${info.room}\n`;
-      content += "\n按摩力度:\n";
-      content += `  ${strengthMap[info.massageStrength] || "未选择"}\n`;
-      content += "\n精油选择:\n";
-      if (info.essentialOil) {
-        content += `  ${oilMap[info.essentialOil]}\n`;
-      } else {
-        content += "  无\n";
-      }
-      content += "\n加强部位:\n";
+      content += "按摩力度:";
+      content += `${strengthMap[info.massageStrength] || "未选择"}\n`;
+      content += "精油选择:";
+      content += `${oilMap[info.essentialOil] || "未选择"}\n`;
+      content += "加强部位:";
       const selectedPartsArray = Object.keys(info.selectedParts).filter(
-        (key) => info.selectedParts[key]
+        (key) => info.selectedParts[key],
       );
       if (selectedPartsArray.length > 0) {
         selectedPartsArray.forEach((part) => {
-          content += `  ${partMap[part]}\n`;
+          content += `${partMap[part]}  `;
         });
       } else {
-        content += "  无\n";
+        content += "无";
       }
-      content += "\n==========\n";
-      content += `打印时间: ${this.formatTime(new Date())}\n\n\n\n`;
+      content += "\n==========================\n";
+      content += `打印时间: ${this.formatTime(new Date())}\n\n\n\n\n\n\n `;
 
       return content;
-    },
-
-    // 构建富文本预览内容（HTML格式）
-    buildPreviewHtml(info: ConsultationInfo) {
-      const strengthMap: Record<string, string> = {
-        standard: "标准",
-        soft: "轻柔",
-        gravity: "重力",
-      };
-
-      const oilMap: Record<string, string> = {
-        lavender: "薰衣草",
-        grapefruit: "葡萄柚",
-        atractylodes: "白术",
-        rosemary: "迷迭香",
-        rosewood: "花梨木",
-        seasonal: "季节特调",
-      };
-
-      const partMap: Record<string, string> = {
-        head: "头部",
-        neck: "颈部",
-        shoulder: "肩部",
-        back: "后背",
-        arm: "胳膊",
-        abdomen: "腹部",
-        waist: "腰部",
-        thigh: "大腿",
-        calf: "小腿",
-      };
-
-      // 转换为HTML格式，模拟热敏小票效果
-      let html = `
-        <div class="receipt-container">
-          <div class="receipt-content">
-            <div class="receipt-title">趴岛 SPA&MASSAGE</div>
-            <div class="receipt-subtitle">用户咨询单</div>
-            <div class="receipt-divider">===============</div>
-            <div class="receipt-item"><span class="strong">顾客:</span> ${info.surname}${
-        info.gender === "male" ? "先生" : "女士"
-      }</div>
-            <div class="receipt-item"><span class="strong">项目:</span> ${
-              info.project
-            }</div>
-            <div class="receipt-item"><span class="strong">技师:</span> ${
-              info.technician
-            }</div>
-            <div class="receipt-item"><span class="strong">房间:</span> ${info.room}</div>
-            
-            <div class="receipt-item">
-              <span class="strong">按摩力度:</span>
-              ${strengthMap[info.massageStrength] || "未选择"}
-            </div>
-            
-            <div class="receipt-item">
-              <span class="strong">精油选择:</span>
-              ${info.essentialOil ? oilMap[info.essentialOil] : "无"}
-            </div>
-            
-            <div class="receipt-item">
-              <span class="strong">加强部位:</span>
-      `;
-
-      const selectedPartsArray = Object.keys(info.selectedParts).filter(
-        (key) => info.selectedParts[key]
-      );
-
-      if (selectedPartsArray.length > 0) {
-        html += selectedPartsArray
-          .map(
-            (part) => `
-          ${partMap[part]}
-        `
-          )
-          .join("");
-      } else {
-        html += `无`;
-      }
-
-      html += `
-              </div>
-            <div class="receipt-divider">===============</div>
-            <div class="receipt-time">打印时间: ${this.formatTime(
-              new Date()
-            )}</div>
-            <div class="receipt-padding"></div>
-          </div>
-        </div>
-      `;
-
-      // 添加CSS样式
-      html =
-        `
-        <style>
-          .receipt-container {
-            display: flex;
-            justify-content: center;
-            background-color: #f5f5f5;
-          }
-          .receipt-content {
-            width: 600rpx;
-            max-width: 100%;
-            background-color: white;
-            padding: 30rpx;
-            border-radius: 10rpx;
-            box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.1);
-            font-family: "Courier New", monospace;
-            font-size: 28rpx;
-            line-height: 1.6;
-            color: #333;
-          }
-          .receipt-title {
-            text-align: center;
-            font-size: 36rpx;
-            font-weight: bold;
-            margin-bottom: 10rpx;
-          }
-          .receipt-subtitle {
-            text-align: center;
-            font-size: 30rpx;
-            margin-bottom: 20rpx;
-          }
-          .receipt-divider {
-            text-align: center;
-            margin: 20rpx 0;
-            font-weight: bold;
-          }
-          .receipt-item {
-            margin-bottom: 15rpx;
-          }
-          .receipt-item strong {
-            display: inline-block;
-            width: 80px;
-            font-weight: bold;
-            margin-right: 10px;
-          }
-          .receipt-time {
-            text-align: center;
-            margin-top: 20rpx;
-            color: #666;
-          }
-          .receipt-padding {
-            height: 60rpx;
-          }
-        </style>
-      ` + html;
-
-      return html;
     },
 
     // 解析项目时长（分钟）
@@ -1037,21 +821,12 @@ Component({
     },
 
     // 格式化时间为 MM-dd HH:mm 格式
-    formatTime(date: Date): string {
+    formatTime(date: Date, withDate = true): string {
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const day = String(date.getDate()).padStart(2, "0");
       const hours = String(date.getHours()).padStart(2, "0");
       const minutes = String(date.getMinutes()).padStart(2, "0");
-      return `${month}-${day} ${hours}:${minutes}`;
-    },
-
-    // 字符串转ArrayBuffer
-    stringToBuffer(str: string) {
-      const array = new Uint8Array(str.length);
-      for (let i = 0, l = str.length; i < l; i++) {
-        array[i] = str.charCodeAt(i);
-      }
-      return array.buffer;
+      return withDate ? `${month}-${day} ${minutes}:${hours}` : `${hours}:${minutes}`;
     },
   },
 });

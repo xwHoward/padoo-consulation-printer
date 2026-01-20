@@ -196,26 +196,9 @@
 
     <!-- 提交和打印按钮 -->
     <view class="button-container">
-      <button class="primary-button" bindtap="previewReceipt">预览</button>
       <button class="primary-button" bindtap="printConsultation">打印</button>
       <button class="primary-button" bindtap="onClockIn">报钟</button>
       <button class="primary-button" bindtap="goToHistory">历史</button>
     </view>
   </view>
 </scroll-view>
-
-<!-- 富文本预览覆盖层 -->
-<view class="preview-overlay" wx:if="{{showPreview}}">
-  <view class="preview-container">
-    <view class="preview-header">
-      <text class="preview-title">小票预览</text>
-    </view>
-    <view class="preview-content">
-      <rich-text nodes="{{previewHtml}}"></rich-text>
-    </view>
-      <view class="preview-controls">
-        <button class="preview-button cancel-button" bindtap="closePreview">关闭</button>
-        <button class="preview-button print-button" bindtap="printFromPreview">打印</button>
-      </view>
-  </view>
-</view>
