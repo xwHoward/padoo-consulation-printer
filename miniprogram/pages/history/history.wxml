@@ -25,8 +25,11 @@
                   <text class="project-info">{{record.project}}</text>
                 </view>
                 <view class="consultation-meta">
-                  <text class="technician-info">
-                    {{record.technician}}{{record.dailyCount && !record.isVoided ? '(' + record.dailyCount + ')' : ''}}{{record.isClockIn ? '[点]' : ''}}  {{record.room}}  {{record.formattedTime}}</text>
+                  <view class="text-info">
+                    {{record.technician}}{{record.dailyCount && !record.isVoided ? '(' + record.dailyCount + ')' : ''}}{{record.isClockIn ? '[点]' : ''}}
+                  </view>
+                  <view class="text-info">{{record.room}}</view>
+                  <view class="text-info">{{record.formattedTime}}</view>
                 </view>
               </view>
               <!-- 操作按钮 -->

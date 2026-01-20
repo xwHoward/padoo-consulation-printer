@@ -36,32 +36,33 @@
     <view class="section">
       <view class="section-title">MASSAGE AREA</view>
       <view class="section-subtitle">加强部位</view>
-      <view class="massage-parts-container">
-        <view class="massage-part-item {{consultationInfo.selectedParts.head ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="head">
+      <view class="body-image-container">
+        <image class="body-image" src="/assets/human.jpg" mode="aspectFit"></image>
+        <view class="body-part head {{consultationInfo.selectedParts.head ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="head">
           <text class="part-name">头部</text>
         </view>
-        <view class="massage-part-item {{consultationInfo.selectedParts.neck ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="neck">
+        <view class="body-part neck {{consultationInfo.selectedParts.neck ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="neck">
           <text class="part-name">颈部</text>
         </view>
-        <view class="massage-part-item {{consultationInfo.selectedParts.shoulder ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="shoulder">
+        <view class="body-part shoulder {{consultationInfo.selectedParts.shoulder ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="shoulder">
           <text class="part-name">肩部</text>
         </view>
-        <view class="massage-part-item {{consultationInfo.selectedParts.back ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="back">
+        <view class="body-part back {{consultationInfo.selectedParts.back ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="back">
           <text class="part-name">后背</text>
         </view>
-        <view class="massage-part-item {{consultationInfo.selectedParts.arm ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="arm">
-          <text class="part-name">胳膊</text>
+        <view class="body-part arm {{consultationInfo.selectedParts.arm ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="arm">
+          <text class="part-name">手臂</text>
         </view>
-        <view class="massage-part-item {{consultationInfo.selectedParts.abdomen ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="abdomen">
+        <view class="body-part abdomen {{consultationInfo.selectedParts.abdomen ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="abdomen">
           <text class="part-name">腹部</text>
         </view>
-        <view class="massage-part-item {{consultationInfo.selectedParts.waist ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="waist">
+        <view class="body-part waist {{consultationInfo.selectedParts.waist ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="waist">
           <text class="part-name">腰部</text>
         </view>
-        <view class="massage-part-item {{consultationInfo.selectedParts.thigh ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="thigh">
+        <view class="body-part thigh {{consultationInfo.selectedParts.thigh ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="thigh">
           <text class="part-name">大腿</text>
         </view>
-        <view class="massage-part-item {{consultationInfo.selectedParts.calf ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="calf">
+        <view class="body-part calf {{consultationInfo.selectedParts.calf ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="calf">
           <text class="part-name">小腿</text>
         </view>
       </view>
@@ -231,14 +232,7 @@
         <view class="section-subtitle">其他</view>
         <view class="form-item">
           <text class="form-label">备注</text>
-          <textarea 
-            class="form-textarea" 
-            placeholder="选填" 
-            bind:input="onRemarksInput" 
-            value="{{consultationInfo.remarks}}"
-            auto-height
-            maxlength="200"
-          ></textarea>
+          <textarea class="form-textarea" placeholder="选填" bind:input="onRemarksInput" value="{{consultationInfo.remarks}}" auto-height maxlength="200"></textarea>
         </view>
       </view>
     </view>

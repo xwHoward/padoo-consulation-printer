@@ -115,30 +115,21 @@
 .consultation-meta {
   display: flex;
   flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
   gap: 15rpx;
   font-size: 24rpx;
+  // 禁止换行
   white-space: nowrap;
+  word-break: keep-all;
   color: #999;
   line-height: 1;
 }
 
 /* 技师信息 */
-.technician-info {
-  display: flex;
-  align-items: center;
-}
-
-/* 房间信息 */
-.room-info {
-  display: flex;
-  align-items: center;
-}
-
-/* 时间信息 */
-.time-info {
-  display: flex;
-  align-items: center;
-  margin-left: auto;
+.text-info {
+  flex: none;
 }
 
 /* 操作按钮容器 */

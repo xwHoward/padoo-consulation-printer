@@ -4,7 +4,7 @@
 @text-color: #333333;
 @text-color-secondary: #666666;
 @bg-color: #ffffff;
-@bg-color-light: #f8f8f8;
+@bg-color-light: #f5f5f5;
 @border-color: #e0e0e0;
 @border-color-light: #f0f0f0;
 
@@ -407,46 +407,126 @@ page {
 
 /* 为选中状态的checkbox添加自定义样式 */
 
-/* 加强部位容器 */
-.massage-parts-container {
+/* 身体图像容器 */
+.body-image-container {
+  position: relative;
+  width: 100%;
+  height: 324px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 20rpx;
+  justify-content: center;
+  align-items: center;
   margin-top: 20rpx;
+  margin-bottom: 20rpx;
+  overflow: hidden;
+  border-radius: 8rpx;
+  background-color: @bg-color-light;
 }
 
-/* 加强部位项 */
-.massage-part-item {
-  display: flex;
-  align-items: center;
-  padding: 15rpx 25rpx;
-  background-color: @bg-color;
-  border-radius: 8rpx;
+/* 身体图像 */
+.body-image {
+  height: 324px;
+  width: 324px;
+  object-fit: contain;
+}
+
+/* 身体部位基础样式 */
+.body-part {
+  position: absolute;
+  padding: 4px 8px;
+  background-color: @bg-color-light;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: 1rpx solid @border-color;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.massage-part-item:active {
+.body-part:active {
   background-color: @bg-color-light;
   border-color: @primary-color;
 }
 
 /* 选中状态 */
-.massage-part-item.selected {
+.body-part.selected {
   background-color: @primary-color;
   border-color: @primary-color;
 }
 
 /* 部位名称 */
 .part-name {
-  font-size: 26rpx;
+  font-size: 12px;
   color: @text-color;
   transition: color 0.3s ease;
 }
 
-.massage-part-item.selected .part-name {
+.body-part.selected .part-name {
   color: white;
+}
+
+/* 各身体部位定位 */
+/* 头部 */
+.body-part.head {
+  top: 26px;
+  left: 50%;
+  transform: translateX(80px);
+}
+
+/* 颈部 */
+.body-part.neck {
+  top: 50px;
+  left: 50%;
+  transform: translateX(36px);
+}
+
+/* 肩部 */
+.body-part.shoulder {
+  top: 68px;
+  left: 50%;
+  transform: translateX(-154px);
+}
+
+/* 后背 */
+.body-part.back {
+  top: 96px;
+  left: 50%;
+  transform: translateX(-110px);
+}
+
+/* 手臂 */
+.body-part.arm {
+  top: 120px;
+  left: 50%;
+  transform: translateX(-150px);
+}
+
+/* 腹部 */
+.body-part.abdomen {
+  top: 126px;
+  left: 50%;
+  transform: translateX(100px);
+}
+
+/* 腰部 */
+.body-part.waist {
+  top: 94px;
+  left: 50%;
+  transform: translateX(110px);
+}
+
+/* 大腿 */
+.body-part.thigh {
+  top: 174px;
+  left: 50%;
+  transform: translateX(80px);
+}
+
+/* 小腿 */
+.body-part.calf {
+  top: 234px;
+  left: 50%;
+  transform: translateX(-130px);
 }
 
 /* 按钮容器 */
@@ -519,18 +599,13 @@ page {
     font-size: 30rpx;
   }
 
-  .massage-parts-container {
-    gap: 30rpx;
-    justify-content: center;
+  /* 身体部位响应式样式 */
+  .body-part {
+    padding: 12rpx 24rpx;
+    min-width: 100rpx;
   }
 
-  .massage-part-item {
-    padding: 20rpx 35rpx;
-    background-color: @bg-color;
-    border-color: @border-color;
-  }
-
-  .massage-part-item.selected {
+  .body-part.selected {
     background-color: @primary-color;
     border-color: @primary-color;
   }
@@ -540,7 +615,7 @@ page {
     color: @text-color;
   }
 
-  .massage-part-item.selected .part-name {
+  .body-part.selected .part-name {
     color: white;
   }
 

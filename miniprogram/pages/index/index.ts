@@ -777,7 +777,7 @@ Component({
         neck: "颈部",
         shoulder: "肩部",
         back: "后背",
-        arm: "胳膊",
+        arm: "手臂",
         abdomen: "腹部",
         waist: "腰部",
         thigh: "大腿",
