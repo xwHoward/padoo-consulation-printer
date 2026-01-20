@@ -21,14 +21,38 @@
   overflow: hidden;
 }
 
+.daily-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fafafa;
+  border-bottom: 1rpx solid #eee;
+}
+
 /* 日期头部 */
 .date-header {
+  flex: 1;
   padding: 20rpx;
-  background-color: #fafafa;
   color: #666;
   font-size: 28rpx;
-  border-bottom: 1rpx solid #eee;
   font-weight: 500;
+}
+
+.summary-btn {
+  padding: 8rpx 40rpx;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
+  min-height: 0;
+  height: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: 1rpx solid #d9d9d9;
+  color: #1890ff;
+  background-color: #fff;
+  margin-right: 20rpx;
 }
 
 /* 当日咨询单列表 */
@@ -93,7 +117,9 @@
   flex-wrap: wrap;
   gap: 15rpx;
   font-size: 24rpx;
+  white-space: nowrap;
   color: #999;
+  line-height: 1;
 }
 
 /* 技师信息 */

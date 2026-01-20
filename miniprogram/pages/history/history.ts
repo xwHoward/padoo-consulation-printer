@@ -1,23 +1,4 @@
-// history.ts
-// 定义咨询单数据结构
-interface ConsultationInfo {
-  surname: string;
-  gender: "male" | "female" | "";
-  project: string;
-  technician: string;
-  room: string;
-  massageStrength: "standard" | "soft" | "gravity" | "";
-  essentialOil: string;
-  selectedParts: Record<string, boolean>;
-}
-
-// 定义带ID的咨询单数据结构（用于历史记录）
-interface ConsultationRecord extends ConsultationInfo {
-  id: string; // 唯一标识符
-  createdAt: string; // 创建时间
-  updatedAt: string; // 更新时间
-  isVoided: boolean; // 是否作废
-}
+import { formatTime } from "../../utils/util";
 
 // 定义每日咨询单集合
 interface DailyGroup {
@@ -74,7 +55,8 @@ Page({
             // 返回带计数的记录
             return {
               ...record,
-              dailyCount: record.isVoided ? 0 : technicianCounts[record.technician]
+              dailyCount: record.isVoided ? 0 : technicianCounts[record.technician],
+              formattedTime: formatTime(new Date(record.createdAt), false)
             };
           });
           
@@ -272,8 +254,121 @@ Page({
     return `${month}-${day} ${hours}:${minutes}`;
   },
 
+  // 生成当日总结
+  onGenerateSummary(e: WechatMiniprogram.TouchEvent) {
+    const { date } = e.currentTarget.dataset;
+    
+    try {
+      // 获取该日期的所有记录
+      const cachedData = wx.getStorageSync('consultationHistory') || {};
+      if (!cachedData[date]) {
+        wx.showToast({
+          title: '当日无记录',
+          icon: 'error'
+        });
+        return;
+      }
+      
+      const records = cachedData[date] as ConsultationRecord[];
+      
+      // 按技师分组统计
+      const technicianStats: Record<string, any> = {};
+      
+      records.forEach(record => {
+        // 只统计未作废的记录
+        if (!record.isVoided) {
+          const technician = record.technician;
+          
+          // 如果技师不存在，初始化统计数据
+          if (!technicianStats[technician]) {
+            technicianStats[technician] = {
+              projects: {} as Record<string, number>,
+              clockInCount: 0,
+              totalCount: 0
+            };
+          }
+          
+          // 统计项目数量
+          if (!technicianStats[technician].projects[record.project]) {
+            technicianStats[technician].projects[record.project] = 0;
+          }
+          technicianStats[technician].projects[record.project]++;
+          
+          // 统计点钟数
+          if (record.isClockIn) {
+            technicianStats[technician].clockInCount++;
+          }
+          
+          // 统计总记录数
+          technicianStats[technician].totalCount++;
+        }
+      });
+      
+      // 格式化统计结果
+      let summaryText = `=== ${date} 每日总结 ===\n\n`;
+      
+      // 遍历每个技师的统计数据
+      Object.keys(technicianStats).forEach(technician => {
+        const stats = technicianStats[technician];
+        summaryText += `技师: ${technician}\n`;
+        summaryText += `总单数: ${stats.totalCount}\n`;
+        summaryText += `点钟数: ${stats.clockInCount}\n`;
+        summaryText += `项目统计:\n`;
+        
+        // 遍历每个项目的统计数据
+        Object.keys(stats.projects).forEach(project => {
+          summaryText += `  ${project}: ${stats.projects[project]}\n`;
+        });
+        
+        summaryText += `\n`;
+      });
+      
+      // 添加总计信息
+      const totalRecords = Object.values(technicianStats).reduce((sum, stats) => sum + stats.totalCount, 0);
+      const totalClockIn = Object.values(technicianStats).reduce((sum, stats) => sum + stats.clockInCount, 0);
+      summaryText += `=== 总计 ===\n`;
+      summaryText += `总单数: ${totalRecords}\n`;
+      summaryText += `总点钟数: ${totalClockIn}\n`;
+      
+      // 复制到剪贴板
+      wx.setClipboardData({
+        data: summaryText,
+        success: () => {
+          wx.showToast({
+            title: '统计已复制到剪贴板',
+            icon: 'success'
+          });
+        },
+        fail: (err) => {
+          console.error('复制到剪贴板失败:', err);
+          wx.showToast({
+            title: '复制失败',
+            icon: 'error'
+          });
+        }
+      });
+      
+      // 显示统计结果
+      wx.showModal({
+        title: `${date} 统计报告`,
+        content: summaryText,
+        showCancel: false,
+        confirmText: '确定'
+      });
+      
+    } catch (error) {
+      console.error('生成总结失败:', error);
+      wx.showToast({
+        title: '生成失败',
+        icon: 'error'
+      });
+    }
+  },
+  
   // 返回主页面
   goBack() {
     wx.navigateBack();
-  }
+  },
+
+  formatTime,
 });

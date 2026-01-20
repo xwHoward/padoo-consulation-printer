@@ -1,24 +1,5 @@
-const GBK = require('gbk.js');
-
-// 定义咨询单数据结构
-interface ConsultationInfo {
-  surname: string;
-  gender: "male" | "female" | "";
-  project: string;
-  technician: string;
-  room: string;
-  massageStrength: "standard" | "soft" | "gravity" | "";
-  essentialOil: string;
-  selectedParts: Record<string, boolean>;
-}
-
-// 定义带ID的咨询单数据结构（用于历史记录）
-interface ConsultationRecord extends ConsultationInfo {
-  id: string; // 唯一标识符
-  createdAt: string; // 创建时间
-  updatedAt: string; // 更新时间
-  isVoided: boolean; // 是否作废
-}
+import { formatTime } from "../../utils/util";
+const GBK = require("gbk.js");
 
 // 定义每日咨询单集合
 type DailyConsultations = {
@@ -34,6 +15,8 @@ const DefaultConsultationInfo: ConsultationInfo = {
   massageStrength: "standard",
   essentialOil: "lavender",
   selectedParts: {},
+  isClockIn: false, // 默认不勾选点钟
+  remarks: "", // 默认无备注
 };
 
 Component({
@@ -103,6 +86,20 @@ Component({
       });
     },
 
+    // 点钟选择
+    onClockInSelect() {
+      this.setData({
+        "consultationInfo.isClockIn": !this.data.consultationInfo.isClockIn,
+      });
+    },
+
+    // 备注输入
+    onRemarksInput(e: any) {
+      this.setData({
+        "consultationInfo.remarks": e.detail.value,
+      });
+    },
+
     // 房间选择
     onRoomSelect(e: any) {
       const room = e.currentTarget.dataset.room;
@@ -130,7 +127,9 @@ Component({
     // 加强部位选择（使用字段map控制）
     onBodyPartSelect(e: any) {
       const part = e.currentTarget.dataset.part;
-      const selectedParts: Record<string, boolean> = { ...this.data.consultationInfo.selectedParts };
+      const selectedParts: Record<string, boolean> = {
+        ...this.data.consultationInfo.selectedParts,
+      };
       selectedParts[part] = !selectedParts[part];
 
       const updatedInfo = {
@@ -269,12 +268,8 @@ Component({
 
     // 打印咨询单（自动连接打印机）
     printConsultation() {
-      const {
-        consultationInfo,
-        printerDeviceId,
-        printerServiceId,
-        printerCharacteristicId,
-      } = this.data;
+      const { printerDeviceId, printerServiceId, printerCharacteristicId } =
+        this.data;
 
       // 检查是否已连接打印机
       if (!printerDeviceId || !printerServiceId || !printerCharacteristicId) {
@@ -444,9 +439,6 @@ Component({
             title: "打印成功",
             icon: "success",
           });
-
-          // 保存到缓存（支持编辑）
-          this.saveConsultationToCache(consultationInfo, this.data.editId);
         },
         fail: (err) => {
           wx.showToast({
@@ -590,6 +582,8 @@ Component({
               massageStrength: foundRecord.massageStrength,
               essentialOil: foundRecord.essentialOil,
               selectedParts: foundRecord.selectedParts,
+              isClockIn: foundRecord.isClockIn,
+              remarks: foundRecord.remarks,
             },
             editId: editId,
           });
@@ -731,7 +725,7 @@ Component({
     // 格式化报钟信息
     formatClockInInfo(info: ConsultationInfo) {
       const currentTime = new Date();
-      const startTime = this.formatTime(currentTime, false);
+      const startTime = formatTime(currentTime, false);
 
       // 解析项目时长并计算结束时间
       const projectDuration = this.parseProjectDuration(info.project);
@@ -739,7 +733,7 @@ Component({
       const endTime = new Date(
         currentTime.getTime() + totalDuration * 60 * 1000,
       );
-      const formattedEndTime = this.formatTime(endTime, false);
+      const formattedEndTime = formatTime(endTime, false);
 
       // 获取技师当日报钟数量
       const dailyCount = this.getTechnicianDailyCount(info.technician);
@@ -749,9 +743,15 @@ Component({
         info.gender === "male" ? "先生" : "女士"
       }\n`;
       formattedInfo += `项目: ${info.project}\n`;
-      formattedInfo += `技师: ${info.technician}(${dailyCount})\n`;
+      formattedInfo += `技师: ${info.technician}(${dailyCount})${info.isClockIn ? "[点]" : ""}\n`;
       formattedInfo += `房间: ${info.room}\n`;
-      formattedInfo += `时间: ${startTime} - ${formattedEndTime}`;
+      formattedInfo += `时间: ${startTime} - ${formattedEndTime}\n`;
+      
+      // 添加备注信息（仅当有内容时显示）
+      if (info.remarks) {
+        formattedInfo += `备注: ${info.remarks}`;
+      }
+      
       return formattedInfo;
     },
 
@@ -784,19 +784,31 @@ Component({
         calf: "小腿",
       };
 
-      let content = "\n趴岛 SPA&MASSAGE\n";
-      content += "用户咨询单\n";
-      content += "==========================\n";
-      content += `顾客: ${info.surname}${
+      // 添加ESC/POS命令设置大号字体
+      // ESC ! 0x10 (16) - 设置双倍高度
+      // ESC ! 0x20 (32) - 设置双倍宽度
+      // ESC ! 0x30 (48) - 设置双倍高度和宽度
+      const ESC = String.fromCharCode(0x1b);
+      const setLargeFont = ESC + "!" + String.fromCharCode(0x30); // 设置双倍高度和宽度
+      const setNormalFont = ESC + "!" + String.fromCharCode(0x00); // 恢复正常字体
+
+      // 将整个打印内容都设置为大号字体
+      let content = setLargeFont + "\n趴岛 SPA&MASSAGE\n";
+      content += `${info.surname}${
         info.gender === "male" ? "先生" : "女士"
-      }\n`;
+      }咨询单\n`;
+      content += "================\n";
       content += `项目: ${info.project}\n`;
-      content += `技师: ${info.technician}\n`;
+      // 获取技师当日报钟数量
+      const dailyCount = this.getTechnicianDailyCount(info.technician);
+      content += `技师: ${info.technician}(${dailyCount})${info.isClockIn ? "[点]" : ""}\n`;
       content += `房间: ${info.room}\n`;
-      content += "按摩力度:";
+      content += "力度:";
       content += `${strengthMap[info.massageStrength] || "未选择"}\n`;
-      content += "精油选择:";
-      content += `${oilMap[info.essentialOil] || "未选择"}\n`;
+      if (info.project !== "60min指压") {
+        content += "精油:";
+        content += `${oilMap[info.essentialOil] || "未选择"}\n`;
+      }
       content += "加强部位:";
       const selectedPartsArray = Object.keys(info.selectedParts).filter(
         (key) => info.selectedParts[key],
@@ -808,8 +820,14 @@ Component({
       } else {
         content += "无";
       }
+      
+      // 添加备注信息（仅当有内容时显示）
+      if (info.remarks) {
+        content += `\n备注: ${info.remarks}`;
+      }
+      
       content += "\n==========================\n";
-      content += `打印时间: ${this.formatTime(new Date())}\n\n\n\n\n\n\n `;
+      content += `打印时间: ${formatTime(new Date())}\n\n\n\n\n\n\n `;
 
       return content;
     },
@@ -818,15 +836,6 @@ Component({
     parseProjectDuration(projectName: string): number {
       const match = projectName.match(/(\d+)min/);
       return match ? parseInt(match[1]) : 0;
-    },
-
-    // 格式化时间为 MM-dd HH:mm 格式
-    formatTime(date: Date, withDate = true): string {
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      const hours = String(date.getHours()).padStart(2, "0");
-      const minutes = String(date.getMinutes()).padStart(2, "0");
-      return withDate ? `${month}-${day} ${minutes}:${hours}` : `${hours}:${minutes}`;
     },
   },
 });

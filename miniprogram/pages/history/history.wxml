@@ -7,7 +7,12 @@
       <!-- 按天分组的历史记录 -->
       <block wx:if="{{historyData.length > 0}}">
         <view wx:for="{{historyData}}" wx:for-item="group" wx:key="date" class="daily-group">
-          <view class="date-header">{{group.date}}</view>
+          <view class="daily-header">
+            <view class="date-header">{{group.date}}</view>
+            <view class="summary-btn" bindtap="onGenerateSummary" data-date="{{group.date}}">
+              总结
+            </view>
+          </view>
           <!-- 当日咨询单列表 -->
           <view class="consultation-list">
             <view wx:for="{{group.records}}" wx:for-item="record" wx:key="id" class="consultation-item {{record.isVoided ? 'voided' : ''}}">
@@ -21,10 +26,7 @@
                 </view>
                 <view class="consultation-meta">
                   <text class="technician-info">
-                    技师: {{record.technician}}{{record.dailyCount && !record.isVoided ? '(' + record.dailyCount + ')' : ''}}
-                  </text>
-                  <text class="room-info">房间: {{record.room}}</text>
-                  <text class="time-info">{{record.createdAt}}</text>
+                    {{record.technician}}{{record.dailyCount && !record.isVoided ? '(' + record.dailyCount + ')' : ''}}{{record.isClockIn ? '[点]' : ''}}  {{record.room}}  {{record.formattedTime}}</text>
                 </view>
               </view>
               <!-- 操作按钮 -->
