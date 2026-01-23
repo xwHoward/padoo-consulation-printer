@@ -1,0 +1,69 @@
+<navigation-bar
+  title="场控收银"
+  back="{{true}}"
+  color="black"
+  background="#FFF"
+>
+</navigation-bar>
+<scroll-view
+  class="scrollarea"
+  scroll-y
+  type="list"
+>
+  <view class="container">
+    <!-- 房间状态 -->
+    <view class="section">
+      <view class="section-title">房间状态</view>
+      <view class="room-grid">
+        <view
+          class="room-item {{item.isOccupied ? 'occupied' : 'empty'}}"
+          wx:for="{{rooms}}"
+          wx:key="name"
+        >
+          <view class="room-name">{{item.name}}</view>
+          <view class="room-status">{{item.isOccupied ? '占用' : '空闲'}}</view>
+          <view class="room-detail" wx:if="{{item.isOccupied}}">
+            <text class="staff-tag">{{item.technician}}</text>
+            <text class="time-tag">{{item.endTime}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <!-- 员工轮排 -->
+    <view class="section">
+      <view class="section-title">今日轮排</view>
+      <view class="rotation-list" wx:if="{{rotationList.length > 0}}">
+        <view
+          class="rotation-item"
+          wx:for="{{rotationList}}"
+          wx:key="id"
+        >
+          <view class="rank-num">{{index + 1}}</view>
+          <view class="staff-info">
+            <text class="staff-name">{{item.name}}</text>
+            <text class="shift-tag {{item.shift}}">{{item.shiftLabel}}</text>
+          </view>
+          <view class="action-btns">
+            <view
+              class="btn move-up {{index === 0 ? 'disabled' : ''}}"
+              bindtap="moveRotation"
+              data-index="{{index}}"
+              data-direction="up"
+            >
+              <text>↑</text>
+            </view>
+            <view
+              class="btn move-down {{index === rotationList.length - 1 ? 'disabled' : ''}}"
+              bindtap="moveRotation"
+              data-index="{{index}}"
+              data-direction="down"
+            >
+              <text>↓</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="empty-hint" wx:else>今日暂无上班排班</view>
+    </view>
+  </view>
+</scroll-view>

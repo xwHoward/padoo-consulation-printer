@@ -328,6 +328,8 @@ export const Collections = {
 	RESERVATIONS: 'reservations', // 预约
 	ORDERS: 'orders',         // 订单/单据
 	SETTINGS: 'settings',     // 设置
+	SCHEDULE: 'schedule',     // 排班
+	ROTATION: 'rotation',     // 轮排
 } as const;
 
 export type CollectionName = typeof Collections[keyof typeof Collections];

@@ -3,7 +3,8 @@
     "pages/index/index",
     "pages/history/history",
     "pages/store-config/store-config",
-    "pages/staff/staff"
+    "pages/staff/staff",
+    "pages/cashier/cashier"
   ],
   "window": {
     "navigationBarTextStyle": "black",

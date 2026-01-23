@@ -23,8 +23,7 @@ Component({
 					wx.navigateTo({url: '/pages/staff/staff'});
 					break;
 				case 'cashier':
-					wx.showToast({title: '场控收银', icon: 'none'});
-					// wx.navigateTo({ url: '/pages/cashier/cashier' });
+					wx.navigateTo({url: '/pages/cashier/cashier'});
 					break;
 				case 'customer':
 					wx.showToast({title: '顾客管理', icon: 'none'});

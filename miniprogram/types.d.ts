@@ -38,3 +38,16 @@ interface StaffInfo {
   createdAt: string;
   updatedAt: string;
 }
+
+// 班次类型
+type ShiftType = "morning" | "evening" | "off" | "leave";
+
+// 排班数据结构
+interface ScheduleRecord {
+  id: string;
+  date: string; // YYYY-MM-DD
+  staffId: string;
+  shift: ShiftType;
+  createdAt: string;
+  updatedAt: string;
+}

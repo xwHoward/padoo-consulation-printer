@@ -1,0 +1,194 @@
+/* cashier.less */
+@primary-color: #FF6B00;
+@text-color: #333333;
+@text-color-secondary: #666666;
+@bg-color: #ffffff;
+@bg-color-light: #f5f5f5;
+@border-color: #e0e0e0;
+@border-color-light: #f0f0f0;
+
+page {
+	height: 100vh;
+	display: flex;
+	flex-direction: column;
+	background-color: @bg-color-light;
+}
+
+.scrollarea {
+	flex: 1;
+	width: 100%;
+}
+
+.container {
+	padding: 15px;
+	box-sizing: border-box;
+}
+
+.section {
+	background-color: @bg-color;
+	border-radius: 12px;
+	padding: 15px;
+	margin-bottom: 15px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.section-title {
+	font-size: 16px;
+	font-weight: 600;
+	color: @text-color;
+	margin-bottom: 15px;
+	padding-left: 10px;
+	border-left: 4px solid @primary-color;
+}
+
+/* 房间网格 */
+.room-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+}
+
+.room-item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 12px 5px;
+	border-radius: 10px;
+	border: 1px solid @border-color-light;
+	transition: all 0.3s ease;
+}
+
+.room-item.empty {
+	background-color: rgba(245, 245, 245, 0.5);
+	color: @text-color-secondary;
+}
+
+.room-item.occupied {
+	background-color: rgba(255, 107, 0, 0.05);
+	border-color: rgba(255, 107, 0, 0.2);
+}
+
+.room-name {
+	font-size: 15px;
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.room-status {
+	font-size: 12px;
+}
+
+.room-detail {
+	margin-top: 8px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+}
+
+.staff-tag {
+	font-size: 11px;
+	color: @primary-color;
+	background-color: rgba(255, 107, 0, 0.1);
+	padding: 2px 6px;
+	border-radius: 4px;
+}
+
+.time-tag {
+	font-size: 10px;
+	color: @text-color-secondary;
+}
+
+/* 轮排列表 */
+.rotation-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.rotation-item {
+	display: flex;
+	align-items: center;
+	padding: 12px;
+	background-color: @bg-color-light;
+	border-radius: 10px;
+	border: 1px solid @border-color-light;
+}
+
+.rank-num {
+	width: 24px;
+	height: 24px;
+	background-color: @primary-color;
+	color: #fff;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	font-weight: 600;
+	margin-right: 12px;
+}
+
+.staff-info {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.staff-name {
+	font-size: 16px;
+	font-weight: 500;
+	color: @text-color;
+}
+
+.shift-tag {
+	font-size: 11px;
+	padding: 2px 6px;
+	border-radius: 4px;
+}
+
+.shift-tag.morning {
+	background-color: rgba(52, 152, 219, 0.1);
+	color: #3498db;
+}
+
+.shift-tag.evening {
+	background-color: rgba(155, 89, 182, 0.1);
+	color: #9b59b6;
+}
+
+.action-btns {
+	display: flex;
+	gap: 8px;
+}
+
+.btn {
+	width: 32px;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: @bg-color;
+	border: 1px solid @border-color;
+	border-radius: 6px;
+	color: @text-color;
+	font-size: 18px;
+}
+
+.btn:active {
+	background-color: @bg-color-light;
+}
+
+.btn.disabled {
+	opacity: 0.3;
+	pointer-events: none;
+}
+
+.empty-hint {
+	text-align: center;
+	padding: 30px 0;
+	color: @text-color-secondary;
+	font-size: 14px;
+}

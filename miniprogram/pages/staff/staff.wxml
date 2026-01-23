@@ -19,6 +19,81 @@
   type="list"
 >
   <view class="container">
+    <!-- 排班表 -->
+    <view class="schedule-section">
+      <view class="section-header">
+        <text class="section-title">员工排班</text>
+        <text class="today-text">当前日期: {{today}}</text>
+      </view>
+      <scroll-view
+        class="table-scroll-view"
+        scroll-x="{{true}}"
+        scroll-y="{{false}}"
+      >
+        <view class="schedule-table">
+          <!-- 表头: 日期 -->
+          <view class="table-row header-row">
+            <view class="table-cell sticky-col header-cell">员工</view>
+            <view
+              class="table-cell header-cell {{item.isToday ? 'is-today' : ''}}"
+              wx:for="{{dates}}"
+              wx:key="date"
+            >
+              <view class="date-num">{{item.dayNum}}</view>
+              <view class="date-week">{{item.weekDay}}</view>
+            </view>
+          </view>
+          <!-- 表体: 员工排班 -->
+          <view
+            class="table-row"
+            wx:for="{{staffList}}"
+            wx:for-item="staff"
+            wx:key="id"
+          >
+            <view class="table-cell sticky-col staff-cell">{{staff.name}}</view>
+            <view
+              class="table-cell shift-cell"
+              wx:for="{{dates}}"
+              wx:for-item="dateObj"
+              wx:key="date"
+            >
+              <picker
+                bindchange="onShiftChange"
+                data-staff-id="{{staff.id}}"
+                data-date="{{dateObj.date}}"
+                value="{{scheduleMap[staff.id][dateObj.date].index}}"
+                range="{{shiftNames}}"
+              >
+                <view class="shift-tag {{scheduleMap[staff.id][dateObj.date].type}}">{{scheduleMap[staff.id][dateObj.date].label}}</view>
+              </picker>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+      <!-- 图例说明 -->
+      <view class="legend">
+        <view class="legend-item">
+          <view class="dot morning">
+          </view>
+          早班
+        </view>
+        <view class="legend-item">
+          <view class="dot evening">
+          </view>
+          晚班
+        </view>
+        <view class="legend-item">
+          <view class="dot off">
+          </view>
+          休息
+        </view>
+        <view class="legend-item">
+          <view class="dot leave">
+          </view>
+          请假
+        </view>
+      </view>
+    </view>
     <!-- 员工列表 -->
     <view class="staff-list" wx:if="{{staffList.length > 0}}">
       <view
