@@ -1,4 +1,5 @@
 import {formatTime, parseProjectDuration} from "../../utils/util";
+import {db, Collections} from "../../utils/db";
 const GBK = require("gbk.js");
 
 // 定义每日咨询单集合
@@ -30,9 +31,82 @@ Component({
     printerServiceId: "",
     printerCharacteristicId: "",
     editId: "", // 正在编辑的记录ID
+    technicianList: [] as any[], // 动态技师列表
+  },
+
+  lifetimes: {
+    attached() {
+      this.loadTechnicianList();
+    }
+  },
+
+  pageLifetimes: {
+    show() {
+      this.loadTechnicianList();
+    }
   },
 
   methods: {
+    // 加载并检查技师可用性
+    loadTechnicianList() {
+      const now = new Date();
+      const today = this.formatDate(now);
+      const currentTimeStr = formatTime(now, false);
+
+      // 获取当前选中的项目时长
+      const projectDuration = parseProjectDuration(this.data.consultationInfo.project) || 60;
+      const proposedEndTime = new Date(now.getTime() + (projectDuration + 10) * 60 * 1000);
+      const proposedEndTimeStr = formatTime(proposedEndTime, false);
+
+      // 1. 获取今日所有单据和预约
+      const history = (wx.getStorageSync('consultationHistory') as any) || {};
+      const todayRecords = (history[today] || []) as ConsultationRecord[];
+      const activeRecords = todayRecords.filter(r => !r.isVoided);
+      const reservations = db.find<ReservationRecord>(Collections.RESERVATIONS, {date: today});
+
+      // 2. 获取轮排顺序
+      const activeStaff = db.getAll<StaffInfo>(Collections.STAFF).filter(s => s.status === 'active');
+      const savedRotation = wx.getStorageSync(`rotation_${ today }`) as string[];
+
+      // 3. 构建技师列表并检查冲突
+      let list = activeStaff.map(staff => {
+        // 检查冲突：查找是否有重叠的任务
+        const hasConflict = [...activeRecords, ...reservations].some(r => {
+          const rName = (r as any).technician || (r as any).technicianName;
+          if (rName !== staff.name) return false;
+
+          // 时间重叠检查: (StartA < EndB) && (EndA > StartB)
+          return currentTimeStr < r.endTime && proposedEndTimeStr > r.startTime;
+        });
+
+        return {
+          id: staff.id,
+          name: staff.name,
+          isOccupied: hasConflict
+        };
+      });
+
+      // 4. 按轮排顺序排序
+      if (savedRotation && savedRotation.length > 0) {
+        list.sort((a, b) => {
+          const idxA = savedRotation.indexOf(a.id);
+          const idxB = savedRotation.indexOf(b.id);
+          if (idxA === -1) return 1;
+          if (idxB === -1) return -1;
+          return idxA - idxB;
+        });
+      }
+
+      this.setData({technicianList: list});
+
+      // 如果当前选中的技师不存在于列表中或有冲突，且不是在编辑模式下，可以考虑清空选中（可选）
+      // if (!this.data.editId && this.data.consultationInfo.technician) {
+      //   const current = list.find(t => t.name === this.data.consultationInfo.technician);
+      //   if (!current || current.isOccupied) {
+      //     this.setData({ "consultationInfo.technician": "" });
+      //   }
+      // }
+    },
     // 页面加载时获取参数
     onLoad(options: Record<string, string | undefined>) {
       if (options.editId) {
@@ -73,11 +147,16 @@ Component({
       this.setData({
         "consultationInfo.project": project,
       });
+      this.loadTechnicianList(); // 项目变更可能影响可用性（时长不同）
     },
 
     // 技师选择
     onTechnicianSelect(e: any) {
-      const technician = e.currentTarget.dataset.technician;
+      const {technician, occupied} = e.currentTarget.dataset;
+      if (occupied) {
+        wx.showToast({title: '该技师当前时段已有安排', icon: 'none'});
+        return;
+      }
       this.setData({
         "consultationInfo.technician": technician,
       });
@@ -731,7 +810,7 @@ Component({
 
     // 报钟功能
     onClockIn() {
-      const {consultationInfo} = this.data;
+      const {consultationInfo, editId} = this.data;
 
       // 验证必填信息（与预览功能统一）
       if (!consultationInfo.gender) {
@@ -770,25 +849,57 @@ Component({
       const clockInInfo = this.formatClockInInfo(consultationInfo);
 
       // 保存到缓存（支持编辑）
-      this.saveConsultationToCache(consultationInfo, this.data.editId);
+      const success = this.saveConsultationToCache(consultationInfo, editId);
 
-      // 复制到剪贴板
-      wx.setClipboardData({
-        data: clockInInfo,
-        success: () => {
-          wx.showToast({
-            title: "上钟信息已复制",
-            icon: "success",
-          });
-        },
-        fail: (err) => {
-          wx.showToast({
-            title: "复制失败",
-            icon: "none",
-          });
-          console.error("复制到剪贴板失败:", err);
-        },
-      });
+      if (success) {
+        // 如果是新纪录且是轮钟（!isClockIn），更新轮排顺序
+        if (!editId && !consultationInfo.isClockIn) {
+          this.updateRotationOrder(consultationInfo.technician);
+        }
+
+        // 复制到剪贴板
+        wx.setClipboardData({
+          data: clockInInfo,
+          success: () => {
+            wx.showToast({
+              title: "上钟信息已复制",
+              icon: "success",
+            });
+            // 刷新列表
+            this.loadTechnicianList();
+          },
+          fail: (err) => {
+            wx.showToast({
+              title: "复制失败",
+              icon: "none",
+            });
+            console.error("复制到剪贴板失败:", err);
+          },
+        });
+      }
+    },
+
+    // 更新轮排顺序：将技师移到末尾
+    updateRotationOrder(technicianName: string) {
+      const now = new Date();
+      const today = this.formatDate(now);
+      const storageKey = `rotation_${ today }`;
+
+      let rotation = wx.getStorageSync(storageKey) as string[];
+      if (!rotation || rotation.length === 0) return;
+
+      // 查找技师ID
+      const staff = this.data.technicianList.find(t => t.name === technicianName);
+      if (!staff) return;
+
+      const index = rotation.indexOf(staff.id);
+      if (index !== -1) {
+        // 移除并加到末尾
+        rotation.splice(index, 1);
+        rotation.push(staff.id);
+        wx.setStorageSync(storageKey, rotation);
+        console.log(`[Rotation] 技师 ${ technicianName } 已移至轮排末尾`);
+      }
     },
 
     // 计算技师当日的报钟数量

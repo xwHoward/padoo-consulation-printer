@@ -1,52 +1,119 @@
-<navigation-bar title="趴岛咨询单" back="{{false}}" color="black" background="#FFF">
-  <view slot="left" bindtap="onRefresh" class="refresh-btn" aria-role="button" aria-label="刷新">
+<navigation-bar
+  title="趴岛咨询单"
+  back="{{false}}"
+  color="black"
+  background="#FFF"
+>
+  <view
+    slot="left"
+    bindtap="onRefresh"
+    class="refresh-btn"
+    aria-role="button"
+    aria-label="刷新"
+  >
     <text class="refresh-text">刷新</text>
   </view>
   <view slot="right" class="nav-right-btns">
-    <view bindtap="goToStoreConfig" class="refresh-btn" aria-role="button" aria-label="配置">
+    <view
+      bindtap="goToStoreConfig"
+      class="refresh-btn"
+      aria-role="button"
+      aria-label="配置"
+    >
       <text class="refresh-text">配置</text>
     </view>
-    <view bindtap="goToHistory" class="refresh-btn" aria-role="button" aria-label="单据">
+    <view
+      bindtap="goToHistory"
+      class="refresh-btn"
+      aria-role="button"
+      aria-label="单据"
+    >
       <text class="refresh-text">单据</text>
     </view>
   </view>
 </navigation-bar>
-<scroll-view class="scrollarea" scroll-y type="list">
+<scroll-view
+  class="scrollarea"
+  scroll-y
+  type="list"
+>
   <view class="container">
     <!-- 加强部位 -->
     <view class="section">
       <!-- Logo -->
       <view class="logo-container">
-        <image class="logo" src="/assets/logo.jpg" mode="contain"></image>
+        <image
+          class="logo"
+          src="/assets/logo.jpg"
+          mode="contain" />
       </view>
       <view class="section-title">加强部位</view>
       <view class="body-image-container">
-        <image class="body-image" src="/assets/human.jpg" mode="aspectFit"></image>
-        <view class="body-part head {{consultationInfo.selectedParts.head ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="head">
+        <image
+          class="body-image"
+          src="/assets/human.jpg"
+          mode="aspectFit" />
+        <view
+          class="body-part head {{consultationInfo.selectedParts.head ? 'selected' : ''}}"
+          bindtap="onBodyPartSelect"
+          data-part="head"
+        >
           <text class="part-name">头部</text>
         </view>
-        <view class="body-part neck {{consultationInfo.selectedParts.neck ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="neck">
+        <view
+          class="body-part neck {{consultationInfo.selectedParts.neck ? 'selected' : ''}}"
+          bindtap="onBodyPartSelect"
+          data-part="neck"
+        >
           <text class="part-name">颈部</text>
         </view>
-        <view class="body-part shoulder {{consultationInfo.selectedParts.shoulder ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="shoulder">
+        <view
+          class="body-part shoulder {{consultationInfo.selectedParts.shoulder ? 'selected' : ''}}"
+          bindtap="onBodyPartSelect"
+          data-part="shoulder"
+        >
           <text class="part-name">肩部</text>
         </view>
-        <view class="body-part back {{consultationInfo.selectedParts.back ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="back">
+        <view
+          class="body-part back {{consultationInfo.selectedParts.back ? 'selected' : ''}}"
+          bindtap="onBodyPartSelect"
+          data-part="back"
+        >
           <text class="part-name">后背</text>
         </view>
-        <view class="body-part arm {{consultationInfo.selectedParts.arm ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="arm">
+        <view
+          class="body-part arm {{consultationInfo.selectedParts.arm ? 'selected' : ''}}"
+          bindtap="onBodyPartSelect"
+          data-part="arm"
+        >
           <text class="part-name">手臂</text>
         </view>
-        <view class="body-part abdomen {{consultationInfo.selectedParts.abdomen ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="abdomen">
+        <view
+          class="body-part abdomen {{consultationInfo.selectedParts.abdomen ? 'selected' : ''}}"
+          bindtap="onBodyPartSelect"
+          data-part="abdomen"
+        >
           <text class="part-name">腹部</text>
         </view>
-        <view class="body-part waist {{consultationInfo.selectedParts.waist ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="waist">
+        <view
+          class="body-part waist {{consultationInfo.selectedParts.waist ? 'selected' : ''}}"
+          bindtap="onBodyPartSelect"
+          data-part="waist"
+        >
           <text class="part-name">腰部</text>
         </view>
-        <view class="body-part thigh {{consultationInfo.selectedParts.thigh ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="thigh">
+        <view
+          class="body-part thigh {{consultationInfo.selectedParts.thigh ? 'selected' : ''}}"
+          bindtap="onBodyPartSelect"
+          data-part="thigh"
+        >
           <text class="part-name">大腿</text>
         </view>
-        <view class="body-part calf {{consultationInfo.selectedParts.calf ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="calf">
+        <view
+          class="body-part calf {{consultationInfo.selectedParts.calf ? 'selected' : ''}}"
+          bindtap="onBodyPartSelect"
+          data-part="calf"
+        >
           <text class="part-name">小腿</text>
         </view>
       </view>
@@ -55,15 +122,27 @@
     <view class="section">
       <view class="section-title">按摩力度</view>
       <view class="checkbox-group">
-        <label class="checkbox-item {{consultationInfo.massageStrength === 'standard' ? 'selected' : ''}}" bindtap="onMassageStrengthSelect" data-strength="standard">
+        <label
+          class="checkbox-item {{consultationInfo.massageStrength === 'standard' ? 'selected' : ''}}"
+          bindtap="onMassageStrengthSelect"
+          data-strength="standard"
+        >
           <checkbox value="standard" checked="{{consultationInfo.massageStrength === 'standard'}}" />
           标准 STANDARD
         </label>
-        <label class="checkbox-item {{consultationInfo.massageStrength === 'soft' ? 'selected' : ''}}" bindtap="onMassageStrengthSelect" data-strength="soft">
+        <label
+          class="checkbox-item {{consultationInfo.massageStrength === 'soft' ? 'selected' : ''}}"
+          bindtap="onMassageStrengthSelect"
+          data-strength="soft"
+        >
           <checkbox value="soft" checked="{{consultationInfo.massageStrength === 'soft'}}" />
           轻柔 SOFT
         </label>
-        <label class="checkbox-item {{consultationInfo.massageStrength === 'gravity' ? 'selected' : ''}}" bindtap="onMassageStrengthSelect" data-strength="gravity">
+        <label
+          class="checkbox-item {{consultationInfo.massageStrength === 'gravity' ? 'selected' : ''}}"
+          bindtap="onMassageStrengthSelect"
+          data-strength="gravity"
+        >
           <checkbox value="gravity" checked="{{consultationInfo.massageStrength === 'gravity'}}" />
           重力 STRONG
         </label>
@@ -73,32 +152,56 @@
     <view class="section">
       <view class="section-title">精油选择</view>
       <view class="checkbox-group">
-        <label class="checkbox-item {{consultationInfo.essentialOil === 'lavender' ? 'selected' : ''}}" bindtap="onEssentialOilSelect" data-oil="lavender">
+        <label
+          class="checkbox-item {{consultationInfo.essentialOil === 'lavender' ? 'selected' : ''}}"
+          bindtap="onEssentialOilSelect"
+          data-oil="lavender"
+        >
           <checkbox value="lavender" checked="{{consultationInfo.essentialOil === 'lavender'}}" />
           <text>薰衣草 LAVENDER</text>
           <text class="oil-effect">安神助眠，放松身心，安抚情绪</text>
         </label>
-        <label class="checkbox-item {{consultationInfo.essentialOil === 'grapefruit' ? 'selected' : ''}}" bindtap="onEssentialOilSelect" data-oil="grapefruit">
+        <label
+          class="checkbox-item {{consultationInfo.essentialOil === 'grapefruit' ? 'selected' : ''}}"
+          bindtap="onEssentialOilSelect"
+          data-oil="grapefruit"
+        >
           <checkbox value="grapefruit" checked="{{consultationInfo.essentialOil === 'grapefruit'}}" />
           <text>葡萄柚 GRAPEFRUIT</text>
           <text class="oil-effect">清新提神，愉悦心情，改善浮肿</text>
         </label>
-        <label class="checkbox-item {{consultationInfo.essentialOil === 'atractylodes' ? 'selected' : ''}}" bindtap="onEssentialOilSelect" data-oil="atractylodes">
+        <label
+          class="checkbox-item {{consultationInfo.essentialOil === 'atractylodes' ? 'selected' : ''}}"
+          bindtap="onEssentialOilSelect"
+          data-oil="atractylodes"
+        >
           <checkbox value="atractylodes" checked="{{consultationInfo.essentialOil === 'atractylodes'}}" />
           <text>白术 ATRACTYLODES</text>
           <text class="oil-effect">驱寒祛湿，温润调理，行气暖身</text>
         </label>
-        <label class="checkbox-item {{consultationInfo.essentialOil === 'rosemary' ? 'selected' : ''}}" bindtap="onEssentialOilSelect" data-oil="rosemary">
+        <label
+          class="checkbox-item {{consultationInfo.essentialOil === 'rosemary' ? 'selected' : ''}}"
+          bindtap="onEssentialOilSelect"
+          data-oil="rosemary"
+        >
           <checkbox value="rosemary" checked="{{consultationInfo.essentialOil === 'rosemary'}}" />
           <text>迷迭香 ROSEMARY</text>
           <text class="oil-effect">提神醒脑，增强专注，缓解疲惫</text>
         </label>
-        <label class="checkbox-item {{consultationInfo.essentialOil === 'rosewood' ? 'selected' : ''}}" bindtap="onEssentialOilSelect" data-oil="rosewood">
+        <label
+          class="checkbox-item {{consultationInfo.essentialOil === 'rosewood' ? 'selected' : ''}}"
+          bindtap="onEssentialOilSelect"
+          data-oil="rosewood"
+        >
           <checkbox value="rosewood" checked="{{consultationInfo.essentialOil === 'rosewood'}}" />
           <text>花梨木 ROSEWOOD</text>
           <text class="oil-effect">温和滋养，舒缓干燥，安抚肌肤</text>
         </label>
-        <label class="checkbox-item {{consultationInfo.essentialOil === 'seasonal' ? 'selected' : ''}}" bindtap="onEssentialOilSelect" data-oil="seasonal">
+        <label
+          class="checkbox-item {{consultationInfo.essentialOil === 'seasonal' ? 'selected' : ''}}"
+          bindtap="onEssentialOilSelect"
+          data-oil="seasonal"
+        >
           <checkbox value="seasonal" checked="{{consultationInfo.essentialOil === 'seasonal'}}" />
           <text>冬日特调 SEASONAL SPECIAL</text>
           <text class="oil-effect">季节调和，平衡身心，调理体质</text>
@@ -111,43 +214,83 @@
       <view class="form-item">
         <text class="form-label">项目</text>
         <view class="project-selector">
-          <label class="project-option {{consultationInfo.project === '60min指压' ? 'selected' : ''}}" bindtap="onProjectSelect" data-project="60min指压">
+          <label
+            class="project-option {{consultationInfo.project === '60min指压' ? 'selected' : ''}}"
+            bindtap="onProjectSelect"
+            data-project="60min指压"
+          >
             <radio value="60min指压" checked="{{consultationInfo.project === '60min指压'}}" />
             60min指压
           </label>
-          <label class="project-option {{consultationInfo.project === '70min精油' ? 'selected' : ''}}" bindtap="onProjectSelect" data-project="70min精油">
+          <label
+            class="project-option {{consultationInfo.project === '70min精油' ? 'selected' : ''}}"
+            bindtap="onProjectSelect"
+            data-project="70min精油"
+          >
             <radio value="70min精油" checked="{{consultationInfo.project === '70min精油'}}" />
             70min精油
           </label>
-          <label class="project-option {{consultationInfo.project === '90min精油' ? 'selected' : ''}}" bindtap="onProjectSelect" data-project="90min精油">
+          <label
+            class="project-option {{consultationInfo.project === '90min精油' ? 'selected' : ''}}"
+            bindtap="onProjectSelect"
+            data-project="90min精油"
+          >
             <radio value="90min精油" checked="{{consultationInfo.project === '90min精油'}}" />
             90min精油
           </label>
-          <label class="project-option {{consultationInfo.project === '90min七脉轮彩石' ? 'selected' : ''}}" bindtap="onProjectSelect" data-project="90min七脉轮彩石">
+          <label
+            class="project-option {{consultationInfo.project === '90min七脉轮彩石' ? 'selected' : ''}}"
+            bindtap="onProjectSelect"
+            data-project="90min七脉轮彩石"
+          >
             <radio value="90min七脉轮彩石" checked="{{consultationInfo.project === '90min七脉轮彩石'}}" />
             90min七脉轮彩石
           </label>
-          <label class="project-option {{consultationInfo.project === '90min深海热贝' ? 'selected' : ''}}" bindtap="onProjectSelect" data-project="90min深海热贝">
+          <label
+            class="project-option {{consultationInfo.project === '90min深海热贝' ? 'selected' : ''}}"
+            bindtap="onProjectSelect"
+            data-project="90min深海热贝"
+          >
             <radio value="90min深海热贝" checked="{{consultationInfo.project === '90min深海热贝'}}" />
             90min深海热贝
           </label>
-          <label class="project-option {{consultationInfo.project === '80min推拿+精油' ? 'selected' : ''}}" bindtap="onProjectSelect" data-project="80min推拿+精油">
+          <label
+            class="project-option {{consultationInfo.project === '80min推拿+精油' ? 'selected' : ''}}"
+            bindtap="onProjectSelect"
+            data-project="80min推拿+精油"
+          >
             <radio value="80min推拿+精油" checked="{{consultationInfo.project === '80min推拿+精油'}}" />
             80min推拿+精油
           </label>
-          <label class="project-option {{consultationInfo.project === '45min腰臀' ? 'selected' : ''}}" bindtap="onProjectSelect" data-project="45min腰臀">
+          <label
+            class="project-option {{consultationInfo.project === '45min腰臀' ? 'selected' : ''}}"
+            bindtap="onProjectSelect"
+            data-project="45min腰臀"
+          >
             <radio value="45min腰臀" checked="{{consultationInfo.project === '45min腰臀'}}" />
             45min腰臀
           </label>
-          <label class="project-option {{consultationInfo.project === '120min精油' ? 'selected' : ''}}" bindtap="onProjectSelect" data-project="120min精油">
+          <label
+            class="project-option {{consultationInfo.project === '120min精油' ? 'selected' : ''}}"
+            bindtap="onProjectSelect"
+            data-project="120min精油"
+          >
             <radio value="120min精油" checked="{{consultationInfo.project === '120min精油'}}" />
             120min精油
           </label>
-          <label class="project-option {{consultationInfo.project === '120min七脉轮彩石' ? 'selected' : ''}}" bindtap="onProjectSelect" data-project="120min七脉轮彩石">
+          <label
+            class="project-option {{consultationInfo.project === '120min七脉轮彩石' ? 'selected' : ''}}"
+            bindtap="onProjectSelect"
+            data-project="120min七脉轮彩石"
+          >
             <radio value="120min七脉轮彩石" checked="{{consultationInfo.project === '120min七脉轮彩石'}}" />
             120min七脉轮彩石
           </label>
-          <label class="project-option {{consultationInfo.project === '120min深海热贝' ? 'selected' : ''}}" bindtap="onProjectSelect" data-project="120min深海热贝">
+          <label
+            class="project-option {{consultationInfo.project === '120min深海热贝' ? 'selected' : ''}}"
+            bindtap="onProjectSelect"
+            data-project="120min深海热贝"
+          >
             <radio value="120min深海热贝" checked="{{consultationInfo.project === '120min深海热贝'}}" />
             120min深海热贝
           </label>
@@ -156,25 +299,19 @@
       <view class="form-item">
         <text class="form-label">技师</text>
         <view class="technician-selector">
-          <label class="technician-option {{consultationInfo.technician === '星野' ? 'selected' : ''}}" bindtap="onTechnicianSelect" data-technician="星野">
-            <radio value="星野" checked="{{consultationInfo.technician === '星野'}}" />
-            星野
-          </label>
-          <label class="technician-option {{consultationInfo.technician === '泽一' ? 'selected' : ''}}" bindtap="onTechnicianSelect" data-technician="泽一">
-            <radio value="泽一" checked="{{consultationInfo.technician === '泽一'}}" />
-            泽一
-          </label>
-          <label class="technician-option {{consultationInfo.technician === '惠音' ? 'selected' : ''}}" bindtap="onTechnicianSelect" data-technician="惠音">
-            <radio value="惠音" checked="{{consultationInfo.technician === '惠音'}}" />
-            惠音
-          </label>
-          <label class="technician-option {{consultationInfo.technician === '云舒' ? 'selected' : ''}}" bindtap="onTechnicianSelect" data-technician="云舒">
-            <radio value="云舒" checked="{{consultationInfo.technician === '云舒'}}" />
-            云舒
-          </label>
-          <label class="technician-option {{consultationInfo.technician === '嘉禾' ? 'selected' : ''}}" bindtap="onTechnicianSelect" data-technician="嘉禾">
-            <radio value="嘉禾" checked="{{consultationInfo.technician === '嘉禾'}}" />
-            嘉禾
+          <label
+            class="technician-option {{consultationInfo.technician === item.name ? 'selected' : ''}} {{item.isOccupied ? 'occupied' : ''}}"
+            wx:for="{{technicianList}}"
+            wx:key="id"
+            bindtap="onTechnicianSelect"
+            data-technician="{{item.name}}"
+            data-occupied="{{item.isOccupied}}"
+          >
+            <radio
+              value="{{item.name}}"
+              checked="{{consultationInfo.technician === item.name}}"
+              disabled="{{item.isOccupied}}" />
+            {{item.name}}
           </label>
         </view>
         <view class="checkbox-group">
@@ -187,27 +324,51 @@
       <view class="form-item">
         <text class="form-label">房间</text>
         <view class="room-selector">
-          <label class="room-option {{consultationInfo.room === '苏梅' ? 'selected' : ''}}" bindtap="onRoomSelect" data-room="苏梅">
+          <label
+            class="room-option {{consultationInfo.room === '苏梅' ? 'selected' : ''}}"
+            bindtap="onRoomSelect"
+            data-room="苏梅"
+          >
             <radio value="苏梅" checked="{{consultationInfo.room === '苏梅'}}" />
             苏梅
           </label>
-          <label class="room-option {{consultationInfo.room === '法罗' ? 'selected' : ''}}" bindtap="onRoomSelect" data-room="法罗">
+          <label
+            class="room-option {{consultationInfo.room === '法罗' ? 'selected' : ''}}"
+            bindtap="onRoomSelect"
+            data-room="法罗"
+          >
             <radio value="法罗" checked="{{consultationInfo.room === '法罗'}}" />
             法罗
           </label>
-          <label class="room-option {{consultationInfo.room === '帕劳' ? 'selected' : ''}}" bindtap="onRoomSelect" data-room="帕劳">
+          <label
+            class="room-option {{consultationInfo.room === '帕劳' ? 'selected' : ''}}"
+            bindtap="onRoomSelect"
+            data-room="帕劳"
+          >
             <radio value="帕劳" checked="{{consultationInfo.room === '帕劳'}}" />
             帕劳
           </label>
-          <label class="room-option {{consultationInfo.room === '巴厘' ? 'selected' : ''}}" bindtap="onRoomSelect" data-room="巴厘">
+          <label
+            class="room-option {{consultationInfo.room === '巴厘' ? 'selected' : ''}}"
+            bindtap="onRoomSelect"
+            data-room="巴厘"
+          >
             <radio value="巴厘" checked="{{consultationInfo.room === '巴厘'}}" />
             巴厘
           </label>
-          <label class="room-option {{consultationInfo.room === '大溪地' ? 'selected' : ''}}" bindtap="onRoomSelect" data-room="大溪地">
+          <label
+            class="room-option {{consultationInfo.room === '大溪地' ? 'selected' : ''}}"
+            bindtap="onRoomSelect"
+            data-room="大溪地"
+          >
             <radio value="大溪地" checked="{{consultationInfo.room === '大溪地'}}" />
             大溪地
           </label>
-          <label class="room-option {{consultationInfo.room === '西西里' ? 'selected' : ''}}" bindtap="onRoomSelect" data-room="西西里">
+          <label
+            class="room-option {{consultationInfo.room === '西西里' ? 'selected' : ''}}"
+            bindtap="onRoomSelect"
+            data-room="西西里"
+          >
             <radio value="西西里" checked="{{consultationInfo.room === '西西里'}}" />
             西西里
           </label>
@@ -221,15 +382,26 @@
       <view class="form-item combined-form-item">
         <view class="form-field">
           <text class="form-label">姓氏</text>
-          <input class="form-input" placeholder="选填" bind:input="onSurnameInput" />
+          <input
+            class="form-input"
+            placeholder="选填"
+            bind:input="onSurnameInput" />
         </view>
         <view class="form-field">
           <view class="gender-selector">
-            <label class="gender-option {{consultationInfo.gender === 'male' ? 'selected' : ''}}" bindtap="onGenderSelect" data-gender="male">
+            <label
+              class="gender-option {{consultationInfo.gender === 'male' ? 'selected' : ''}}"
+              bindtap="onGenderSelect"
+              data-gender="male"
+            >
               <radio value="male" checked="{{consultationInfo.gender === 'male'}}" />
               先生
             </label>
-            <label class="gender-option {{consultationInfo.gender === 'female' ? 'selected' : ''}}" bindtap="onGenderSelect" data-gender="female">
+            <label
+              class="gender-option {{consultationInfo.gender === 'female' ? 'selected' : ''}}"
+              bindtap="onGenderSelect"
+              data-gender="female"
+            >
               <radio value="female" checked="{{consultationInfo.gender === 'female'}}" />
               女士
             </label>
@@ -239,23 +411,46 @@
       <!-- 手机号 -->
       <view class="form-item">
         <text class="form-label">手机号</text>
-        <input class="form-input" type="number" placeholder="选填" maxlength="11" bind:input="onPhoneInput" value="{{consultationInfo.phone}}" />
+        <input
+          class="form-input"
+          type="number"
+          placeholder="选填"
+          maxlength="11"
+          bind:input="onPhoneInput"
+          value="{{consultationInfo.phone}}" />
       </view>
       <!-- 券码 -->
       <view class="form-item coupon-form-item">
         <text class="form-label">券码</text>
         <view class="coupon-container">
-          <input class="form-input coupon-input" type="number" placeholder="选填" bind:input="onCouponCodeInput" value="{{consultationInfo.couponCode}}" />
+          <input
+            class="form-input coupon-input"
+            type="number"
+            placeholder="选填"
+            bind:input="onCouponCodeInput"
+            value="{{consultationInfo.couponCode}}" />
           <view class="coupon-platform-selector">
-            <label class="platform-option {{consultationInfo.couponPlatform === 'meituan' ? 'selected' : ''}}" bindtap="onCouponPlatformSelect" data-platform="meituan">
+            <label
+              class="platform-option {{consultationInfo.couponPlatform === 'meituan' ? 'selected' : ''}}"
+              bindtap="onCouponPlatformSelect"
+              data-platform="meituan"
+            >
               <radio value="meituan" checked="{{consultationInfo.couponPlatform === 'meituan'}}" />
               美团
             </label>
-            <label class="platform-option {{consultationInfo.couponPlatform === 'dianping' ? 'selected' : ''}}" bindtap="onCouponPlatformSelect" data-platform="dianping">
+            <label
+              class="platform-option {{consultationInfo.couponPlatform === 'dianping' ? 'selected' : ''}}"
+              bindtap="onCouponPlatformSelect"
+              data-platform="dianping"
+            >
               <radio value="dianping" checked="{{consultationInfo.couponPlatform === 'dianping'}}" />
               点评
             </label>
-            <label class="platform-option {{consultationInfo.couponPlatform === 'douyin' ? 'selected' : ''}}" bindtap="onCouponPlatformSelect" data-platform="douyin">
+            <label
+              class="platform-option {{consultationInfo.couponPlatform === 'douyin' ? 'selected' : ''}}"
+              bindtap="onCouponPlatformSelect"
+              data-platform="douyin"
+            >
               <radio value="douyin" checked="{{consultationInfo.couponPlatform === 'douyin'}}" />
               抖音
             </label>
@@ -264,7 +459,15 @@
       </view>
       <view class="form-item">
         <text class="form-label">备注</text>
-        <textarea class="form-textarea" placeholder="选填" bind:input="onRemarksInput" value="{{consultationInfo.remarks}}" auto-height maxlength="200"></textarea>
+        <textarea
+          class="form-textarea"
+          placeholder="选填"
+          bind:input="onRemarksInput"
+          value="{{consultationInfo.remarks}}"
+          auto-height
+          maxlength="200"
+        >
+        </textarea>
       </view>
     </view>
     <!-- 提交和打印按钮 -->

@@ -51,3 +51,19 @@ interface ScheduleRecord {
   createdAt: string;
   updatedAt: string;
 }
+
+// 预约数据结构
+interface ReservationRecord {
+  id: string;
+  date: string; // YYYY-MM-DD
+  customerName: string;
+  gender: "male" | "female";
+  phone: string;
+  project: string;
+  technicianId?: string; // 选填
+  technicianName?: string; // 选填
+  startTime: string; // HH:MM
+  endTime: string; // HH:MM
+  createdAt: string;
+  updatedAt: string;
+}

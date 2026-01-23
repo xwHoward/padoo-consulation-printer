@@ -24,6 +24,195 @@ page {
 	box-sizing: border-box;
 }
 
+/* 日期选择器 */
+.header-picker {
+	margin-bottom: 15px;
+
+	.date-display {
+		display: inline-flex;
+		align-items: center;
+		background: #fff;
+		padding: 8px 16px;
+		border-radius: 20px;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+
+		.calendar-icon {
+			margin-right: 8px;
+			font-size: 16px;
+		}
+
+		.date-text {
+			font-size: 16px;
+			font-weight: 500;
+			color: @text-color;
+		}
+
+		.arrow-down {
+			margin-left: 8px;
+			font-size: 10px;
+			color: @text-color-secondary;
+		}
+	}
+}
+
+/* 进度表样式 */
+.timeline-section {
+	padding: 15px 0;
+
+	.section-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin: 0 15px 10px;
+
+		.section-title {
+			margin: 0;
+		}
+
+		.reserve-btn {
+			font-size: 13px;
+			color: @primary-color;
+			border: 1px solid @primary-color;
+			padding: 4px 12px;
+			border-radius: 4px;
+
+			&:active {
+				opacity: 0.7;
+			}
+		}
+	}
+}
+
+.timeline-scroll {
+	width: 100%;
+}
+
+.timeline-container {
+	min-width: 800px; // 保证横向滚动有足够宽度
+	padding: 0 15px;
+}
+
+.time-axis {
+	display: flex;
+	border-bottom: 1px solid @border-color-light;
+	padding-bottom: 5px;
+	margin-bottom: 5px;
+
+	.time-axis-spacer {
+		width: 80px;
+		flex-shrink: 0;
+	}
+
+	.time-mark {
+		flex: 1;
+		font-size: 12px;
+		color: @text-color-secondary;
+		text-align: left;
+		position: relative;
+
+		&::before {
+			content: '';
+			position: absolute;
+			left: 0;
+			top: 15px;
+			width: 1px;
+			height: 5px;
+			background: @border-color;
+		}
+	}
+}
+
+.staff-timeline-row {
+	display: flex;
+	height: 60px;
+	border-bottom: 1px dashed @border-color-light;
+	align-items: center;
+}
+
+.staff-name-col {
+	width: 80px;
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	font-size: 14px;
+	font-weight: 500;
+	color: @text-color;
+
+	.shift-mini-tag {
+		font-size: 10px;
+		padding: 1px 4px;
+		border-radius: 3px;
+		margin-top: 4px;
+
+		&.morning {
+			background: rgba(52, 152, 219, 0.1);
+			color: #3498db;
+		}
+
+		&.evening {
+			background: rgba(155, 89, 182, 0.1);
+			color: #9b59b6;
+		}
+	}
+}
+
+.timeline-track {
+	flex: 1;
+	height: 100%;
+	position: relative;
+	background: rgba(245, 245, 245, 0.3);
+	display: flex;
+
+	.grid-line {
+		flex: 1;
+		height: 100%;
+		border-left: 1px solid rgba(0, 0, 0, 0.02);
+	}
+}
+
+.time-block {
+	position: absolute;
+	top: 5px;
+	bottom: 5px;
+	background: @primary-color;
+	border-radius: 4px;
+	overflow: hidden;
+	box-shadow: 0 2px 4px rgba(255, 107, 0, 0.2);
+	z-index: 1;
+
+	&.reservation {
+		background: #4A90E2; // 预约使用蓝色区分
+		box-shadow: 0 2px 4px rgba(74, 144, 226, 0.2);
+		opacity: 0.9;
+	}
+
+	.block-content {
+		padding: 4px;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		height: 100%;
+		color: #fff;
+		white-space: nowrap;
+
+		.block-customer {
+			font-size: 12px;
+			font-weight: bold;
+		}
+
+		.block-time {
+			font-size: 10px;
+			opacity: 0.9;
+		}
+
+		.block-info {
+			font-size: 10px;
+			opacity: 0.8;
+		}
+	}
+}
+
 .section {
 	background-color: @bg-color;
 	border-radius: 12px;
@@ -191,4 +380,131 @@ page {
 	padding: 30px 0;
 	color: @text-color-secondary;
 	font-size: 14px;
+}
+
+/* 弹窗样式 */
+.modal-mask {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.6);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 100;
+}
+
+.modal-content {
+	width: 85%;
+	background: #fff;
+	border-radius: 12px;
+	padding: 20px;
+
+	.modal-header {
+		font-size: 18px;
+		font-weight: bold;
+		text-align: center;
+		margin-bottom: 20px;
+		color: @text-color;
+	}
+
+	.modal-body {
+		.form-item {
+			display: flex;
+			align-items: center;
+			margin-bottom: 15px;
+
+			.label {
+				width: 80px;
+				font-size: 14px;
+				color: @text-color-secondary;
+			}
+
+			.input,
+			.picker-val {
+				flex: 1;
+				height: 36px;
+				line-height: 36px;
+				border: 1px solid @border-color-light;
+				border-radius: 6px;
+				padding: 0 10px;
+				font-size: 14px;
+			}
+
+			.radio-group {
+				display: flex;
+				gap: 10px;
+
+				.radio-item {
+					padding: 6px 15px;
+					border: 1px solid @border-color-light;
+					border-radius: 6px;
+					font-size: 14px;
+
+					&.selected {
+						background: rgba(255, 107, 0, 0.1);
+						border-color: @primary-color;
+						color: @primary-color;
+					}
+				}
+			}
+		}
+
+		.technician-item {
+			align-items: flex-start !important;
+
+			.technician-grid {
+				flex: 1;
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px;
+
+				.tech-tag {
+					padding: 6px 12px;
+					border: 1px solid @border-color-light;
+					border-radius: 6px;
+					font-size: 13px;
+					background: @bg-color-light;
+
+					&.selected {
+						background: rgba(255, 107, 0, 0.1);
+						border-color: @primary-color;
+						color: @primary-color;
+					}
+
+					&.occupied {
+						opacity: 0.4;
+						background: #eee;
+						color: #999;
+					}
+				}
+			}
+		}
+	}
+
+	.modal-footer {
+		display: flex;
+		gap: 15px;
+		margin-top: 25px;
+
+		button {
+			flex: 1;
+			height: 44px;
+			line-height: 44px;
+			font-size: 16px;
+			border-radius: 22px;
+		}
+
+		.btn-cancel {
+			background: @bg-color-light;
+			color: @text-color-secondary;
+		}
+
+		.btn-confirm {
+			background: @primary-color;
+			color: #fff;
+		}
+	}
 }

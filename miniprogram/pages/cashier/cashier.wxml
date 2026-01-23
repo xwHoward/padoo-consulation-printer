@@ -11,6 +11,77 @@
   type="list"
 >
   <view class="container">
+    <!-- 日期选择 -->
+    <view class="header-picker">
+      <picker
+        mode="date"
+        value="{{selectedDate}}"
+        bindchange="onDateChange"
+      >
+        <view class="date-display">
+          <text class="calendar-icon">📅</text>
+          <text class="date-text">{{selectedDate}}</text>
+          <text class="arrow-down">▼</text>
+        </view>
+      </picker>
+    </view>
+    <!-- 员工排钟表 -->
+    <view class="section timeline-section">
+      <view class="section-header">
+        <text class="section-title">排钟进度 (12:00 - 23:00)</text>
+        <view class="reserve-btn" bindtap="openReserveModal">新增预约</view>
+      </view>
+      <scroll-view class="timeline-scroll" scroll-x>
+        <view class="timeline-container">
+          <!-- 时间轴刻度 -->
+          <view class="time-axis">
+            <view class="time-axis-spacer">
+            </view>
+            <view
+              class="time-mark"
+              wx:for="{{timeLabels}}"
+              wx:key="*this"
+            >
+              {{item}}
+            </view>
+          </view>
+          <!-- 员工行 -->
+          <view
+            class="staff-timeline-row"
+            wx:for="{{staffTimeline}}"
+            wx:key="id"
+          >
+            <view class="staff-name-col">
+              <text>{{item.name}}</text>
+              <text class="shift-mini-tag {{item.shift}}">{{item.shift === 'morning' ? '早' : '晚'}}</text>
+            </view>
+            <view class="timeline-track">
+              <!-- 背景网格线 -->
+              <view
+                class="grid-line"
+                wx:for="{{timeLabels}}"
+                wx:key="*this"
+              >
+              </view>
+              <!-- 占用块 -->
+              <view
+                class="time-block {{block.isReservation ? 'reservation' : ''}}"
+                wx:for="{{item.blocks}}"
+                wx:for-item="block"
+                wx:key="startTime"
+                style="left: {{block.left}}; width: {{block.width}};"
+              >
+                <view class="block-content">
+                  <text class="block-customer">{{block.customerName}}</text>
+                  <text class="block-time">{{block.startTime}}-{{block.endTime}}</text>
+                  <text class="block-info">{{block.project}} | {{block.room}}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
     <!-- 房间状态 -->
     <view class="section">
       <view class="section-title">房间状态</view>
@@ -67,3 +138,107 @@
     </view>
   </view>
 </scroll-view>
+<!-- 预约弹窗 -->
+<view
+  class="modal-mask"
+  wx:if="{{showReserveModal}}"
+  bindtap="closeReserveModal"
+>
+  <view class="modal-content" catchtap="stopBubble">
+    <view class="modal-header">新增预约</view>
+    <view class="modal-body">
+      <view class="form-item">
+        <text class="label">日期</text>
+        <picker
+          mode="date"
+          value="{{reserveForm.date}}"
+          bindchange="onReserveFieldChange"
+          data-field="date"
+        >
+          <view class="picker-val">{{reserveForm.date}}</view>
+        </picker>
+      </view>
+      <view class="form-item">
+        <text class="label">顾客姓名</text>
+        <input
+          class="input"
+          placeholder="选填"
+          value="{{reserveForm.customerName}}"
+          bindinput="onReserveFieldChange"
+          data-field="customerName" />
+      </view>
+      <view class="form-item">
+        <text class="label">性别</text>
+        <view class="radio-group">
+          <view
+            class="radio-item {{reserveForm.gender === 'male' ? 'selected' : ''}}"
+            bindtap="setReserveGender"
+            data-gender="male"
+          >
+            先生
+          </view>
+          <view
+            class="radio-item {{reserveForm.gender === 'female' ? 'selected' : ''}}"
+            bindtap="setReserveGender"
+            data-gender="female"
+          >
+            女士
+          </view>
+        </view>
+      </view>
+      <view class="form-item">
+        <text class="label">项目</text>
+        <picker
+          mode="selector"
+          range="{{projects}}"
+          bindchange="onReserveFieldChange"
+          data-field="project"
+        >
+          <view class="picker-val">{{reserveForm.project || '点击选择项目（选填）'}}</view>
+        </picker>
+      </view>
+      <view class="form-item">
+        <text class="label">手机号</text>
+        <input
+          class="input"
+          type="number"
+          maxlength="11"
+          placeholder="选填"
+          value="{{reserveForm.phone}}"
+          bindinput="onReserveFieldChange"
+          data-field="phone" />
+      </view>
+      <view class="form-item technician-item">
+        <text class="label">技师</text>
+        <view class="technician-grid">
+          <view
+            class="tech-tag {{reserveForm.technicianId === item.id ? 'selected' : ''}} {{item.isOccupied ? 'occupied' : ''}}"
+            wx:for="{{staffAvailability}}"
+            wx:key="id"
+            bindtap="selectReserveTechnician"
+            data-id="{{item.id}}"
+            data-name="{{item.name}}"
+            data-occupied="{{item.isOccupied}}"
+          >
+            {{item.name}}
+          </view>
+        </view>
+      </view>
+      <view class="form-item">
+        <text class="label">开始时间</text>
+        <picker
+          mode="time"
+          value="{{reserveForm.startTime}}"
+          bindchange="onReserveFieldChange"
+          data-field="startTime"
+        >
+          <view class="picker-val">{{reserveForm.startTime}}</view>
+        </picker>
+      </view>
+    </view>
+    <view class="modal-footer">
+      <button class="btn-cancel" bindtap="closeReserveModal">取消</button>
+      <button class="btn-confirm" bindtap="confirmReserve">确定</button>
+    </view>
+  </view>
+</view>
