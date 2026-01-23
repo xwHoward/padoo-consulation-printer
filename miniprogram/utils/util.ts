@@ -4,6 +4,12 @@ export function formatTime(date: Date, withDate = true): string {
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
   return withDate
-    ? `${month}-${day} ${minutes}:${hours}`
-    : `${hours}:${minutes}`;
+    ? `${ month }-${ day } ${ minutes }:${ hours }`
+    : `${ hours }:${ minutes }`;
+}
+
+// 解析项目时长（分钟）
+export function parseProjectDuration(projectName: string): number {
+  const match = projectName.match(/(\d+)min/);
+  return match ? parseInt(match[1]) : 0;
 }

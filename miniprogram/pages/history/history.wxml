@@ -15,31 +15,50 @@
           </view>
           <!-- 当日咨询单列表 -->
           <view class="consultation-list">
-            <view wx:for="{{group.records}}" wx:for-item="record" wx:key="id" class="consultation-item {{record.isVoided ? 'voided' : ''}}">
-              <!-- 咨询单详情 -->
-              <view class="consultation-details" bindtap="showConsultationDetail" data-record="{{record}}">
+            <view wx:for="{{group.records}}" wx:for-item="record" wx:for-index="recordIndex" wx:key="id" class="consultation-item {{record.isVoided ? 'voided' : ''}} {{record.collapsed ? 'collapsed' : ''}}">
+              <!-- 咨询单头部（始终显示） -->
+              <view class="consultation-header" bindtap="toggleCollapse" data-group-index="{{index}}" data-record-index="{{recordIndex}}">
                 <view class="consultation-basic">
                   <text class="customer-info">
-                    {{record.surname}}{{record.gender === 'male' ? '先生' : '女士'}}
+                    {{group.records.length - recordIndex}}. {{record.surname}}{{record.gender === 'male' ? '先生' : '女士'}}
                   </text>
-                  <text class="project-info">{{record.project}}</text>
+                  <text class="tag">{{record.room}}</text>
+                  <text class="tag">{{record.endTime}}</text>
+                  <text wx:if="{{record.isVoided}}" class="voided-tag">已作废</text>
                 </view>
-                <view class="consultation-meta">
-                  <view class="text-info">
-                    {{record.technician}}{{record.dailyCount && !record.isVoided ? '(' + record.dailyCount + ')' : ''}}{{record.isClockIn ? '[点]' : ''}}
-                  </view>
-                  <view class="text-info">{{record.room}}</view>
-                  <view class="text-info">{{record.formattedTime}}</view>
+                <view class="collapse-btn">
+                  <text class="collapse-icon">{{record.collapsed ? '▼' : '▲'}}</text>
                 </view>
               </view>
-              <!-- 操作按钮 -->
-              <view class="consultation-actions">
-                <button class="action-btn edit-btn" bindtap="editConsultation" data-record="{{record}}">
-                  修改
-                </button>
-                <button class="action-btn void-btn" bindtap="voidConsultation" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
-                  作废
-                </button>
+              <!-- 咨询单详情（可折叠） -->
+              <view class="consultation-body" wx:if="{{!record.collapsed}}">
+                <view class="consultation-details" bindtap="showConsultationDetail" data-record="{{record}}">
+                  <view class="consultation-meta">
+                    <view class="text-info">
+                      {{record.technician}}{{record.dailyCount && !record.isVoided ? '(' + record.dailyCount + ')' : ''}}{{record.isClockIn ? '[点]' : ''}}
+                    </view>
+                    <view class="text-info">{{record.project}}</view>
+                    <view class="text-info">{{record.startTime}}</view>
+                    <view wx:if="{{record.couponPlatform}}" class="text-info">
+                      {{platforms[record.couponPlatform]}}{{record.phone}}
+                    </view>
+                  </view>
+                </view>
+                <!-- 操作按钮 -->
+                <view class="consultation-actions">
+                  <button class="action-btn edit-btn" bindtap="editConsultation" data-record="{{record}}">
+                    修改
+                  </button>
+                  <button class="action-btn extra-btn" bindtap="onExtraTime" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
+                    加钟{{record.extraTime ? '(' + record.extraTime + ')' : ''}}
+                  </button>
+                  <button class="action-btn overtime-btn" bindtap="onOvertime" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
+                    加班{{record.overtime ? '(' + record.overtime + ')' : ''}}
+                  </button>
+                  <button class="action-btn void-btn" bindtap="voidConsultation" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
+                    作废
+                  </button>
+                </view>
               </view>
             </view>
           </view>
@@ -50,3 +69,24 @@
     </view>
   </view>
 </scroll-view>
+<!-- 数字输入弹窗 -->
+<view class="modal-mask" wx:if="{{numberInputModal.show}}" bindtap="onModalCancel"></view>
+<view class="modal-container" wx:if="{{numberInputModal.show}}">
+  <view class="modal-title">设置{{numberInputModal.title}}数</view>
+  <view class="modal-content">
+    <view class="number-input-wrapper">
+      <view class="step-btn minus-btn {{numberInputModal.inputValue <= 0 ? 'disabled' : ''}}" bindtap="onStepMinus">
+        <text>-</text>
+      </view>
+      <input class="number-input" type="number" value="{{numberInputModal.inputValue}}" bindinput="onNumberInput" />
+      <view class="step-btn plus-btn" bindtap="onStepPlus">
+        <text>+</text>
+      </view>
+    </view>
+    <view class="modal-unit">单位：半小时</view>
+  </view>
+  <view class="modal-footer">
+    <view class="modal-btn cancel-btn" bindtap="onModalCancel">取消</view>
+    <view class="modal-btn confirm-btn" bindtap="onModalConfirm">确定</view>
+  </view>
+</view>

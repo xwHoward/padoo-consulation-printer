@@ -1,22 +1,42 @@
 {
-  "libVersion": "2.32.3",
-  "projectname": "%E5%92%A8%E8%AF%A2%E5%8D%95",
-  "setting": {
-    "urlCheck": true,
-    "coverView": false,
-    "lazyloadPlaceholderEnable": false,
-    "skylineRenderEnable": true,
-    "preloadBackgroundData": false,
-    "autoAudits": false,
-    "useApiHook": true,
-    "useApiHostProcess": true,
-    "showShadowRootInWxmlPanel": false,
-    "useStaticServer": false,
-    "useLanDebug": false,
-    "showES6CompileOption": false,
-    "compileHotReLoad": true,
-    "bigPackageSizeSupport": false,
-    "checkInvalidKey": true,
-    "ignoreDevUnusedFiles": true
-  }
+    "libVersion": "2.32.3",
+    "projectname": "%E5%92%A8%E8%AF%A2%E5%8D%95",
+    "setting": {
+        "urlCheck": true,
+        "coverView": false,
+        "lazyloadPlaceholderEnable": false,
+        "skylineRenderEnable": true,
+        "preloadBackgroundData": false,
+        "autoAudits": false,
+        "useApiHook": true,
+        "useApiHostProcess": true,
+        "showShadowRootInWxmlPanel": false,
+        "useStaticServer": false,
+        "useLanDebug": false,
+        "showES6CompileOption": false,
+        "compileHotReLoad": true,
+        "bigPackageSizeSupport": false,
+        "checkInvalidKey": true,
+        "ignoreDevUnusedFiles": true
+    },
+    "condition": {
+        "miniprogram": {
+            "list": [
+                {
+                    "name": "门店配置",
+                    "pathName": "pages/store-config/store-config",
+                    "query": "",
+                    "scene": null,
+                    "launchMode": "default"
+                },
+                {
+                    "name": "history",
+                    "pathName": "pages/history/history",
+                    "query": "",
+                    "launchMode": "default",
+                    "scene": null
+                }
+            ]
+        }
+    }
 }

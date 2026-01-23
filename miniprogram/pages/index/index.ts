@@ -1,4 +1,4 @@
-import { formatTime } from "../../utils/util";
+import {formatTime, parseProjectDuration} from "../../utils/util";
 const GBK = require("gbk.js");
 
 // 定义每日咨询单集合
@@ -17,11 +17,14 @@ const DefaultConsultationInfo: ConsultationInfo = {
   selectedParts: {},
   isClockIn: false, // 默认不勾选点钟
   remarks: "", // 默认无备注
+  phone: "", // 默认无手机号
+  couponCode: "", // 默认无券码
+  couponPlatform: "meituan", // 默认无平台
 };
 
 Component({
   data: {
-    consultationInfo: { ...DefaultConsultationInfo, selectedParts: {} },
+    consultationInfo: {...DefaultConsultationInfo, selectedParts: {}},
     isPrinterConnected: false,
     printerDeviceId: "",
     printerServiceId: "",
@@ -29,20 +32,14 @@ Component({
     editId: "", // 正在编辑的记录ID
   },
 
-  // 组件生命周期函数，在组件实例进入页面节点树时执行
-  attached() {
-    // 获取页面参数
-    const pages = getCurrentPages();
-    const currentPage = pages[pages.length - 1];
-    const editId = (currentPage.options || {}).editId;
-
-    if (editId) {
-      // 加载编辑数据
-      this.loadEditData(editId);
-    }
-  },
-
   methods: {
+    // 页面加载时获取参数
+    onLoad(options: Record<string, string | undefined>) {
+      if (options.editId) {
+        // 加载编辑数据
+        this.loadEditData(options.editId);
+      }
+    },
     // 检查数组是否包含某个元素（替代数组的includes方法）
     arrayIncludes(array: string[], element: string): boolean {
       if (!array || !Array.isArray(array)) {
@@ -97,6 +94,30 @@ Component({
     onRemarksInput(e: any) {
       this.setData({
         "consultationInfo.remarks": e.detail.value,
+      });
+    },
+
+    // 手机号输入
+    onPhoneInput(e: any) {
+      this.setData({
+        "consultationInfo.phone": e.detail.value,
+      });
+    },
+
+    // 券码输入
+    onCouponCodeInput(e: any) {
+      this.setData({
+        "consultationInfo.couponCode": e.detail.value,
+      });
+    },
+
+    // 券码平台选择
+    onCouponPlatformSelect(e: any) {
+      const platform = e.currentTarget.dataset.platform;
+      // 如果点击已选中的平台，则取消选择
+      const currentPlatform = this.data.consultationInfo.couponPlatform;
+      this.setData({
+        "consultationInfo.couponPlatform": currentPlatform === platform ? "" : platform,
       });
     },
 
@@ -268,7 +289,7 @@ Component({
 
     // 打印咨询单（自动连接打印机）
     printConsultation() {
-      const { printerDeviceId, printerServiceId, printerCharacteristicId } =
+      const {printerDeviceId, printerServiceId, printerCharacteristicId} =
         this.data;
 
       // 检查是否已连接打印机
@@ -487,6 +508,13 @@ Component({
           (wx.getStorageSync("consultationHistory") as DailyConsultations) ||
           {};
 
+        // 计算开始时间和结束时间
+        const startTimeStr = formatTime(now, false);
+        const projectDuration = parseProjectDuration(consultation.project);
+        const totalDuration = projectDuration + 10; // 项目时长 + 10分钟
+        const endTimeDate = new Date(now.getTime() + totalDuration * 60 * 1000);
+        const endTimeStr = formatTime(endTimeDate, false);
+
         if (editId) {
           // 更新现有记录
           let updated = false;
@@ -502,6 +530,8 @@ Component({
                 ...records[index],
                 ...consultation,
                 updatedAt: timestamp,
+                startTime: startTimeStr, // 报钟时间
+                endTime: endTimeStr, // 结束时间
               };
               updated = true;
             }
@@ -515,12 +545,17 @@ Component({
           // 创建新记录
           const id =
             Date.now().toString() + Math.random().toString(36).substr(2, 9);
+
           const record: ConsultationRecord = {
             ...consultation,
             id,
             createdAt: timestamp,
             updatedAt: timestamp,
             isVoided: false,
+            extraTime: 0, // 初始化加钟数
+            overtime: 0, // 初始化加班数
+            startTime: startTimeStr, // 报钟时间
+            endTime: endTimeStr, // 结束时间
           };
 
           // 确保当天的数组存在
@@ -547,6 +582,7 @@ Component({
 
     // 加载编辑数据
     loadEditData(editId: string) {
+      console.log("loadEditData", editId);
       try {
         // 获取现有缓存数据
         const cachedData =
@@ -584,6 +620,9 @@ Component({
               selectedParts: foundRecord.selectedParts,
               isClockIn: foundRecord.isClockIn,
               remarks: foundRecord.remarks,
+              phone: foundRecord.phone || "",
+              couponCode: foundRecord.couponCode || "",
+              couponPlatform: foundRecord.couponPlatform || "",
             },
             editId: editId,
           });
@@ -610,12 +649,68 @@ Component({
       });
     },
 
+    // 跳转到门店配置页面
+    goToStoreConfig() {
+      wx.navigateTo({
+        url: "/pages/store-config/store-config",
+      });
+    },
+
+    // 保存编辑（不复制报钟信息）
+    saveEdit() {
+      const {consultationInfo, editId} = this.data;
+
+      // 验证必填信息
+      if (!consultationInfo.gender) {
+        wx.showToast({title: "请选择称呼", icon: "none"});
+        return;
+      }
+      if (!consultationInfo.project) {
+        wx.showToast({title: "请选择项目", icon: "none"});
+        return;
+      }
+      if (!consultationInfo.technician) {
+        wx.showToast({title: "请选择技师", icon: "none"});
+        return;
+      }
+      if (!consultationInfo.room) {
+        wx.showToast({title: "请选择房间", icon: "none"});
+        return;
+      }
+
+      // 保存到缓存
+      const success = this.saveConsultationToCache(consultationInfo, editId);
+
+      if (success) {
+        wx.showToast({
+          title: "保存成功",
+          icon: "success",
+          success: () => {
+            // 延迟返回，让用户看到提示
+            setTimeout(() => {
+              wx.navigateBack();
+            }, 1000);
+          }
+        });
+      } else {
+        wx.showToast({
+          title: "保存失败",
+          icon: "error"
+        });
+      }
+    },
+
+    // 取消编辑
+    cancelEdit() {
+      wx.navigateBack();
+    },
+
     // 格式化日期为 YYYY-MM-DD 格式
     formatDate(date: Date): string {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const day = String(date.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
+      return `${ year }-${ month }-${ day }`;
     },
 
     // 清理超过30天的历史数据
@@ -636,7 +731,7 @@ Component({
 
     // 报钟功能
     onClockIn() {
-      const { consultationInfo } = this.data;
+      const {consultationInfo} = this.data;
 
       // 验证必填信息（与预览功能统一）
       if (!consultationInfo.gender) {
@@ -726,9 +821,8 @@ Component({
     formatClockInInfo(info: ConsultationInfo) {
       const currentTime = new Date();
       const startTime = formatTime(currentTime, false);
-
       // 解析项目时长并计算结束时间
-      const projectDuration = this.parseProjectDuration(info.project);
+      const projectDuration = parseProjectDuration(info.project);
       const totalDuration = projectDuration + 10; // 项目时长 + 10分钟
       const endTime = new Date(
         currentTime.getTime() + totalDuration * 60 * 1000,
@@ -739,19 +833,18 @@ Component({
       const dailyCount = this.getTechnicianDailyCount(info.technician);
 
       let formattedInfo = "";
-      formattedInfo += `顾客: ${info.surname}${
-        info.gender === "male" ? "先生" : "女士"
-      }\n`;
-      formattedInfo += `项目: ${info.project}\n`;
-      formattedInfo += `技师: ${info.technician}(${dailyCount})${info.isClockIn ? "[点]" : ""}\n`;
-      formattedInfo += `房间: ${info.room}\n`;
-      formattedInfo += `时间: ${startTime} - ${formattedEndTime}\n`;
-      
+      formattedInfo += `顾客: ${ info.surname }${ info.gender === "male" ? "先生" : "女士"
+        }\n`;
+      formattedInfo += `项目: ${ info.project }\n`;
+      formattedInfo += `技师: ${ info.technician }(${ dailyCount })${ info.isClockIn ? "[点]" : "" }\n`;
+      formattedInfo += `房间: ${ info.room }\n`;
+      formattedInfo += `时间: ${ startTime } - ${ formattedEndTime }`;
+
       // 添加备注信息（仅当有内容时显示）
       if (info.remarks) {
-        formattedInfo += `备注: ${info.remarks}`;
+        formattedInfo += `\n备注: ${ info.remarks }`;
       }
-      
+
       return formattedInfo;
     },
 
@@ -793,21 +886,20 @@ Component({
       const setNormalFont = ESC + "!" + String.fromCharCode(0x00); // 恢复正常字体
 
       // 将整个打印内容都设置为大号字体
-      let content = setLargeFont + "\n趴岛 SPA&MASSAGE\n";
-      content += `${info.surname}${
-        info.gender === "male" ? "先生" : "女士"
-      }咨询单\n`;
+      let content = setLargeFont + "\n\n\n\n趴岛 SPA&MASSAGE\n";
+      content += `${ info.surname }${ info.gender === "male" ? "先生" : "女士"
+        }咨询单\n`;
       content += "================\n";
-      content += `项目: ${info.project}\n`;
+      content += `项目: ${ info.project }\n`;
       // 获取技师当日报钟数量
       const dailyCount = this.getTechnicianDailyCount(info.technician);
-      content += `技师: ${info.technician}(${dailyCount})${info.isClockIn ? "[点]" : ""}\n`;
-      content += `房间: ${info.room}\n`;
+      content += `技师: ${ info.technician }(${ dailyCount })${ info.isClockIn ? "[点]" : "" }\n`;
+      content += `房间: ${ info.room }\n`;
       content += "力度:";
-      content += `${strengthMap[info.massageStrength] || "未选择"}\n`;
+      content += `${ strengthMap[info.massageStrength] || "未选择" }\n`;
       if (info.project !== "60min指压") {
         content += "精油:";
-        content += `${oilMap[info.essentialOil] || "未选择"}\n`;
+        content += `${ oilMap[info.essentialOil] || "未选择" }\n`;
       }
       content += "加强部位:";
       const selectedPartsArray = Object.keys(info.selectedParts).filter(
@@ -815,27 +907,27 @@ Component({
       );
       if (selectedPartsArray.length > 0) {
         selectedPartsArray.forEach((part) => {
-          content += `${partMap[part]}  `;
+          content += `${ partMap[part] }  `;
         });
       } else {
         content += "无";
       }
-      
+
       // 添加备注信息（仅当有内容时显示）
       if (info.remarks) {
-        content += `\n备注: ${info.remarks}`;
+        content += `\n备注: ${ info.remarks }`;
       }
+
+      content += "\n================\n";
+      content += `打印时间: ${ formatTime(new Date(), false) }
+
+
+
       
-      content += "\n==========================\n";
-      content += `打印时间: ${formatTime(new Date())}\n\n\n\n\n\n\n `;
+
+`;
 
       return content;
-    },
-
-    // 解析项目时长（分钟）
-    parseProjectDuration(projectName: string): number {
-      const match = projectName.match(/(\d+)min/);
-      return match ? parseInt(match[1]) : 0;
     },
   },
 });

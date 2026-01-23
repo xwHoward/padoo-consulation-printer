@@ -1,41 +1,25 @@
-<!-- index.wxml -->
 <navigation-bar title="趴岛咨询单" back="{{false}}" color="black" background="#FFF">
-  <view slot="right" bindtap="onRefresh" class="refresh-btn" aria-role="button" aria-label="刷新">
+  <view slot="left" bindtap="onRefresh" class="refresh-btn" aria-role="button" aria-label="刷新">
     <text class="refresh-text">刷新</text>
+  </view>
+  <view slot="right" class="nav-right-btns">
+    <view bindtap="goToStoreConfig" class="refresh-btn" aria-role="button" aria-label="配置">
+      <text class="refresh-text">配置</text>
+    </view>
+    <view bindtap="goToHistory" class="refresh-btn" aria-role="button" aria-label="单据">
+      <text class="refresh-text">单据</text>
+    </view>
   </view>
 </navigation-bar>
 <scroll-view class="scrollarea" scroll-y type="list">
   <view class="container">
-    <!-- 个人信息 -->
+    <!-- 加强部位 -->
     <view class="section">
       <!-- Logo -->
       <view class="logo-container">
         <image class="logo" src="/assets/logo.jpg" mode="contain"></image>
       </view>
-      <view class="section-title">个人信息</view>
-      <view class="form-item combined-form-item">
-        <view class="form-field">
-          <text class="form-label">姓氏</text>
-          <input class="form-input" placeholder="选填" bind:input="onSurnameInput" />
-        </view>
-        <view class="form-field">
-          <view class="gender-selector">
-            <label class="gender-option {{consultationInfo.gender === 'male' ? 'selected' : ''}}" bindtap="onGenderSelect" data-gender="male">
-              <radio value="male" checked="{{consultationInfo.gender === 'male'}}" />
-              先生
-            </label>
-            <label class="gender-option {{consultationInfo.gender === 'female' ? 'selected' : ''}}" bindtap="onGenderSelect" data-gender="female">
-              <radio value="female" checked="{{consultationInfo.gender === 'female'}}" />
-              女士
-            </label>
-          </view>
-        </view>
-      </view>
-    </view>
-    <!-- 加强部位 -->
-    <view class="section">
-      <view class="section-title">MASSAGE AREA</view>
-      <view class="section-subtitle">加强部位</view>
+      <view class="section-title">加强部位</view>
       <view class="body-image-container">
         <image class="body-image" src="/assets/human.jpg" mode="aspectFit"></image>
         <view class="body-part head {{consultationInfo.selectedParts.head ? 'selected' : ''}}" bindtap="onBodyPartSelect" data-part="head">
@@ -69,8 +53,7 @@
     </view>
     <!-- 按摩力度 -->
     <view class="section">
-      <view class="section-title">MASSAGE STRENGTH</view>
-      <view class="section-subtitle">按摩力度</view>
+      <view class="section-title">按摩力度</view>
       <view class="checkbox-group">
         <label class="checkbox-item {{consultationInfo.massageStrength === 'standard' ? 'selected' : ''}}" bindtap="onMassageStrengthSelect" data-strength="standard">
           <checkbox value="standard" checked="{{consultationInfo.massageStrength === 'standard'}}" />
@@ -88,39 +71,43 @@
     </view>
     <!-- 精油选择 -->
     <view class="section">
-      <view class="section-title">ESSENTIAL OIL SELECTION</view>
-      <view class="section-subtitle">精油选择</view>
+      <view class="section-title">精油选择</view>
       <view class="checkbox-group">
         <label class="checkbox-item {{consultationInfo.essentialOil === 'lavender' ? 'selected' : ''}}" bindtap="onEssentialOilSelect" data-oil="lavender">
           <checkbox value="lavender" checked="{{consultationInfo.essentialOil === 'lavender'}}" />
-          薰衣草 LAVENDER
+          <text>薰衣草 LAVENDER</text>
+          <text class="oil-effect">安神助眠，放松身心，安抚情绪</text>
         </label>
         <label class="checkbox-item {{consultationInfo.essentialOil === 'grapefruit' ? 'selected' : ''}}" bindtap="onEssentialOilSelect" data-oil="grapefruit">
           <checkbox value="grapefruit" checked="{{consultationInfo.essentialOil === 'grapefruit'}}" />
-          葡萄柚 GRAPEFRUIT
+          <text>葡萄柚 GRAPEFRUIT</text>
+          <text class="oil-effect">清新提神，愉悦心情，改善浮肿</text>
         </label>
         <label class="checkbox-item {{consultationInfo.essentialOil === 'atractylodes' ? 'selected' : ''}}" bindtap="onEssentialOilSelect" data-oil="atractylodes">
           <checkbox value="atractylodes" checked="{{consultationInfo.essentialOil === 'atractylodes'}}" />
-          白术 ATRACTYLODES
+          <text>白术 ATRACTYLODES</text>
+          <text class="oil-effect">驱寒祛湿，温润调理，行气暖身</text>
         </label>
         <label class="checkbox-item {{consultationInfo.essentialOil === 'rosemary' ? 'selected' : ''}}" bindtap="onEssentialOilSelect" data-oil="rosemary">
           <checkbox value="rosemary" checked="{{consultationInfo.essentialOil === 'rosemary'}}" />
-          迷迭香 ROSEMARY
+          <text>迷迭香 ROSEMARY</text>
+          <text class="oil-effect">提神醒脑，增强专注，缓解疲惫</text>
         </label>
         <label class="checkbox-item {{consultationInfo.essentialOil === 'rosewood' ? 'selected' : ''}}" bindtap="onEssentialOilSelect" data-oil="rosewood">
           <checkbox value="rosewood" checked="{{consultationInfo.essentialOil === 'rosewood'}}" />
-          花梨木 ROSEWOOD
+          <text>花梨木 ROSEWOOD</text>
+          <text class="oil-effect">温和滋养，舒缓干燥，安抚肌肤</text>
         </label>
         <label class="checkbox-item {{consultationInfo.essentialOil === 'seasonal' ? 'selected' : ''}}" bindtap="onEssentialOilSelect" data-oil="seasonal">
           <checkbox value="seasonal" checked="{{consultationInfo.essentialOil === 'seasonal'}}" />
-          季节特调 SEASONAL SPECIAL
+          <text>冬日特调 SEASONAL SPECIAL</text>
+          <text class="oil-effect">季节调和，平衡身心，调理体质</text>
         </label>
       </view>
     </view>
     <!-- 上钟信息 -->
     <view class="section">
-      <view class="section-title">ON-DUTY INFORMATION</view>
-      <view class="section-subtitle">上钟信息</view>
+      <view class="section-title">上钟信息</view>
       <view class="form-item">
         <text class="form-label">项目</text>
         <view class="project-selector">
@@ -226,21 +213,69 @@
           </label>
         </view>
       </view>
-      <!-- 备注信息 -->
-      <view class="section">
-        <view class="section-title">REMARKS</view>
-        <view class="section-subtitle">其他</view>
-        <view class="form-item">
-          <text class="form-label">备注</text>
-          <textarea class="form-textarea" placeholder="选填" bind:input="onRemarksInput" value="{{consultationInfo.remarks}}" auto-height maxlength="200"></textarea>
+    </view>
+    <!-- 备注信息 -->
+    <view class="section">
+      <view class="section-title">其他</view>
+      <!-- 个人信息 -->
+      <view class="form-item combined-form-item">
+        <view class="form-field">
+          <text class="form-label">姓氏</text>
+          <input class="form-input" placeholder="选填" bind:input="onSurnameInput" />
         </view>
+        <view class="form-field">
+          <view class="gender-selector">
+            <label class="gender-option {{consultationInfo.gender === 'male' ? 'selected' : ''}}" bindtap="onGenderSelect" data-gender="male">
+              <radio value="male" checked="{{consultationInfo.gender === 'male'}}" />
+              先生
+            </label>
+            <label class="gender-option {{consultationInfo.gender === 'female' ? 'selected' : ''}}" bindtap="onGenderSelect" data-gender="female">
+              <radio value="female" checked="{{consultationInfo.gender === 'female'}}" />
+              女士
+            </label>
+          </view>
+        </view>
+      </view>
+      <!-- 手机号 -->
+      <view class="form-item">
+        <text class="form-label">手机号</text>
+        <input class="form-input" type="number" placeholder="选填" maxlength="11" bind:input="onPhoneInput" value="{{consultationInfo.phone}}" />
+      </view>
+      <!-- 券码 -->
+      <view class="form-item coupon-form-item">
+        <text class="form-label">券码</text>
+        <view class="coupon-container">
+          <input class="form-input coupon-input" type="number" placeholder="选填" bind:input="onCouponCodeInput" value="{{consultationInfo.couponCode}}" />
+          <view class="coupon-platform-selector">
+            <label class="platform-option {{consultationInfo.couponPlatform === 'meituan' ? 'selected' : ''}}" bindtap="onCouponPlatformSelect" data-platform="meituan">
+              <radio value="meituan" checked="{{consultationInfo.couponPlatform === 'meituan'}}" />
+              美团
+            </label>
+            <label class="platform-option {{consultationInfo.couponPlatform === 'dianping' ? 'selected' : ''}}" bindtap="onCouponPlatformSelect" data-platform="dianping">
+              <radio value="dianping" checked="{{consultationInfo.couponPlatform === 'dianping'}}" />
+              点评
+            </label>
+            <label class="platform-option {{consultationInfo.couponPlatform === 'douyin' ? 'selected' : ''}}" bindtap="onCouponPlatformSelect" data-platform="douyin">
+              <radio value="douyin" checked="{{consultationInfo.couponPlatform === 'douyin'}}" />
+              抖音
+            </label>
+          </view>
+        </view>
+      </view>
+      <view class="form-item">
+        <text class="form-label">备注</text>
+        <textarea class="form-textarea" placeholder="选填" bind:input="onRemarksInput" value="{{consultationInfo.remarks}}" auto-height maxlength="200"></textarea>
       </view>
     </view>
     <!-- 提交和打印按钮 -->
-    <view class="button-container">
+    <view class="button-container" wx:if="{{!editId}}">
       <button class="primary-button" bindtap="printConsultation">打印</button>
       <button class="primary-button" bindtap="onClockIn">报钟</button>
-      <button class="primary-button" bindtap="goToHistory">历史</button>
+    </view>
+    <!-- 编辑模式按钮 -->
+    <view class="button-container" wx:if="{{editId}}">
+      <button class="primary-button" bindtap="saveEdit">保存</button>
+      <button class="primary-button secondary-button" bindtap="cancelEdit">取消</button>
     </view>
   </view>
 </scroll-view>

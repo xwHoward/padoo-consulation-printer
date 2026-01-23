@@ -1,10 +1,35 @@
 /* history.less */
 
+/* 主题色定义 - 与 index.less 保持一致 */
+@primary-color: #FF6B00;
+@text-color: #333333;
+@text-color-secondary: #666666;
+@bg-color: #ffffff;
+@bg-color-light: #f5f5f5;
+@border-color: #e0e0e0;
+@border-color-light: #f0f0f0;
+
+/* 页面基础样式 */
+page {
+  height: 98vh;
+  display: flex;
+  flex-direction: column;
+  background-color: @bg-color-light;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  padding-top: env(safe-area-inset-top);
+  padding-top: constant(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: constant(safe-area-inset-bottom);
+  box-sizing: border-box;
+}
+
 /* 页面容器 */
 .container {
-  padding: 20rpx;
-  background-color: #f5f5f5;
-  min-height: 100vh;
+  padding: 10px;
+  background-color: @bg-color-light;
+  min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 50px);
+  min-height: calc(100vh - constant(safe-area-inset-top) - constant(safe-area-inset-bottom) - 50px);
+  box-sizing: border-box;
 }
 
 /* 历史记录列表 */
@@ -14,10 +39,10 @@
 
 /* 每日分组 */
 .daily-group {
-  margin-bottom: 30rpx;
-  background-color: #fff;
-  border-radius: 16rpx;
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+  background-color: @bg-color;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 }
 
@@ -25,152 +50,243 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #fafafa;
-  border-bottom: 1rpx solid #eee;
+  background-color: @bg-color;
+  border-bottom: 1px solid @border-color-light;
+  padding: 10px 15px;
 }
 
 /* 日期头部 */
 .date-header {
   flex: 1;
-  padding: 20rpx;
-  color: #666;
-  font-size: 28rpx;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
+  color: @text-color;
+  border-left: 2px solid @primary-color;
+  padding-left: 8px;
 }
 
 .summary-btn {
-  padding: 8rpx 40rpx;
-  border-radius: 20rpx;
-  font-size: 24rpx;
+  padding: 5px 15px;
+  border-radius: 4px;
+  font-size: 12px;
   line-height: 1.5;
   min-height: 0;
   height: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background-color: transparent;
-  border: 1rpx solid #d9d9d9;
-  color: #1890ff;
-  background-color: #fff;
-  margin-right: 20rpx;
+  background-color: @primary-color;
+  border: none;
+  color: #fff;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.summary-btn:active {
+  background-color: #E05D00;
 }
 
 /* 当日咨询单列表 */
 .consultation-list {
-  padding: 10rpx;
+  padding: 8px 10px;
 }
 
 /* 咨询单项 */
 .consultation-item {
-  margin-bottom: 10rpx;
-  padding: 20rpx;
-  background-color: #fff;
-  border-radius: 12rpx;
-  border: 1rpx solid #f0f0f0;
+  margin-bottom: 8px;
+  padding: 0;
+  background-color: @bg-color;
+  border-radius: 5px;
+  border: 1px solid @border-color-light;
   transition: all 0.3s ease;
+  overflow: hidden;
 }
 
 /* 点击效果 */
 .consultation-item:active {
-  background-color: #f9f9f9;
-  transform: translateY(2rpx);
+  background-color: @bg-color-light;
+  border-color: @primary-color;
 }
 
 /* 已作废的咨询单 */
 .consultation-item.voided {
   opacity: 0.6;
-  background-color: #fafafa;
+  background-color: @bg-color-light;
+  border-style: dashed;
+}
+
+/* 折叠状态的咨询单 */
+.consultation-item.collapsed {
+  opacity: 0.7;
+}
+
+.consultation-item.collapsed .consultation-header {
+  padding-bottom: 10px;
+}
+
+/* 咨询单头部（始终显示） */
+.consultation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.consultation-header:active {
+  background-color: @bg-color-light;
+}
+
+/* 折叠按钮 */
+.collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.collapse-icon {
+  font-size: 10px;
+  color: @primary-color;
+  transition: transform 0.3s ease;
+}
+
+/* 已作废标签 */
+.voided-tag {
+  font-size: 11px;
+  color: #ff4d4f;
+  background-color: rgba(255, 77, 79, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: 6px;
+}
+
+/* 咨询单内容区域（可折叠） */
+.consultation-body {
+  padding: 0 12px 10px;
+  border-top: 1px solid @border-color-light;
 }
 
 /* 咨询单详情 */
 .consultation-details {
-  margin-bottom: 15rpx;
+  margin-bottom: 8px;
+  padding-top: 8px;
 }
 
 /* 基本信息 */
 .consultation-basic {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 10rpx;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 6px;
 }
+
 
 /* 客户信息 */
 .customer-info {
-  font-size: 32rpx;
+  font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: @text-color;
+  margin-top: -1.4em;
 }
 
 /* 项目信息 */
-.project-info {
-  font-size: 28rpx;
-  color: #666;
-  background-color: #f0f0f0;
-  padding: 4rpx 12rpx;
-  border-radius: 16rpx;
+.tag {
+  font-size: 13px;
+  color: @primary-color;
+  background-color: rgba(255, 107, 0, 0.1);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 500;
 }
 
 /* 元信息 */
 .consultation-meta {
   display: flex;
-  flex-wrap: wrap;
-  display: flex;
   align-items: center;
-  justify-content: space-around;
-  gap: 15rpx;
-  font-size: 24rpx;
-  // 禁止换行
+  justify-content: flex-start;
+  gap: 10px;
+  font-size: 12px;
   white-space: nowrap;
   word-break: keep-all;
-  color: #999;
+  color: @text-color-secondary;
   line-height: 1;
+  margin-top: 6px;
 }
 
 /* 技师信息 */
 .text-info {
   flex: none;
+  padding: 2px 5px;
+  background-color: @bg-color-light;
+  border-radius: 3px;
 }
 
 /* 操作按钮容器 */
 .consultation-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10rpx;
-  margin-top: 15rpx;
-  padding-top: 15rpx;
-  border-top: 1rpx solid #f0f0f0;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid @border-color-light;
 }
 
 /* 操作按钮 */
 .action-btn {
-  padding: 8rpx 20rpx;
-  border-radius: 20rpx;
-  font-size: 24rpx;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 12px;
   line-height: 1.5;
   min-height: 0;
   height: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background-color: transparent;
-  border: 1rpx solid #d9d9d9;
+  transition: all 0.3s ease;
 }
 
 /* 修改按钮 */
 .edit-btn {
-  color: #1890ff;
-  border-color: #1890ff;
+  color: #fff;
+  background-color: @primary-color;
+  border: none;
 }
 
 .edit-btn:active {
+  background-color: #E05D00;
+}
+
+/* 加钟按钮 */
+.extra-btn {
+  color: #1890ff;
+  background-color: transparent;
+  border: 1px solid #1890ff;
+}
+
+.extra-btn:active {
   background-color: rgba(24, 144, 255, 0.1);
+}
+
+/* 加班按钮 */
+.overtime-btn {
+  color: #52c41a;
+  background-color: transparent;
+  border: 1px solid #52c41a;
+}
+
+.overtime-btn:active {
+  background-color: rgba(82, 196, 26, 0.1);
 }
 
 /* 作废按钮 */
 .void-btn {
   color: #ff4d4f;
-  border-color: #ff4d4f;
+  background-color: transparent;
+  border: 1px solid #ff4d4f;
 }
 
 .void-btn:active {
@@ -180,33 +296,154 @@
 /* 无记录提示 */
 .empty-hint {
   text-align: center;
-  padding: 100rpx 20rpx;
-  color: #999;
-  font-size: 28rpx;
-  background-color: #fff;
-  border-radius: 16rpx;
-  margin: 30rpx 0;
+  padding: 60px 10px;
+  color: @text-color-secondary;
+  font-size: 14px;
+  background-color: @bg-color;
+  border-radius: 6px;
+  margin: 10px 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
 /* 滚动区域 */
 .scrollarea {
-  height: 100vh;
-  box-sizing: border-box;
+  flex: 1;
+  width: 100%;
+  overflow-y: hidden;
 }
 
-/* 响应式设计 */
-@media (max-width: 375px) {
-  .container {
-    padding: 15rpx;
-  }
-  
-  .consultation-meta {
-    font-size: 22rpx;
-    gap: 10rpx;
-  }
-  
-  .action-btn {
-    padding: 6rpx 16rpx;
-    font-size: 22rpx;
-  }
+/* 数字输入弹窗样式 */
+.modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.modal-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  background-color: @bg-color;
+  border-radius: 8px;
+  z-index: 1001;
+  overflow: hidden;
+}
+
+.modal-title {
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  color: @text-color;
+  padding: 20px 15px 10px;
+}
+
+.modal-content {
+  padding: 10px 20px 20px;
+}
+
+.modal-hint {
+  text-align: center;
+  font-size: 13px;
+  color: @text-color-secondary;
+  margin-bottom: 15px;
+}
+
+.number-input-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.step-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 300;
+  transition: all 0.2s ease;
+}
+
+.minus-btn {
+  background-color: @bg-color-light;
+  color: @text-color;
+  border: 1px solid @border-color;
+}
+
+.minus-btn:active {
+  background-color: @border-color;
+}
+
+.minus-btn.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.plus-btn {
+  background-color: @primary-color;
+  color: #fff;
+  border: none;
+}
+
+.plus-btn:active {
+  background-color: #E05D00;
+}
+
+.number-input {
+  width: 80px;
+  height: 40px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+  color: @text-color;
+  border: 1px solid @border-color;
+  border-radius: 6px;
+  background-color: @bg-color;
+}
+
+.modal-unit {
+  text-align: center;
+  font-size: 12px;
+  color: @text-color-secondary;
+  margin-top: 8px;
+}
+
+.modal-footer {
+  display: flex;
+  border-top: 1px solid @border-color-light;
+}
+
+.modal-btn {
+  flex: 1;
+  text-align: center;
+  padding: 15px 0;
+  font-size: 16px;
+  transition: background-color 0.2s ease;
+}
+
+.cancel-btn {
+  color: @text-color-secondary;
+  border-right: 1px solid @border-color-light;
+}
+
+.cancel-btn:active {
+  background-color: @bg-color-light;
+}
+
+.confirm-btn {
+  color: @primary-color;
+  font-weight: 500;
+}
+
+.confirm-btn:active {
+  background-color: rgba(255, 107, 0, 0.1);
 }

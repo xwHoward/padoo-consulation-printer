@@ -1,7 +1,9 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/history/history"
+    "pages/history/history",
+    "pages/store-config/store-config",
+    "pages/staff/staff"
   ],
   "window": {
     "navigationBarTextStyle": "black",
