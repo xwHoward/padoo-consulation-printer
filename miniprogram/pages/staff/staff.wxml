@@ -1,0 +1,104 @@
+<!-- staff.wxml -->
+<navigation-bar
+  title="员工管理"
+  back="{{true}}"
+  color="black"
+  background="#FFF"
+>
+  <view
+    slot="right"
+    bindtap="onAddStaff"
+    class="nav-btn"
+  >
+    <text class="nav-btn-text">添加</text>
+  </view>
+</navigation-bar>
+<scroll-view
+  class="scrollarea"
+  scroll-y
+  type="list"
+>
+  <view class="container">
+    <!-- 员工列表 -->
+    <view class="staff-list" wx:if="{{staffList.length > 0}}">
+      <view
+        class="staff-item {{item.status === 'disabled' ? 'disabled' : ''}}"
+        wx:for="{{staffList}}"
+        wx:key="id"
+      >
+        <view
+          class="staff-info"
+          bindtap="onEditStaff"
+          data-id="{{item.id}}"
+        >
+          <text class="staff-name">{{item.name}}</text>
+          <text class="staff-status {{item.status}}">{{item.status === 'active' ? '正常' : '禁用'}}</text>
+        </view>
+        <view class="staff-actions">
+          <view
+            class="action-btn toggle-btn"
+            bindtap="onToggleStatus"
+            data-id="{{item.id}}"
+          >
+            <text>{{item.status === 'active' ? '禁用' : '启用'}}</text>
+          </view>
+          <view
+            class="action-btn delete-btn"
+            bindtap="onDeleteStaff"
+            data-id="{{item.id}}"
+          >
+            <text>删除</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <!-- 空状态 -->
+    <view class="empty-hint" wx:else>
+      <text>暂无员工，点击右上角添加</text>
+    </view>
+  </view>
+</scroll-view>
+<!-- 添加/编辑弹窗 -->
+<view
+  class="modal-mask"
+  wx:if="{{showModal}}"
+  bindtap="onCloseModal"
+>
+</view>
+<view class="modal-container" wx:if="{{showModal}}">
+  <view class="modal-title">{{editingStaff ? '编辑员工' : '添加员工'}}</view>
+  <view class="modal-content">
+    <view class="form-item">
+      <text class="form-label">姓名</text>
+      <input
+        class="form-input"
+        placeholder="请输入员工姓名"
+        value="{{inputName}}"
+        bindinput="onNameInput"
+        focus="{{showModal}}" />
+    </view>
+    <view class="form-item" wx:if="{{editingStaff}}">
+      <text class="form-label">状态</text>
+      <view class="status-selector">
+        <view
+          class="status-option {{inputStatus === 'active' ? 'selected' : ''}}"
+          bindtap="onStatusSelect"
+          data-status="active"
+        >
+          <text>正常</text>
+        </view>
+        <view
+          class="status-option {{inputStatus === 'disabled' ? 'selected' : ''}}"
+          bindtap="onStatusSelect"
+          data-status="disabled"
+        >
+          <text>禁用</text>
+        </view>
+      </view>
+    </view>
+  </view>
+  <view class="modal-footer">
+    <view class="modal-btn cancel-btn" bindtap="onCloseModal">取消</view>
+    <view class="modal-btn confirm-btn" bindtap="onConfirmModal">确定</view>
+  </view>
+</view>

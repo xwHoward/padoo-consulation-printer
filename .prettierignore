@@ -1,0 +1,7 @@
+node_modules/
+miniprogram/miniprogram_npm/
+typings/
+*.d.ts
+package-lock.json
+project.config.json
+project.private.config.json

@@ -1,0 +1,45 @@
+module.exports = {
+  root: true,
+  env: {
+    browser: true,
+    es2021: true,
+    node: true,
+  },
+  extends: [
+    'eslint:recommended',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:prettier/recommended',
+  ],
+  parser: '@typescript-eslint/parser',
+  parserOptions: {
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+    project: './tsconfig.json',
+  },
+  plugins: ['@typescript-eslint', 'prettier'],
+  globals: {
+    wx: 'readonly',
+    App: 'readonly',
+    Page: 'readonly',
+    Component: 'readonly',
+    getApp: 'readonly',
+    getCurrentPages: 'readonly',
+    WechatMiniprogram: 'readonly',
+  },
+  rules: {
+    'prettier/prettier': 'error',
+    '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    '@typescript-eslint/explicit-function-return-type': 'off',
+    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-non-null-assertion': 'off',
+    'no-console': 'off',
+    'prefer-const': 'warn',
+  },
+  ignorePatterns: [
+    'node_modules/',
+    'miniprogram_npm/',
+    'typings/',
+    '*.js',
+    '*.d.ts',
+  ],
+};
