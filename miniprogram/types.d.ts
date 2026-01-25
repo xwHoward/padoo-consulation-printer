@@ -30,6 +30,7 @@ interface ConsultationInfo {
   phone: string; // 手机号（选填）
   couponCode: string; // 券码（选填，纯数字）
   couponPlatform: "meituan" | "dianping" | "douyin" | ""; // 券码平台
+  upgradeHimalayanSaltStone: boolean; // 是否升级冬季喜马拉雅热油盐石
 }
 
 // 定义带ID的咨询单数据结构（用于历史记录）

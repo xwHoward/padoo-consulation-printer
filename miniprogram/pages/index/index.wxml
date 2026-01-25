@@ -55,6 +55,24 @@
           src="/assets/logo.jpg"
           mode="contain" />
       </view>
+      <!-- 双人模式切换 -->
+      <view class="dual-mode-switch" wx:if="{{!editId}}">
+        <text class="dual-mode-label">双人模式</text>
+        <switch class="dual-mode-toggle" checked="{{isDualMode}}" bindchange="toggleDualMode" color="#FF6B00" />
+      </view>
+      <!-- 双人模式顾客切换标签 -->
+      <view class="guest-tabs" wx:if="{{isDualMode}}">
+        <view class="guest-tab {{activeGuest === 1 ? 'active' : ''}}" bindtap="switchGuest" data-guest="1">
+          <text>顾客1</text>
+          <text class="guest-name" wx:if="{{guest1Info.surname}}">{{guest1Info.surname}}{{guest1Info.gender === 'male' ? '先生' : '女士'}}</text>
+          <text class="guest-tech" wx:if="{{guest1Info.technician}}">{{guest1Info.technician}}</text>
+        </view>
+        <view class="guest-tab {{activeGuest === 2 ? 'active' : ''}}" bindtap="switchGuest" data-guest="2">
+          <text>顾客2</text>
+          <text class="guest-name" wx:if="{{guest2Info.surname}}">{{guest2Info.surname}}{{guest2Info.gender === 'male' ? '先生' : '女士'}}</text>
+          <text class="guest-tech" wx:if="{{guest2Info.technician}}">{{guest2Info.technician}}</text>
+        </view>
+      </view>
       <view class="section-title">加强部位</view>
       <view class="body-image-container">
         <image
@@ -62,63 +80,63 @@
           src="/assets/human.jpeg"
           mode="aspectFit" />
         <view
-          class="body-part head {{consultationInfo.selectedParts.head ? 'selected' : ''}}"
+          class="body-part head {{(isDualMode ? (activeGuest === 1 ? guest1Info.selectedParts.head : guest2Info.selectedParts.head) : consultationInfo.selectedParts.head) ? 'selected' : ''}}"
           bindtap="onBodyPartSelect"
           data-part="head"
         >
           <text class="part-name">头部</text>
         </view>
         <view
-          class="body-part neck {{consultationInfo.selectedParts.neck ? 'selected' : ''}}"
+          class="body-part neck {{(isDualMode ? (activeGuest === 1 ? guest1Info.selectedParts.neck : guest2Info.selectedParts.neck) : consultationInfo.selectedParts.neck) ? 'selected' : ''}}"
           bindtap="onBodyPartSelect"
           data-part="neck"
         >
           <text class="part-name">颈部</text>
         </view>
         <view
-          class="body-part shoulder {{consultationInfo.selectedParts.shoulder ? 'selected' : ''}}"
+          class="body-part shoulder {{(isDualMode ? (activeGuest === 1 ? guest1Info.selectedParts.shoulder : guest2Info.selectedParts.shoulder) : consultationInfo.selectedParts.shoulder) ? 'selected' : ''}}"
           bindtap="onBodyPartSelect"
           data-part="shoulder"
         >
           <text class="part-name">肩部</text>
         </view>
         <view
-          class="body-part back {{consultationInfo.selectedParts.back ? 'selected' : ''}}"
+          class="body-part back {{(isDualMode ? (activeGuest === 1 ? guest1Info.selectedParts.back : guest2Info.selectedParts.back) : consultationInfo.selectedParts.back) ? 'selected' : ''}}"
           bindtap="onBodyPartSelect"
           data-part="back"
         >
           <text class="part-name">后背</text>
         </view>
         <view
-          class="body-part arm {{consultationInfo.selectedParts.arm ? 'selected' : ''}}"
+          class="body-part arm {{(isDualMode ? (activeGuest === 1 ? guest1Info.selectedParts.arm : guest2Info.selectedParts.arm) : consultationInfo.selectedParts.arm) ? 'selected' : ''}}"
           bindtap="onBodyPartSelect"
           data-part="arm"
         >
           <text class="part-name">手臂</text>
         </view>
         <view
-          class="body-part abdomen {{consultationInfo.selectedParts.abdomen ? 'selected' : ''}}"
+          class="body-part abdomen {{(isDualMode ? (activeGuest === 1 ? guest1Info.selectedParts.abdomen : guest2Info.selectedParts.abdomen) : consultationInfo.selectedParts.abdomen) ? 'selected' : ''}}"
           bindtap="onBodyPartSelect"
           data-part="abdomen"
         >
           <text class="part-name">腹部</text>
         </view>
         <view
-          class="body-part waist {{consultationInfo.selectedParts.waist ? 'selected' : ''}}"
+          class="body-part waist {{(isDualMode ? (activeGuest === 1 ? guest1Info.selectedParts.waist : guest2Info.selectedParts.waist) : consultationInfo.selectedParts.waist) ? 'selected' : ''}}"
           bindtap="onBodyPartSelect"
           data-part="waist"
         >
           <text class="part-name">腰部</text>
         </view>
         <view
-          class="body-part thigh {{consultationInfo.selectedParts.thigh ? 'selected' : ''}}"
+          class="body-part thigh {{(isDualMode ? (activeGuest === 1 ? guest1Info.selectedParts.thigh : guest2Info.selectedParts.thigh) : consultationInfo.selectedParts.thigh) ? 'selected' : ''}}"
           bindtap="onBodyPartSelect"
           data-part="thigh"
         >
           <text class="part-name">大腿</text>
         </view>
         <view
-          class="body-part calf {{consultationInfo.selectedParts.calf ? 'selected' : ''}}"
+          class="body-part calf {{(isDualMode ? (activeGuest === 1 ? guest1Info.selectedParts.calf : guest2Info.selectedParts.calf) : consultationInfo.selectedParts.calf) ? 'selected' : ''}}"
           bindtap="onBodyPartSelect"
           data-part="calf"
         >
@@ -131,27 +149,27 @@
       <view class="section-title">按摩力度</view>
       <view class="checkbox-group">
         <label
-          class="checkbox-item {{consultationInfo.massageStrength === 'standard' ? 'selected' : ''}}"
+          class="checkbox-item {{(isDualMode ? (activeGuest === 1 ? guest1Info.massageStrength : guest2Info.massageStrength) : consultationInfo.massageStrength) === 'standard' ? 'selected' : ''}}"
           bindtap="onMassageStrengthSelect"
           data-strength="standard"
         >
-          <checkbox value="standard" checked="{{consultationInfo.massageStrength === 'standard'}}" />
+          <checkbox value="standard" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.massageStrength : guest2Info.massageStrength) : consultationInfo.massageStrength) === 'standard'}}" />
           标准 STANDARD
         </label>
         <label
-          class="checkbox-item {{consultationInfo.massageStrength === 'soft' ? 'selected' : ''}}"
+          class="checkbox-item {{(isDualMode ? (activeGuest === 1 ? guest1Info.massageStrength : guest2Info.massageStrength) : consultationInfo.massageStrength) === 'soft' ? 'selected' : ''}}"
           bindtap="onMassageStrengthSelect"
           data-strength="soft"
         >
-          <checkbox value="soft" checked="{{consultationInfo.massageStrength === 'soft'}}" />
+          <checkbox value="soft" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.massageStrength : guest2Info.massageStrength) : consultationInfo.massageStrength) === 'soft'}}" />
           轻柔 SOFT
         </label>
         <label
-          class="checkbox-item {{consultationInfo.massageStrength === 'gravity' ? 'selected' : ''}}"
+          class="checkbox-item {{(isDualMode ? (activeGuest === 1 ? guest1Info.massageStrength : guest2Info.massageStrength) : consultationInfo.massageStrength) === 'gravity' ? 'selected' : ''}}"
           bindtap="onMassageStrengthSelect"
           data-strength="gravity"
         >
-          <checkbox value="gravity" checked="{{consultationInfo.massageStrength === 'gravity'}}" />
+          <checkbox value="gravity" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.massageStrength : guest2Info.massageStrength) : consultationInfo.massageStrength) === 'gravity'}}" />
           重力 STRONG
         </label>
       </view>
@@ -161,145 +179,158 @@
       <view class="section-title">精油选择</view>
       <view class="checkbox-group">
         <label
-          class="checkbox-item {{consultationInfo.essentialOil === 'lavender' ? 'selected' : ''}}"
+          class="checkbox-item {{(isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil) === 'lavender' ? 'selected' : ''}}"
           bindtap="onEssentialOilSelect"
           data-oil="lavender"
         >
-          <checkbox value="lavender" checked="{{consultationInfo.essentialOil === 'lavender'}}" />
+          <checkbox value="lavender" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil) === 'lavender'}}" />
           <text>薰衣草 LAVENDER</text>
           <text class="oil-effect">安神助眠，放松身心，安抚情绪</text>
         </label>
         <label
-          class="checkbox-item {{consultationInfo.essentialOil === 'grapefruit' ? 'selected' : ''}}"
+          class="checkbox-item {{(isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil) === 'grapefruit' ? 'selected' : ''}}"
           bindtap="onEssentialOilSelect"
           data-oil="grapefruit"
         >
-          <checkbox value="grapefruit" checked="{{consultationInfo.essentialOil === 'grapefruit'}}" />
+          <checkbox value="grapefruit" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil) === 'grapefruit'}}" />
           <text>葡萄柚 GRAPEFRUIT</text>
           <text class="oil-effect">清新提神，愉悦心情，改善浮肿</text>
         </label>
         <label
-          class="checkbox-item {{consultationInfo.essentialOil === 'atractylodes' ? 'selected' : ''}}"
+          class="checkbox-item {{(isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil) === 'atractylodes' ? 'selected' : ''}}"
           bindtap="onEssentialOilSelect"
           data-oil="atractylodes"
         >
-          <checkbox value="atractylodes" checked="{{consultationInfo.essentialOil === 'atractylodes'}}" />
+          <checkbox value="atractylodes" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil) === 'atractylodes'}}" />
           <text>白术 ATRACTYLODES</text>
-          <text class="oil-effect">驱寒祛湿，温润调理，行气暖身</text>
+          <text class="oil-effect">驱寒祠湿，温润调理，行气暖身</text>
         </label>
         <label
-          class="checkbox-item {{consultationInfo.essentialOil === 'rosemary' ? 'selected' : ''}}"
+          class="checkbox-item {{(isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil) === 'rosemary' ? 'selected' : ''}}"
           bindtap="onEssentialOilSelect"
           data-oil="rosemary"
         >
-          <checkbox value="rosemary" checked="{{consultationInfo.essentialOil === 'rosemary'}}" />
+          <checkbox value="rosemary" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil) === 'rosemary'}}" />
           <text>迷迭香 ROSEMARY</text>
-          <text class="oil-effect">提神醒脑，增强专注，缓解疲惫</text>
+          <text class="oil-effect">提神醒脑，增强专注，缓解笫惫</text>
         </label>
         <label
-          class="checkbox-item {{consultationInfo.essentialOil === 'rosewood' ? 'selected' : ''}}"
+          class="checkbox-item {{(isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil) === 'rosewood' ? 'selected' : ''}}"
           bindtap="onEssentialOilSelect"
           data-oil="rosewood"
         >
-          <checkbox value="rosewood" checked="{{consultationInfo.essentialOil === 'rosewood'}}" />
+          <checkbox value="rosewood" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil) === 'rosewood'}}" />
           <text>花梨木 ROSEWOOD</text>
           <text class="oil-effect">温和滋养，舒缓干燥，安抚肌肤</text>
         </label>
         <label
-          class="checkbox-item {{consultationInfo.essentialOil === 'seasonal' ? 'selected' : ''}}"
+          class="checkbox-item {{(isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil) === 'seasonal' ? 'selected' : ''}}"
           bindtap="onEssentialOilSelect"
           data-oil="seasonal"
         >
-          <checkbox value="seasonal" checked="{{consultationInfo.essentialOil === 'seasonal'}}" />
+          <checkbox value="seasonal" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil) === 'seasonal'}}" />
           <text>冬日特调 SEASONAL SPECIAL</text>
           <text class="oil-effect">季节调和，平衡身心，调理体质</text>
+        </label>
+      </view>
+    </view>
+    <!-- 升级选项 -->
+    <view class="section">
+      <view class="section-title">升级选项</view>
+      <view class="checkbox-group">
+        <label class="checkbox-item upgrade-option {{(isDualMode ? (activeGuest === 1 ? guest1Info.upgradeHimalayanSaltStone : guest2Info.upgradeHimalayanSaltStone) : consultationInfo.upgradeHimalayanSaltStone) ? 'selected' : ''}}" bindtap="onUpgradeSelect">
+          <image class="upgrade-bg" src="/assets/saltstone.jpg" mode="aspectFill" />
+          <view class="upgrade-mask"></view>
+          <view class="upgrade-gradient-mask"></view>
+          <checkbox checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.upgradeHimalayanSaltStone : guest2Info.upgradeHimalayanSaltStone) : consultationInfo.upgradeHimalayanSaltStone)}}" />
+          <text class="upgrade-text">加购冬季喜马拉雅热油盐石</text>
         </label>
       </view>
     </view>
     <!-- 上钟信息 -->
     <view class="section">
       <view class="section-title">上钟信息</view>
-      <view class="form-item">
-        <text class="form-label">项目</text>
+      <view class="form-item {{isDualMode && activeGuest === 2 ? 'shared-field-disabled' : ''}}">
+        <text class="form-label">项目{{isDualMode ? '（共享）' : ''}}</text>
         <view class="project-selector">
           <label
-            class="project-option {{consultationInfo.project === '60min指压' ? 'selected' : ''}}"
-            bindtap="onProjectSelect"
+            class="project-option {{consultationInfo.project === '60min指压' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onProjectSelect'}}"
             data-project="60min指压"
           >
-            <radio value="60min指压" checked="{{consultationInfo.project === '60min指压'}}" />
+            <radio value="60min指压" checked="{{consultationInfo.project === '60min指压'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             60min指压
           </label>
           <label
-            class="project-option {{consultationInfo.project === '70min精油' ? 'selected' : ''}}"
-            bindtap="onProjectSelect"
+            class="project-option {{consultationInfo.project === '70min精油' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onProjectSelect'}}"
             data-project="70min精油"
           >
-            <radio value="70min精油" checked="{{consultationInfo.project === '70min精油'}}" />
+            <radio value="70min精油" checked="{{consultationInfo.project === '70min精油'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             70min精油
           </label>
           <label
-            class="project-option {{consultationInfo.project === '90min精油' ? 'selected' : ''}}"
-            bindtap="onProjectSelect"
+            class="project-option {{consultationInfo.project === '90min精油' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onProjectSelect'}}"
             data-project="90min精油"
           >
-            <radio value="90min精油" checked="{{consultationInfo.project === '90min精油'}}" />
+            <radio value="90min精油" checked="{{consultationInfo.project === '90min精油'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             90min精油
           </label>
           <label
-            class="project-option {{consultationInfo.project === '90min七脉轮彩石' ? 'selected' : ''}}"
-            bindtap="onProjectSelect"
+            class="project-option {{consultationInfo.project === '90min七脉轮彩石' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onProjectSelect'}}"
             data-project="90min七脉轮彩石"
           >
-            <radio value="90min七脉轮彩石" checked="{{consultationInfo.project === '90min七脉轮彩石'}}" />
+            <radio value="90min七脉轮彩石" checked="{{consultationInfo.project === '90min七脉轮彩石'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             90min七脉轮彩石
           </label>
           <label
-            class="project-option {{consultationInfo.project === '90min深海热贝' ? 'selected' : ''}}"
-            bindtap="onProjectSelect"
+            class="project-option {{consultationInfo.project === '90min深海热贝' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onProjectSelect'}}"
             data-project="90min深海热贝"
           >
-            <radio value="90min深海热贝" checked="{{consultationInfo.project === '90min深海热贝'}}" />
+            <radio value="90min深海热贝" checked="{{consultationInfo.project === '90min深海热贝'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             90min深海热贝
           </label>
           <label
-            class="project-option {{consultationInfo.project === '80min推拿+精油' ? 'selected' : ''}}"
-            bindtap="onProjectSelect"
+            class="project-option {{consultationInfo.project === '80min推拿+精油' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onProjectSelect'}}"
             data-project="80min推拿+精油"
           >
-            <radio value="80min推拿+精油" checked="{{consultationInfo.project === '80min推拿+精油'}}" />
+            <radio value="80min推拿+精油" checked="{{consultationInfo.project === '80min推拿+精油'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             80min推拿+精油
           </label>
           <label
-            class="project-option {{consultationInfo.project === '45min腰臀' ? 'selected' : ''}}"
-            bindtap="onProjectSelect"
+            class="project-option {{consultationInfo.project === '45min腰臀' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onProjectSelect'}}"
             data-project="45min腰臀"
           >
-            <radio value="45min腰臀" checked="{{consultationInfo.project === '45min腰臀'}}" />
+            <radio value="45min腰臀" checked="{{consultationInfo.project === '45min腰臀'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             45min腰臀
           </label>
           <label
-            class="project-option {{consultationInfo.project === '120min精油' ? 'selected' : ''}}"
-            bindtap="onProjectSelect"
+            class="project-option {{consultationInfo.project === '120min精油' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onProjectSelect'}}"
             data-project="120min精油"
           >
-            <radio value="120min精油" checked="{{consultationInfo.project === '120min精油'}}" />
+            <radio value="120min精油" checked="{{consultationInfo.project === '120min精油'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             120min精油
           </label>
           <label
-            class="project-option {{consultationInfo.project === '120min七脉轮彩石' ? 'selected' : ''}}"
-            bindtap="onProjectSelect"
+            class="project-option {{consultationInfo.project === '120min七脉轮彩石' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onProjectSelect'}}"
             data-project="120min七脉轮彩石"
           >
-            <radio value="120min七脉轮彩石" checked="{{consultationInfo.project === '120min七脉轮彩石'}}" />
+            <radio value="120min七脉轮彩石" checked="{{consultationInfo.project === '120min七脉轮彩石'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             120min七脉轮彩石
           </label>
           <label
-            class="project-option {{consultationInfo.project === '120min深海热贝' ? 'selected' : ''}}"
-            bindtap="onProjectSelect"
+            class="project-option {{consultationInfo.project === '120min深海热贝' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onProjectSelect'}}"
             data-project="120min深海热贝"
           >
-            <radio value="120min深海热贝" checked="{{consultationInfo.project === '120min深海热贝'}}" />
+            <radio value="120min深海热贝" checked="{{consultationInfo.project === '120min深海热贝'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             120min深海热贝
           </label>
         </view>
@@ -308,7 +339,7 @@
         <text class="form-label">技师</text>
         <view class="technician-selector">
           <label
-            class="technician-option {{consultationInfo.technician === item.name ? 'selected' : ''}} {{item.isOccupied ? 'occupied' : ''}}"
+            class="technician-option {{(isDualMode ? (activeGuest === 1 ? guest1Info.technician : guest2Info.technician) : consultationInfo.technician) === item.name ? 'selected' : ''}} {{item.isOccupied ? 'occupied' : ''}}"
             wx:for="{{technicianList}}"
             wx:key="id"
             bindtap="onTechnicianSelect"
@@ -318,7 +349,7 @@
           >
             <radio
               value="{{item.name}}"
-              checked="{{consultationInfo.technician === item.name}}"
+              checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.technician : guest2Info.technician) : consultationInfo.technician) === item.name}}"
               disabled="{{item.isOccupied}}" />
             <view class="tech-info">
               <text class="tech-name">{{item.name}}</text>
@@ -327,61 +358,61 @@
           </label>
         </view>
         <view class="checkbox-group">
-          <label class="checkbox-item {{consultationInfo.isClockIn ? 'selected' : ''}}" bindtap="onClockInSelect">
-            <checkbox checked="{{consultationInfo.isClockIn}}" />
+          <label class="checkbox-item {{(isDualMode ? (activeGuest === 1 ? guest1Info.isClockIn : guest2Info.isClockIn) : consultationInfo.isClockIn) ? 'selected' : ''}}" bindtap="onClockInSelect">
+            <checkbox checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.isClockIn : guest2Info.isClockIn) : consultationInfo.isClockIn)}}" />
             点钟
           </label>
         </view>
       </view>
-      <view class="form-item">
-        <text class="form-label">房间</text>
+      <view class="form-item {{isDualMode && activeGuest === 2 ? 'shared-field-disabled' : ''}}">
+        <text class="form-label">房间{{isDualMode ? '（共享）' : ''}}</text>
         <view class="room-selector">
           <label
-            class="room-option {{consultationInfo.room === '苏梅' ? 'selected' : ''}}"
-            bindtap="onRoomSelect"
+            class="room-option {{consultationInfo.room === '苏梅' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onRoomSelect'}}"
             data-room="苏梅"
           >
-            <radio value="苏梅" checked="{{consultationInfo.room === '苏梅'}}" />
+            <radio value="苏梅" checked="{{consultationInfo.room === '苏梅'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             苏梅
           </label>
           <label
-            class="room-option {{consultationInfo.room === '法罗' ? 'selected' : ''}}"
-            bindtap="onRoomSelect"
+            class="room-option {{consultationInfo.room === '法罗' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onRoomSelect'}}"
             data-room="法罗"
           >
-            <radio value="法罗" checked="{{consultationInfo.room === '法罗'}}" />
+            <radio value="法罗" checked="{{consultationInfo.room === '法罗'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             法罗
           </label>
           <label
-            class="room-option {{consultationInfo.room === '帕劳' ? 'selected' : ''}}"
-            bindtap="onRoomSelect"
+            class="room-option {{consultationInfo.room === '帕劳' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onRoomSelect'}}"
             data-room="帕劳"
           >
-            <radio value="帕劳" checked="{{consultationInfo.room === '帕劳'}}" />
+            <radio value="帕劳" checked="{{consultationInfo.room === '帕劳'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             帕劳
           </label>
           <label
-            class="room-option {{consultationInfo.room === '巴厘' ? 'selected' : ''}}"
-            bindtap="onRoomSelect"
+            class="room-option {{consultationInfo.room === '巴厘' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onRoomSelect'}}"
             data-room="巴厘"
           >
-            <radio value="巴厘" checked="{{consultationInfo.room === '巴厘'}}" />
+            <radio value="巴厘" checked="{{consultationInfo.room === '巴厘'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             巴厘
           </label>
           <label
-            class="room-option {{consultationInfo.room === '大溪地' ? 'selected' : ''}}"
-            bindtap="onRoomSelect"
+            class="room-option {{consultationInfo.room === '大溪地' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onRoomSelect'}}"
             data-room="大溪地"
           >
-            <radio value="大溪地" checked="{{consultationInfo.room === '大溪地'}}" />
+            <radio value="大溪地" checked="{{consultationInfo.room === '大溪地'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             大溪地
           </label>
           <label
-            class="room-option {{consultationInfo.room === '西西里' ? 'selected' : ''}}"
-            bindtap="onRoomSelect"
+            class="room-option {{consultationInfo.room === '西西里' ? 'selected' : ''}} {{isDualMode && activeGuest === 2 ? 'disabled' : ''}}"
+            bindtap="{{isDualMode && activeGuest === 2 ? '' : 'onRoomSelect'}}"
             data-room="西西里"
           >
-            <radio value="西西里" checked="{{consultationInfo.room === '西西里'}}" />
+            <radio value="西西里" checked="{{consultationInfo.room === '西西里'}}" disabled="{{isDualMode && activeGuest === 2}}" />
             西西里
           </label>
         </view>
@@ -398,39 +429,40 @@
             class="form-input"
             placeholder="选填"
             bind:input="onSurnameInput"
-            value="{{consultationInfo.surname}}" />
+            value="{{isDualMode ? (activeGuest === 1 ? guest1Info.surname : guest2Info.surname) : consultationInfo.surname}}" />
         </view>
         <view class="form-field">
           <view class="gender-selector">
             <label
-              class="gender-option {{consultationInfo.gender === 'male' ? 'selected' : ''}}"
+              class="gender-option {{(isDualMode ? (activeGuest === 1 ? guest1Info.gender : guest2Info.gender) : consultationInfo.gender) === 'male' ? 'selected' : ''}}"
               bindtap="onGenderSelect"
               data-gender="male"
             >
-              <radio value="male" checked="{{consultationInfo.gender === 'male'}}" />
+              <radio value="male" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.gender : guest2Info.gender) : consultationInfo.gender) === 'male'}}" />
               先生
             </label>
             <label
-              class="gender-option {{consultationInfo.gender === 'female' ? 'selected' : ''}}"
+              class="gender-option {{(isDualMode ? (activeGuest === 1 ? guest1Info.gender : guest2Info.gender) : consultationInfo.gender) === 'female' ? 'selected' : ''}}"
               bindtap="onGenderSelect"
               data-gender="female"
             >
-              <radio value="female" checked="{{consultationInfo.gender === 'female'}}" />
+              <radio value="female" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.gender : guest2Info.gender) : consultationInfo.gender) === 'female'}}" />
               女士
             </label>
           </view>
         </view>
       </view>
       <!-- 手机号 -->
-      <view class="form-item">
-        <text class="form-label">手机号</text>
+      <view class="form-item {{isDualMode && activeGuest === 2 ? 'shared-field-disabled' : ''}}">
+        <text class="form-label">手机号{{isDualMode ? '（共享）' : ''}}</text>
         <input
           class="form-input"
           type="number"
           placeholder="选填"
           maxlength="11"
           bind:input="onPhoneInput"
-          value="{{consultationInfo.phone}}" />
+          value="{{consultationInfo.phone}}"
+          disabled="{{isDualMode && activeGuest === 2}}" />
       </view>
       <!-- 券码 -->
       <view class="form-item coupon-form-item">
@@ -441,30 +473,30 @@
             type="number"
             placeholder="选填"
             bind:input="onCouponCodeInput"
-            value="{{consultationInfo.couponCode}}" />
+            value="{{isDualMode ? (activeGuest === 1 ? guest1Info.couponCode : guest2Info.couponCode) : consultationInfo.couponCode}}" />
           <view class="coupon-platform-selector">
             <label
-              class="platform-option {{consultationInfo.couponPlatform === 'meituan' ? 'selected' : ''}}"
+              class="platform-option {{(isDualMode ? (activeGuest === 1 ? guest1Info.couponPlatform : guest2Info.couponPlatform) : consultationInfo.couponPlatform) === 'meituan' ? 'selected' : ''}}"
               bindtap="onCouponPlatformSelect"
               data-platform="meituan"
             >
-              <radio value="meituan" checked="{{consultationInfo.couponPlatform === 'meituan'}}" />
+              <radio value="meituan" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.couponPlatform : guest2Info.couponPlatform) : consultationInfo.couponPlatform) === 'meituan'}}" />
               美团
             </label>
             <label
-              class="platform-option {{consultationInfo.couponPlatform === 'dianping' ? 'selected' : ''}}"
+              class="platform-option {{(isDualMode ? (activeGuest === 1 ? guest1Info.couponPlatform : guest2Info.couponPlatform) : consultationInfo.couponPlatform) === 'dianping' ? 'selected' : ''}}"
               bindtap="onCouponPlatformSelect"
               data-platform="dianping"
             >
-              <radio value="dianping" checked="{{consultationInfo.couponPlatform === 'dianping'}}" />
+              <radio value="dianping" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.couponPlatform : guest2Info.couponPlatform) : consultationInfo.couponPlatform) === 'dianping'}}" />
               点评
             </label>
             <label
-              class="platform-option {{consultationInfo.couponPlatform === 'douyin' ? 'selected' : ''}}"
+              class="platform-option {{(isDualMode ? (activeGuest === 1 ? guest1Info.couponPlatform : guest2Info.couponPlatform) : consultationInfo.couponPlatform) === 'douyin' ? 'selected' : ''}}"
               bindtap="onCouponPlatformSelect"
               data-platform="douyin"
             >
-              <radio value="douyin" checked="{{consultationInfo.couponPlatform === 'douyin'}}" />
+              <radio value="douyin" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.couponPlatform : guest2Info.couponPlatform) : consultationInfo.couponPlatform) === 'douyin'}}" />
               抖音
             </label>
           </view>
@@ -476,7 +508,7 @@
           class="form-textarea"
           placeholder="选填"
           bind:input="onRemarksInput"
-          value="{{consultationInfo.remarks}}"
+          value="{{isDualMode ? (activeGuest === 1 ? guest1Info.remarks : guest2Info.remarks) : consultationInfo.remarks}}"
           auto-height
           maxlength="200"
         >

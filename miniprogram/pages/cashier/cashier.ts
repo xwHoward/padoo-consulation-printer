@@ -42,15 +42,21 @@ interface ReserveForm {
 	gender: 'male' | 'female';
 	project: string;
 	phone: string;
-	technicianId: string;
-	technicianName: string;
+	// 支持多位技师
+	selectedTechnicians: Array<{id: string; name: string}>;
 	startTime: string;
+	// 编辑时用
+	id?: string;
+	technicianId?: string;
+	technicianName?: string;
 }
 
 interface StaffAvailability {
 	id: string;
 	name: string;
 	isOccupied: boolean;
+	occupiedReason?: string;
+	isSelected?: boolean;
 }
 
 Component({
@@ -76,9 +82,11 @@ Component({
 			gender: 'male' as 'male' | 'female',
 			project: '',
 			phone: '',
+			selectedTechnicians: [] as Array<{id: string; name: string}>,
+			startTime: '',
+			// 兼容编辑模式
 			technicianId: '',
 			technicianName: '',
-			startTime: '',
 		},
 		// 结算弹窗相关
 		showSettlementModal: false,
@@ -465,9 +473,10 @@ Component({
 					gender: 'male',
 					project: '',
 					phone: '',
+					selectedTechnicians: [],
+					startTime: startTimeStr,
 					technicianId: '',
 					technicianName: '',
-					startTime: startTimeStr,
 				}
 			}, () => {
 				this.checkStaffAvailability();
@@ -504,6 +513,11 @@ Component({
 		editReservation(id: string) {
 			const record = db.findById<ReservationRecord>(Collections.RESERVATIONS, id);
 			if (record) {
+				// 编辑时将单个技师放入数组
+				const selectedTechnicians: Array<{id: string; name: string}> = [];
+				if (record.technicianId && record.technicianName) {
+					selectedTechnicians.push({id: record.technicianId, name: record.technicianName});
+				}
 				this.setData({
 					showReserveModal: true,
 					reserveForm: {
@@ -513,9 +527,10 @@ Component({
 						gender: record.gender,
 						project: record.project,
 						phone: record.phone,
+						selectedTechnicians,
+						startTime: record.startTime,
 						technicianId: record.technicianId || '',
 						technicianName: record.technicianName || '',
-						startTime: record.startTime,
 					}
 				}, () => {
 					this.checkStaffAvailability();
@@ -564,11 +579,15 @@ Component({
 					occupiedReason = `${ conflictTask.startTime }-${ conflictTask.endTime } ${ customerName }${ gender }${ isReservation ? '(预约)' : '' }`;
 				}
 
+				// 检查是否已选中
+				const isSelected = this.data.reserveForm.selectedTechnicians.some(t => t.id === staff.id);
+
 				return {
 					id: staff.id,
 					name: staff.name,
 					isOccupied: !!conflictTask,
-					occupiedReason
+					occupiedReason,
+					isSelected
 				};
 			});
 
@@ -604,10 +623,39 @@ Component({
 				wx.showToast({title: reason || '该技师在此时段已有安排', icon: 'none', duration: 2500});
 				return;
 			}
+			
+			// 多选逻辑：切换选中状态
+			const selectedTechnicians = [...this.data.reserveForm.selectedTechnicians];
+			const existingIndex = selectedTechnicians.findIndex(t => t.id === id);
+			
+			if (existingIndex !== -1) {
+				// 已选中，取消选择
+				selectedTechnicians.splice(existingIndex, 1);
+			} else {
+				// 未选中，添加
+				selectedTechnicians.push({id, name});
+			}
+			
+			// 更新 staffAvailability 的 isSelected 状态
+			const staffAvailability = this.data.staffAvailability.map(staff => ({
+				...staff,
+				isSelected: selectedTechnicians.some(t => t.id === staff.id)
+			}));
+			
 			this.setData({
-				'reserveForm.technicianId': id,
-				'reserveForm.technicianName': name
+				'reserveForm.selectedTechnicians': selectedTechnicians,
+				staffAvailability
 			});
+		},
+
+		// 选择项目（平铺版）
+		selectReserveProject(e: any) {
+			const {project} = e.currentTarget.dataset;
+			const currentProject = this.data.reserveForm.project;
+			// 切换选中状态
+			this.setData({
+				'reserveForm.project': currentProject === project ? '' : project
+			}, () => this.checkStaffAvailability());
 		},
 
 		setReserveGender(e: any) {
@@ -636,33 +684,84 @@ Component({
 			const endM = endTotal % 60;
 			const endTime = `${ String(endH).padStart(2, '0') }:${ String(endM).padStart(2, '0') }`;
 
-			const record: Omit<ReservationRecord, 'id' | 'createdAt' | 'updatedAt'> = {
-				date: reserveForm.date,
-				customerName: reserveForm.customerName || '',
-				gender: reserveForm.gender,
-				phone: reserveForm.phone,
-				project: reserveForm.project || '待定',
-				technicianId: reserveForm.technicianId,
-				technicianName: reserveForm.technicianName,
-				startTime: reserveForm.startTime,
-				endTime: endTime
-			};
-
-			let success = false;
+			// 如果是编辑模式，只更新第一个技师
 			if (reserveForm.id) {
-				// 更新
-				success = db.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm.id, record);
-			} else {
-				// 插入
-				success = !!db.insert<ReservationRecord>(Collections.RESERVATIONS, record);
+				const firstTech = reserveForm.selectedTechnicians[0];
+				const record: Omit<ReservationRecord, 'id' | 'createdAt' | 'updatedAt'> = {
+					date: reserveForm.date,
+					customerName: reserveForm.customerName || '',
+					gender: reserveForm.gender,
+					phone: reserveForm.phone,
+					project: reserveForm.project || '待定',
+					technicianId: firstTech?.id || '',
+					technicianName: firstTech?.name || '',
+					startTime: reserveForm.startTime,
+					endTime: endTime
+				};
+				const success = db.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm.id, record);
+				if (success) {
+					wx.showToast({title: '更新成功', icon: 'success'});
+					this.closeReserveModal();
+					this.loadData();
+				} else {
+					wx.showToast({title: '保存失败', icon: 'none'});
+				}
+				return;
 			}
 
-			if (success) {
-				wx.showToast({title: reserveForm.id ? '更新成功' : '预约成功', icon: 'success'});
+			// 新增模式：为每位选中的技师创建一条预约
+			const technicians = reserveForm.selectedTechnicians;
+			
+			// 如果没有选择技师，也允许创建一条预约（技师待定）
+			if (technicians.length === 0) {
+				const record: Omit<ReservationRecord, 'id' | 'createdAt' | 'updatedAt'> = {
+					date: reserveForm.date,
+					customerName: reserveForm.customerName || '',
+					gender: reserveForm.gender,
+					phone: reserveForm.phone,
+					project: reserveForm.project || '待定',
+					technicianId: '',
+					technicianName: '',
+					startTime: reserveForm.startTime,
+					endTime: endTime
+				};
+				const success = !!db.insert<ReservationRecord>(Collections.RESERVATIONS, record);
+				if (success) {
+					wx.showToast({title: '预约成功', icon: 'success'});
+					this.closeReserveModal();
+					this.loadData();
+				} else {
+					wx.showToast({title: '保存失败', icon: 'none'});
+				}
+				return;
+			}
+
+			// 为每位技师创建预约
+			let successCount = 0;
+			for (const tech of technicians) {
+				const record: Omit<ReservationRecord, 'id' | 'createdAt' | 'updatedAt'> = {
+					date: reserveForm.date,
+					customerName: reserveForm.customerName || '',
+					gender: reserveForm.gender,
+					phone: reserveForm.phone,
+					project: reserveForm.project || '待定',
+					technicianId: tech.id,
+					technicianName: tech.name,
+					startTime: reserveForm.startTime,
+					endTime: endTime
+				};
+				if (db.insert<ReservationRecord>(Collections.RESERVATIONS, record)) {
+					successCount++;
+				}
+			}
+
+			if (successCount === technicians.length) {
+				const msg = technicians.length > 1 ? `已创建${technicians.length}条预约` : '预约成功';
+				wx.showToast({title: msg, icon: 'success'});
 				this.closeReserveModal();
 				this.loadData();
 			} else {
-				wx.showToast({title: '保存失败', icon: 'none'});
+				wx.showToast({title: `部分保存失败(${successCount}/${technicians.length})`, icon: 'none'});
 			}
 		},
 

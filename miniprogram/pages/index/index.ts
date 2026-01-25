@@ -11,8 +11,8 @@ const DefaultConsultationInfo: ConsultationInfo = {
   surname: "",
   gender: "male",
   project: "70min精油",
-  technician: "星野",
-  room: "苏梅",
+  technician: "",
+  room: "",
   massageStrength: "standard",
   essentialOil: "lavender",
   selectedParts: {},
@@ -21,6 +21,37 @@ const DefaultConsultationInfo: ConsultationInfo = {
   phone: "", // 默认无手机号
   couponCode: "", // 默认无券码
   couponPlatform: "meituan", // 默认无平台
+  upgradeHimalayanSaltStone: false, // 默认不勾选升级冬季喜马拉雅热油盐石
+};
+
+// 顾客独立信息（双人模式下每位顾客独立填写）
+interface GuestInfo {
+  surname: string;
+  gender: 'male' | 'female';
+  selectedParts: Record<string, boolean>;
+  massageStrength: 'standard' | 'soft' | 'gravity';
+  essentialOil: string;
+  remarks: string;
+  // 独立字段：技师、点钟、券码
+  technician: string;
+  isClockIn: boolean;
+  couponCode: string;
+  couponPlatform: '' | 'meituan' | 'dianping' | 'douyin';
+  upgradeHimalayanSaltStone: boolean; // 是否升级冬季喜马拉雅热油盐石
+}
+
+const DefaultGuestInfo: GuestInfo = {
+  surname: "",
+  gender: "male",
+  selectedParts: {},
+  massageStrength: "standard",
+  essentialOil: "lavender",
+  remarks: "",
+  technician: "",
+  isClockIn: false,
+  couponCode: "",
+  couponPlatform: "",
+  upgradeHimalayanSaltStone: false, // 默认不勾选升级冬季喜马拉雅热油盐石
 };
 
 Component({
@@ -32,6 +63,11 @@ Component({
     printerCharacteristicId: "",
     editId: "", // 正在编辑的记录ID
     technicianList: [] as any[], // 动态技师列表
+    // 双人模式相关
+    isDualMode: false, // 是否为双人模式
+    activeGuest: 1 as 1 | 2, // 当前活跃的顾客标签
+    guest1Info: {...DefaultGuestInfo, selectedParts: {}} as GuestInfo, // 顾客1独立信息
+    guest2Info: {...DefaultGuestInfo, selectedParts: {}} as GuestInfo, // 顾客2独立信息
   },
 
   lifetimes: {
@@ -154,18 +190,77 @@ Component({
       return false;
     },
 
+    // 切换双人模式
+    toggleDualMode() {
+      const newMode = !this.data.isDualMode;
+      if (newMode) {
+        // 启用双人模式时，将当前咨询单信息复制到顾客1
+        const {consultationInfo} = this.data;
+        this.setData({
+          isDualMode: true,
+          activeGuest: 1,
+          guest1Info: {
+            surname: consultationInfo.surname,
+            gender: (consultationInfo.gender || 'male') as 'male' | 'female',
+            selectedParts: {...consultationInfo.selectedParts},
+            massageStrength: (consultationInfo.massageStrength || 'standard') as 'standard' | 'soft' | 'gravity',
+            essentialOil: consultationInfo.essentialOil,
+            remarks: consultationInfo.remarks,
+            technician: consultationInfo.technician,
+            isClockIn: consultationInfo.isClockIn,
+            couponCode: consultationInfo.couponCode,
+            couponPlatform: consultationInfo.couponPlatform,
+            upgradeHimalayanSaltStone: consultationInfo.upgradeHimalayanSaltStone,
+          },
+          guest2Info: {...DefaultGuestInfo, selectedParts: {}},
+        });
+      } else {
+        // 关闭双人模式时，将顾客1信息复制回咨询单
+        const {guest1Info} = this.data;
+        this.setData({
+          isDualMode: false,
+          activeGuest: 1,
+          'consultationInfo.surname': guest1Info.surname,
+          'consultationInfo.gender': guest1Info.gender,
+          'consultationInfo.selectedParts': {...guest1Info.selectedParts},
+          'consultationInfo.massageStrength': guest1Info.massageStrength,
+          'consultationInfo.essentialOil': guest1Info.essentialOil,
+          'consultationInfo.remarks': guest1Info.remarks,
+          'consultationInfo.technician': guest1Info.technician,
+          'consultationInfo.isClockIn': guest1Info.isClockIn,
+          'consultationInfo.couponCode': guest1Info.couponCode,
+          'consultationInfo.couponPlatform': guest1Info.couponPlatform,
+          'consultationInfo.upgradeHimalayanSaltStone': guest1Info.upgradeHimalayanSaltStone,
+        });
+      }
+    },
+
+    // 切换顾客标签
+    switchGuest(e: any) {
+      const guest = parseInt(e.currentTarget.dataset.guest) as 1 | 2;
+      this.setData({activeGuest: guest});
+    },
+
     // 姓氏输入
     onSurnameInput(e: any) {
-      this.setData({
-        "consultationInfo.surname": e.detail.value,
-      });
+      const {isDualMode, activeGuest} = this.data;
+      if (isDualMode) {
+        const key = activeGuest === 1 ? 'guest1Info.surname' : 'guest2Info.surname';
+        this.setData({[key]: e.detail.value});
+      } else {
+        this.setData({"consultationInfo.surname": e.detail.value});
+      }
     },
 
     // 性别选择
     onGenderSelect(e: any) {
-      this.setData({
-        "consultationInfo.gender": e.currentTarget.dataset.gender,
-      });
+      const {isDualMode, activeGuest} = this.data;
+      if (isDualMode) {
+        const key = activeGuest === 1 ? 'guest1Info.gender' : 'guest2Info.gender';
+        this.setData({[key]: e.currentTarget.dataset.gender});
+      } else {
+        this.setData({"consultationInfo.gender": e.currentTarget.dataset.gender});
+      }
     },
 
     // 项目选择
@@ -184,23 +279,36 @@ Component({
         wx.showToast({title: reason || '该技师当前时段已有安排', icon: 'none', duration: 2500});
         return;
       }
-      this.setData({
-        "consultationInfo.technician": technician,
-      });
+      const {isDualMode, activeGuest} = this.data;
+      if (isDualMode) {
+        const key = activeGuest === 1 ? 'guest1Info.technician' : 'guest2Info.technician';
+        this.setData({[key]: technician});
+      } else {
+        this.setData({"consultationInfo.technician": technician});
+      }
     },
 
     // 点钟选择
     onClockInSelect() {
-      this.setData({
-        "consultationInfo.isClockIn": !this.data.consultationInfo.isClockIn,
-      });
+      const {isDualMode, activeGuest} = this.data;
+      if (isDualMode) {
+        const currentInfo = activeGuest === 1 ? this.data.guest1Info : this.data.guest2Info;
+        const key = activeGuest === 1 ? 'guest1Info.isClockIn' : 'guest2Info.isClockIn';
+        this.setData({[key]: !currentInfo.isClockIn});
+      } else {
+        this.setData({"consultationInfo.isClockIn": !this.data.consultationInfo.isClockIn});
+      }
     },
 
     // 备注输入
     onRemarksInput(e: any) {
-      this.setData({
-        "consultationInfo.remarks": e.detail.value,
-      });
+      const {isDualMode, activeGuest} = this.data;
+      if (isDualMode) {
+        const key = activeGuest === 1 ? 'guest1Info.remarks' : 'guest2Info.remarks';
+        this.setData({[key]: e.detail.value});
+      } else {
+        this.setData({"consultationInfo.remarks": e.detail.value});
+      }
     },
 
     // 手机号输入
@@ -212,19 +320,27 @@ Component({
 
     // 券码输入
     onCouponCodeInput(e: any) {
-      this.setData({
-        "consultationInfo.couponCode": e.detail.value,
-      });
+      const {isDualMode, activeGuest} = this.data;
+      if (isDualMode) {
+        const key = activeGuest === 1 ? 'guest1Info.couponCode' : 'guest2Info.couponCode';
+        this.setData({[key]: e.detail.value});
+      } else {
+        this.setData({"consultationInfo.couponCode": e.detail.value});
+      }
     },
 
     // 券码平台选择
     onCouponPlatformSelect(e: any) {
       const platform = e.currentTarget.dataset.platform;
-      // 如果点击已选中的平台，则取消选择
-      const currentPlatform = this.data.consultationInfo.couponPlatform;
-      this.setData({
-        "consultationInfo.couponPlatform": currentPlatform === platform ? "" : platform,
-      });
+      const {isDualMode, activeGuest} = this.data;
+      if (isDualMode) {
+        const currentInfo = activeGuest === 1 ? this.data.guest1Info : this.data.guest2Info;
+        const key = activeGuest === 1 ? 'guest1Info.couponPlatform' : 'guest2Info.couponPlatform';
+        this.setData({[key]: currentInfo.couponPlatform === platform ? '' : platform});
+      } else {
+        const currentPlatform = this.data.consultationInfo.couponPlatform;
+        this.setData({"consultationInfo.couponPlatform": currentPlatform === platform ? '' : platform});
+      }
     },
 
     // 房间选择
@@ -238,35 +354,61 @@ Component({
     // 按摩力度选择
     onMassageStrengthSelect(e: any) {
       const strength = e.currentTarget.dataset.strength;
-      this.setData({
-        "consultationInfo.massageStrength": strength,
-      });
+      const {isDualMode, activeGuest} = this.data;
+      if (isDualMode) {
+        const key = activeGuest === 1 ? 'guest1Info.massageStrength' : 'guest2Info.massageStrength';
+        this.setData({[key]: strength});
+      } else {
+        this.setData({"consultationInfo.massageStrength": strength});
+      }
     },
 
     // 精油选择（单选）
     onEssentialOilSelect(e: any) {
       const oil = e.currentTarget.dataset.oil;
-      this.setData({
-        "consultationInfo.essentialOil": oil,
-      });
+      const {isDualMode, activeGuest} = this.data;
+      if (isDualMode) {
+        const key = activeGuest === 1 ? 'guest1Info.essentialOil' : 'guest2Info.essentialOil';
+        this.setData({[key]: oil});
+      } else {
+        this.setData({"consultationInfo.essentialOil": oil});
+      }
+    },
+
+    // 升级选项选择
+    onUpgradeSelect() {
+      const {isDualMode, activeGuest} = this.data;
+      if (isDualMode) {
+        const currentInfo = activeGuest === 1 ? this.data.guest1Info : this.data.guest2Info;
+        const key = activeGuest === 1 ? 'guest1Info.upgradeHimalayanSaltStone' : 'guest2Info.upgradeHimalayanSaltStone';
+        this.setData({[key]: !currentInfo.upgradeHimalayanSaltStone});
+      } else {
+        this.setData({"consultationInfo.upgradeHimalayanSaltStone": !this.data.consultationInfo.upgradeHimalayanSaltStone});
+      }
     },
 
     // 加强部位选择（使用字段map控制）
     onBodyPartSelect(e: any) {
       const part = e.currentTarget.dataset.part;
-      const selectedParts: Record<string, boolean> = {
-        ...this.data.consultationInfo.selectedParts,
-      };
-      selectedParts[part] = !selectedParts[part];
-
-      const updatedInfo = {
-        ...this.data.consultationInfo,
-        selectedParts: selectedParts,
-      };
-
-      this.setData({
-        consultationInfo: updatedInfo,
-      });
+      const {isDualMode, activeGuest} = this.data;
+      
+      if (isDualMode) {
+        const infoKey = activeGuest === 1 ? 'guest1Info' : 'guest2Info';
+        const currentInfo = activeGuest === 1 ? this.data.guest1Info : this.data.guest2Info;
+        const selectedParts = {...currentInfo.selectedParts};
+        selectedParts[part] = !selectedParts[part];
+        this.setData({[`${infoKey}.selectedParts`]: selectedParts});
+      } else {
+        const selectedParts: Record<string, boolean> = {
+          ...this.data.consultationInfo.selectedParts,
+        };
+        selectedParts[part] = !selectedParts[part];
+        const updatedInfo = {
+          ...this.data.consultationInfo,
+          selectedParts: selectedParts,
+        };
+        this.setData({consultationInfo: updatedInfo});
+      }
     },
 
     // 连接蓝牙打印机
@@ -542,30 +684,69 @@ Component({
 
     // 执行实际的打印操作
     doPrint() {
-      const {
-        consultationInfo,
-        printerDeviceId,
-        printerServiceId,
-        printerCharacteristicId,
-      } = this.data;
+      const {isDualMode, guest1Info, guest2Info, consultationInfo, printerDeviceId, printerServiceId, printerCharacteristicId} = this.data;
 
-      // 构建打印内容
-      const printContent = this.buildPrintContent(consultationInfo);
+      // 双人模式下构建两份打印内容
+      let printContents: string[] = [];
+      if (isDualMode) {
+        // 顾客1打印内容（使用顾客1的技师、点钟、券码）
+        const info1: ConsultationInfo = {
+          ...consultationInfo,
+          surname: guest1Info.surname,
+          gender: guest1Info.gender,
+          selectedParts: guest1Info.selectedParts,
+          massageStrength: guest1Info.massageStrength,
+          essentialOil: guest1Info.essentialOil,
+          remarks: guest1Info.remarks,
+          technician: guest1Info.technician,
+          isClockIn: guest1Info.isClockIn,
+          couponCode: guest1Info.couponCode,
+          couponPlatform: guest1Info.couponPlatform,
+        };
+        printContents.push(this.buildPrintContent(info1));
+        
+        // 顾客2打印内容（使用顾客2的技师、点钟、券码）
+        const info2: ConsultationInfo = {
+          ...consultationInfo,
+          surname: guest2Info.surname,
+          gender: guest2Info.gender,
+          selectedParts: guest2Info.selectedParts,
+          massageStrength: guest2Info.massageStrength,
+          essentialOil: guest2Info.essentialOil,
+          remarks: guest2Info.remarks,
+          technician: guest2Info.technician,
+          isClockIn: guest2Info.isClockIn,
+          couponCode: guest2Info.couponCode,
+          couponPlatform: guest2Info.couponPlatform,
+        };
+        printContents.push(this.buildPrintContent(info2));
+      } else {
+        printContents.push(this.buildPrintContent(consultationInfo));
+      }
 
-      // 转换为 Uint8Array 以便分片
+      // 顺序打印所有内容
+      this.printMultiple(printContents, printerDeviceId, printerServiceId, printerCharacteristicId);
+    },
+
+    // 顺序打印多份内容
+    printMultiple(contents: string[], deviceId: string, serviceId: string, characteristicId: string, index: number = 0) {
+      if (index >= contents.length) {
+        const msg = contents.length > 1 ? `已打印${contents.length}张单据` : '打印成功';
+        wx.showToast({title: msg, icon: 'success'});
+        return;
+      }
+
+      const printContent = contents[index];
       const uint8Array = new Uint8Array(GBK.encode(printContent));
-      
-      // 安卓机型 BLE 写入通常有 MTU 限制（默认为 20 字节）
-      // 需要分片发送数据，否则大块数据会导致打印停止或丢失
       const chunkSize = 20;
       let offset = 0;
 
       const writeNextChunk = () => {
         if (offset >= uint8Array.length) {
-          wx.showToast({
-            title: "打印成功",
-            icon: "success",
-          });
+          // 当前单据打印完成，打印下一份
+          setTimeout(() => {
+            this.printMultiple(contents, deviceId, serviceId, characteristicId, index + 1);
+          }, 500); // 两张单据间隔500ms
           return;
         }
 
@@ -573,21 +754,17 @@ Component({
         const chunk = uint8Array.slice(offset, end).buffer;
 
         wx.writeBLECharacteristicValue({
-          deviceId: printerDeviceId,
-          serviceId: printerServiceId,
-          characteristicId: printerCharacteristicId,
+          deviceId,
+          serviceId,
+          characteristicId,
           value: chunk,
           success: () => {
             offset += chunkSize;
-            // 延迟 20ms 发送下一片，防止安卓下打印机缓冲区溢出
             setTimeout(writeNextChunk, 20);
           },
           fail: (err) => {
-            wx.showToast({
-              title: "打印失败",
-              icon: "none",
-            });
-            console.error("分片打印失败:", err);
+            wx.showToast({title: '打印失败', icon: 'none'});
+            console.error('分片打印失败:', err);
           },
         });
       };
@@ -608,8 +785,12 @@ Component({
                 ...DefaultConsultationInfo,
                 selectedParts: {},
               },
-
               editId: "", // 重置编辑状态
+              // 重置双人模式相关数据
+              isDualMode: false,
+              activeGuest: 1,
+              guest1Info: {...DefaultGuestInfo, selectedParts: {}},
+              guest2Info: {...DefaultGuestInfo, selectedParts: {}},
             });
             wx.showToast({
               title: "咨询单已重置",
@@ -747,6 +928,7 @@ Component({
               phone: foundRecord.phone || "",
               couponCode: foundRecord.couponCode || "",
               couponPlatform: foundRecord.couponPlatform || "",
+              upgradeHimalayanSaltStone: foundRecord.upgradeHimalayanSaltStone || false,
             },
             editId: editId,
           });
@@ -921,72 +1103,133 @@ Component({
 
     // 报钟功能
     onClockIn() {
-      const {consultationInfo, editId} = this.data;
+      const {consultationInfo, editId, isDualMode} = this.data;
 
-      // 验证必填信息（与预览功能统一）
-      if (!consultationInfo.gender) {
-        wx.showToast({
-          title: "请选择称呼",
-          icon: "none",
-        });
-        return;
-      }
-
+      // 验证必填信息（项目和房间是共享的）
       if (!consultationInfo.project) {
-        wx.showToast({
-          title: "请选择项目",
-          icon: "none",
-        });
+        wx.showToast({title: '请选择项目', icon: 'none'});
         return;
       }
-
-      if (!consultationInfo.technician) {
-        wx.showToast({
-          title: "请选择技师",
-          icon: "none",
-        });
-        return;
-      }
-
       if (!consultationInfo.room) {
-        wx.showToast({
-          title: "请选择房间",
-          icon: "none",
-        });
+        wx.showToast({title: '请选择房间', icon: 'none'});
         return;
       }
 
-      // 格式化上钟信息
-      const clockInInfo = this.formatClockInInfo(consultationInfo);
+      if (isDualMode) {
+        // 双人模式报钟（技师验证在 doDualClockIn 中进行）
+        this.doDualClockIn();
+      } else {
+        // 单人模式报钟
+        if (!consultationInfo.technician) {
+          wx.showToast({title: '请选择技师', icon: 'none'});
+          return;
+        }
+        if (!consultationInfo.gender) {
+          wx.showToast({title: '请选择称呼', icon: 'none'});
+          return;
+        }
+        
+        const clockInInfo = this.formatClockInInfo(consultationInfo);
+        const success = this.saveConsultationToCache(consultationInfo, editId);
 
-      // 保存到缓存（支持编辑）
-      const success = this.saveConsultationToCache(consultationInfo, editId);
+        if (success) {
+          if (!editId && !consultationInfo.isClockIn) {
+            this.updateRotationOrder(consultationInfo.technician);
+          }
+          wx.setClipboardData({
+            data: clockInInfo,
+            success: () => {
+              wx.showToast({title: '上钟信息已复制', icon: 'success'});
+              this.loadTechnicianList();
+            },
+            fail: (err) => {
+              wx.showToast({title: '复制失败', icon: 'none'});
+              console.error('复制到剪贴板失败:', err);
+            },
+          });
+        }
+      }
+    },
 
-      if (success) {
-        // 如果是新纪录且是轮钟（!isClockIn），更新轮排顺序
-        if (!editId && !consultationInfo.isClockIn) {
-          this.updateRotationOrder(consultationInfo.technician);
+    // 双人模式报钟
+    doDualClockIn() {
+      const {consultationInfo, guest1Info, guest2Info} = this.data;
+      
+      // 验证两位顾客的技师
+      if (!guest1Info.technician) {
+        wx.showToast({title: '请为顾客1选择技师', icon: 'none'});
+        return;
+      }
+      if (!guest2Info.technician) {
+        wx.showToast({title: '请为顾客2选择技师', icon: 'none'});
+        return;
+      }
+
+      // 构建两位顾客的完整信息（使用各自的技师、点钟、券码）
+      const info1: ConsultationInfo = {
+        ...consultationInfo,
+        surname: guest1Info.surname,
+        gender: guest1Info.gender,
+        selectedParts: guest1Info.selectedParts,
+        massageStrength: guest1Info.massageStrength,
+        essentialOil: guest1Info.essentialOil,
+        remarks: guest1Info.remarks,
+        technician: guest1Info.technician,
+        isClockIn: guest1Info.isClockIn,
+        couponCode: guest1Info.couponCode,
+        couponPlatform: guest1Info.couponPlatform,
+        upgradeHimalayanSaltStone: guest1Info.upgradeHimalayanSaltStone,
+      };
+      const info2: ConsultationInfo = {
+        ...consultationInfo,
+        surname: guest2Info.surname,
+        gender: guest2Info.gender,
+        selectedParts: guest2Info.selectedParts,
+        massageStrength: guest2Info.massageStrength,
+        essentialOil: guest2Info.essentialOil,
+        remarks: guest2Info.remarks,
+        technician: guest2Info.technician,
+        isClockIn: guest2Info.isClockIn,
+        couponCode: guest2Info.couponCode,
+        couponPlatform: guest2Info.couponPlatform,
+        upgradeHimalayanSaltStone: guest2Info.upgradeHimalayanSaltStone,
+      };
+
+      // 保存两条记录（使用相同的开始和结束时间）
+      const success1 = this.saveConsultationToCache(info1);
+      const success2 = this.saveConsultationToCache(info2);
+
+      if (success1 && success2) {
+        // 更新轮排顺序（两位技师都需要更新）
+        if (!guest1Info.isClockIn) {
+          this.updateRotationOrder(guest1Info.technician);
+        }
+        if (!guest2Info.isClockIn && guest2Info.technician !== guest1Info.technician) {
+          this.updateRotationOrder(guest2Info.technician);
         }
 
-        // 复制到剪贴板
+        // 格式化两位顾客的报钟信息
+        const clockInInfo1 = this.formatClockInInfo(info1);
+        const clockInInfo2 = this.formatClockInInfo(info2);
+        const combinedInfo = `【顾客1】
+${clockInInfo1}
+
+【顾客2】
+${clockInInfo2}`;
+
         wx.setClipboardData({
-          data: clockInInfo,
+          data: combinedInfo,
           success: () => {
-            wx.showToast({
-              title: "上钟信息已复制",
-              icon: "success",
-            });
-            // 刷新列表
+            wx.showToast({title: '双人报钟已复制', icon: 'success'});
             this.loadTechnicianList();
           },
           fail: (err) => {
-            wx.showToast({
-              title: "复制失败",
-              icon: "none",
-            });
-            console.error("复制到剪贴板失败:", err);
+            wx.showToast({title: '复制失败', icon: 'none'});
+            console.error('复制到剪贴板失败:', err);
           },
         });
+      } else {
+        wx.showToast({title: '保存失败', icon: 'error'});
       }
     },
 
@@ -1133,6 +1376,11 @@ Component({
         });
       } else {
         content += "无";
+      }
+
+      // 添加升级选项（仅当勾选时显示）
+      if (info.upgradeHimalayanSaltStone) {
+        content += `\n升级: 冬季喜马拉雅热油盐石`;
       }
 
       // 添加备注信息（仅当有内容时显示）

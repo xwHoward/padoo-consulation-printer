@@ -579,7 +579,8 @@ page {
 					background-color: @bg-color;
 					min-height: 32px;
 
-					radio {
+					radio,
+					checkbox {
 						position: absolute;
 						opacity: 0;
 						width: 0;
@@ -629,6 +630,53 @@ page {
 						.tech-info .tech-reason {
 							color: #999;
 						}
+					}
+				}
+			}
+		}
+
+		/* 项目平铺选择器 */
+		.project-item {
+			align-items: flex-start !important;
+			flex-direction: column;
+
+			.project-selector {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px;
+				margin-top: 8px;
+				width: 100%;
+
+				.project-option {
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					font-size: 13px;
+					color: @text-color;
+					cursor: pointer;
+					padding: 6px 12px;
+					border-radius: 5px;
+					border: 1px solid @border-color;
+					transition: all 0.3s ease;
+					position: relative;
+					background-color: @bg-color;
+					min-width: 80px;
+
+					radio {
+						position: absolute;
+						opacity: 0;
+						width: 0;
+						height: 0;
+					}
+
+					&.selected {
+						border-color: @primary-color;
+						background-color: rgba(255, 107, 0, 0.05);
+						color: @primary-color;
+					}
+
+					&:active {
+						border-color: @primary-color;
 					}
 				}
 			}

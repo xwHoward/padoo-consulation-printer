@@ -212,18 +212,7 @@
           </view>
         </view>
       </view>
-      <view class="form-item">
-        <text class="form-label">项目</text>
-        <picker
-          mode="selector"
-          range="{{projects}}"
-          bindchange="onReserveFieldChange"
-          data-field="project"
-        >
-          <view class="picker-val">{{reserveForm.project || '点击选择项目（选填）'}}</view>
-        </picker>
-      </view>
-      <view class="form-item">
+            <view class="form-item">
         <text class="form-label">手机号</text>
         <input
           class="form-input"
@@ -234,11 +223,26 @@
           bindinput="onReserveFieldChange"
           data-field="phone" />
       </view>
+      <view class="form-item project-item">
+        <text class="form-label">项目</text>
+        <view class="project-selector">
+          <label
+            class="project-option {{reserveForm.project === item ? 'selected' : ''}}"
+            wx:for="{{projects}}"
+            wx:key="*this"
+            bindtap="selectReserveProject"
+            data-project="{{item}}"
+          >
+            <radio value="{{item}}" checked="{{reserveForm.project === item}}" />
+            {{item}}
+          </label>
+        </view>
+      </view>
       <view class="form-item technician-item">
-        <text class="form-label">技师</text>
+        <text class="form-label">技师{{reserveForm.selectedTechnicians.length > 0 ? '(' + reserveForm.selectedTechnicians.length + ')' : ''}}</text>
         <view class="technician-selector">
           <label
-            class="technician-option {{reserveForm.technicianId === item.id ? 'selected' : ''}} {{item.isOccupied ? 'occupied' : ''}}"
+            class="technician-option {{item.isSelected ? 'selected' : ''}} {{item.isOccupied ? 'occupied' : ''}}"
             wx:for="{{staffAvailability}}"
             wx:key="id"
             bindtap="selectReserveTechnician"
@@ -247,9 +251,9 @@
             data-occupied="{{item.isOccupied}}"
             data-reason="{{item.occupiedReason}}"
           >
-            <radio
+            <checkbox
               value="{{item.name}}"
-              checked="{{reserveForm.technicianId === item.id}}"
+              checked="{{item.isSelected}}"
               disabled="{{item.isOccupied}}" />
             <view class="tech-info">
               <text class="tech-name">{{item.name}}</text>
