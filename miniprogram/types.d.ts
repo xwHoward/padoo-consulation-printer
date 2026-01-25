@@ -25,12 +25,26 @@ interface ConsultationInfo {
   massageStrength: "standard" | "soft" | "gravity" | "";
   essentialOil: string;
   selectedParts: Record<string, boolean>;
-  isClockIn: boolean; // 是否点钟
-  remarks: string; // 备注信息
-  phone: string; // 手机号（选填）
-  couponCode: string; // 券码（选填，纯数字）
-  couponPlatform: "meituan" | "dianping" | "douyin" | ""; // 券码平台
-  upgradeHimalayanSaltStone: boolean; // 是否升级冬季喜马拉雅热油盐石
+  isClockIn: boolean;
+  remarks: string;
+  phone: string;
+  couponCode: string;
+  couponPlatform: "meituan" | "dianping" | "douyin" | "";
+  upgradeHimalayanSaltStone: boolean;
+}
+
+interface GuestInfo {
+  surname: string;
+  gender: 'male' | 'female';
+  selectedParts: Record<string, boolean>;
+  massageStrength: 'standard' | 'soft' | 'gravity';
+  essentialOil: string;
+  remarks: string;
+  technician: string;
+  isClockIn: boolean;
+  couponCode: string;
+  couponPlatform: '' | 'meituan' | 'dianping' | 'douyin';
+  upgradeHimalayanSaltStone: boolean;
 }
 
 // 定义带ID的咨询单数据结构（用于历史记录）

@@ -15,14 +15,6 @@
   </view>
   <view slot="right" class="nav-right-btns">
     <view
-      bindtap="goToStoreConfig"
-      class="refresh-btn"
-      aria-role="button"
-      aria-label="配置"
-    >
-      <text class="refresh-text">配置</text>
-    </view>
-    <view
       bindtap="goToCashier"
       class="refresh-btn"
       aria-role="button"
@@ -240,6 +232,7 @@
       <view class="checkbox-group">
         <label class="checkbox-item upgrade-option {{(isDualMode ? (activeGuest === 1 ? guest1Info.upgradeHimalayanSaltStone : guest2Info.upgradeHimalayanSaltStone) : consultationInfo.upgradeHimalayanSaltStone) ? 'selected' : ''}}" bindtap="onUpgradeSelect">
           <image class="upgrade-bg" src="/assets/saltstone.jpg" mode="aspectFill" />
+          <image class="upgrade-bg-qr" src="/assets/qr.jpg" mode="aspectFill" />
           <view class="upgrade-mask"></view>
           <view class="upgrade-gradient-mask"></view>
           <checkbox checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.upgradeHimalayanSaltStone : guest2Info.upgradeHimalayanSaltStone) : consultationInfo.upgradeHimalayanSaltStone)}}" />

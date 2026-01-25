@@ -137,6 +137,11 @@ Page({
     detailText += `按摩力度: ${ this.getMassageStrengthText(record.massageStrength) }\n`;
     detailText += `精油选择: ${ record.essentialOil || '无' }\n`;
 
+    // 处理升级选项
+    if (record.upgradeHimalayanSaltStone) {
+      detailText += `升级选项: 冬季喜马拉雅热油盐石\n`;
+    }
+
     // 处理加强部位
     const selectedParts = Object.keys(record.selectedParts).filter(part => record.selectedParts[part]);
     detailText += `加强部位: ${ selectedParts.length > 0 ? selectedParts.join(', ') : '无' }\n\n`;

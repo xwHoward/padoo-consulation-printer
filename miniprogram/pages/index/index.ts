@@ -21,24 +21,8 @@ const DefaultConsultationInfo: ConsultationInfo = {
   phone: "", // 默认无手机号
   couponCode: "", // 默认无券码
   couponPlatform: "meituan", // 默认无平台
-  upgradeHimalayanSaltStone: false, // 默认不勾选升级冬季喜马拉雅热油盐石
+  upgradeHimalayanSaltStone: false,
 };
-
-// 顾客独立信息（双人模式下每位顾客独立填写）
-interface GuestInfo {
-  surname: string;
-  gender: 'male' | 'female';
-  selectedParts: Record<string, boolean>;
-  massageStrength: 'standard' | 'soft' | 'gravity';
-  essentialOil: string;
-  remarks: string;
-  // 独立字段：技师、点钟、券码
-  technician: string;
-  isClockIn: boolean;
-  couponCode: string;
-  couponPlatform: '' | 'meituan' | 'dianping' | 'douyin';
-  upgradeHimalayanSaltStone: boolean; // 是否升级冬季喜马拉雅热油盐石
-}
 
 const DefaultGuestInfo: GuestInfo = {
   surname: "",
@@ -51,8 +35,91 @@ const DefaultGuestInfo: GuestInfo = {
   isClockIn: false,
   couponCode: "",
   couponPlatform: "",
-  upgradeHimalayanSaltStone: false, // 默认不勾选升级冬季喜马拉雅热油盐石
+  upgradeHimalayanSaltStone: false,
 };
+
+function ensureConsultationInfoCompatibility(data: any): ConsultationInfo {
+  return {
+    surname: data.surname || "",
+    gender: data.gender || "male",
+    project: data.project || "70min精油",
+    technician: data.technician || "",
+    room: data.room || "",
+    massageStrength: data.massageStrength || "standard",
+    essentialOil: data.essentialOil || "lavender",
+    selectedParts: data.selectedParts || {},
+    isClockIn: data.isClockIn || false,
+    remarks: data.remarks || "",
+    phone: data.phone || "",
+    couponCode: data.couponCode || "",
+    couponPlatform: data.couponPlatform || "meituan",
+    upgradeHimalayanSaltStone: data.upgradeHimalayanSaltStone || false,
+  };
+}
+
+function ensureGuestInfoCompatibility(data: any): GuestInfo {
+  return {
+    surname: data.surname || "",
+    gender: data.gender || "male",
+    selectedParts: data.selectedParts || {},
+    massageStrength: data.massageStrength || "standard",
+    essentialOil: data.essentialOil || "lavender",
+    remarks: data.remarks || "",
+    technician: data.technician || "",
+    isClockIn: data.isClockIn || false,
+    couponCode: data.couponCode || "",
+    couponPlatform: data.couponPlatform || "",
+    upgradeHimalayanSaltStone: data.upgradeHimalayanSaltStone || false,
+  };
+}
+
+type GuestContext = {
+  isDualMode: boolean;
+  activeGuest: 1 | 2;
+  guest1Info: GuestInfo;
+  guest2Info: GuestInfo;
+  consultationInfo: ConsultationInfo;
+};
+
+function getGuestInfo(context: GuestContext): GuestInfo | ConsultationInfo {
+  if (context.isDualMode) {
+    return context.activeGuest === 1 ? context.guest1Info : context.guest2Info;
+  }
+  return context.consultationInfo;
+}
+
+function getGuestDataKey(fieldName: string, context: GuestContext): string {
+  if (context.isDualMode) {
+    const guestPrefix = context.activeGuest === 1 ? 'guest1Info' : 'guest2Info';
+    return `${guestPrefix}.${fieldName}`;
+  }
+  return `consultationInfo.${fieldName}`;
+}
+
+function updateGuestField(context: GuestContext, fieldName: string, value: any): any {
+  if (context.isDualMode) {
+    const guestKey = context.activeGuest === 1 ? 'guest1Info' : 'guest2Info';
+    return {
+      [`${guestKey}.${fieldName}`]: value
+    };
+  }
+  return {
+    [`consultationInfo.${fieldName}`]: value
+  };
+}
+
+function toggleGuestBooleanField(context: GuestContext, fieldName: string): any {
+  const currentValue = getGuestFieldValue(context, fieldName);
+  return updateGuestField(context, fieldName, !currentValue);
+}
+
+function getGuestFieldValue(context: GuestContext, fieldName: string): any {
+  if (context.isDualMode) {
+    const guestInfo = context.activeGuest === 1 ? context.guest1Info : context.guest2Info;
+    return (guestInfo as any)[fieldName];
+  }
+  return (context.consultationInfo as any)[fieldName];
+}
 
 Component({
   data: {
@@ -377,14 +444,14 @@ Component({
 
     // 升级选项选择
     onUpgradeSelect() {
-      const {isDualMode, activeGuest} = this.data;
-      if (isDualMode) {
-        const currentInfo = activeGuest === 1 ? this.data.guest1Info : this.data.guest2Info;
-        const key = activeGuest === 1 ? 'guest1Info.upgradeHimalayanSaltStone' : 'guest2Info.upgradeHimalayanSaltStone';
-        this.setData({[key]: !currentInfo.upgradeHimalayanSaltStone});
-      } else {
-        this.setData({"consultationInfo.upgradeHimalayanSaltStone": !this.data.consultationInfo.upgradeHimalayanSaltStone});
-      }
+      const context = {
+        isDualMode: this.data.isDualMode,
+        activeGuest: this.data.activeGuest,
+        guest1Info: this.data.guest1Info,
+        guest2Info: this.data.guest2Info,
+        consultationInfo: this.data.consultationInfo
+      };
+      this.setData(toggleGuestBooleanField(context, 'upgradeHimalayanSaltStone'));
     },
 
     // 加强部位选择（使用字段map控制）
@@ -912,24 +979,9 @@ Component({
         }
 
         if (foundRecord) {
-          // 设置表单数据和编辑ID
+          // 设置表单数据和编辑ID，使用兼容性函数确保旧数据正确初始化
           this.setData({
-            consultationInfo: {
-              surname: foundRecord.surname,
-              gender: foundRecord.gender,
-              project: foundRecord.project,
-              technician: foundRecord.technician,
-              room: foundRecord.room,
-              massageStrength: foundRecord.massageStrength,
-              essentialOil: foundRecord.essentialOil,
-              selectedParts: foundRecord.selectedParts,
-              isClockIn: foundRecord.isClockIn,
-              remarks: foundRecord.remarks,
-              phone: foundRecord.phone || "",
-              couponCode: foundRecord.couponCode || "",
-              couponPlatform: foundRecord.couponPlatform || "",
-              upgradeHimalayanSaltStone: foundRecord.upgradeHimalayanSaltStone || false,
-            },
+            consultationInfo: ensureConsultationInfoCompatibility(foundRecord),
             editId: editId,
           });
         } else {

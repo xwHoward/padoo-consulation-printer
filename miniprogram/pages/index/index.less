@@ -805,13 +805,23 @@ page {
   display: flex;
   align-items: center;
   padding: 20px;
-  height: 50px;
+  height: 60px;
 
   .upgrade-bg {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
+    height: 100%;
+    z-index: 0;
+    object-fit: cover;
+  }
+
+  .upgrade-bg-qr {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
     height: 100%;
     z-index: 0;
     object-fit: cover;
@@ -852,9 +862,9 @@ page {
     position: relative;
     z-index: 2;
     padding: 6px 10px;
-    color: lighten(@primary-color, 10%);
-    letter-spacing: 4px;
-    font-size: 26px;
+    color: fade(@primary-color, 50%);
+    letter-spacing: 8px;
+    font-size: 24px;
     flex: 1;
   }
 
