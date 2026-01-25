@@ -23,6 +23,14 @@
       <text class="refresh-text">配置</text>
     </view>
     <view
+      bindtap="goToCashier"
+      class="refresh-btn"
+      aria-role="button"
+      aria-label="场控收银"
+    >
+      <text class="refresh-text">场控收银</text>
+    </view>
+    <view
       bindtap="goToHistory"
       class="refresh-btn"
       aria-role="button"
@@ -51,7 +59,7 @@
       <view class="body-image-container">
         <image
           class="body-image"
-          src="/assets/human.jpg"
+          src="/assets/human.jpeg"
           mode="aspectFit" />
         <view
           class="body-part head {{consultationInfo.selectedParts.head ? 'selected' : ''}}"
@@ -306,12 +314,16 @@
             bindtap="onTechnicianSelect"
             data-technician="{{item.name}}"
             data-occupied="{{item.isOccupied}}"
+            data-reason="{{item.occupiedReason}}"
           >
             <radio
               value="{{item.name}}"
               checked="{{consultationInfo.technician === item.name}}"
               disabled="{{item.isOccupied}}" />
-            {{item.name}}
+            <view class="tech-info">
+              <text class="tech-name">{{item.name}}</text>
+              <text class="tech-reason" wx:if="{{item.isOccupied}}">{{item.occupiedReason}}</text>
+            </view>
           </label>
         </view>
         <view class="checkbox-group">
@@ -385,7 +397,8 @@
           <input
             class="form-input"
             placeholder="选填"
-            bind:input="onSurnameInput" />
+            bind:input="onSurnameInput"
+            value="{{consultationInfo.surname}}" />
         </view>
         <view class="form-field">
           <view class="gender-selector">
@@ -477,7 +490,8 @@
     </view>
     <!-- 编辑模式按钮 -->
     <view class="button-container" wx:if="{{editId}}">
-      <button class="primary-button" bindtap="saveEdit">保存</button>
+      <button class="primary-button" bindtap="printConsultation">打印</button>
+      <button class="primary-button" bindtap="reClockIn">重新报钟</button>
       <button class="primary-button secondary-button" bindtap="cancelEdit">取消</button>
     </view>
   </view>

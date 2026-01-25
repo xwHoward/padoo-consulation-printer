@@ -1,6 +1,6 @@
 {
     "libVersion": "2.32.3",
-    "projectname": "%E5%92%A8%E8%AF%A2%E5%8D%95",
+    "projectname": "padoo-consulation-printer",
     "setting": {
         "urlCheck": true,
         "coverView": false,
@@ -19,24 +19,5 @@
         "checkInvalidKey": true,
         "ignoreDevUnusedFiles": true
     },
-    "condition": {
-        "miniprogram": {
-            "list": [
-                {
-                    "name": "门店配置",
-                    "pathName": "pages/store-config/store-config",
-                    "query": "",
-                    "scene": null,
-                    "launchMode": "default"
-                },
-                {
-                    "name": "history",
-                    "pathName": "pages/history/history",
-                    "query": "",
-                    "launchMode": "default",
-                    "scene": null
-                }
-            ]
-        }
-    }
+    "condition": {}
 }

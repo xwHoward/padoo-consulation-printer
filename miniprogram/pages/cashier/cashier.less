@@ -192,7 +192,6 @@ page {
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
-		height: 100%;
 		color: #fff;
 		white-space: nowrap;
 
@@ -210,6 +209,29 @@ page {
 			font-size: 10px;
 			opacity: 0.8;
 		}
+	}
+}
+
+/* 当前时间线 */
+.current-time-line {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 2px;
+	background-color: #E74C3C;
+	z-index: 10;
+	pointer-events: none;
+
+	&::before {
+		content: '';
+		position: absolute;
+		top: -4px;
+		left: -3px;
+		width: 8px;
+		height: 8px;
+		background-color: #E74C3C;
+		border-radius: 50%;
+		box-shadow: 0 0 4px rgba(231, 76, 60, 0.6);
 	}
 }
 
@@ -264,16 +286,36 @@ page {
 	margin-bottom: 4px;
 }
 
-.room-status {
-	font-size: 12px;
-}
-
 .room-detail {
 	margin-top: 8px;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	gap: 6px;
+	width: 100%;
+}
+
+.occupied-record {
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	padding-left: 20px;
 	gap: 2px;
+	width: 100%;
+
+	&:not(:last-child) {
+		border-bottom: 1px dashed rgba(255, 107, 0, 0.2);
+		padding-bottom: 6px;
+	}
+}
+
+.customer-tag {
+	font-size: 11px;
+	font-weight: 600;
+	color: @text-color;
+	background-color: rgba(255, 107, 0, 0.08);
+	padding: 2px 8px;
+	border-radius: 4px;
 }
 
 .staff-tag {
@@ -322,6 +364,12 @@ page {
 .staff-info {
 	flex: 1;
 	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.staff-name-row {
+	display: flex;
 	align-items: center;
 	gap: 8px;
 }
@@ -330,6 +378,22 @@ page {
 	font-size: 16px;
 	font-weight: 500;
 	color: @text-color;
+}
+
+.available-slots {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 12px;
+
+	.slots-label {
+		color: @text-color-secondary;
+	}
+
+	.slots-time {
+		color: #27ae60;
+		font-weight: 500;
+	}
 }
 
 .shift-tag {
@@ -414,40 +478,77 @@ page {
 		.form-item {
 			display: flex;
 			align-items: center;
-			margin-bottom: 15px;
+			margin-bottom: 12px;
+			padding-bottom: 12px;
+			border-bottom: 1px solid @border-color-light;
 
-			.label {
-				width: 80px;
-				font-size: 14px;
-				color: @text-color-secondary;
+			&:last-child {
+				border-bottom: none;
+				margin-bottom: 0;
+				padding-bottom: 0;
 			}
 
-			.input,
+			.form-label {
+				width: 60px;
+				font-size: 13px;
+				color: @text-color;
+			}
+
+			.form-input,
 			.picker-val {
 				flex: 1;
-				height: 36px;
-				line-height: 36px;
-				border: 1px solid @border-color-light;
-				border-radius: 6px;
-				padding: 0 10px;
-				font-size: 14px;
+				font-size: 13px;
+				color: @text-color;
+				padding: 5px 0;
+				border: none;
+				border-bottom: 1px solid @border-color;
 			}
+		}
 
-			.radio-group {
+		.combined-form-item {
+			flex-wrap: wrap;
+			gap: 20px;
+
+			.form-field {
 				display: flex;
-				gap: 10px;
+				align-items: center;
+				flex: 1;
+				min-width: 100px;
+			}
+		}
 
-				.radio-item {
-					padding: 6px 15px;
-					border: 1px solid @border-color-light;
-					border-radius: 6px;
-					font-size: 14px;
+		.gender-selector {
+			display: flex;
+			gap: 10px;
 
-					&.selected {
-						background: rgba(255, 107, 0, 0.1);
-						border-color: @primary-color;
-						color: @primary-color;
-					}
+			.gender-option {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 13px;
+				color: @text-color;
+				cursor: pointer;
+				padding: 6px 15px;
+				border-radius: 5px;
+				border: 1px solid @border-color;
+				transition: all 0.3s ease;
+				position: relative;
+
+				radio {
+					position: absolute;
+					opacity: 0;
+					width: 0;
+					height: 0;
+				}
+
+				&.selected {
+					border-color: @primary-color;
+					background-color: rgba(255, 107, 0, 0.05);
+					color: @primary-color;
+				}
+
+				&:active {
+					border-color: @primary-color;
 				}
 			}
 		}
@@ -455,29 +556,79 @@ page {
 		.technician-item {
 			align-items: flex-start !important;
 
-			.technician-grid {
-				flex: 1;
+			.technician-selector {
 				display: flex;
 				flex-wrap: wrap;
 				gap: 8px;
+				flex: 1;
 
-				.tech-tag {
-					padding: 6px 12px;
-					border: 1px solid @border-color-light;
-					border-radius: 6px;
+				.technician-option {
+					display: flex;
+					flex-direction: column;
+					align-items: flex-start;
+					justify-content: center;
 					font-size: 13px;
-					background: @bg-color-light;
+					color: @text-color;
+					cursor: pointer;
+					padding: 6px 12px;
+					border-radius: 5px;
+					border: 1px solid @border-color;
+					transition: all 0.3s ease;
+					margin-bottom: 6px;
+					position: relative;
+					background-color: @bg-color;
+					min-height: 32px;
+
+					radio {
+						position: absolute;
+						opacity: 0;
+						width: 0;
+						height: 0;
+					}
+
+					.tech-info {
+						display: flex;
+						flex-direction: column;
+						gap: 2px;
+						width: 100%;
+
+						.tech-name {
+							font-size: 13px;
+							color: @text-color;
+						}
+
+						.tech-reason {
+							font-size: 11px;
+							color: @text-color-secondary;
+							line-height: 1.3;
+						}
+					}
 
 					&.selected {
-						background: rgba(255, 107, 0, 0.1);
 						border-color: @primary-color;
-						color: @primary-color;
+						background-color: rgba(255, 107, 0, 0.05);
+
+						.tech-info .tech-name {
+							color: @primary-color;
+						}
+					}
+
+					&:active {
+						border-color: @primary-color;
 					}
 
 					&.occupied {
-						opacity: 0.4;
-						background: #eee;
-						color: #999;
+						background-color: @bg-color-light;
+						border-color: @border-color-light;
+						opacity: 0.7;
+
+						.tech-info .tech-name {
+							color: @text-color-secondary;
+						}
+
+						.tech-info .tech-reason {
+							color: #999;
+						}
 					}
 				}
 			}
@@ -491,8 +642,7 @@ page {
 
 		button {
 			flex: 1;
-			height: 44px;
-			line-height: 44px;
+			line-height: 24px;
 			font-size: 16px;
 			border-radius: 22px;
 		}
@@ -505,6 +655,109 @@ page {
 		.btn-confirm {
 			background: @primary-color;
 			color: #fff;
+		}
+	}
+}
+
+// 结算弹窗样式
+.settlement-modal {
+	max-height: 80vh;
+	width: 90%;
+	max-width: 500px;
+
+	.payment-methods {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		margin-top: 10px;
+		margin-bottom: 20px;
+
+		.payment-item {
+			border: 1px solid @border-color;
+			border-radius: 8px;
+			padding: 12px;
+			transition: all 0.3s ease;
+
+			&.selected {
+				border-color: @primary-color;
+				background-color: rgba(255, 107, 0, 0.03);
+			}
+
+			.payment-header {
+				display: flex;
+				align-items: center;
+				cursor: pointer;
+
+				.checkbox-wrapper {
+					display: flex;
+					align-items: center;
+					gap: 10px;
+
+					.checkbox {
+						width: 18px;
+						height: 18px;
+						border: 2px solid @border-color;
+						border-radius: 4px;
+						position: relative;
+						transition: all 0.3s ease;
+
+						&.checked {
+							background-color: @primary-color;
+							border-color: @primary-color;
+
+							&::after {
+								content: '';
+								position: absolute;
+								left: 5px;
+								top: 2px;
+								width: 4px;
+								height: 8px;
+								border: solid white;
+								border-width: 0 2px 2px 0;
+								transform: rotate(45deg);
+							}
+						}
+					}
+
+					.payment-label {
+						font-size: 14px;
+						color: @text-color;
+						font-weight: 500;
+					}
+				}
+			}
+
+			.payment-amount {
+				display: flex;
+				align-items: center;
+				margin-top: 12px;
+				padding-left: 28px;
+				gap: 8px;
+
+				.amount-label {
+					font-size: 13px;
+					color: @text-color-secondary;
+				}
+
+				.amount-input {
+					flex: 1;
+					height: 32px;
+					padding: 0 10px;
+					border: 1px solid @border-color;
+					border-radius: 4px;
+					font-size: 14px;
+					background-color: @bg-color;
+
+					&:focus {
+						border-color: @primary-color;
+					}
+				}
+
+				.amount-unit {
+					font-size: 13px;
+					color: @text-color-secondary;
+				}
+			}
 		}
 	}
 }

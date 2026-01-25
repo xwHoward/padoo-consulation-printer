@@ -256,7 +256,8 @@ page {
 
 .technician-option {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   justify-content: center;
   font-size: 13px;
   color: @text-color;
@@ -268,6 +269,7 @@ page {
   margin-bottom: 6px;
   position: relative;
   background-color: @bg-color;
+  min-height: 32px;
 }
 
 .technician-option radio {
@@ -277,7 +279,25 @@ page {
   height: 0;
 }
 
-.technician-option radio[checked]+text {
+.technician-option .tech-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+
+.technician-option .tech-name {
+  font-size: 13px;
+  color: @text-color;
+}
+
+.technician-option .tech-reason {
+  font-size: 11px;
+  color: @text-color-secondary;
+  line-height: 1.3;
+}
+
+.technician-option radio[checked]+.tech-info .tech-name {
   color: @primary-color;
 }
 
@@ -287,9 +307,16 @@ page {
 
 .technician-option.occupied {
   background-color: @bg-color-light;
-  color: @text-color-secondary;
   border-color: @border-color-light;
-  opacity: 0.6;
+  opacity: 0.7;
+}
+
+.technician-option.occupied .tech-name {
+  color: @text-color-secondary;
+}
+
+.technician-option.occupied .tech-reason {
+  color: #999;
 }
 
 /* 移除不支持的:has选择器 */
@@ -466,7 +493,7 @@ page {
 .oil-effect {
   display: block;
   margin-left: auto;
-  font-size: 10px;
+  font-size: 12px;
   color: @text-color-secondary;
   margin-top: 2px;
   font-weight: normal;
@@ -492,7 +519,7 @@ page {
 .body-image-container {
   position: relative;
   width: 100%;
-  height: 324px;
+  height: 420px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -505,8 +532,8 @@ page {
 
 /* 身体图像 */
 .body-image {
-  height: 324px;
-  width: 324px;
+  height: 420px;
+  width: 420px;
   object-fit: contain;
 }
 
@@ -550,65 +577,65 @@ page {
 /* 各身体部位定位 */
 /* 头部 */
 .body-part.head {
-  top: 26px;
+  top: 36px;
   left: 50%;
   transform: translateX(80px);
 }
 
 /* 颈部 */
 .body-part.neck {
-  top: 50px;
+  top: 66px;
   left: 50%;
-  transform: translateX(36px);
+  transform: translateX(54px);
 }
 
 /* 肩部 */
 .body-part.shoulder {
-  top: 68px;
+  top: 88px;
   left: 50%;
-  transform: translateX(-154px);
+  transform: translateX(98px);
 }
 
 /* 后背 */
 .body-part.back {
-  top: 96px;
-  left: 50%;
-  transform: translateX(-110px);
-}
-
-/* 手臂 */
-.body-part.arm {
-  top: 120px;
-  left: 50%;
-  transform: translateX(-150px);
-}
-
-/* 腹部 */
-.body-part.abdomen {
-  top: 126px;
-  left: 50%;
-  transform: translateX(100px);
-}
-
-/* 腰部 */
-.body-part.waist {
-  top: 94px;
-  left: 50%;
-  transform: translateX(110px);
-}
-
-/* 大腿 */
-.body-part.thigh {
-  top: 174px;
+  top: 124px;
   left: 50%;
   transform: translateX(80px);
 }
 
+/* 手臂 */
+.body-part.arm {
+  top: 126px;
+  left: 50%;
+  transform: translateX(-160px);
+}
+
+/* 腹部 */
+.body-part.abdomen {
+  top: 160px;
+  left: 50%;
+  transform: translateX(-140px);
+}
+
+/* 腰部 */
+.body-part.waist {
+  top: 156px;
+  left: 50%;
+  transform: translateX(80px);
+}
+
+/* 大腿 */
+.body-part.thigh {
+  top: 220px;
+  left: 50%;
+  transform: translateX(-160px);
+}
+
 /* 小腿 */
 .body-part.calf {
-  top: 234px;
+  top: 306px;
   left: 50%;
-  transform: translateX(-130px);
+  transform: translateX(-150px);
 }
 
 /* 按钮容器 */

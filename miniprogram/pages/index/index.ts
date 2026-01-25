@@ -71,7 +71,8 @@ Component({
       // 3. 构建技师列表并检查冲突
       let list = activeStaff.map(staff => {
         // 检查冲突：查找是否有重叠的任务
-        const hasConflict = [...activeRecords, ...reservations].some(r => {
+        let occupiedReason = '';
+        const conflictTask = [...activeRecords, ...reservations].find(r => {
           const rName = (r as any).technician || (r as any).technicianName;
           if (rName !== staff.name) return false;
 
@@ -79,10 +80,18 @@ Component({
           return currentTimeStr < r.endTime && proposedEndTimeStr > r.startTime;
         });
 
+        if (conflictTask) {
+          const isReservation = !(conflictTask as any).technician;
+          const customerName = (conflictTask as any).surname || (conflictTask as any).customerName || '顾客';
+          const gender = conflictTask.gender === 'male' ? '先生' : '女士';
+          occupiedReason = `${ conflictTask.startTime }-${ conflictTask.endTime } ${ customerName }${ gender }${ isReservation ? '(预约)' : '' }`;
+        }
+
         return {
           id: staff.id,
           name: staff.name,
-          isOccupied: hasConflict
+          isOccupied: !!conflictTask,
+          occupiedReason
         };
       });
 
@@ -98,20 +107,38 @@ Component({
       }
 
       this.setData({technicianList: list});
-
-      // 如果当前选中的技师不存在于列表中或有冲突，且不是在编辑模式下，可以考虑清空选中（可选）
-      // if (!this.data.editId && this.data.consultationInfo.technician) {
-      //   const current = list.find(t => t.name === this.data.consultationInfo.technician);
-      //   if (!current || current.isOccupied) {
-      //     this.setData({ "consultationInfo.technician": "" });
-      //   }
-      // }
     },
     // 页面加载时获取参数
     onLoad(options: Record<string, string | undefined>) {
       if (options.editId) {
         // 加载编辑数据
         this.loadEditData(options.editId);
+      } else if (options.reserveId) {
+        // 加载预约数据
+        this.loadReserveData(options.reserveId);
+      }
+    },
+
+    // 加载预约数据
+    loadReserveData(reserveId: string) {
+      try {
+        const record = db.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
+        if (record) {
+          this.setData({
+            consultationInfo: {
+              ...DefaultConsultationInfo,
+              surname: record.customerName,
+              gender: record.gender,
+              project: record.project === '待定' ? '70min精油' : record.project,
+              technician: record.technicianName || '',
+              phone: record.phone || '',
+              selectedParts: {},
+            }
+          });
+          this.loadTechnicianList();
+        }
+      } catch (e) {
+        console.error("加载预约数据失败", e);
       }
     },
     // 检查数组是否包含某个元素（替代数组的includes方法）
@@ -152,9 +179,9 @@ Component({
 
     // 技师选择
     onTechnicianSelect(e: any) {
-      const {technician, occupied} = e.currentTarget.dataset;
+      const {technician, occupied, reason} = e.currentTarget.dataset;
       if (occupied) {
-        wx.showToast({title: '该技师当前时段已有安排', icon: 'none'});
+        wx.showToast({title: reason || '该技师当前时段已有安排', icon: 'none', duration: 2500});
         return;
       }
       this.setData({
@@ -525,29 +552,47 @@ Component({
       // 构建打印内容
       const printContent = this.buildPrintContent(consultationInfo);
 
-      // 转换为ArrayBuffer
-      const buffer = new Uint8Array(GBK.encode(printContent)).buffer;
+      // 转换为 Uint8Array 以便分片
+      const uint8Array = new Uint8Array(GBK.encode(printContent));
+      
+      // 安卓机型 BLE 写入通常有 MTU 限制（默认为 20 字节）
+      // 需要分片发送数据，否则大块数据会导致打印停止或丢失
+      const chunkSize = 20;
+      let offset = 0;
 
-      // 发送打印数据
-      wx.writeBLECharacteristicValue({
-        deviceId: printerDeviceId,
-        serviceId: printerServiceId,
-        characteristicId: printerCharacteristicId,
-        value: buffer,
-        success: () => {
+      const writeNextChunk = () => {
+        if (offset >= uint8Array.length) {
           wx.showToast({
             title: "打印成功",
             icon: "success",
           });
-        },
-        fail: (err) => {
-          wx.showToast({
-            title: "打印失败",
-            icon: "none",
-          });
-          console.error("打印失败:", err);
-        },
-      });
+          return;
+        }
+
+        const end = Math.min(offset + chunkSize, uint8Array.length);
+        const chunk = uint8Array.slice(offset, end).buffer;
+
+        wx.writeBLECharacteristicValue({
+          deviceId: printerDeviceId,
+          serviceId: printerServiceId,
+          characteristicId: printerCharacteristicId,
+          value: chunk,
+          success: () => {
+            offset += chunkSize;
+            // 延迟 20ms 发送下一片，防止安卓下打印机缓冲区溢出
+            setTimeout(writeNextChunk, 20);
+          },
+          fail: (err) => {
+            wx.showToast({
+              title: "打印失败",
+              icon: "none",
+            });
+            console.error("分片打印失败:", err);
+          },
+        });
+      };
+
+      writeNextChunk();
     },
 
     // 刷新表单内容
@@ -728,6 +773,12 @@ Component({
       });
     },
 
+    goToCashier() {
+      wx.navigateTo({
+        url: "/pages/cashier/cashier",
+      });
+    },
+
     // 跳转到门店配置页面
     goToStoreConfig() {
       wx.navigateTo({
@@ -770,6 +821,66 @@ Component({
               wx.navigateBack();
             }, 1000);
           }
+        });
+      } else {
+        wx.showToast({
+          title: "保存失败",
+          icon: "error"
+        });
+      }
+    },
+
+    // 重新报钟（编辑模式）
+    reClockIn() {
+      const {consultationInfo, editId} = this.data;
+
+      // 验证必填信息
+      if (!consultationInfo.gender) {
+        wx.showToast({title: "请选择称呼", icon: "none"});
+        return;
+      }
+      if (!consultationInfo.project) {
+        wx.showToast({title: "请选择项目", icon: "none"});
+        return;
+      }
+      if (!consultationInfo.technician) {
+        wx.showToast({title: "请选择技师", icon: "none"});
+        return;
+      }
+      if (!consultationInfo.room) {
+        wx.showToast({title: "请选择房间", icon: "none"});
+        return;
+      }
+
+      // 格式化上钟信息
+      const clockInInfo = this.formatClockInInfo(consultationInfo);
+
+      // 保存到缓存（更新现有记录）
+      const success = this.saveConsultationToCache(consultationInfo, editId);
+
+      if (success) {
+        // 复制到剪贴板
+        wx.setClipboardData({
+          data: clockInInfo,
+          success: () => {
+            wx.showToast({
+              title: "上钟信息已复制",
+              icon: "success",
+              success: () => {
+                // 延迟返回
+                setTimeout(() => {
+                  wx.navigateBack();
+                }, 1000);
+              }
+            });
+          },
+          fail: (err) => {
+            wx.showToast({
+              title: "复制失败",
+              icon: "none",
+            });
+            console.error("复制到剪贴板失败:", err);
+          },
         });
       } else {
         wx.showToast({

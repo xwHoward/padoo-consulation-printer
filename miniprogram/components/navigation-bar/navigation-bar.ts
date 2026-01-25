@@ -55,7 +55,11 @@ Component({
    * 组件的初始数据
    */
   data: {
-    displayStyle: ''
+    displayStyle: '',
+    ios: false,
+    innerPaddingRight: '',
+    leftWidth: '',
+    safeAreaTop: ''
   },
   lifetimes: {
     attached() {
@@ -63,12 +67,12 @@ Component({
       wx.getSystemInfo({
         success: (res) => {
           const isAndroid = res.platform === 'android'
-          const isDevtools = res.platform === 'devtools'
+          const statusBarHeight = res.statusBarHeight || 0
           this.setData({
             ios: !isAndroid,
             innerPaddingRight: `padding-right: ${res.windowWidth - rect.left}px`,
-            leftWidth: `width: ${res.windowWidth - rect.left }px`,
-            safeAreaTop: isDevtools || isAndroid ? `height: calc(var(--height) + ${res.safeArea.top}px); padding-top: ${res.safeArea.top}px` : ``
+            leftWidth: `width: ${res.windowWidth - rect.left}px`,
+            safeAreaTop: `height: calc(var(--height) + ${statusBarHeight}px); padding-top: ${statusBarHeight}px`
           })
         }
       })

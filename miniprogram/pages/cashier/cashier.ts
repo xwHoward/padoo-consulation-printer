@@ -14,9 +14,11 @@ interface RotationItem {
 	name: string;
 	shift: ShiftType;
 	shiftLabel: string;
+	availableSlots?: string; // 可约时段
 }
 
 interface TimelineBlock {
+	id: string;
 	customerName: string;
 	startTime: string;
 	endTime: string;
@@ -58,6 +60,9 @@ Component({
 		rotationList: [] as RotationItem[],
 		staffTimeline: [] as StaffTimeline[],
 		timeLabels: ['12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'],
+		// 当前时间线位置（百分比）
+		currentTimePosition: '0%',
+		showCurrentTimeLine: false,
 		// 预约弹窗相关
 		showReserveModal: false,
 		projects: PROJECTS,
@@ -65,15 +70,29 @@ Component({
 		activeStaffList: [] as StaffInfo[],
 		staffAvailability: [] as StaffAvailability[],
 		reserveForm: {
+			id: '', // 新增
 			date: '',
 			customerName: '',
-			gender: 'male' as const,
+			gender: 'male' as 'male' | 'female',
 			project: '',
 			phone: '',
 			technicianId: '',
 			technicianName: '',
 			startTime: '',
 		},
+		// 结算弹窗相关
+		showSettlementModal: false,
+		settlementRecordId: '',
+		settlementCouponCode: '',
+		paymentMethods: [
+			{key: 'meituan', label: '美团', selected: false, amount: ''},
+			{key: 'dianping', label: '大众点评', selected: false, amount: ''},
+			{key: 'douyin', label: '抖音', selected: false, amount: ''},
+			{key: 'wechat', label: '微信', selected: false, amount: ''},
+			{key: 'alipay', label: '支付宝', selected: false, amount: ''},
+			{key: 'cash', label: '现金', selected: false, amount: ''},
+			{key: 'free', label: '免单', selected: false, amount: ''},
+		]
 	},
 
 	lifetimes: {
@@ -108,18 +127,43 @@ Component({
 			// 获取预约记录
 			const reservations = db.find<ReservationRecord>(Collections.RESERVATIONS, {date: today});
 
-			const rooms = FIXED_ROOMS.map(name => {
-				const occupiedRecord = activeRecords
-					.filter(r => r.room === name)
-					.sort((a, b) => b.endTime.localeCompare(a.endTime))[0];
+			// 获取当前时间
+			const now = new Date();
+			const todayStr = this.getTodayStr();
+			const isToday = today === todayStr;
+			let currentTime = '';
+			if (isToday) {
+				const hours = now.getHours();
+				const minutes = now.getMinutes();
+				currentTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+			}
 
-				const isOccupied = !!occupiedRecord;
+			const rooms = FIXED_ROOMS.map(name => {
+				let occupiedRecords = activeRecords
+					.filter(r => r.room === name)
+					.map(r => ({
+						customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
+						technician: r.technician || '',
+						startTime: r.startTime,
+						endTime: r.endTime || ''
+					}));
+
+				// 只显示当前时间正在占用的记录（对于今天）
+				if (isToday && currentTime) {
+					occupiedRecords = occupiedRecords.filter(r => {
+						return currentTime >= r.startTime && currentTime < r.endTime;
+					});
+				}
+
+				// 按结束时间降序排列
+				occupiedRecords.sort((a, b) => b.endTime.localeCompare(a.endTime));
+
+				const isOccupied = occupiedRecords.length > 0;
 
 				return {
 					name,
 					isOccupied,
-					technician: occupiedRecord?.technician || '',
-					endTime: occupiedRecord?.endTime || ''
+					occupiedRecords
 				};
 			});
 
@@ -150,6 +194,7 @@ Component({
 					const blocks: TimelineBlock[] = [
 						...staffRecords.map(r => ({...r, isReservation: false})),
 						...staffReservations.map(r => ({
+							id: r.id,
 							surname: r.customerName,
 							gender: r.gender,
 							project: r.project,
@@ -166,6 +211,7 @@ Component({
 						const duration = (endH - startH) * 60 + (endM - startM);
 
 						return {
+							id: r.id,
 							customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
 							startTime: r.startTime,
 							endTime: r.endTime,
@@ -185,11 +231,15 @@ Component({
 					});
 				}
 
+				// 计算可约时段
+				const availableSlots = this.calculateAvailableSlots(staff.name, activeRecords, reservations, today);
+
 				return {
 					id: staff.id,
 					name: staff.name,
 					shift: shift as ShiftType,
-					shiftLabel: shift === 'morning' ? '早班' : '晚班'
+					shiftLabel: shift === 'morning' ? '早班' : '晚班',
+					availableSlots
 				};
 			}).filter(item => item.shift === 'morning' || item.shift === 'evening');
 
@@ -207,6 +257,126 @@ Component({
 			}
 
 			this.setData({rooms, rotationList, staffTimeline});
+
+			// 计算当前时间线位置
+			this.updateCurrentTimeLine();
+		},
+
+		// 计算技师可约时段
+		calculateAvailableSlots(
+			staffName: string,
+			activeRecords: ConsultationRecord[],
+			reservations: ReservationRecord[],
+			selectedDate: string
+		): string {
+			const now = new Date();
+			const todayStr = this.getTodayStr();
+			const isToday = selectedDate === todayStr;
+
+			// 获取该技师的所有占用时段
+			const staffRecords = activeRecords.filter(r => r.technician === staffName);
+			const staffReservations = reservations.filter(r => r.technicianName === staffName);
+
+			// 合并所有占用时段并排序
+			const occupiedSlots = [...staffRecords, ...staffReservations]
+				.map(r => ({
+					startTime: r.startTime,
+					endTime: r.endTime
+				}))
+				.sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+			// 如果没有任何占用，返回全天可约
+			if (occupiedSlots.length === 0) {
+				if (isToday) {
+					const currentHour = now.getHours();
+					const currentMinute = now.getMinutes();
+					if (currentHour >= 23) {
+						return '已下班';
+					}
+					if (currentHour < 12) {
+						const duration = this.getMinutesDiff('12:00', '23:00');
+						return `12:00-23:00(${this.formatDuration(duration)})`;
+					}
+					// 从下一个半点或整点开始
+					const nextMinute = currentMinute < 30 ? 30 : 0;
+					const nextHour = nextMinute === 0 ? currentHour + 1 : currentHour;
+					const startTimeStr = `${ String(nextHour).padStart(2, '0') }:${ String(nextMinute).padStart(2, '0') }`;
+					const duration = this.getMinutesDiff(startTimeStr, '23:00');
+					return `${ startTimeStr }-23:00(${this.formatDuration(duration)})`;
+				}
+				const duration = this.getMinutesDiff('12:00', '23:00');
+				return `12:00-23:00(${this.formatDuration(duration)})`;
+			}
+
+			// 查找空闲时段（至少60分钟以上）
+			const availableSlots: string[] = [];
+
+			// 检查第一个占用之前的时间
+			const firstOccupied = occupiedSlots[0];
+			const startOfDay = isToday ? now : new Date(`${ selectedDate } 12:00:00`);
+			let firstAvailableTime = '12:00';
+
+			if (isToday) {
+				const currentHour = now.getHours();
+				const currentMinute = now.getMinutes();
+				if (currentHour >= 23) {
+					return '已下班';
+				}
+				if (currentHour >= 12) {
+					const nextMinute = currentMinute < 30 ? 30 : 0;
+					const nextHour = nextMinute === 0 ? currentHour + 1 : currentHour;
+					firstAvailableTime = `${ String(nextHour).padStart(2, '0') }:${ String(nextMinute).padStart(2, '0') }`;
+				}
+			}
+
+			// 计算第一个空闲时段
+			const gapMinutes = this.getMinutesDiff(firstAvailableTime, firstOccupied.startTime);
+			if (gapMinutes >= 60) {
+				availableSlots.push(`${ firstAvailableTime }-${ firstOccupied.startTime }(${this.formatDuration(gapMinutes)})`);
+			}
+
+			// 检查占用时段之间的空闲时间
+			for (let i = 0; i < occupiedSlots.length - 1; i++) {
+				const current = occupiedSlots[i];
+				const next = occupiedSlots[i + 1];
+				const gap = this.getMinutesDiff(current.endTime, next.startTime);
+				if (gap >= 60) {
+					availableSlots.push(`${ current.endTime }-${ next.startTime }(${this.formatDuration(gap)})`);
+				}
+			}
+
+			// 检查最后一个占用之后的时间
+			const lastOccupied = occupiedSlots[occupiedSlots.length - 1];
+			const lastGap = this.getMinutesDiff(lastOccupied.endTime, '23:00');
+			if (lastGap >= 60) {
+				availableSlots.push(`${ lastOccupied.endTime }-23:00(${this.formatDuration(lastGap)})`);
+			}
+
+			if (availableSlots.length === 0) {
+				return '已满';
+			}
+
+			return availableSlots.join(', ');
+		},
+
+		// 格式化时长显示
+		formatDuration(minutes: number): string {
+			const hours = Math.floor(minutes / 60);
+			const mins = minutes % 60;
+			if (hours > 0 && mins > 0) {
+				return `${hours}h${mins}m`;
+			} else if (hours > 0) {
+				return `${hours}h`;
+			} else {
+				return `${mins}m`;
+			}
+		},
+
+		// 计算两个时间之间的分钟差
+		getMinutesDiff(startTime: string, endTime: string): number {
+			const [startH, startM] = startTime.split(':').map(Number);
+			const [endH, endM] = endTime.split(':').map(Number);
+			return (endH * 60 + endM) - (startH * 60 + startM);
 		},
 
 		getTodayStr() {
@@ -215,6 +385,39 @@ Component({
 			const month = String(now.getMonth() + 1).padStart(2, '0');
 			const day = String(now.getDate()).padStart(2, '0');
 			return `${ year }-${ month }-${ day }`;
+		},
+
+		// 更新当前时间线位置
+		updateCurrentTimeLine() {
+			const now = new Date();
+			const todayStr = this.getTodayStr();
+			const selectedDate = this.data.selectedDate;
+
+			// 只有当选中的是今天时才显示当前时间线
+			if (selectedDate !== todayStr) {
+				this.setData({showCurrentTimeLine: false});
+				return;
+			}
+
+			const hours = now.getHours();
+			const minutes = now.getMinutes();
+
+			// 只在12:00-23:00之间显示时间线
+			if (hours < 12 || hours >= 23) {
+				this.setData({showCurrentTimeLine: false});
+				return;
+			}
+
+			// 计算相对于12:00的分钟数
+			const currentMinutes = (hours - 12) * 60 + minutes;
+			// 总时间范围：12:00-23:00 = 11小时 = 660分钟
+			const totalMinutes = 660;
+			const position = (currentMinutes / totalMinutes * 100).toFixed(2) + '%';
+
+			this.setData({
+				showCurrentTimeLine: true,
+				currentTimePosition: position
+			});
 		},
 
 		// 调整轮排顺序
@@ -256,6 +459,7 @@ Component({
 			this.setData({
 				showReserveModal: true,
 				reserveForm: {
+					id: '', // 重置 ID
 					date: this.data.selectedDate || this.getTodayStr(),
 					customerName: '',
 					gender: 'male',
@@ -268,6 +472,55 @@ Component({
 			}, () => {
 				this.checkStaffAvailability();
 			});
+		},
+
+		// 点击排钟项目操作
+		onBlockClick(e: any) {
+			const {id, reservation} = e.currentTarget.dataset;
+			const itemList = reservation ? ['编辑', '到店', '取消预约'] : ['编辑', '结算'];
+		
+			wx.showActionSheet({
+				itemList,
+				success: (res) => {
+					const action = itemList[res.tapIndex];
+					if (action === '编辑') {
+						if (reservation) {
+							this.editReservation(id);
+						} else {
+							wx.navigateTo({url: `/pages/index/index?editId=${ id }`});
+						}
+					} else if (action === '到店') {
+						wx.navigateTo({url: `/pages/index/index?reserveId=${ id }`});
+					} else if (action === '取消预约') {
+						this.cancelReservation(id);
+					} else if (action === '结算') {
+						this.openSettlement(id);
+					}
+				}
+			});
+		},
+
+		// 编辑预约
+		editReservation(id: string) {
+			const record = db.findById<ReservationRecord>(Collections.RESERVATIONS, id);
+			if (record) {
+				this.setData({
+					showReserveModal: true,
+					reserveForm: {
+						id: record.id,
+						date: record.date,
+						customerName: record.customerName,
+						gender: record.gender,
+						project: record.project,
+						phone: record.phone,
+						technicianId: record.technicianId || '',
+						technicianName: record.technicianName || '',
+						startTime: record.startTime,
+					}
+				}, () => {
+					this.checkStaffAvailability();
+				});
+			}
 		},
 
 		// 检查技师在预约时段的可用性
@@ -297,16 +550,25 @@ Component({
 			const activeStaff = db.getAll<StaffInfo>(Collections.STAFF).filter(s => s.status === 'active');
 
 			const staffAvailability = activeStaff.map(staff => {
-				const hasConflict = allTasks.some(r => {
+				let occupiedReason = '';
+				const conflictTask = allTasks.find(r => {
 					const rName = (r as any).technician || (r as any).technicianName;
 					if (rName !== staff.name) return false;
 					return startTime < r.endTime && endTimeStr > r.startTime;
 				});
 
+				if (conflictTask) {
+					const isReservation = !(conflictTask as any).technician;
+					const customerName = (conflictTask as any).surname || (conflictTask as any).customerName || '顾客';
+					const gender = conflictTask.gender === 'male' ? '先生' : '女士';
+					occupiedReason = `${ conflictTask.startTime }-${ conflictTask.endTime } ${ customerName }${ gender }${ isReservation ? '(预约)' : '' }`;
+				}
+
 				return {
 					id: staff.id,
 					name: staff.name,
-					isOccupied: hasConflict
+					isOccupied: !!conflictTask,
+					occupiedReason
 				};
 			});
 
@@ -337,9 +599,9 @@ Component({
 		},
 
 		selectReserveTechnician(e: any) {
-			const {id, name, occupied} = e.currentTarget.dataset;
+			const {id, name, occupied, reason} = e.currentTarget.dataset;
 			if (occupied) {
-				wx.showToast({title: '该技师在此时段已有安排', icon: 'none'});
+				wx.showToast({title: reason || '该技师在此时段已有安排', icon: 'none', duration: 2500});
 				return;
 			}
 			this.setData({
@@ -386,12 +648,214 @@ Component({
 				endTime: endTime
 			};
 
-			const success = db.insert<ReservationRecord>(Collections.RESERVATIONS, record);
+			let success = false;
+			if (reserveForm.id) {
+				// 更新
+				success = db.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm.id, record);
+			} else {
+				// 插入
+				success = !!db.insert<ReservationRecord>(Collections.RESERVATIONS, record);
+			}
+
 			if (success) {
-				wx.showToast({title: '预约成功', icon: 'success'});
+				wx.showToast({title: reserveForm.id ? '更新成功' : '预约成功', icon: 'success'});
 				this.closeReserveModal();
 				this.loadData();
 			} else {
+				wx.showToast({title: '保存失败', icon: 'none'});
+			}
+		},
+
+		// 取消预约
+		cancelReservation(id: string) {
+			wx.showModal({
+				title: '确认取消',
+				content: '确定要取消此预约吗？',
+				confirmText: '确定',
+				cancelText: '再想想',
+				success: (res) => {
+					if (res.confirm) {
+						const success = db.deleteById(Collections.RESERVATIONS, id);
+						if (success) {
+							wx.showToast({title: '已取消预约', icon: 'success'});
+							this.loadData(); // 重新加载数据，释放占用
+						} else {
+							wx.showToast({title: '取消失败', icon: 'none'});
+						}
+					}
+				}
+			});
+		},
+
+		// 打开结算弹窗
+		openSettlement(id: string) {
+			const today = this.data.selectedDate || this.getTodayStr();
+			const history = (wx.getStorageSync('consultationHistory') as any) || {};
+			const todayRecords = (history[today] || []) as ConsultationRecord[];
+			const record = todayRecords.find(r => r.id === id);
+
+			if (!record) {
+				wx.showToast({title: '未找到该单据', icon: 'none'});
+				return;
+			}
+
+			// 如果已经结算，提示
+			if (record.settlement) {
+				wx.showModal({
+					title: '已结算',
+					content: '该单据已经结算，是否重新结算？',
+					success: (res) => {
+						if (res.confirm) {
+							this.loadSettlement(id, record);
+						}
+					}
+				});
+			} else {
+				this.loadSettlement(id, record);
+			}
+		},
+
+		// 加载结算信息
+		loadSettlement(id: string, record: ConsultationRecord) {
+			// 重置支付方式
+			const paymentMethods = this.data.paymentMethods.map(m => ({
+				...m,
+				selected: false,
+				amount: ''
+			}));
+
+			// 如果已有结算信息，回显
+			if (record.settlement) {
+				record.settlement.payments.forEach(payment => {
+					const methodIndex = paymentMethods.findIndex(m => m.key === payment.method);
+					if (methodIndex !== -1) {
+						paymentMethods[methodIndex].selected = true;
+						paymentMethods[methodIndex].amount = payment.amount.toString();
+					}
+				});
+			}
+
+			this.setData({
+				showSettlementModal: true,
+				settlementRecordId: id,
+				settlementCouponCode: record.settlement?.couponCode || record.couponCode || '',
+				paymentMethods
+			});
+		},
+
+		// 关闭结算弹窗
+		closeSettlementModal() {
+			this.setData({showSettlementModal: false});
+		},
+
+		// 切换支付方式
+		togglePaymentMethod(e: any) {
+			const {index} = e.currentTarget.dataset;
+			const paymentMethods = this.data.paymentMethods;
+			paymentMethods[index].selected = !paymentMethods[index].selected;
+			
+			// 如果是免单，取消其他所有选项
+			if (paymentMethods[index].key === 'free' && paymentMethods[index].selected) {
+				paymentMethods.forEach((m, i) => {
+					if (i !== index) {
+						m.selected = false;
+						m.amount = '';
+					}
+				});
+			}
+			// 如果选择其他方式，取消免单
+			else if (paymentMethods[index].key !== 'free' && paymentMethods[index].selected) {
+				const freeIndex = paymentMethods.findIndex(m => m.key === 'free');
+				if (freeIndex !== -1) {
+					paymentMethods[freeIndex].selected = false;
+					paymentMethods[freeIndex].amount = '';
+				}
+			}
+
+			// 如果取消选择，清空金额
+			if (!paymentMethods[index].selected) {
+				paymentMethods[index].amount = '';
+			}
+
+			this.setData({paymentMethods});
+		},
+
+		// 输入支付金额
+		onPaymentAmountInput(e: any) {
+			const {index} = e.currentTarget.dataset;
+			const {value} = e.detail;
+			const paymentMethods = this.data.paymentMethods;
+			paymentMethods[index].amount = value;
+			this.setData({paymentMethods});
+		},
+
+		// 输入券码
+		onCouponCodeInput(e: any) {
+			this.setData({settlementCouponCode: e.detail.value});
+		},
+
+		// 确认结算
+		confirmSettlement() {
+			const {settlementRecordId, paymentMethods, settlementCouponCode} = this.data;
+			
+			// 收集所有已选择的支付方式
+			const selectedPayments = paymentMethods.filter(m => m.selected);
+			
+			if (selectedPayments.length === 0) {
+				wx.showToast({title: '请选择支付方式', icon: 'none'});
+				return;
+			}
+
+			// 验证金额
+			const payments: PaymentItem[] = [];
+			let totalAmount = 0;
+
+			for (const method of selectedPayments) {
+				// 免单不需要输入金额
+				if (method.key === 'free') {
+					payments.push({method: method.key as PaymentMethod, amount: 0});
+					continue;
+				}
+
+				const amount = parseFloat(method.amount);
+				if (!method.amount || isNaN(amount) || amount <= 0) {
+					wx.showToast({title: `请输入${method.label}的有效金额`, icon: 'none'});
+					return;
+				}
+
+				payments.push({method: method.key as PaymentMethod, amount});
+				totalAmount += amount;
+			}
+
+			// 保存结算信息
+			const today = this.data.selectedDate || this.getTodayStr();
+			const history = (wx.getStorageSync('consultationHistory') as any) || {};
+			const todayRecords = (history[today] || []) as ConsultationRecord[];
+			const recordIndex = todayRecords.findIndex(r => r.id === settlementRecordId);
+
+			if (recordIndex === -1) {
+				wx.showToast({title: '未找到该单据', icon: 'none'});
+				return;
+			}
+
+			const now = new Date();
+			const settlement: SettlementInfo = {
+				payments,
+				totalAmount,
+				couponCode: settlementCouponCode,
+				settledAt: now.toISOString()
+			};
+
+			todayRecords[recordIndex].settlement = settlement;
+			todayRecords[recordIndex].updatedAt = now.toISOString();
+			history[today] = todayRecords;
+
+			try {
+				wx.setStorageSync('consultationHistory', history);
+				wx.showToast({title: '结算成功', icon: 'success'});
+				this.closeSettlementModal();
+				this.loadData();
+			} catch (e) {
 				wx.showToast({title: '保存失败', icon: 'none'});
 			}
 		}

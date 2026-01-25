@@ -1,3 +1,20 @@
+// 支付方式类型
+type PaymentMethod = "meituan" | "dianping" | "douyin" | "wechat" | "alipay" | "cash" | "free";
+
+// 单笔支付记录
+interface PaymentItem {
+	method: PaymentMethod;
+	amount: number; // 实付金额
+}
+
+// 结算信息
+interface SettlementInfo {
+	payments: PaymentItem[]; // 支付列表（支持组合支付）
+	totalAmount: number; // 总金额
+	couponCode?: string; // 券码
+	settledAt: string; // 结算时间
+}
+
 // 定义咨询单数据结构
 interface ConsultationInfo {
   surname: string;
@@ -25,6 +42,7 @@ interface ConsultationRecord extends ConsultationInfo {
   overtime: number; // 加班数（单位：半小时）
   startTime: string; // 报钟时间（格式 HH:MM）
   endTime: string; // 结束时间（格式 HH:MM）
+  settlement?: SettlementInfo; // 结算信息（选填）
 }
 
 // 员工状态类型
