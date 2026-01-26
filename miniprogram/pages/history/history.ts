@@ -1,4 +1,5 @@
 import {formatTime, parseProjectDuration} from "../../utils/util";
+import {db, Collections} from "../../utils/db";
 
 // 扩展记录类型，添加折叠状态
 interface DisplayRecord extends ConsultationRecord {
@@ -51,8 +52,14 @@ Page({
       Object.keys(consultationHistory).forEach(date => {
         const records = consultationHistory[date] as ConsultationRecord[];
         if (records && records.length > 0) {
+          // 自动计算该日期所有记录的加班
+          this.autoUpdateOvertimeForDate(date);
+
+          // 重新获取更新后的记录
+          const updatedRecords = wx.getStorageSync('consultationHistory')[date] as ConsultationRecord[];
+
           // 按时间正序排列当天的记录（用于计算报钟顺序）
-          const sortedByTime = [...records].sort((a, b) => {
+          const sortedByTime = [...updatedRecords].sort((a, b) => {
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           });
 
@@ -476,22 +483,101 @@ Page({
     });
   },
 
-  // 加班操作 - 显示弹窗
-  onOvertime(e: WechatMiniprogram.TouchEvent) {
-    const {record, date} = e.currentTarget.dataset;
-    const currentValue = record.overtime || 0;
-
-    this.setData({
-      numberInputModal: {
-        show: true,
-        title: '加班',
-        type: 'overtime',
-        currentValue: currentValue,
-        inputValue: currentValue, // 默认显示当前值
-        record: record,
+  // 计算加班时长（根据排班和起始时间）
+  calculateOvertime(technician: string, date: string, startTime: string): number {
+    try {
+      // 获取当日排班
+      const schedule = db.findOne<{staffId: string; shift: any}>(Collections.SCHEDULE, {
         date: date
+      });
+
+      if (!schedule) {
+        return 0; // 没有排班，不计算加班
       }
-    });
+
+      // 获取技师信息以匹配 staffId
+      const staff = db.findOne<{id: string; name: string}>(Collections.STAFF, {
+        name: technician,
+        status: 'active'
+      });
+
+      if (!staff) {
+        return 0; // 未找到技师
+      }
+
+      // 检查排班是否匹配该技师
+      if (schedule.staffId !== staff.id) {
+        return 0; // 排班不匹配，不计算加班
+      }
+
+      // 定义班次结束时间
+      const shiftEndTime: Record<string, string> = {
+        'morning': '22:00', // 早班结束时间
+        'evening': '23:00' // 晚班结束时间
+      };
+
+      const endTime = shiftEndTime[schedule.shift];
+      if (!endTime) {
+        return 0; // 休息或请假不计算加班
+      }
+
+      // 解析开始时间和班次结束时间
+      const [startHour, startMin] = startTime.split(':').map(Number);
+      const [endHour, endMin] = endTime.split(':').map(Number);
+
+      const startTotalMinutes = startHour * 60 + startMin;
+      const endTotalMinutes = endHour * 60 + endMin;
+
+      // 如果开始时间早于或等于班次结束时间，不计算加班
+      if (startTotalMinutes <= endTotalMinutes) {
+        return 0;
+      }
+
+      // 计算超出的分钟数
+      const overtimeMinutes = startTotalMinutes - endTotalMinutes;
+
+      // 每30分钟为1个加班单位：<30min=0, >=30&<60=1, >=60&<90=2，以此类推
+      const overtimeUnits = Math.floor(overtimeMinutes / 30);
+
+      return overtimeUnits;
+    } catch (error) {
+      console.error('计算加班时长失败:', error);
+      return 0;
+    }
+  },
+
+  // 自动计算并更新所有记录的加班
+  autoUpdateOvertimeForDate(date: string) {
+    try {
+      const consultationHistory = wx.getStorageSync('consultationHistory') || {};
+
+      if (!consultationHistory[date]) {
+        return;
+      }
+
+      const records = consultationHistory[date] as ConsultationRecord[];
+      let hasChanges = false;
+
+      records.forEach(record => {
+        // 只计算未作废的记录
+        if (!record.isVoided) {
+          const calculatedOvertime = this.calculateOvertime(record.technician, date, record.startTime);
+
+          // 如果计算的加班与当前值不同，更新
+          if (record.overtime !== calculatedOvertime) {
+            record.overtime = calculatedOvertime;
+            record.updatedAt = new Date().toISOString();
+            hasChanges = true;
+          }
+        }
+      });
+
+      if (hasChanges) {
+        wx.setStorageSync('consultationHistory', consultationHistory);
+      }
+    } catch (error) {
+      console.error('自动更新加班失败:', error);
+    }
   },
 
   // 步进按钮 - 减少

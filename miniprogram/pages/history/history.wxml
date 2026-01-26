@@ -52,9 +52,9 @@
                   <button class="action-btn extra-btn" bindtap="onExtraTime" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
                     加钟{{record.extraTime ? '(' + record.extraTime + ')' : ''}}
                   </button>
-                  <button class="action-btn overtime-btn" bindtap="onOvertime" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
-                    加班{{record.overtime ? '(' + record.overtime + ')' : ''}}
-                  </button>
+                  <view class="action-btn overtime-display" wx:if="{{!record.isVoided}}">
+                    加班{{record.overtime ? '(' + record.overtime + ')' : '(0)'}}
+                  </view>
                   <button class="action-btn void-btn" bindtap="voidConsultation" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
                     作废
                   </button>

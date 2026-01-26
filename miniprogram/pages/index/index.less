@@ -8,24 +8,25 @@
 @border-color: #e0e0e0;
 @border-color-light: #f0f0f0;
 
-/* 刷新按钮样式 */
-.refresh-btn {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-}
 
-.refresh-text {
-  color: @primary-color;
-  font-size: 16px;
-}
 
-/* 导航栏右侧按钮容器 */
-.nav-right-btns {
+/* 导航栏按钮容器 */
+.nav-btns {
   display: flex;
   align-items: center;
   height: 100%;
+  /* 刷新按钮样式 */
+  .navigation-btn {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    white-space: nowrap;
+    .nav-btn-text {
+      color: @primary-color;
+      font-size: 16px;
+    }
+  }
 }
 
 page {
@@ -129,7 +130,8 @@ page {
 }
 
 .form-label {
-  width: 50px;
+  flex: none;
+  margin-right: 12px;
   font-size: 13px;
   color: @text-color;
 }
@@ -363,22 +365,12 @@ page {
 /* 移除不支持的:has选择器 */
 
 /* 券码表单项 */
-.coupon-form-item {
-  flex-direction: column;
-  align-items: flex-start;
-}
-
 .coupon-container {
   flex: 1;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .coupon-input {
   width: 100%;
-  box-sizing: border-box;
 }
 
 /* 券码平台选择器 */

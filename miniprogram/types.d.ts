@@ -45,6 +45,7 @@ interface GuestInfo {
   couponCode: string;
   couponPlatform: '' | 'meituan' | 'dianping' | 'douyin';
   upgradeHimalayanSaltStone: boolean;
+  project: string;
 }
 
 // 定义带ID的咨询单数据结构（用于历史记录）

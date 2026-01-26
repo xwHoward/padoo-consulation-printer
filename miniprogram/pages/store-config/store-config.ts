@@ -26,8 +26,7 @@ Component({
 					wx.navigateTo({url: '/pages/cashier/cashier'});
 					break;
 				case 'customer':
-					wx.showToast({title: '顾客管理', icon: 'none'});
-					// wx.navigateTo({ url: '/pages/customer/customer' });
+					wx.navigateTo({ url: '/pages/customers/customers' });
 					break;
 				case 'membership':
 					wx.showToast({title: '会员卡', icon: 'none'});

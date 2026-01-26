@@ -19,5 +19,17 @@
         "checkInvalidKey": true,
         "ignoreDevUnusedFiles": true
     },
-    "condition": {}
+    "condition": {
+        "miniprogram": {
+            "list": [
+                {
+                    "name": "customers",
+                    "pathName": "pages/customers/customers",
+                    "query": "",
+                    "scene": null,
+                    "launchMode": "default"
+                }
+            ]
+        }
+    }
 }
