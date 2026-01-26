@@ -17,6 +17,8 @@ Page({
   data: {
     historyData: [] as DailyGroup[], // 按天分组的历史记录
     platforms: {meituan: '美团', dianping: '点评', douyin: '抖音'},
+    customerPhone: '', // 顾客手机号
+    customerId: '', // 顾客ID
     // 数字输入弹窗状态
     numberInputModal: {
       show: false,
@@ -29,14 +31,133 @@ Page({
     }
   },
 
-  onLoad() {
-    // 页面加载时获取历史数据
-    this.loadHistoryData();
+  onLoad(options: any) {
+    console.log('history onLoad options:', options);
+    // 检查是否为顾客只读模式
+    if (options.readonly === 'true' && options.customerPhone) {
+      console.log('Loading customer history:', options.customerPhone, options.customerId);
+      this.loadCustomerHistory(options.customerPhone, options.customerId);
+    } else {
+      // 页面加载时获取历史数据
+      this.loadHistoryData();
+    }
   },
 
   onShow() {
+    // 顾客只读模式下不重新加载数据
+    if (this.data.customerPhone) {
+      return;
+    }
     // 页面显示时重新加载数据，确保数据最新
     this.loadHistoryData();
+  },
+
+  // 加载顾客历史记录
+  loadCustomerHistory(customerPhone: string, customerId: string) {
+    console.log('loadCustomerHistory called with:', customerPhone, customerId);
+    try {
+      const consultationHistory = wx.getStorageSync('consultationHistory') || {};
+      console.log('consultationHistory keys:', Object.keys(consultationHistory));
+      const historyData: DailyGroup[] = [];
+
+      Object.keys(consultationHistory).forEach(date => {
+        const records = consultationHistory[date] as ConsultationRecord[];
+        console.log(`Date ${date} has ${records.length} records`);
+        if (records && records.length > 0) {
+          // 过滤出该顾客的记录
+          const customerRecords = records.filter(record => {
+            const recordKey = record.phone || record.id;
+            const isMatch = recordKey === customerId && !record.isVoided;
+            console.log(`Record ${record.id}: key=${recordKey}, customerId=${customerId}, isMatch=${isMatch}`);
+            return isMatch;
+          });
+
+          console.log(`Found ${customerRecords.length} customer records for date ${date}`);
+
+          if (customerRecords.length > 0) {
+            // 自动计算该日期所有记录的加班
+            this.autoUpdateOvertimeForDate(date);
+
+            // 重新获取更新后的记录
+            const updatedRecords = wx.getStorageSync('consultationHistory')[date] as ConsultationRecord[];
+
+            // 过滤出该顾客的记录
+            const filteredRecords = updatedRecords.filter(record => {
+              const recordKey = record.phone || record.id;
+              return recordKey === customerId && !record.isVoided;
+            });
+
+            // 按时间正序排列当天的记录（用于计算报钟顺序）
+            const sortedByTime = [...filteredRecords].sort((a, b) => {
+              return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+            });
+
+            // 计算每个记录的报钟数量
+            const technicianCounts: Record<string, number> = {};
+            const recordsWithCount = sortedByTime.map(record => {
+              if (!technicianCounts[record.technician]) {
+                technicianCounts[record.technician] = 0;
+              }
+              technicianCounts[record.technician]++;
+
+              let startTimeStr = record.startTime;
+              let endTimeStr = record.endTime;
+
+              if (!startTimeStr || !endTimeStr) {
+                const createdDate = new Date(record.createdAt);
+                startTimeStr = formatTime(createdDate, false);
+
+                const projectDuration = parseProjectDuration(record.project);
+                const extraTimeMinutes = (record.extraTime || 0) * 30;
+                const totalDuration = projectDuration + extraTimeMinutes + 10;
+                const endDate = new Date(createdDate.getTime() + totalDuration * 60 * 1000);
+                endTimeStr = formatTime(endDate, false);
+              }
+
+              return {
+                ...record,
+                dailyCount: technicianCounts[record.technician],
+                startTime: startTimeStr,
+                endTime: endTimeStr,
+                collapsed: false
+              };
+            });
+
+            // 按时间倒序排列当天的记录（用于显示）
+            const sortedForDisplay = recordsWithCount.sort((a, b) => {
+              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            });
+
+            historyData.push({
+              date,
+              records: sortedForDisplay as DisplayRecord[]
+            });
+          }
+        }
+      });
+
+      // 按日期倒序排列
+      historyData.sort((a, b) => {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+
+      console.log('Final historyData:', historyData);
+      console.log('Setting data with customerPhone:', customerPhone, 'customerId:', customerId);
+
+      this.setData({
+        historyData,
+        customerPhone,
+        customerId
+      }, () => {
+        console.log('setData callback - current data:', this.data);
+      });
+    } catch (error) {
+      console.error('加载顾客历史失败:', error);
+      wx.showToast({
+        title: '加载失败',
+        icon: 'error'
+      });
+    }
   },
 
   // 加载历史数据

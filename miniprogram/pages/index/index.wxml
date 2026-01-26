@@ -1,17 +1,17 @@
 <navigation-bar title="趴岛咨询单" back="{{false}}" color="black" background="#FFF">
   <view slot="left" class="nav-btns">
-    <view bindtap="goToHome" class="navigation-btn" aria-role="button" aria-label="主页">
+    <view bindtap="goToHome" class="nav-btn" aria-role="button" aria-label="主页">
       <text class="nav-btn-text">主页</text>
     </view>
-    <view bindtap="onRefresh" class="navigation-btn" aria-role="button" aria-label="刷新">
+    <view bindtap="onRefresh" class="nav-btn" aria-role="button" aria-label="刷新">
       <text class="nav-btn-text">刷新</text>
     </view>
   </view>
   <view slot="right" class="nav-btns">
-    <view bindtap="goToCashier" class="navigation-btn" aria-role="button" aria-label="场控收银">
+    <view bindtap="goToCashier" class="nav-btn" aria-role="button" aria-label="场控收银">
       <text class="nav-btn-text">场控收银</text>
     </view>
-    <view bindtap="goToHistory" class="navigation-btn" aria-role="button" aria-label="单据">
+    <view bindtap="goToHistory" class="nav-btn" aria-role="button" aria-label="单据">
       <text class="nav-btn-text">单据</text>
     </view>
   </view>

@@ -4,7 +4,8 @@
     "pages/history/history",
     "pages/store-config/store-config",
     "pages/staff/staff",
-    "pages/cashier/cashier"
+    "pages/cashier/cashier",
+    "pages/customers/customers"
   ],
   "window": {
     "navigationBarTextStyle": "black",

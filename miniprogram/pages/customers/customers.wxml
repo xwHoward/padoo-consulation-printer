@@ -1,0 +1,138 @@
+<navigation-bar title="顾客管理" back="{{true}}" color="black" background="#FFF">
+  <view slot="right" class="nav-btns">
+    <view bindtap="showAddCustomer" class="nav-btn" aria-role="button" aria-label="新增顾客">
+      <text class="nav-btn-text">新增顾客</text>
+    </view>
+  </view>
+</navigation-bar>
+<view class="customers-page">
+  <view class="customer-list">
+    <view wx:for="{{customerList}}" wx:key="phone" class="customer-card">
+      <view class="customer-header">
+        <view class="customer-info">
+          <view class="customer-name">{{item.name}}</view>
+          <view wx:if="{{item.phone}}" class="customer-phone">{{item.phone}}</view>
+          <view class="customer-meta">
+            <view wx:if="{{item.responsibleTechnician}}" class="meta-item">
+              <text class="meta-label">责任技师:</text>
+              <text>{{item.responsibleTechnician}}</text>
+            </view>
+            <view wx:if="{{item.licensePlate}}" class="meta-item">
+              <text class="meta-label">车牌号:</text>
+              <text>{{item.licensePlate}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="action-buttons">
+          <button class="action-btn edit" catch:tap="showEditCustomer" data-customer="{{item}}">
+            编辑
+          </button>
+          <button class="action-btn detail" catch:tap="loadCustomerVisits" data-customer="{{item}}">
+            详情
+          </button>
+        </view>
+      </view>
+      <view wx:if="{{item.remarks}}" class="customer-remarks">
+        <text class="meta-label">备注:</text>
+        {{item.remarks}}
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{customerList.length === 0}}" class="empty-state">
+    <view class="empty-icon">📋</view>
+    <view class="empty-text">暂无顾客记录</view>
+  </view>
+</view>
+<view class="modal-mask" wx:if="{{showEditModal}}" bindtap="onModalCancel"></view>
+<view class="modal-container" wx:if="{{showEditModal}}">
+  <view class="modal-title">{{modalTitle}}</view>
+  <view class="form-group">
+    <text class="form-label">手机号</text>
+    <input class="form-input" type="number" placeholder="选填" maxlength="11" bindinput="onPhoneInput" value="{{formPhone}}" />
+  </view>
+  <view class="form-group">
+    <text class="form-label">姓名</text>
+    <input class="form-input" type="text" placeholder="选填" bindinput="onNameInput" value="{{formName}}" />
+  </view>
+  <view class="form-group">
+    <text class="form-label">责任技师</text>
+    <view class="technician-selector">
+      <label wx:for="{{technicianList}}" wx:key="id" wx:for-item="tech" class="technician-option {{formResponsibleTechnician === tech.name ? 'selected' : ''}}" bindtap="onTechnicianSelect" data-technician="{{tech.name}}">
+        <radio value="{{tech.name}}" checked="{{formResponsibleTechnician === tech.name}}" />
+        <text>{{tech.name}}</text>
+      </label>
+    </view>
+  </view>
+  <view class="form-group">
+    <text class="form-label">车牌号</text>
+    <input class="form-input" type="text" placeholder="选填" bindinput="onLicensePlateInput" value="{{formLicensePlate}}" />
+  </view>
+  <view class="form-group">
+    <text class="form-label">备注</text>
+    <textarea class="form-textarea" placeholder="选填" bindinput="onRemarksInput" value="{{formRemarks}}" maxlength="200" />
+  </view>
+  <view class="modal-footer">
+    <view class="modal-btn cancel-btn" bindtap="onModalCancel">取消</view>
+    <view class="modal-btn confirm-btn" bindtap="onModalConfirm">确定</view>
+  </view>
+</view>
+<view class="modal-mask" wx:if="{{showDetailModal}}" bindtap="closeDetailModal"></view>
+<view class="detail-modal-container" wx:if="{{showDetailModal}}">
+  <view class="detail-header">
+    <view class="detail-title">顾客详情</view>
+    <view class="detail-close" bindtap="closeDetailModal">×</view>
+  </view>
+  <view class="detail-content">
+    <view class="detail-info">
+      <view class="detail-row">
+        <text class="detail-label">姓名:</text>
+        <text class="detail-value">{{selectedCustomer.name}}</text>
+      </view>
+      <view wx:if="{{selectedCustomer.phone}}" class="detail-row">
+        <text class="detail-label">手机号:</text>
+        <text class="detail-value">{{selectedCustomer.phone}}</text>
+      </view>
+      <view wx:if="{{selectedCustomer.responsibleTechnician}}" class="detail-row">
+        <text class="detail-label">责任技师:</text>
+        <text class="detail-value">{{selectedCustomer.responsibleTechnician}}</text>
+      </view>
+      <view wx:if="{{selectedCustomer.licensePlate}}" class="detail-row">
+        <text class="detail-label">车牌号:</text>
+        <text class="detail-value">{{selectedCustomer.licensePlate}}</text>
+      </view>
+      <view wx:if="{{selectedCustomer.remarks}}" class="detail-row">
+        <text class="detail-label">备注:</text>
+        <text class="detail-value">{{selectedCustomer.remarks}}</text>
+      </view>
+    </view>
+    <view class="visit-history">
+      <view class="history-title">消费记录</view>
+      <view wx:if="{{visitRecords.length === 0}}" class="empty-history">暂无消费记录</view>
+      <view wx:else class="history-list">
+        <view wx:for="{{visitRecords}}" wx:key="id" wx:for-index="visitIndex" class="history-item">
+          <view class="history-header">
+            <view class="history-date">{{item.date}}</view>
+          </view>
+          <view class="history-body" bindtap="goToConsultationDetail">
+            <view class="history-details">
+              <view class="history-detail">
+                <text class="detail-label">项目:</text>
+                <text>{{item.project}}</text>
+              </view>
+              <view class="history-detail">
+                <text class="detail-label">技师:</text>
+                <text>{{item.technician}}</text>
+              </view>
+              <view class="history-detail">
+                <text class="detail-label">房间:</text>
+                <text>{{item.room}}</text>
+              </view>
+              <view wx:if="{{item.isClockIn}}" class="history-tag clock-in">点钟</view>
+            </view>
+            <view class="view-detail-hint">点击查看详情</view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
