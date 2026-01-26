@@ -1,13 +1,6 @@
 // staff.ts
 import {db, Collections, generateId, getTimestamp} from '../../utils/db';
 
-const SHIFT_MAP: Record<string, {label: string; type: ShiftType;}> = {
-	'0': {label: '早班', type: 'morning'},
-	'1': {label: '晚班', type: 'evening'},
-	'2': {label: '休息', type: 'off'},
-	'3': {label: '请假', type: 'leave'},
-};
-
 const SHIFT_TYPES: ShiftType[] = ['morning', 'evening', 'off', 'leave'];
 const SHIFT_NAMES = ['早班', '晚班', '休息', '请假'];
 

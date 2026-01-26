@@ -1,3 +1,10 @@
+// 基础数据记录接口
+interface BaseRecord {
+	id: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
 // 支付方式类型
 type PaymentMethod = "meituan" | "dianping" | "douyin" | "wechat" | "alipay" | "cash" | "free";
 
@@ -100,4 +107,43 @@ interface ReservationRecord {
   endTime: string; // HH:MM
   createdAt: string;
   updatedAt: string;
+}
+
+// 会员卡数据结构
+interface MembershipCard extends BaseRecord {
+  name: string; // 会员卡名称
+  originalPrice: number; // 原价
+  remainingTimes: number; // 剩余次数
+  project: string; // 关联项目
+  status: "active" | "disabled"; // 状态
+}
+
+// 顾客会员卡关联数据结构
+interface CustomerMembership extends BaseRecord {
+  customerId: string; // 顾客ID
+  customerName: string; // 顾客姓名
+  customerPhone: string; // 顾客手机号
+  cardId: string; // 会员卡ID
+  cardName: string; // 会员卡名称
+  originalPrice: number; // 原价
+  paidAmount: number; // 实付金额
+  remainingTimes: number; // 剩余次数
+  project: string; // 项目
+  salesStaff: string; // 销售员工
+  remarks: string; // 备注
+  status: "active" | "disabled"; // 状态
+}
+
+// 会员卡使用记录
+interface MembershipUsageRecord {
+  id: string;
+  cardId: string; // 会员卡ID
+  cardName: string; // 会员卡名称
+  date: string; // 使用日期
+  customerName: string; // 顾客姓名
+  project: string; // 使用项目
+  technician: string; // 技师
+  room: string; // 房间
+  consultationId: string; // 关联的咨询单ID
+  createdAt: string; // 创建时间
 }

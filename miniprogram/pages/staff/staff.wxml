@@ -177,3 +177,4 @@
     <view class="modal-btn confirm-btn" bindtap="onConfirmModal">确定</view>
   </view>
 </view>
+<!-- TODO: 追加“项目管理”模块，对可选项目进行增删改查和排序，项目信息有名称、时长（min）、状态（启用/禁用）。在所有选择项目的地方替换成动态加载 -->

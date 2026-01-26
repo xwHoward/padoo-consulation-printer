@@ -10,7 +10,7 @@
     <view wx:for="{{customerList}}" wx:key="phone" class="customer-card">
       <view class="customer-header">
         <view class="customer-info">
-          <view class="customer-name">{{item.name}}</view>
+          <view class="customer-name">{{item.name}}{{item.gender === 'male' ? '先生' : '女士'}}</view>
           <view wx:if="{{item.phone}}" class="customer-phone">{{item.phone}}</view>
           <view class="customer-meta">
             <view wx:if="{{item.responsibleTechnician}}" class="meta-item">
@@ -24,12 +24,15 @@
           </view>
         </view>
         <view class="action-buttons">
-          <button class="action-btn edit" catch:tap="showEditCustomer" data-customer="{{item}}">
+          <view class="action-btn open-card" catch:tap="showOpenCardModal" data-customer="{{item}}">
+            开卡
+          </view>
+          <view class="action-btn edit" catch:tap="showEditCustomer" data-customer="{{item}}">
             编辑
-          </button>
-          <button class="action-btn detail" catch:tap="loadCustomerVisits" data-customer="{{item}}">
+          </view>
+          <view class="action-btn detail" catch:tap="loadCustomerVisits" data-customer="{{item}}">
             详情
-          </button>
+          </view>
         </view>
       </view>
       <view wx:if="{{item.remarks}}" class="customer-remarks">
@@ -76,6 +79,75 @@
     <view class="modal-btn confirm-btn" bindtap="onModalConfirm">确定</view>
   </view>
 </view>
+<view class="modal-mask" wx:if="{{showOpenCardModal}}" bindtap="onOpenCardCancel"></view>
+<view class="modal-container large" wx:if="{{showOpenCardModal}}">
+  <view class="modal-title">开卡</view>
+  <view class="customer-info-display">
+    <view class="info-row">
+      <text class="info-label">顾客:</text>
+      <text class="info-value">{{selectedCustomerForCard.name}}</text>
+    </view>
+    <view wx:if="{{selectedCustomerForCard.phone}}" class="info-row">
+      <text class="info-label">手机号:</text>
+      <text class="info-value">{{selectedCustomerForCard.phone}}</text>
+    </view>
+  </view>
+  <view class="form-group">
+    <text class="form-label">选择会员卡</text>
+    <view class="membership-card-selector">
+      <label wx:for="{{membershipCards}}" wx:key="id" wx:for-item="card" class="card-option {{selectedCardId === card.id ? 'selected' : ''}}" bindtap="onCardSelect" data-card="{{card}}">
+        <radio value="{{card.id}}" checked="{{selectedCardId === card.id}}" />
+        <view class="card-option-content">
+          <view class="card-option-name">{{card.name}}</view>
+          <view class="card-option-meta">
+            <text class="meta-text">{{card.project}}</text>
+            <text class="meta-text">{{card.remainingTimes}}次</text>
+            <text class="meta-text">¥{{card.originalPrice}}</text>
+          </view>
+        </view>
+      </label>
+    </view>
+  </view>
+  <view wx:if="{{selectedCardInfo}}" class="selected-card-info">
+    <view class="info-row">
+      <text class="info-label">会员卡:</text>
+      <text class="info-value">{{selectedCardInfo.name}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">原价:</text>
+      <text class="info-value">¥{{selectedCardInfo.originalPrice}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">次数:</text>
+      <text class="info-value">{{selectedCardInfo.remainingTimes}}次</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">项目:</text>
+      <text class="info-value">{{selectedCardInfo.project}}</text>
+    </view>
+  </view>
+  <view class="form-group">
+    <text class="form-label">实付金额</text>
+    <input class="form-input" type="digit" placeholder="请输入实付金额" bindinput="onPaidAmountInput" value="{{formPaidAmount}}" />
+  </view>
+  <view class="form-group">
+    <text class="form-label">销售员工</text>
+    <view class="technician-selector">
+      <label wx:for="{{technicianList}}" wx:key="id" wx:for-item="tech" class="technician-option {{formSalesStaff === tech.name ? 'selected' : ''}}" bindtap="onSalesStaffSelect" data-staff="{{tech.name}}">
+        <radio value="{{tech.name}}" checked="{{formSalesStaff === tech.name}}" />
+        <text>{{tech.name}}</text>
+      </label>
+    </view>
+  </view>
+  <view class="form-group">
+    <text class="form-label">备注</text>
+    <input class="form-input" placeholder="选填" bindinput="onCardRemarksInput" value="{{formCardRemarks}}" />
+  </view>
+  <view class="modal-footer">
+    <view class="modal-btn cancel-btn" bindtap="onOpenCardCancel">取消</view>
+    <view class="modal-btn confirm-btn" bindtap="onOpenCardConfirm">确定</view>
+  </view>
+</view>
 <view class="modal-mask" wx:if="{{showDetailModal}}" bindtap="closeDetailModal"></view>
 <view class="detail-modal-container" wx:if="{{showDetailModal}}">
   <view class="detail-header">
@@ -103,6 +175,46 @@
       <view wx:if="{{selectedCustomer.remarks}}" class="detail-row">
         <text class="detail-label">备注:</text>
         <text class="detail-value">{{selectedCustomer.remarks}}</text>
+      </view>
+    </view>
+    <view class="membership-cards-section">
+      <view class="history-title">会员卡</view>
+      <view wx:if="{{customerMemberships.length === 0}}" class="empty-history">暂无会员卡</view>
+      <view wx:else class="membership-cards-list">
+        <view wx:for="{{customerMemberships}}" wx:key="id" class="membership-card-item {{item.status === 'disabled' ? 'disabled' : ''}}">
+          <view class="card-header">
+            <view class="card-name">{{item.cardName}}</view>
+            <view class="card-status {{item.status === 'active' ? 'active' : 'disabled'}}">
+              {{item.status === 'active' ? '启用' : '禁用'}}
+            </view>
+          </view>
+          <view class="card-body">
+            <view class="card-row">
+              <text class="card-label">项目:</text>
+              <text class="card-value">{{item.project}}</text>
+            </view>
+            <view class="card-row">
+              <text class="card-label">剩余次数:</text>
+              <text class="card-value highlight">{{item.remainingTimes}}次</text>
+            </view>
+            <view class="card-row">
+              <text class="card-label">原价:</text>
+              <text class="card-value">¥{{item.originalPrice}}</text>
+            </view>
+            <view class="card-row">
+              <text class="card-label">实付:</text>
+              <text class="card-value">¥{{item.paidAmount}}</text>
+            </view>
+            <view class="card-row">
+              <text class="card-label">销售:</text>
+              <text class="card-value">{{item.salesStaff}}</text>
+            </view>
+            <view wx:if="{{item.remarks}}" class="card-row">
+              <text class="card-label">备注:</text>
+              <text class="card-value">{{item.remarks}}</text>
+            </view>
+          </view>
+        </view>
       </view>
     </view>
     <view class="visit-history">

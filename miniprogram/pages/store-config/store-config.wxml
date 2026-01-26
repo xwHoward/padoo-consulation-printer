@@ -1,57 +1,57 @@
 <!-- store-config.wxml -->
 <navigation-bar title="门店配置" back="{{true}}" color="black" background="#FFF"></navigation-bar>
 <scroll-view class="scrollarea" scroll-y type="list">
-				<view class="container">
-								<view class="grid-container">
-												<!-- 员工管理 -->
-												<view class="grid-item" bindtap="onModuleTap" data-module="staff">
-																<view class="grid-icon staff-icon">
-																				<text class="icon-text">👥</text>
-																</view>
-																<text class="grid-label">员工管理</text>
-												</view>
-												<!-- 场控收银 -->
-												<view class="grid-item" bindtap="onModuleTap" data-module="cashier">
-																<view class="grid-icon cashier-icon">
-																				<text class="icon-text">💰</text>
-																</view>
-																<text class="grid-label">场控收银</text>
-												</view>
-												<!-- 顾客管理 -->
-												<view class="grid-item" bindtap="onModuleTap" data-module="customer">
-																<view class="grid-icon customer-icon">
-																				<text class="icon-text">👤</text>
-																</view>
-																<text class="grid-label">顾客管理</text>
-												</view>
-												<!-- 会员卡 -->
-												<view class="grid-item" bindtap="onModuleTap" data-module="membership">
-																<view class="grid-icon membership-icon">
-																				<text class="icon-text">💳</text>
-																</view>
-																<text class="grid-label">会员卡</text>
-												</view>
-												<!-- 预约 -->
-												<view class="grid-item" bindtap="onModuleTap" data-module="reservation">
-																<view class="grid-icon reservation-icon">
-																				<text class="icon-text">📅</text>
-																</view>
-																<text class="grid-label">预约</text>
-												</view>
-												<!-- 单据管理 -->
-												<view class="grid-item" bindtap="onModuleTap" data-module="orders">
-																<view class="grid-icon orders-icon">
-																				<text class="icon-text">📋</text>
-																</view>
-																<text class="grid-label">单据管理</text>
-												</view>
-												<!-- 报表分析 -->
-												<view class="grid-item" bindtap="onModuleTap" data-module="reports">
-																<view class="grid-icon reports-icon">
-																				<text class="icon-text">📊</text>
-																</view>
-																<text class="grid-label">报表分析</text>
-												</view>
-								</view>
-				</view>
+  <view class="container">
+    <view class="grid-container">
+      <!-- 员工管理 -->
+      <view class="grid-item" bindtap="onModuleTap" data-module="staff">
+        <view class="grid-icon staff-icon">
+          <text class="icon-text">👥</text>
+        </view>
+        <text class="grid-label">员工管理</text>
+      </view>
+      <!-- 场控收银 -->
+      <view class="grid-item" bindtap="onModuleTap" data-module="cashier">
+        <view class="grid-icon cashier-icon">
+          <text class="icon-text">💰</text>
+        </view>
+        <text class="grid-label">场控收银</text>
+      </view>
+      <!-- 顾客管理 -->
+      <view class="grid-item" bindtap="onModuleTap" data-module="customer">
+        <view class="grid-icon customer-icon">
+          <text class="icon-text">👤</text>
+        </view>
+        <text class="grid-label">顾客管理</text>
+      </view>
+      <!-- 会员卡 -->
+      <view class="grid-item" bindtap="onModuleTap" data-module="membership">
+        <view class="grid-icon membership-icon">
+          <text class="icon-text">💳</text>
+        </view>
+        <text class="grid-label">会员卡/次卡</text>
+      </view>
+      <!-- 预约 -->
+      <view class="grid-item" bindtap="onModuleTap" data-module="reservation">
+        <view class="grid-icon reservation-icon">
+          <text class="icon-text">📅</text>
+        </view>
+        <text class="grid-label">预约</text>
+      </view>
+      <!-- 单据管理 -->
+      <view class="grid-item" bindtap="onModuleTap" data-module="orders">
+        <view class="grid-icon orders-icon">
+          <text class="icon-text">📋</text>
+        </view>
+        <text class="grid-label">单据管理</text>
+      </view>
+      <!-- 报表分析 -->
+      <view class="grid-item" bindtap="onModuleTap" data-module="reports">
+        <view class="grid-icon reports-icon">
+          <text class="icon-text">📊</text>
+        </view>
+        <text class="grid-label">报表分析</text>
+      </view>
+    </view>
+  </view>
 </scroll-view>

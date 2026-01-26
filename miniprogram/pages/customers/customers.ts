@@ -36,7 +36,16 @@ Page({
     technicianList: [] as {id: string; name: string}[],
     selectedCustomer: null as CustomerInfo | null,
     visitRecords: [] as CustomerVisit[],
-    showDetailModal: false
+    showDetailModal: false,
+    showOpenCardModal: false,
+    selectedCustomerForCard: null as CustomerInfo | null,
+    membershipCards: [] as MembershipCard[],
+    selectedCardId: '',
+    selectedCardInfo: null as MembershipCard | null,
+    formPaidAmount: '',
+    formSalesStaff: '',
+    formCardRemarks: '',
+    customerMemberships: [] as CustomerMembership[]
   },
 
   onLoad() {
@@ -50,7 +59,7 @@ Page({
 
   loadTechnicianList() {
     try {
-      const staffList = db.find<{id: string; name: string; status: string}>(Collections.STAFF, {
+      const staffList = db.find<{id: string; name: string; status: string; createdAt: string; updatedAt: string}>(Collections.STAFF, {
         status: 'active'
       });
       this.setData({technicianList: staffList});
@@ -263,18 +272,33 @@ Page({
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
 
-    this.setData({
-      selectedCustomer: customer,
-      visitRecords,
-      showDetailModal: true
-    });
+    try {
+      const memberships = db.find<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, {
+        customerId: customer.id
+      });
+      this.setData({
+        selectedCustomer: customer,
+        visitRecords,
+        customerMemberships: memberships,
+        showDetailModal: true
+      });
+    } catch (error) {
+      console.error('加载顾客会员卡失败:', error);
+      this.setData({
+        selectedCustomer: customer,
+        visitRecords,
+        customerMemberships: [],
+        showDetailModal: true
+      });
+    }
   },
 
   closeDetailModal() {
     this.setData({
       showDetailModal: false,
       selectedCustomer: null,
-      visitRecords: []
+      visitRecords: [],
+      customerMemberships: []
     });
   },
 
@@ -283,6 +307,151 @@ Page({
     wx.navigateTo({
       url: `/pages/history/history?customerPhone=${selectedCustomer.phone}&customerId=${selectedCustomer.phone || selectedCustomer.id}&readonly=true`
     });
+  },
+
+  loadMembershipCards() {
+    try {
+      const cards = db.getAll<MembershipCard>(Collections.MEMBERSHIP);
+      const activeCards = cards.filter(card => card.status === 'active');
+      this.setData({membershipCards: activeCards});
+    } catch (error) {
+      console.error('加载会员卡列表失败:', error);
+      wx.showToast({
+        title: '加载会员卡失败',
+        icon: 'error'
+      });
+    }
+  },
+
+  showOpenCardModal(e: any) {
+    const customer = e.currentTarget.dataset.customer as CustomerInfo;
+    this.loadMembershipCards();
+    this.setData({
+      showOpenCardModal: true,
+      selectedCustomerForCard: customer,
+      selectedCardId: '',
+      selectedCardInfo: null,
+      formPaidAmount: '',
+      formSalesStaff: '',
+      formCardRemarks: ''
+    });
+  },
+
+  onOpenCardCancel() {
+    this.setData({
+      showOpenCardModal: false,
+      selectedCustomerForCard: null,
+      selectedCardId: '',
+      selectedCardInfo: null,
+      formPaidAmount: '',
+      formSalesStaff: '',
+      formCardRemarks: ''
+    });
+  },
+
+  onCardSelect(e: any) {
+    const card = e.currentTarget.dataset.card as MembershipCard;
+    this.setData({
+      selectedCardId: card.id,
+      selectedCardInfo: card
+    });
+  },
+
+  onPaidAmountInput(e: any) {
+    this.setData({formPaidAmount: e.detail.value});
+  },
+
+  onSalesStaffSelect(e: any) {
+    const staff = e.currentTarget.dataset.staff;
+    this.setData({formSalesStaff: staff});
+  },
+
+  onCardRemarksInput(e: any) {
+    this.setData({formCardRemarks: e.detail.value});
+  },
+
+  onOpenCardConfirm() {
+    const {selectedCustomerForCard, selectedCardInfo, formPaidAmount, formSalesStaff, formCardRemarks} = this.data;
+
+    if (!selectedCustomerForCard) {
+      wx.showToast({
+        title: '顾客信息错误',
+        icon: 'none'
+      });
+      return;
+    }
+
+    if (!selectedCardInfo) {
+      wx.showToast({
+        title: '请选择会员卡',
+        icon: 'none'
+      });
+      return;
+    }
+
+    if (!formPaidAmount.trim()) {
+      wx.showToast({
+        title: '请输入实付金额',
+        icon: 'none'
+      });
+      return;
+    }
+
+    if (!formSalesStaff.trim()) {
+      wx.showToast({
+        title: '请选择销售员工',
+        icon: 'none'
+      });
+      return;
+    }
+
+    const paidAmount = parseFloat(formPaidAmount);
+    if (isNaN(paidAmount) || paidAmount < 0) {
+      wx.showToast({
+        title: '实付金额不能小于0',
+        icon: 'none'
+      });
+      return;
+    }
+
+    try {
+      const now = new Date().toISOString();
+      db.insert(Collections.CUSTOMER_MEMBERSHIP, {
+        customerId: selectedCustomerForCard.id,
+        customerName: selectedCustomerForCard.name,
+        customerPhone: selectedCustomerForCard.phone,
+        cardId: selectedCardInfo.id,
+        cardName: selectedCardInfo.name,
+        originalPrice: selectedCardInfo.originalPrice,
+        paidAmount,
+        remainingTimes: selectedCardInfo.remainingTimes,
+        project: selectedCardInfo.project,
+        salesStaff: formSalesStaff,
+        remarks: formCardRemarks,
+        status: 'active'
+      });
+
+      this.setData({
+        showOpenCardModal: false,
+        selectedCustomerForCard: null,
+        selectedCardId: '',
+        selectedCardInfo: null,
+        formPaidAmount: '',
+        formSalesStaff: '',
+        formCardRemarks: ''
+      });
+
+      wx.showToast({
+        title: '开卡成功',
+        icon: 'success'
+      });
+    } catch (error) {
+      console.error('开卡失败:', error);
+      wx.showToast({
+        title: '开卡失败',
+        icon: 'error'
+      });
+    }
   },
 
 });

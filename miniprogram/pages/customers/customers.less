@@ -13,6 +13,7 @@
   min-height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
+
 .customer-list {
   display: flex;
   flex-direction: column;
@@ -81,6 +82,15 @@
   border: none;
   cursor: pointer;
   transition: all 0.3s ease;
+
+  &.open-card {
+    background-color: #52C41A;
+    color: #fff;
+  }
+
+  &.open-card:active {
+    background-color: #389E0D;
+  }
 
   &.edit {
     background-color: @bg-color;
@@ -153,6 +163,11 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+.modal-container.large {
+  max-width: 550px;
+  max-height: 85vh;
+}
+
 .modal-title {
   font-size: 14px;
   font-weight: 600;
@@ -190,16 +205,6 @@
   border-bottom: 1px solid @border-color;
   font-size: 13px;
   color: @text-color;
-}
-
-.form-textarea {
-  width: 100%;
-  padding: 8px 0;
-  border-bottom: 1px solid @border-color;
-  font-size: 13px;
-  color: @text-color;
-  min-height: 80px;
-  resize: vertical;
 }
 
 .technician-selector {
@@ -358,6 +363,90 @@
   margin-top: 15px;
 }
 
+.membership-cards-section {
+  margin-top: 15px;
+}
+
+.membership-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.membership-card-item {
+  background-color: @bg-color-light;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.membership-card-item.disabled {
+  opacity: 0.6;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background-color: @bg-color-light;
+  border-bottom: 1px solid @border-color-light;
+}
+
+.card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: @text-color;
+}
+
+.card-status {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.card-status.active {
+  background-color: rgba(82, 196, 26, 0.1);
+  color: #52C41A;
+}
+
+.card-status.disabled {
+  background-color: rgba(153, 153, 153, 0.1);
+  color: #999999;
+}
+
+.card-body {
+  padding: 12px;
+  background-color: @bg-color;
+}
+
+.card-row {
+  display: flex;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.card-row:last-child {
+  margin-bottom: 0;
+}
+
+.card-label {
+  color: @text-color-secondary;
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.card-value {
+  color: @text-color;
+  flex: 1;
+}
+
+.card-value.highlight {
+  color: @primary-color;
+  font-weight: 600;
+}
+
 .history-title {
   font-size: 14px;
   font-weight: 600;
@@ -450,4 +539,100 @@
     background-color: @primary-color;
     color: #fff;
   }
+}
+
+.customer-info-display {
+  background-color: @bg-color-light;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 15px;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.info-row:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  color: @text-color-secondary;
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.info-value {
+  color: @text-color;
+  flex: 1;
+}
+
+.membership-card-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.card-option {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  font-size: 13px;
+  color: @text-color;
+  cursor: pointer;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid @border-color;
+  transition: all 0.3s ease;
+  position: relative;
+  background-color: @bg-color;
+  gap: 8px;
+}
+
+.card-option radio {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.card-option-content {
+  flex: 1;
+}
+
+.card-option-name {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: @text-color;
+}
+
+.card-option-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: @text-color-secondary;
+}
+
+.meta-text {
+  color: @text-color-secondary;
+}
+
+.card-option.selected {
+  border-color: @primary-color;
+  background-color: rgba(255, 107, 0, 0.05);
+}
+
+.card-option:active {
+  border-color: @primary-color;
+  background-color: rgba(255, 107, 0, 0.05);
+}
+
+.selected-card-info {
+  background-color: @bg-color-light;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 15px;
 }

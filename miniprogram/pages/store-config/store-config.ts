@@ -29,8 +29,7 @@ Component({
 					wx.navigateTo({ url: '/pages/customers/customers' });
 					break;
 				case 'membership':
-					wx.showToast({title: '会员卡', icon: 'none'});
-					// wx.navigateTo({ url: '/pages/membership/membership' });
+					wx.navigateTo({ url: '/pages/membership-cards/membership-cards' });
 					break;
 				case 'reservation':
 					wx.showToast({title: '预约', icon: 'none'});

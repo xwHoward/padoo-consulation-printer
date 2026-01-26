@@ -1,0 +1,77 @@
+<navigation-bar title="会员卡管理" back="{{true}}" color="black" background="#FFF">
+  <view slot="right" class="nav-btns">
+    <view bindtap="showAddCard" class="nav-btn" aria-role="button" aria-label="新增会员卡">
+      <text class="nav-btn-text">新增会员卡</text>
+    </view>
+  </view>
+</navigation-bar>
+<view class="cards-page">
+  <view class="card-list">
+    <view wx:for="{{cardList}}" wx:key="id" class="card-item {{item.status === 'disabled' ? 'disabled' : ''}}" data-card="{{item}}">
+      <view class="card-header">
+        <view class="card-info">
+          <view class="card-name">{{item.name}}</view>
+          <view class="card-meta">
+            <view class="meta-item">
+              <text class="meta-label">项目:</text>
+              <text>{{item.project}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="card-status {{item.status === 'active' ? 'active' : 'disabled'}}">
+          {{item.status === 'active' ? '启用' : '禁用'}}
+        </view>
+      </view>
+      <view class="card-body">
+        <view class="card-row">
+          <text class="card-label">原价:</text>
+          <text class="card-value">¥{{item.originalPrice}}</text>
+        </view>
+        <view class="card-row">
+          <text class="card-label">次数:</text>
+          <text class="card-value remaining">{{item.totalTimes}}</text>
+        </view>
+      </view>
+      <view class="card-actions">
+        <view class="action-btn toggle" catch:tap="toggleCardStatus" data-card="{{item}}">
+          {{item.status === 'active' ? '禁用' : '启用'}}
+        </view>
+        <view class="action-btn edit" catch:tap="showEditCard" data-card="{{item}}">编辑</view>
+        <view class="action-btn delete" catch:tap="deleteCard" data-card="{{item}}">删除</view>
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{cardList.length === 0}}" class="empty-state">
+    <view class="empty-icon">💳</view>
+    <view class="empty-text">暂无会员卡记录</view>
+  </view>
+</view>
+<view class="modal-mask" wx:if="{{showEditModal}}" bindtap="onModalCancel"></view>
+<view class="modal-container" wx:if="{{showEditModal}}">
+  <view class="modal-title">{{modalTitle}}</view>
+  <view class="form-group">
+    <text class="form-label">会员卡名称</text>
+    <input class="form-input" type="text" placeholder="请输入会员卡名称" bindinput="onNameInput" value="{{formName}}" />
+  </view>
+  <view class="form-group">
+    <text class="form-label">原价</text>
+    <input class="form-input" type="digit" placeholder="请输入原价" bindinput="onOriginalPriceInput" value="{{formOriginalPrice}}" />
+  </view>
+  <view class="form-group">
+    <text class="form-label">次数</text>
+    <input class="form-input" type="number" placeholder="请输入次数" bindinput="onRemainingTimesInput" value="{{formRemainingTimes}}" />
+  </view>
+  <view class="form-group">
+    <text class="form-label">关联项目</text>
+    <view class="project-selector">
+      <label wx:for="{{projects}}" wx:key="*this" wx:for-item="project" class="project-option {{formProject === project ? 'selected' : ''}}" bindtap="onProjectSelect" data-project="{{project}}">
+        <radio value="{{project}}" checked="{{formProject === project}}" />
+        <text>{{project}}</text>
+      </label>
+    </view>
+  </view>
+  <view class="modal-footer">
+    <view class="modal-btn cancel-btn" bindtap="onModalCancel">取消</view>
+    <view class="modal-btn confirm-btn" bindtap="onModalConfirm">确定</view>
+  </view>
+</view>

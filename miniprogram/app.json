@@ -5,7 +5,8 @@
     "pages/store-config/store-config",
     "pages/staff/staff",
     "pages/cashier/cashier",
-    "pages/customers/customers"
+    "pages/customers/customers",
+    "pages/membership-cards/membership-cards"
   ],
   "window": {
     "navigationBarTextStyle": "black",

@@ -7,13 +7,6 @@
 // 数据库存储键前缀
 const DB_PREFIX = 'db_';
 
-// 基础数据记录接口
-export interface BaseRecord {
-	id: string;
-	createdAt: string;
-	updatedAt: string;
-}
-
 // 查询条件类型
 export type QueryCondition<T> = Partial<T> | ((item: T) => boolean);
 
@@ -325,6 +318,7 @@ export const Collections = {
 	STAFF: 'staff',           // 员工
 	CUSTOMERS: 'customers',   // 顾客
 	MEMBERSHIP: 'membership', // 会员卡
+	CUSTOMER_MEMBERSHIP: 'customer_membership', // 顾客会员卡关联
 	RESERVATIONS: 'reservations', // 预约
 	ORDERS: 'orders',         // 订单/单据
 	SETTINGS: 'settings',     // 设置
