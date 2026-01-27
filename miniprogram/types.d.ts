@@ -167,3 +167,21 @@ interface MembershipUsageRecord extends BaseRecord {
   room: string; // 房间
   consultationId: string; // 关联的咨询单ID
 }
+
+interface Project extends BaseRecord {
+  id: string;
+  name: string;
+  duration: number;
+  price?: number;
+}
+
+interface Room extends BaseRecord {
+  id: string;
+  name: string;
+}
+
+interface EssentialOil extends BaseRecord {
+  id: string;
+  name: string;
+  effect: string;
+}

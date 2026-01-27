@@ -325,6 +325,9 @@ export const Collections = {
 	SCHEDULE: 'schedule',     // 排班
 	ROTATION: 'rotation',     // 轮排
 	MEMBERSHIP_USAGE: 'membership_usage', // 会员卡使用记录
+	PROJECTS: 'projects',     // 项目
+	ROOMS: 'rooms',         // 房间
+	ESSENTIAL_OILS: 'essential_oils', // 精油
 } as const;
 
 export type CollectionName = typeof Collections[keyof typeof Collections];

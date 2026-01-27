@@ -1,19 +1,61 @@
-export const PROJECTS = [
-	'60min指压', '70min精油', '90min精油', '90min七脉轮彩石',
-	'90min深海热贝', '80min推拿+精油', '45min腰臀',
-	'120min精油', '120min七脉轮彩石', '120min深海热贝'
+export interface Project {
+	id: string;
+	name: string;
+	duration: number;
+	price?: number;
+	isEssentialOilOnly?: boolean;
+	status: 'normal' | 'disabled';
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+export const PROJECTS: Project[] = [
+	{id: '1', name: '60min指压', duration: 60, price: 0, status: 'normal', isEssentialOilOnly: false},
+	{id: '2', name: '70min精油', duration: 70, price: 0, status: 'normal', isEssentialOilOnly: false},
+	{id: '3', name: '90min精油', duration: 90, price: 0, status: 'normal', isEssentialOilOnly: false},
+	{id: '4', name: '90min七脉轮彩石', duration: 90, price: 0, status: 'normal', isEssentialOilOnly: false},
+	{id: '5', name: '90min深海热贝', duration: 90, price: 0, status: 'normal', isEssentialOilOnly: false},
+	{id: '6', name: '80min推拿+精油', duration: 80, price: 0, status: 'normal', isEssentialOilOnly: false},
+	{id: '7', name: '45min腰臀', duration: 45, price: 0, status: 'normal', isEssentialOilOnly: false},
+	{id: '8', name: '120min精油', duration: 120, price: 0, status: 'normal', isEssentialOilOnly: false},
+	{id: '9', name: '120min七脉轮彩石', duration: 120, price: 0, status: 'normal', isEssentialOilOnly: false},
+	{id: '10', name: '120min深海热贝', duration: 120, price: 0, status: 'normal', isEssentialOilOnly: false}
 ];
 
-export const ESSENTIAL_OILS = [
-	{id: 'lavender', name: '薰衣草 LAVENDER', effect: '安神助眠，放松身心，安抚情绪'},
-	{id: 'grapefruit', name: '葡萄柚 GRAPEFRUIT', effect: '清新提神，愉悦心情，改善浮肿'},
-	{id: 'atractylodes', name: '白术 ATRACTYLODES', effect: '驱寒祠湿，温润调理，行气暖身'},
-	{id: 'rosemary', name: '迷迭香 ROSEMARY', effect: '提神醒脑，增强专注，缓解笫惫'},
-	{id: 'rosewood', name: '花梨木 ROSEWOOD', effect: '温和滋养，舒缓干燥，安抚肌肤'},
-	{id: 'seasonal', name: '冬日特调 SEASONAL SPECIAL', effect: '季节调和，平衡身心，调理体质'}
+export interface EssentialOil {
+	id: string;
+	name: string;
+	effect: string;
+	status: 'normal' | 'disabled';
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+export const ESSENTIAL_OILS: EssentialOil[] = [
+	{id: 'lavender', name: '薰衣草 LAVENDER', effect: '安神助眠，放松身心，安抚情绪', status: 'normal'},
+	{id: 'grapefruit', name: '葡萄柚 GRAPEFRUIT', effect: '清新提神，愉悦心情，改善浮肿', status: 'normal'},
+	{id: 'atractylodes', name: '白术 ATRACTYLODES', effect: '驱寒祠湿，温润调理，行气暖身', status: 'normal'},
+	{id: 'rosemary', name: '迷迭香 ROSEMARY', effect: '提神醒脑，增强专注，缓解笫惫', status: 'normal'},
+	{id: 'rosewood', name: '花梨木 ROSEWOOD', effect: '温和滋养，舒缓干燥，安抚肌肤', status: 'normal'},
+	{id: 'seasonal', name: '冬日特调 SEASONAL SPECIAL', effect: '季节调和，平衡身心，调理体质', status: 'normal'}
 ];
 
-export const ROOMS = ['苏梅', '法罗', '帕劳', '巴厘', '大溪地', '西西里'];
+export interface Room {
+	id: string;
+	name: string;
+	status: 'normal' | 'disabled';
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+export const ROOMS: Room[] = [
+	{id: '1', name: '苏梅', status: 'normal'},
+	{id: '2', name: '法罗', status: 'normal'},
+	{id: '3', name: '帕劳', status: 'normal'},
+	{id: '4', name: '巴厘', status: 'normal'},
+	{id: '5', name: '大溪地', status: 'normal'},
+	{id: '6', name: '西西里', status: 'normal'}
+];
 
 export const MASSAGE_STRENGTHS = [
 	{id: 'standard', name: '标准 STANDARD'},

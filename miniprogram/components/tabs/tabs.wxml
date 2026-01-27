@@ -1,0 +1,11 @@
+<view class="tabs">
+	<view 
+		class="tab-item {{item.value === activeTab ? 'active' : ''}}" 
+		wx:for="{{tabs}}" 
+		wx:key="value"
+		data-tab="{{item.value}}"
+		bindtap="onTabChange"
+	>
+		{{item.label}}
+	</view>
+</view>

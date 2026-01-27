@@ -1,0 +1,406 @@
+@import "../../app.less";
+
+/* 页面基础样式 */
+page {
+	height: 100vh;
+	display: flex;
+	flex-direction: column;
+	background-color: @bg-color-light;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	padding-top: env(safe-area-inset-top);
+	padding-top: constant(safe-area-inset-top);
+	padding-bottom: env(safe-area-inset-bottom);
+	padding-bottom: constant(safe-area-inset-bottom);
+	box-sizing: border-box;
+}
+
+.data-management {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	background-color: @bg-color-light;
+	overflow: hidden;
+}
+
+/* 标签页 */
+.tabs {
+	display: flex;
+	background-color: @bg-color;
+	border-bottom: 1px solid @border-color-light;
+	padding: 0 15px;
+}
+
+.tab-item {
+	flex: 1;
+	text-align: center;
+	padding: 14px 0;
+	font-size: 15px;
+	color: @text-color-secondary;
+	position: relative;
+	transition: all 0.3s ease;
+	user-select: none;
+}
+
+.tab-item.active {
+	color: @primary-color;
+	font-weight: 500;
+}
+
+.tab-item.active::after {
+	content: '';
+	position: absolute;
+	bottom: 0;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 30px;
+	height: 3px;
+	background-color: @primary-color;
+	border-radius: 3px 3px 0 0;
+}
+
+/* 内容区域 */
+.content {
+	flex: 1;
+	overflow-y: auto;
+	padding: 15px;
+}
+
+/* 区块 */
+.section {
+	background-color: @bg-color;
+	border-radius: 12px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+	overflow: hidden;
+}
+
+.section-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 15px;
+	background-color: @bg-color-light;
+	border-bottom: 1px solid @border-color-light;
+}
+
+.section-title {
+	font-size: 16px;
+	font-weight: 600;
+	color: @text-color;
+}
+
+.add-btn {
+	padding: 6px 14px;
+	background-color: @primary-color;
+	color: #fff;
+	border-radius: 6px;
+	font-size: 13px;
+	user-select: none;
+	transition: background-color 0.3s ease;
+}
+
+.add-btn:active {
+	background-color: #e66a00;
+}
+
+/* 列表 */
+.list {
+	min-height: 200px;
+}
+
+.list-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 15px;
+	border-bottom: 1px solid @border-color-light;
+	transition: background-color 0.3s ease;
+}
+
+.list-item:last-child {
+	border-bottom: none;
+}
+
+.list-item:active {
+	background-color: @bg-color-light;
+}
+
+.list-item.disabled {
+	opacity: 0.5;
+	background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* 项目信息 */
+.item-info {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.item-name {
+	font-size: 16px;
+	font-weight: 500;
+	color: @text-color;
+	word-break: break-all;
+}
+
+.item-detail {
+	font-size: 13px;
+	color: @text-color-secondary;
+	word-break: break-all;
+}
+
+.item-tag {
+	display: inline-block;
+	padding: 2px 8px;
+	background-color: rgba(255, 107, 0, 0.1);
+	color: @primary-color;
+	border-radius: 4px;
+	font-size: 11px;
+	margin-left: 6px;
+	white-space: nowrap;
+}
+
+/* 操作按钮 */
+.item-actions {
+	display: flex;
+	gap: 10px;
+	margin-left: 15px;
+}
+
+.action-btn {
+	padding: 6px 12px;
+	border-radius: 6px;
+	font-size: 13px;
+	user-select: none;
+	transition: all 0.3s ease;
+}
+
+.edit-btn {
+	color: @info-color;
+	background-color: rgba(24, 144, 255, 0.1);
+}
+
+.edit-btn:active {
+	background-color: rgba(24, 144, 255, 0.2);
+}
+
+.delete-btn {
+	color: @danger-color;
+	background-color: rgba(255, 77, 79, 0.1);
+}
+
+.delete-btn:active {
+	background-color: rgba(255, 77, 79, 0.2);
+}
+
+.status-btn {
+	min-width: 50px;
+	text-align: center;
+}
+
+.status-normal {
+	color: @success-color;
+	background-color: rgba(82, 196, 26, 0.1);
+}
+
+.status-normal:active {
+	background-color: rgba(82, 196, 26, 0.2);
+}
+
+.status-disabled {
+	color: @warning-color;
+	background-color: rgba(250, 140, 22, 0.1);
+}
+
+.status-disabled:active {
+	background-color: rgba(250, 140, 22, 0.2);
+}
+
+/* 空状态 */
+.empty {
+	text-align: center;
+	padding: 60px 20px;
+	color: @text-color-secondary;
+	font-size: 14px;
+}
+
+.empty > view {
+	user-select: none;
+}
+
+/* 弹窗 */
+.modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	z-index: 1000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.modal-content {
+	width: 85%;
+	max-width: 400px;
+	background-color: @bg-color;
+	border-radius: 12px;
+	overflow: hidden;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 15px;
+	background-color: @bg-color-light;
+	border-bottom: 1px solid @border-color-light;
+}
+
+.modal-title {
+	font-size: 17px;
+	font-weight: 600;
+	color: @text-color;
+}
+
+.modal-close {
+	font-size: 28px;
+	color: @text-color-secondary;
+	line-height: 1;
+	cursor: pointer;
+	transition: color 0.3s ease;
+	user-select: none;
+	width: 30px;
+	text-align: center;
+}
+
+.modal-close:active {
+	color: @text-color;
+}
+
+.modal-body {
+	padding: 20px;
+}
+
+/* 表单项 */
+.form-item {
+	display: flex;
+	align-items: center;
+	margin-bottom: 15px;
+}
+
+.form-item:last-child {
+	margin-bottom: 0;
+}
+
+.form-label {
+	flex: none;
+	display: flex;
+	font-size: 14px;
+	color: @text-color;
+	margin-right: 10px;
+}
+
+.required {
+	color: @danger-color;
+}
+
+.form-input {
+	flex: auto;
+	padding: 10px 12px;
+	font-size: 15px;
+	color: @text-color;
+	background-color: @bg-color-light;
+	border: 1px solid @border-color;
+	border-radius: 8px;
+	box-sizing: border-box;
+}
+
+.form-input:focus {
+	border-color: @primary-color;
+	outline: none;
+}
+
+/* 复选框 */
+.checkbox-wrapper {
+	flex: auto;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.form-checkbox {
+	width: 18px;
+	height: 18px;
+}
+
+.checkbox-label {
+	font-size: 14px;
+	color: @text-color;
+	user-select: none;
+}
+
+/* 单选按钮组 */
+.radio-group {
+	flex: auto;
+	display: flex;
+	gap: 20px;
+}
+
+.radio-option {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 12px;
+	border-radius: 6px;
+	transition: background-color 0.3s ease;
+	user-select: none;
+}
+
+.radio-option.selected {
+	background-color: rgba(255, 107, 0, 0.05);
+}
+
+.radio-option:active {
+	background-color: @bg-color-light;
+}
+
+/* 弹窗底部 */
+.modal-footer {
+	display: flex;
+	border-top: 1px solid @border-color-light;
+}
+
+.modal-btn {
+	flex: 1;
+	text-align: center;
+	padding: 15px 0;
+	font-size: 16px;
+	border: none;
+	transition: background-color 0.2s ease;
+	user-select: none;
+}
+
+.cancel-btn {
+	color: @text-color-secondary;
+	background-color: transparent;
+	border-right: 1px solid @border-color-light;
+}
+
+.cancel-btn:active {
+	background-color: @bg-color-light;
+}
+
+.confirm-btn {
+	color: @primary-color;
+	background-color: transparent;
+	font-weight: 500;
+}
+
+.confirm-btn:active {
+	background-color: rgba(255, 107, 0, 0.1);
+}

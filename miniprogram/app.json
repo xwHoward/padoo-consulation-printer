@@ -6,7 +6,8 @@
     "pages/staff/staff",
     "pages/cashier/cashier",
     "pages/customers/customers",
-    "pages/membership-cards/membership-cards"
+    "pages/membership-cards/membership-cards",
+    "pages/data-management/data-management"
   ],
   "window": {
     "navigationBarTextStyle": "black",

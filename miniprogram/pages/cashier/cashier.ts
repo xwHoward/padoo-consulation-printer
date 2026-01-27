@@ -95,6 +95,7 @@ Component({
 			{key: 'wechat', label: '微信', selected: false, amount: ''},
 			{key: 'alipay', label: '支付宝', selected: false, amount: ''},
 			{key: 'cash', label: '现金', selected: false, amount: ''},
+			{key: 'gaode', label: '高德', selected: false, amount: ''},
 			{key: 'free', label: '免单', selected: false, amount: ''},
 			{key: 'membership', label: '划卡', selected: false, amount: ''},
 		]
@@ -140,7 +141,7 @@ Component({
 				if (AppConfig.useCloudDatabase) {
 					reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, {date: today});
 				} else {
-					reservations = database.find<ReservationRecord>(Collections.RESERVATIONS, {date: today});
+					reservations = await  database.find<ReservationRecord>(Collections.RESERVATIONS, {date: today});
 				}
 
 				// 获取当前时间
@@ -154,9 +155,9 @@ Component({
 					currentTime = `${ String(hours).padStart(2, '0') }:${ String(minutes).padStart(2, '0') }`;
 				}
 
-				const rooms = FIXED_ROOMS.map(name => {
+				const rooms = FIXED_ROOMS.map(room => {
 					let occupiedRecords = activeRecords
-							.filter(r => r.room === name)
+							.filter(r => r.room === room.name)
 							.map(r => ({
 								customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
 								technician: r.technician || '',
@@ -177,7 +178,7 @@ Component({
 				const isOccupied = occupiedRecords.length > 0;
 
 				return {
-					name,
+					name: room,
 					isOccupied,
 					occupiedRecords
 				};
@@ -192,8 +193,8 @@ Component({
 				const allStaff = await database.getAll<StaffInfo>(Collections.STAFF);
 				activeStaff = allStaff.filter(s => s.status === 'active');
 			} else {
-				allSchedules = database.getAll<ScheduleRecord>(Collections.SCHEDULE);
-				activeStaff = database.getAll<StaffInfo>(Collections.STAFF).filter(s => s.status === 'active');
+				allSchedules = await database.getAll<ScheduleRecord>(Collections.SCHEDULE);
+				activeStaff = (await database.getAll<StaffInfo>(Collections.STAFF)).filter(s => s.status === 'active');
 			}
 
 			const savedRotation = wx.getStorageSync(`rotation_${ today }`) as string[];
@@ -286,6 +287,13 @@ Component({
 
 			// 计算当前时间线位置
 			this.updateCurrentTimeLine();
+			} catch (error) {
+				console.error('加载数据失败:', error);
+				wx.showToast({
+					title: '加载数据失败',
+					icon: 'none'
+				});
+			}
 		},
 
 		// 计算技师可约时段
@@ -564,7 +572,7 @@ Component({
 				if (AppConfig.useCloudDatabase) {
 					reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, {date});
 				} else {
-					reservations = database.find<ReservationRecord>(Collections.RESERVATIONS, {date});
+					reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, {date});
 				}
 
 				const allTasks = [...activeRecords, ...reservations];
@@ -574,7 +582,7 @@ Component({
 					const allStaff = await database.getAll<StaffInfo>(Collections.STAFF);
 					activeStaff = allStaff.filter(s => s.status === 'active');
 				} else {
-					activeStaff = database.getAll<StaffInfo>(Collections.STAFF).filter(s => s.status === 'active');
+					activeStaff = (await database.getAll<StaffInfo>(Collections.STAFF)).filter(s => s.status === 'active');
 				}
 
 				const staffAvailability = activeStaff.map(staff => {
@@ -605,6 +613,9 @@ Component({
 			});
 
 			this.setData({staffAvailability});
+			} catch (error) {
+				console.error('检查技师可用性失败:', error);
+			}
 		},
 
 		closeReserveModal() {
@@ -619,7 +630,7 @@ Component({
 			const {reserveForm} = this.data;
 
 			if (field === 'project') {
-				reserveForm.project = PROJECTS[val];
+				reserveForm.project = PROJECTS[val].name;
 				this.setData({reserveForm});
 				await this.checkStaffAvailability();
 			} else if (field === 'startTime' || field === 'date') {
@@ -999,10 +1010,10 @@ Component({
 							m.remainingTimes > 0 && m.status === 'active';
 					}) || null;
 				} else {
-					customerMembership = database.findOne<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, (m) => {
+					customerMembership = (await database.findOne<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, (m) => {
 						return (m.customerPhone === record.phone || m.customerName === record.surname) &&
 							m.remainingTimes > 0 && m.status === 'active';
-					});
+					})) || null;
 				}
 
 				if (!customerMembership) {
@@ -1039,14 +1050,10 @@ Component({
 			todayRecords[recordIndex].updatedAt = now.toISOString();
 			history[today] = todayRecords;
 
-			try {
-				wx.setStorageSync('consultationHistory', history);
-				wx.showToast({title: '结算成功', icon: 'success'});
-				this.closeSettlementModal();
-				await this.loadData();
-			} catch (e) {
-				wx.showToast({title: '保存失败', icon: 'none'});
-			}
+			wx.setStorageSync('consultationHistory', history);
+			wx.showToast({title: '结算成功', icon: 'success'});
+			this.closeSettlementModal();
+			await this.loadData();
 			} catch (error) {
 				console.error('结算失败:', error);
 				wx.showToast({title: '结算失败', icon: 'none'});

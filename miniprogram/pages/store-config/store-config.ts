@@ -1,15 +1,6 @@
 // store-config.ts
 Component({
-	data: {
-		modules: [
-			{key: 'staff', name: '员工管理', icon: '👥'},
-			{key: 'cashier', name: '场控收银', icon: '💰'},
-			{key: 'customer', name: '顾客管理', icon: '👤'},
-			{key: 'membership', name: '会员卡', icon: '💳'},
-			{key: 'orders', name: '单据管理', icon: '📋'},
-			{key: 'reports', name: '报表分析', icon: '📊'},
-		]
-	},
+	data: {	},
 
 	methods: {
 		// 模块点击事件
@@ -37,6 +28,9 @@ Component({
 				case 'reports':
 					wx.showToast({title: '报表分析', icon: 'none'});
 					// wx.navigateTo({ url: '/pages/reports/reports' });
+					break;
+				case 'data':
+					wx.navigateTo({ url: '/pages/data-management/data-management' });
 					break;
 				default:
 					wx.showToast({title: '功能开发中', icon: 'none'});

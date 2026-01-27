@@ -10,6 +10,6 @@
       value="{{item}}"
       checked="{{selectedRoom === item}}"
       disabled="{{disabled}}" />
-    {{item}}
+    <view class="room-name">{{item}}</view>
   </label>
 </view>

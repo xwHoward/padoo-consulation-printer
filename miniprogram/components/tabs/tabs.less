@@ -1,0 +1,36 @@
+/* tabs.less */
+@import "../../app.less";
+
+.tabs {
+	display: flex;
+	background-color: @bg-color;
+	border-bottom: 1px solid @border-color-light;
+	padding: 0 15px;
+}
+
+.tab-item {
+	flex: 1;
+	text-align: center;
+	padding: 14px 0;
+	font-size: 15px;
+	color: @text-color-secondary;
+	position: relative;
+	transition: all 0.3s ease;
+}
+
+.tab-item.active {
+	color: @primary-color;
+	font-weight: 500;
+}
+
+.tab-item.active::after {
+	content: '';
+	position: absolute;
+	bottom: 0;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 30px;
+	height: 3px;
+	background-color: @primary-color;
+	border-radius: 3px 3px 0 0;
+}

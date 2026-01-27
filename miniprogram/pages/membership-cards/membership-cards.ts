@@ -11,7 +11,7 @@ Page({
     formName: '',
     formOriginalPrice: '',
     formTotalTimes: '',
-    formProject: PROJECTS[1],
+    formProject: PROJECTS[1].name,
     projects: PROJECTS
   },
 
@@ -44,7 +44,7 @@ Page({
       formName: '',
       formOriginalPrice: '',
       formTotalTimes: '',
-      formProject: PROJECTS[1]
+      formProject: PROJECTS[1].name
     });
   },
 
@@ -68,7 +68,7 @@ Page({
       formName: '',
       formOriginalPrice: '',
       formTotalTimes: '',
-      formProject: PROJECTS[1]
+      formProject: PROJECTS[1].name
     });
   },
 

@@ -7,7 +7,7 @@
     data-oil="{{item.id}}"
   >
     <checkbox value="{{item.id}}" checked="{{selectedOil === item.id}}" />
-    <text>{{item.name}}</text>
-    <text class="oil-effect">{{item.effect}}</text>
+    <view class="oil-name">{{item.name}}</view>
+    <view class="oil-effect">{{item.effect}}</view>
   </label>
 </view>

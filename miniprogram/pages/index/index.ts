@@ -13,7 +13,7 @@ type DailyConsultations = {
 const DefaultConsultationInfo: ConsultationInfo = {
   surname: "",
   gender: "male",
-  project: PROJECTS[1], // 70min精油
+  project: PROJECTS[1].name, // 70min精油
   technician: "",
   room: "",
   massageStrength: "standard",
@@ -39,14 +39,14 @@ const DefaultGuestInfo: GuestInfo = {
   couponCode: "",
   couponPlatform: "",
   upgradeHimalayanSaltStone: false,
-  project: PROJECTS[1], // 70min精油
+  project: PROJECTS[1].name, // 70min精油
 };
 
 function ensureConsultationInfoCompatibility(data: any): ConsultationInfo {
   return {
     surname: data.surname || "",
     gender: data.gender || "male",
-    project: data.project || PROJECTS[1],
+    project: data.project || PROJECTS[1].name,
     technician: data.technician || "",
     room: data.room || "",
     massageStrength: data.massageStrength || "standard",

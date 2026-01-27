@@ -7,6 +7,6 @@
     data-project="{{item}}"
   >
     <radio value="{{item}}" checked="{{selectedProject === item}}" />
-    {{item}}
+    <view class="project-name">{{item}}</view>
   </label>
 </view>
