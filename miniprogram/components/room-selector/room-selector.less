@@ -1,0 +1,44 @@
+@import "../../app.less";
+
+.room-selector {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	flex: 1;
+}
+
+.room-option {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 13px;
+	color: @text-color;
+	cursor: pointer;
+	padding: 6px 12px;
+	border-radius: 5px;
+	border: 1px solid @border-color;
+	transition: all 0.3s ease;
+	margin-bottom: 6px;
+	position: relative;
+	background-color: @bg-color;
+}
+
+.room-option.selected {
+	border-color: @primary-color;
+	background-color: rgba(255, 107, 0, 0.05);
+	color: @primary-color;
+}
+
+.room-option.disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	pointer-events: none;
+	background-color: @bg-color-light;
+}
+
+.room-option radio {
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+}

@@ -1,0 +1,12 @@
+<view class="platform-selector">
+  <label
+    class="platform-option {{selectedPlatform === item.id ? 'selected' : ''}}"
+    wx:for="{{platforms}}"
+    wx:key="id"
+    bindtap="onSelect"
+    data-id="{{item.id}}"
+  >
+    <radio value="{{item.id}}" checked="{{selectedPlatform === item.id}}" />
+    {{item.name}}
+  </label>
+</view>

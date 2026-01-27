@@ -1,0 +1,15 @@
+<view class="room-selector">
+  <label
+    wx:for="{{rooms}}"
+    wx:key="*this"
+    class="room-option {{selectedRoom === item ? 'selected' : ''}} {{disabled ? 'disabled' : ''}}"
+    bindtap="onRoomTap"
+    data-room="{{item}}"
+  >
+    <radio
+      value="{{item}}"
+      checked="{{selectedRoom === item}}"
+      disabled="{{disabled}}" />
+    {{item}}
+  </label>
+</view>

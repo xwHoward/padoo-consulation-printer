@@ -1,44 +1,22 @@
 import {db, Collections} from "../../utils/db";
 
-interface CustomerInfo {
-  id: string;
-  phone: string;
-  name: string;
-  responsibleTechnician: string;
-  licensePlate: string;
-  remarks: string;
-  totalAmount: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface CustomerVisit {
-  id: string;
-  date: string;
-  project: string;
-  technician: string;
-  room: string;
-  amount?: number;
-  isClockIn: boolean;
-}
-
 Page({
   data: {
-    customerList: [] as CustomerInfo[],
+    customerList: [] as CustomerRecord[],
     showEditModal: false,
     modalTitle: '',
-    editCustomer: null as CustomerInfo | null,
+    editCustomer: null as CustomerRecord | null,
     formPhone: '',
     formName: '',
     formResponsibleTechnician: '',
     formLicensePlate: '',
     formRemarks: '',
-    technicianList: [] as {id: string; name: string}[],
-    selectedCustomer: null as CustomerInfo | null,
+    technicianList: [] as {id: string; name: string;}[],
+    selectedCustomer: null as CustomerRecord | null,
     visitRecords: [] as CustomerVisit[],
     showDetailModal: false,
     showOpenCardModal: false,
-    selectedCustomerForCard: null as CustomerInfo | null,
+    selectedCustomerForCard: null as CustomerRecord | null,
     membershipCards: [] as MembershipCard[],
     selectedCardId: '',
     selectedCardInfo: null as MembershipCard | null,
@@ -59,7 +37,7 @@ Page({
 
   loadTechnicianList() {
     try {
-      const staffList = db.find<{id: string; name: string; status: string; createdAt: string; updatedAt: string}>(Collections.STAFF, {
+      const staffList = db.find<{id: string; name: string; status: string; createdAt: string; updatedAt: string;}>(Collections.STAFF, {
         status: 'active'
       });
       this.setData({technicianList: staffList});
@@ -70,45 +48,44 @@ Page({
 
   loadCustomerList() {
     try {
+      // 1. 获取数据库中已保存的顾客
+      const savedCustomers = db.getAll<CustomerRecord>(Collections.CUSTOMERS);
+      const customerMap: Record<string, CustomerRecord> = {};
+
+      savedCustomers.forEach(c => {
+        const key = c.phone || c.id;
+        customerMap[key] = c;
+      });
+
+      // 2. 从咨询单历史中同步未保存的顾客（向前兼容/补全逻辑）
       const consultationHistory = wx.getStorageSync('consultationHistory') || {};
-      const customerMap: Record<string, CustomerInfo> = {};
+      let hasNewCustomer = false;
 
       Object.keys(consultationHistory).forEach(date => {
         const records = consultationHistory[date] as any[];
-
         records.forEach((record: any) => {
-          if (record.isVoided) {
-            return;
-          }
+          if (record.isVoided) return;
 
           const phone = record.phone || '';
           const name = record.surname || '';
-          const visitDate = date;
           const customerKey = phone || record.id;
 
           if (!customerMap[customerKey]) {
-            customerMap[customerKey] = {
-              id: customerKey,
+            const newCustomer: Omit<CustomerRecord, 'id' | 'createdAt' | 'updatedAt'> = {
               phone,
               name,
               responsibleTechnician: '',
               licensePlate: '',
               remarks: '',
-              totalAmount: 0,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
+              totalAmount: 0
             };
+            const inserted = db.insert<CustomerRecord>(Collections.CUSTOMERS, newCustomer);
+            if (inserted) {
+              customerMap[customerKey] = inserted;
+              hasNewCustomer = true;
+            }
           }
         });
-      });
-
-      const savedCustomers = wx.getStorageSync('customers') || {};
-      Object.keys(savedCustomers).forEach(phone => {
-        if (customerMap[phone]) {
-          customerMap[phone].responsibleTechnician = savedCustomers[phone].responsibleTechnician || '';
-          customerMap[phone].licensePlate = savedCustomers[phone].licensePlate || '';
-          customerMap[phone].remarks = savedCustomers[phone].remarks || '';
-        }
       });
 
       const customerList = Object.values(customerMap).sort((a, b) => {
@@ -139,7 +116,7 @@ Page({
   },
 
   showEditCustomer(e: any) {
-    const customer = e.currentTarget.dataset.customer as CustomerInfo;
+    const customer = e.currentTarget.dataset.customer as CustomerRecord;
     this.setData({
       showEditModal: true,
       modalTitle: '编辑顾客',
@@ -176,22 +153,26 @@ Page({
     }
 
     try {
-      const savedCustomers = wx.getStorageSync('customers') || {};
-      const customerKey = formPhone || editCustomer?.id || Date.now().toString();
-
-      savedCustomers[customerKey] = {
-        id: customerKey,
-        phone: formPhone,
-        name: formName,
-        responsibleTechnician: formResponsibleTechnician,
-        licensePlate: formLicensePlate,
-        remarks: formRemarks,
-        totalAmount: editCustomer?.totalAmount || 0,
-        createdAt: editCustomer?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      wx.setStorageSync('customers', savedCustomers);
+      if (editCustomer) {
+        // 更新现有顾客
+        db.updateById(Collections.CUSTOMERS, editCustomer.id, {
+          phone: formPhone,
+          name: formName,
+          responsibleTechnician: formResponsibleTechnician,
+          licensePlate: formLicensePlate,
+          remarks: formRemarks
+        });
+      } else {
+        // 新增顾客
+        db.insert<CustomerRecord>(Collections.CUSTOMERS, {
+          phone: formPhone,
+          name: formName,
+          responsibleTechnician: formResponsibleTechnician,
+          licensePlate: formLicensePlate,
+          remarks: formRemarks,
+          totalAmount: 0
+        });
+      }
 
       this.setData({
         showEditModal: false,
@@ -240,7 +221,7 @@ Page({
   },
 
   loadCustomerVisits(e: any) {
-    const customer = e.currentTarget.dataset.customer as CustomerInfo;
+    const customer = e.currentTarget.dataset.customer as CustomerRecord;
     const consultationHistory = wx.getStorageSync('consultationHistory') || {};
     const visitRecords: CustomerVisit[] = [];
     Object.keys(consultationHistory).forEach(date => {
@@ -305,7 +286,7 @@ Page({
   goToConsultationDetail() {
     const selectedCustomer = this.data.selectedCustomer!;
     wx.navigateTo({
-      url: `/pages/history/history?customerPhone=${selectedCustomer.phone}&customerId=${selectedCustomer.phone || selectedCustomer.id}&readonly=true`
+      url: `/pages/history/history?customerPhone=${ selectedCustomer.phone }&customerId=${ selectedCustomer.phone || selectedCustomer.id }&readonly=true`
     });
   },
 
@@ -324,7 +305,7 @@ Page({
   },
 
   showOpenCardModal(e: any) {
-    const customer = e.currentTarget.dataset.customer as CustomerInfo;
+    const customer = e.currentTarget.dataset.customer as CustomerRecord;
     this.loadMembershipCards();
     this.setData({
       showOpenCardModal: true,

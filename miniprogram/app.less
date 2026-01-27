@@ -1,10 +1,25 @@
+/* 主题色定义 */
 @primary-color: #FF6B00;
+@primary-color-dark: #CC5C00;
+@text-color: #333333;
+@text-color-secondary: #666666;
+@bg-color: #ffffff;
+@bg-color-light: #f5f5f5;
+@border-color: #e0e0e0;
+@border-color-light: #f0f0f0;
+
+/* 状态色 */
+@success-color: #52c41a;
+@danger-color: #ff4d4f;
+@warning-color: #faad14;
+@info-color: #1890ff;
 
 /* 导航栏按钮容器 */
 .nav-btns {
   display: flex;
   align-items: center;
   height: 100%;
+
   /* 刷新按钮样式 */
   .nav-btn {
     height: 100%;
@@ -12,9 +27,65 @@
     align-items: center;
     padding: 0 20px;
     white-space: nowrap;
+
     .nav-btn-text {
       color: @primary-color;
       font-size: 16px;
     }
+  }
+}
+
+.checkbox-group {
+
+
+  .checkbox-item {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: @text-color;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 5px;
+    border: 1px solid @border-color;
+    transition: all 0.3s ease;
+    position: relative;
+    background-color: @bg-color;
+  }
+
+  .checkbox-item::before {
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    border: 1px solid @border-color;
+    margin-right: 8px;
+    background-color: @bg-color;
+    transition: all 0.3s ease;
+  }
+
+  .checkbox-item.selected {
+    border-color: @primary-color;
+    background-color: rgba(255, 107, 0, 0.05);
+  }
+
+  .checkbox-item.selected::before {
+    background-color: @primary-color;
+    border-color: @primary-color;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+    background-size: 9px;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  .checkbox-item.selected text {
+    color: @primary-color;
+  }
+
+  checkbox {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
   }
 }

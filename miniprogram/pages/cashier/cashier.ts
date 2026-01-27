@@ -1,13 +1,7 @@
 // cashier.ts
 import {db, Collections} from '../../utils/db';
-import {parseProjectDuration} from '../../utils/util';
-
-const FIXED_ROOMS = ['西西里', '巴厘', '大溪地', '苏梅', '帕劳', '法罗'];
-const PROJECTS = [
-	'60min指压', '70min精油', '90min精油', '90min七脉轮彩石',
-	'90min深海热贝', '80min推拿+精油', '45min腰臀',
-	'120min精油', '120min七脉轮彩石', '120min深海热贝'
-];
+import {parseProjectDuration, formatDate, getMinutesDiff, isTimeOverlapping, formatDuration} from '../../utils/util';
+import {PROJECTS, ROOMS as FIXED_ROOMS} from '../../utils/constants';
 
 interface RotationItem {
 	id: string;
@@ -43,7 +37,7 @@ interface ReserveForm {
 	project: string;
 	phone: string;
 	// 支持多位技师
-	selectedTechnicians: Array<{id: string; name: string}>;
+	selectedTechnicians: Array<{id: string; name: string;}>;
 	startTime: string;
 	// 编辑时用
 	id?: string;
@@ -82,7 +76,7 @@ Component({
 			gender: 'male' as 'male' | 'female',
 			project: '',
 			phone: '',
-			selectedTechnicians: [] as Array<{id: string; name: string}>,
+			selectedTechnicians: [] as Array<{id: string; name: string;}>,
 			startTime: '',
 			// 兼容编辑模式
 			technicianId: '',
@@ -105,7 +99,7 @@ Component({
 
 	lifetimes: {
 		attached() {
-			const today = this.getTodayStr();
+			const today = formatDate(new Date());
 			this.setData({selectedDate: today});
 			this.loadData();
 		}
@@ -125,7 +119,7 @@ Component({
 
 		// 加载数据
 		loadData() {
-			const today = this.data.selectedDate || this.getTodayStr();
+			const today = this.data.selectedDate || formatDate(new Date());
 
 			// 1. 获取房间状态
 			const history = (wx.getStorageSync('consultationHistory') as any) || {};
@@ -137,13 +131,13 @@ Component({
 
 			// 获取当前时间
 			const now = new Date();
-			const todayStr = this.getTodayStr();
+			const todayStr = formatDate(now);
 			const isToday = today === todayStr;
 			let currentTime = '';
 			if (isToday) {
 				const hours = now.getHours();
 				const minutes = now.getMinutes();
-				currentTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+				currentTime = `${ String(hours).padStart(2, '0') }:${ String(minutes).padStart(2, '0') }`;
 			}
 
 			const rooms = FIXED_ROOMS.map(name => {
@@ -278,7 +272,7 @@ Component({
 			selectedDate: string
 		): string {
 			const now = new Date();
-			const todayStr = this.getTodayStr();
+			const todayStr = formatDate(now);
 			const isToday = selectedDate === todayStr;
 
 			// 获取该技师的所有占用时段
@@ -302,18 +296,18 @@ Component({
 						return '已下班';
 					}
 					if (currentHour < 12) {
-						const duration = this.getMinutesDiff('12:00', '23:00');
-						return `12:00-23:00(${this.formatDuration(duration)})`;
+						const duration = getMinutesDiff('12:00', '23:00');
+						return `12:00-23:00(${ formatDuration(duration) })`;
 					}
 					// 从下一个半点或整点开始
 					const nextMinute = currentMinute < 30 ? 30 : 0;
 					const nextHour = nextMinute === 0 ? currentHour + 1 : currentHour;
 					const startTimeStr = `${ String(nextHour).padStart(2, '0') }:${ String(nextMinute).padStart(2, '0') }`;
-					const duration = this.getMinutesDiff(startTimeStr, '23:00');
-					return `${ startTimeStr }-23:00(${this.formatDuration(duration)})`;
+					const duration = getMinutesDiff(startTimeStr, '23:00');
+					return `${ startTimeStr }-23:00(${ formatDuration(duration) })`;
 				}
-				const duration = this.getMinutesDiff('12:00', '23:00');
-				return `12:00-23:00(${this.formatDuration(duration)})`;
+				const duration = getMinutesDiff('12:00', '23:00');
+				return `12:00-23:00(${ formatDuration(duration) })`;
 			}
 
 			// 查找空闲时段（至少60分钟以上）
@@ -338,26 +332,26 @@ Component({
 			}
 
 			// 计算第一个空闲时段
-			const gapMinutes = this.getMinutesDiff(firstAvailableTime, firstOccupied.startTime);
+			const gapMinutes = getMinutesDiff(firstAvailableTime, firstOccupied.startTime);
 			if (gapMinutes >= 60) {
-				availableSlots.push(`${ firstAvailableTime }-${ firstOccupied.startTime }(${this.formatDuration(gapMinutes)})`);
+				availableSlots.push(`${ firstAvailableTime }-${ firstOccupied.startTime }(${ formatDuration(gapMinutes) })`);
 			}
 
 			// 检查占用时段之间的空闲时间
 			for (let i = 0; i < occupiedSlots.length - 1; i++) {
 				const current = occupiedSlots[i];
 				const next = occupiedSlots[i + 1];
-				const gap = this.getMinutesDiff(current.endTime, next.startTime);
+				const gap = getMinutesDiff(current.endTime, next.startTime);
 				if (gap >= 60) {
-					availableSlots.push(`${ current.endTime }-${ next.startTime }(${this.formatDuration(gap)})`);
+					availableSlots.push(`${ current.endTime }-${ next.startTime }(${ formatDuration(gap) })`);
 				}
 			}
 
 			// 检查最后一个占用之后的时间
 			const lastOccupied = occupiedSlots[occupiedSlots.length - 1];
-			const lastGap = this.getMinutesDiff(lastOccupied.endTime, '23:00');
+			const lastGap = getMinutesDiff(lastOccupied.endTime, '23:00');
 			if (lastGap >= 60) {
-				availableSlots.push(`${ lastOccupied.endTime }-23:00(${this.formatDuration(lastGap)})`);
+				availableSlots.push(`${ lastOccupied.endTime }-23:00(${ formatDuration(lastGap) })`);
 			}
 
 			if (availableSlots.length === 0) {
@@ -367,38 +361,10 @@ Component({
 			return availableSlots.join(', ');
 		},
 
-		// 格式化时长显示
-		formatDuration(minutes: number): string {
-			const hours = Math.floor(minutes / 60);
-			const mins = minutes % 60;
-			if (hours > 0 && mins > 0) {
-				return `${hours}h${mins}m`;
-			} else if (hours > 0) {
-				return `${hours}h`;
-			} else {
-				return `${mins}m`;
-			}
-		},
-
-		// 计算两个时间之间的分钟差
-		getMinutesDiff(startTime: string, endTime: string): number {
-			const [startH, startM] = startTime.split(':').map(Number);
-			const [endH, endM] = endTime.split(':').map(Number);
-			return (endH * 60 + endM) - (startH * 60 + startM);
-		},
-
-		getTodayStr() {
-			const now = new Date();
-			const year = now.getFullYear();
-			const month = String(now.getMonth() + 1).padStart(2, '0');
-			const day = String(now.getDate()).padStart(2, '0');
-			return `${ year }-${ month }-${ day }`;
-		},
-
 		// 更新当前时间线位置
 		updateCurrentTimeLine() {
 			const now = new Date();
-			const todayStr = this.getTodayStr();
+			const todayStr = formatDate(now);
 			const selectedDate = this.data.selectedDate;
 
 			// 只有当选中的是今天时才显示当前时间线
@@ -444,7 +410,7 @@ Component({
 			this.setData({rotationList: list});
 
 			// 持久化顺序
-			const today = this.data.selectedDate || this.getTodayStr();
+			const today = this.data.selectedDate || formatDate(new Date());
 			wx.setStorageSync(`rotation_${ today }`, list.map(item => item.id));
 		},
 
@@ -468,7 +434,7 @@ Component({
 				showReserveModal: true,
 				reserveForm: {
 					id: '', // 重置 ID
-					date: this.data.selectedDate || this.getTodayStr(),
+					date: this.data.selectedDate || formatDate(new Date()),
 					customerName: '',
 					gender: 'male',
 					project: '',
@@ -487,7 +453,7 @@ Component({
 		onBlockClick(e: any) {
 			const {id, reservation} = e.currentTarget.dataset;
 			const itemList = reservation ? ['编辑', '到店', '取消预约'] : ['编辑', '结算'];
-		
+
 			wx.showActionSheet({
 				itemList,
 				success: (res) => {
@@ -514,7 +480,7 @@ Component({
 			const record = db.findById<ReservationRecord>(Collections.RESERVATIONS, id);
 			if (record) {
 				// 编辑时将单个技师放入数组
-				const selectedTechnicians: Array<{id: string; name: string}> = [];
+				const selectedTechnicians: Array<{id: string; name: string;}> = [];
 				if (record.technicianId && record.technicianName) {
 					selectedTechnicians.push({id: record.technicianId, name: record.technicianName});
 				}
@@ -569,7 +535,7 @@ Component({
 				const conflictTask = allTasks.find(r => {
 					const rName = (r as any).technician || (r as any).technicianName;
 					if (rName !== staff.name) return false;
-					return startTime < r.endTime && endTimeStr > r.startTime;
+					return isTimeOverlapping(startTime, endTimeStr, r.startTime, r.endTime);
 				});
 
 				if (conflictTask) {
@@ -618,16 +584,16 @@ Component({
 		},
 
 		selectReserveTechnician(e: any) {
-			const {id, name, occupied, reason} = e.currentTarget.dataset;
+			const {id, technician: name, occupied, reason} = e.detail;
 			if (occupied) {
 				wx.showToast({title: reason || '该技师在此时段已有安排', icon: 'none', duration: 2500});
 				return;
 			}
-			
+
 			// 多选逻辑：切换选中状态
 			const selectedTechnicians = [...this.data.reserveForm.selectedTechnicians];
 			const existingIndex = selectedTechnicians.findIndex(t => t.id === id);
-			
+
 			if (existingIndex !== -1) {
 				// 已选中，取消选择
 				selectedTechnicians.splice(existingIndex, 1);
@@ -635,13 +601,13 @@ Component({
 				// 未选中，添加
 				selectedTechnicians.push({id, name});
 			}
-			
+
 			// 更新 staffAvailability 的 isSelected 状态
 			const staffAvailability = this.data.staffAvailability.map(staff => ({
 				...staff,
 				isSelected: selectedTechnicians.some(t => t.id === staff.id)
 			}));
-			
+
 			this.setData({
 				'reserveForm.selectedTechnicians': selectedTechnicians,
 				staffAvailability
@@ -650,7 +616,7 @@ Component({
 
 		// 选择项目（平铺版）
 		selectReserveProject(e: any) {
-			const {project} = e.currentTarget.dataset;
+			const {project} = e.detail;
 			const currentProject = this.data.reserveForm.project;
 			// 切换选中状态
 			this.setData({
@@ -658,9 +624,8 @@ Component({
 			}, () => this.checkStaffAvailability());
 		},
 
-		setReserveGender(e: any) {
-			const {gender} = e.currentTarget.dataset;
-			this.setData({'reserveForm.gender': gender});
+		onReserveGenderChange(e: any) {
+			this.setData({'reserveForm.gender': e.detail.value});
 		},
 
 		confirmReserve() {
@@ -711,7 +676,7 @@ Component({
 
 			// 新增模式：为每位选中的技师创建一条预约
 			const technicians = reserveForm.selectedTechnicians;
-			
+
 			// 如果没有选择技师，也允许创建一条预约（技师待定）
 			if (technicians.length === 0) {
 				const record: Omit<ReservationRecord, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -756,12 +721,12 @@ Component({
 			}
 
 			if (successCount === technicians.length) {
-				const msg = technicians.length > 1 ? `已创建${technicians.length}条预约` : '预约成功';
+				const msg = technicians.length > 1 ? `已创建${ technicians.length }条预约` : '预约成功';
 				wx.showToast({title: msg, icon: 'success'});
 				this.closeReserveModal();
 				this.loadData();
 			} else {
-				wx.showToast({title: `部分保存失败(${successCount}/${technicians.length})`, icon: 'none'});
+				wx.showToast({title: `部分保存失败(${ successCount }/${ technicians.length })`, icon: 'none'});
 			}
 		},
 
@@ -788,7 +753,7 @@ Component({
 
 		// 打开结算弹窗
 		openSettlement(id: string) {
-			const today = this.data.selectedDate || this.getTodayStr();
+			const today = this.data.selectedDate || formatDate(new Date());
 			const history = (wx.getStorageSync('consultationHistory') as any) || {};
 			const todayRecords = (history[today] || []) as ConsultationRecord[];
 			const record = todayRecords.find(r => r.id === id);
@@ -852,7 +817,7 @@ Component({
 			const {index} = e.currentTarget.dataset;
 			const paymentMethods = this.data.paymentMethods;
 			paymentMethods[index].selected = !paymentMethods[index].selected;
-			
+
 			// 如果是免单，取消其他所有选项
 			if (paymentMethods[index].key === 'free' && paymentMethods[index].selected) {
 				paymentMethods.forEach((m, i) => {
@@ -896,10 +861,10 @@ Component({
 		// 确认结算
 		confirmSettlement() {
 			const {settlementRecordId, paymentMethods, settlementCouponCode} = this.data;
-			
+
 			// 收集所有已选择的支付方式
 			const selectedPayments = paymentMethods.filter(m => m.selected);
-			
+
 			if (selectedPayments.length === 0) {
 				wx.showToast({title: '请选择支付方式', icon: 'none'});
 				return;
@@ -918,7 +883,7 @@ Component({
 
 				const amount = parseFloat(method.amount);
 				if (!method.amount || isNaN(amount) || amount <= 0) {
-					wx.showToast({title: `请输入${method.label}的有效金额`, icon: 'none'});
+					wx.showToast({title: `请输入${ method.label }的有效金额`, icon: 'none'});
 					return;
 				}
 
@@ -927,7 +892,7 @@ Component({
 			}
 
 			// 保存结算信息
-			const today = this.data.selectedDate || this.getTodayStr();
+			const today = this.data.selectedDate || formatDate(new Date());
 			const history = (wx.getStorageSync('consultationHistory') as any) || {};
 			const todayRecords = (history[today] || []) as ConsultationRecord[];
 			const recordIndex = todayRecords.findIndex(r => r.id === settlementRecordId);

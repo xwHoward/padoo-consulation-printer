@@ -1,8 +1,10 @@
+@import "../../app.less";
+
 page {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f5f5f5;
+  background-color: @bg-color-light;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
@@ -18,7 +20,7 @@ page {
 }
 
 .nav-btn-text {
-  color: #FF6B00;
+  color: @primary-color;
   font-size: 14px;
   font-weight: 500;
 }
@@ -36,7 +38,7 @@ page {
 }
 
 .card-item {
-  background-color: #ffffff;
+  background-color: @bg-color;
   border-radius: 8px;
   padding: 15px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
@@ -54,7 +56,7 @@ page {
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid @border-color-light;
 }
 
 .card-info {
@@ -64,7 +66,7 @@ page {
 .card-name {
   font-size: 16px;
   font-weight: 600;
-  color: #333333;
+  color: @text-color;
   margin-bottom: 8px;
 }
 
@@ -78,7 +80,7 @@ page {
   display: flex;
   align-items: center;
   font-size: 13px;
-  color: #666666;
+  color: @text-color-secondary;
 }
 
 .meta-label {
@@ -100,7 +102,7 @@ page {
 
 .card-status.disabled {
   background-color: rgba(255, 107, 0, 0.1);
-  color: #FF6B00;
+  color: @primary-color;
 }
 
 .card-body {
@@ -117,18 +119,18 @@ page {
 }
 
 .card-label {
-  color: #999999;
+  color: @text-color-secondary;
   width: 70px;
   flex-shrink: 0;
 }
 
 .card-value {
-  color: #333333;
+  color: @text-color;
   font-weight: 500;
 }
 
 .card-value.paid {
-  color: #FF6B00;
+  color: @primary-color;
   font-weight: 600;
 }
 
@@ -140,7 +142,7 @@ page {
 
 .card-value.remarks {
   font-size: 13px;
-  color: #666666;
+  color: @text-color-secondary;
   font-weight: normal;
 }
 
@@ -227,7 +229,7 @@ page {
   width: 90%;
   max-width: 500px;
   max-height: 80vh;
-  background-color: #ffffff;
+  background-color: @bg-color;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   z-index: 1001;
@@ -239,21 +241,21 @@ page {
 .modal-title {
   font-size: 16px;
   font-weight: 600;
-  color: #333333;
+  color: @text-color;
   text-align: center;
   padding: 15px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid @border-color-light;
 }
 
 .form-group {
   padding: 12px 15px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid @border-color-light;
 }
 
 .form-label {
   display: block;
   font-size: 14px;
-  color: #333333;
+  color: @text-color;
   margin-bottom: 8px;
   font-weight: 500;
 }
@@ -261,63 +263,21 @@ page {
 .form-input {
   width: 100%;
   font-size: 14px;
-  color: #333333;
+  color: @text-color;
   padding: 8px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid @border-color;
   border-radius: 4px;
 }
 
 .form-input:focus {
-  border-color: #FF6B00;
+  border-color: @primary-color;
   outline: none;
-}
-
-.project-selector,
-.staff-selector {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.project-option,
-.staff-option {
-  display: flex;
-  align-items: center;
-  padding: 6px 12px;
-  border-radius: 4px;
-  border: 1px solid #e0e0e0;
-  background-color: #ffffff;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 13px;
-  color: #333333;
-}
-
-.project-option.selected,
-.staff-option.selected {
-  border-color: #FF6B00;
-  background-color: rgba(255, 107, 0, 0.05);
-  color: #FF6B00;
-}
-
-.project-option radio,
-.staff-option radio {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.project-option:active,
-.staff-option:active {
-  border-color: #FF6B00;
-  background-color: rgba(255, 107, 0, 0.08);
 }
 
 .modal-footer {
   display: flex;
   padding: 15px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid @border-color-light;
   gap: 10px;
 }
 
@@ -333,20 +293,20 @@ page {
 }
 
 .cancel-btn {
-  background-color: #f5f5f5;
-  color: #666666;
-  border: 1px solid #e0e0e0;
+  background-color: @bg-color-light;
+  color: @text-color-secondary;
+  border: 1px solid @border-color;
 }
 
 .cancel-btn:active {
-  background-color: #e0e0e0;
+  background-color: @border-color;
 }
 
 .confirm-btn {
-  background-color: #FF6B00;
+  background-color: @primary-color;
   color: #ffffff;
 }
 
 .confirm-btn:active {
-  background-color: #E05D00;
+  background-color: @primary-color-dark;
 }

@@ -1,11 +1,6 @@
 import {db, Collections} from "../../utils/db";
 import {formatTime} from "../../utils/util";
-
-const PROJECTS = [
-  '60min指压', '70min精油', '90min精油', '90min七脉轮彩石',
-  '90min深海热贝', '80min推拿+精油', '45min腰臀',
-  '120min精油', '120min七脉轮彩石', '120min深海热贝'
-];
+import {PROJECTS} from "../../utils/constants";
 
 Page({
   data: {
@@ -16,7 +11,7 @@ Page({
     formName: '',
     formOriginalPrice: '',
     formRemainingTimes: '',
-    formProject: '70min精油',
+    formProject: PROJECTS[1],
     projects: PROJECTS
   },
 
@@ -49,7 +44,7 @@ Page({
       formName: '',
       formOriginalPrice: '',
       formRemainingTimes: '',
-      formProject: '70min精油'
+      formProject: PROJECTS[1]
     });
   },
 
@@ -73,7 +68,7 @@ Page({
       formName: '',
       formOriginalPrice: '',
       formRemainingTimes: '',
-      formProject: '70min精油'
+      formProject: PROJECTS[1]
     });
   },
 
@@ -113,16 +108,15 @@ Page({
       const now = new Date().toISOString();
 
       if (editCard) {
-        db.updateById(Collections.MEMBERSHIP, editCard.id, {
+        db.updateById<MembershipCard>(Collections.MEMBERSHIP, editCard.id, {
           name: formName,
           originalPrice,
           totalTimes,
-          project: formProject,
-          updatedAt: now
+          project: formProject
         });
         wx.showToast({title: '修改成功', icon: 'success'});
       } else {
-        db.insert(Collections.MEMBERSHIP, {
+        db.insert<MembershipCard>(Collections.MEMBERSHIP, {
           name: formName,
           originalPrice,
           totalTimes,
@@ -153,9 +147,8 @@ Page({
       success: (res) => {
         if (res.confirm) {
           try {
-            db.updateById(Collections.MEMBERSHIP, card.id, {
-              status: newStatus,
-              updatedAt: new Date().toISOString()
+            db.updateById<MembershipCard>(Collections.MEMBERSHIP, card.id, {
+              status: newStatus
             });
             this.loadCardList();
             wx.showToast({title: '操作成功', icon: 'success'});
@@ -202,6 +195,6 @@ Page({
   },
 
   onProjectSelect(e: any) {
-    this.setData({formProject: e.currentTarget.dataset.project});
+    this.setData({formProject: e.detail.project});
   }
 });

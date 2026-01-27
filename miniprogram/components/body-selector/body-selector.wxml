@@ -1,0 +1,15 @@
+<view class="body-image-container">
+  <image
+    class="body-image"
+    src="/assets/human.jpeg"
+    mode="aspectFit" />
+  <view
+    wx:for="{{parts}}"
+    wx:key="id"
+    class="body-part {{item.id}} {{selectedParts[item.id] ? 'selected' : ''}}"
+    bindtap="onPartTap"
+    data-part="{{item.id}}"
+  >
+    <text class="part-name">{{item.name}}</text>
+  </view>
+</view>

@@ -1,5 +1,6 @@
-import {formatTime, parseProjectDuration} from "../../utils/util";
-import {db, Collections} from "../../utils/db";
+import {COUPON_PLATFORMS, GENDERS, MASSAGE_STRENGTHS} from "../../utils/constants";
+import {Collections, db} from "../../utils/db";
+import {calculateOvertimeUnits, calculateProjectEndTime, formatTime, SHIFT_END_TIMES} from "../../utils/util";
 
 // 扩展记录类型，添加折叠状态
 interface DisplayRecord extends ConsultationRecord {
@@ -16,7 +17,8 @@ interface DailyGroup {
 Page({
   data: {
     historyData: [] as DailyGroup[], // 按天分组的历史记录
-    platforms: {meituan: '美团', dianping: '点评', douyin: '抖音'},
+    platforms: COUPON_PLATFORMS.reduce((acc, p) => ({...acc, [p.id]: p.name}), {}),
+    genders: GENDERS.reduce((acc, g) => ({...acc, [g.id]: g.name}), {}),
     customerPhone: '', // 顾客手机号
     customerId: '', // 顾客ID
     // 数字输入弹窗状态
@@ -32,10 +34,8 @@ Page({
   },
 
   onLoad(options: any) {
-    console.log('history onLoad options:', options);
     // 检查是否为顾客只读模式
     if (options.readonly === 'true' && options.customerPhone) {
-      console.log('Loading customer history:', options.customerPhone, options.customerId);
       this.loadCustomerHistory(options.customerPhone, options.customerId);
     } else {
       // 页面加载时获取历史数据
@@ -52,27 +52,67 @@ Page({
     this.loadHistoryData();
   },
 
+  // 处理单日记录（计算计数、补全时间、排序）
+  processDailyRecords(records: ConsultationRecord[]): DisplayRecord[] {
+    // 按时间正序排列当天的记录（用于计算报钟顺序）
+    const sortedByTime = [...records].sort((a, b) => {
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+
+    // 计算每个记录的报钟数量
+    const technicianCounts: Record<string, number> = {};
+    const recordsWithCount = sortedByTime.map(record => {
+      // 初始化技师计数
+      if (!technicianCounts[record.technician]) {
+        technicianCounts[record.technician] = 0;
+      }
+
+      // 如果记录未作废，增加计数
+      if (!record.isVoided) {
+        technicianCounts[record.technician]++;
+      }
+
+      // 兼容旧数据：如果没有 startTime/endTime 字段，动态计算
+      let startTimeStr = record.startTime;
+      let endTimeStr = record.endTime;
+
+      if (!startTimeStr || !endTimeStr) {
+        const createdDate = new Date(record.createdAt);
+        startTimeStr = formatTime(createdDate, false);
+        const endDate = calculateProjectEndTime(createdDate, record.project, record.extraTime || 0);
+        endTimeStr = formatTime(endDate, false);
+      }
+
+      // 返回带计数的记录，已作废的默认折叠
+      return {
+        ...record,
+        dailyCount: record.isVoided ? 0 : technicianCounts[record.technician],
+        startTime: startTimeStr,
+        endTime: endTimeStr,
+        collapsed: record.isVoided // 已作废的默认折叠
+      } as DisplayRecord;
+    });
+
+    // 按时间倒序排列当天的记录（用于显示）
+    return recordsWithCount.sort((a, b) => {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  },
+
   // 加载顾客历史记录
   loadCustomerHistory(customerPhone: string, customerId: string) {
-    console.log('loadCustomerHistory called with:', customerPhone, customerId);
     try {
       const consultationHistory = wx.getStorageSync('consultationHistory') || {};
-      console.log('consultationHistory keys:', Object.keys(consultationHistory));
       const historyData: DailyGroup[] = [];
 
       Object.keys(consultationHistory).forEach(date => {
         const records = consultationHistory[date] as ConsultationRecord[];
-        console.log(`Date ${date} has ${records.length} records`);
         if (records && records.length > 0) {
           // 过滤出该顾客的记录
           const customerRecords = records.filter(record => {
             const recordKey = record.phone || record.id;
-            const isMatch = recordKey === customerId && !record.isVoided;
-            console.log(`Record ${record.id}: key=${recordKey}, customerId=${customerId}, isMatch=${isMatch}`);
-            return isMatch;
+            return recordKey === customerId && !record.isVoided;
           });
-
-          console.log(`Found ${customerRecords.length} customer records for date ${date}`);
 
           if (customerRecords.length > 0) {
             // 自动计算该日期所有记录的加班
@@ -81,95 +121,40 @@ Page({
             // 重新获取更新后的记录
             const updatedRecords = wx.getStorageSync('consultationHistory')[date] as ConsultationRecord[];
 
-            // 过滤出该顾客的记录
+            // 再次过滤并处理
             const filteredRecords = updatedRecords.filter(record => {
               const recordKey = record.phone || record.id;
               return recordKey === customerId && !record.isVoided;
             });
 
-            // 按时间正序排列当天的记录（用于计算报钟顺序）
-            const sortedByTime = [...filteredRecords].sort((a, b) => {
-              return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-            });
-
-            // 计算每个记录的报钟数量
-            const technicianCounts: Record<string, number> = {};
-            const recordsWithCount = sortedByTime.map(record => {
-              if (!technicianCounts[record.technician]) {
-                technicianCounts[record.technician] = 0;
-              }
-              technicianCounts[record.technician]++;
-
-              let startTimeStr = record.startTime;
-              let endTimeStr = record.endTime;
-
-              if (!startTimeStr || !endTimeStr) {
-                const createdDate = new Date(record.createdAt);
-                startTimeStr = formatTime(createdDate, false);
-
-                const projectDuration = parseProjectDuration(record.project);
-                const extraTimeMinutes = (record.extraTime || 0) * 30;
-                const totalDuration = projectDuration + extraTimeMinutes + 10;
-                const endDate = new Date(createdDate.getTime() + totalDuration * 60 * 1000);
-                endTimeStr = formatTime(endDate, false);
-              }
-
-              return {
-                ...record,
-                dailyCount: technicianCounts[record.technician],
-                startTime: startTimeStr,
-                endTime: endTimeStr,
-                collapsed: false
-              };
-            });
-
-            // 按时间倒序排列当天的记录（用于显示）
-            const sortedForDisplay = recordsWithCount.sort((a, b) => {
-              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            });
-
             historyData.push({
               date,
-              records: sortedForDisplay as DisplayRecord[]
+              records: this.processDailyRecords(filteredRecords)
             });
           }
         }
       });
 
       // 按日期倒序排列
-      historyData.sort((a, b) => {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      });
-
-      console.log('Final historyData:', historyData);
-      console.log('Setting data with customerPhone:', customerPhone, 'customerId:', customerId);
+      historyData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       this.setData({
         historyData,
         customerPhone,
         customerId
-      }, () => {
-        console.log('setData callback - current data:', this.data);
       });
     } catch (error) {
       console.error('加载顾客历史失败:', error);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'error'
-      });
+      wx.showToast({title: '加载失败', icon: 'error'});
     }
   },
 
   // 加载历史数据
   loadHistoryData() {
     try {
-      // 从本地缓存获取历史数据
       const consultationHistory = wx.getStorageSync('consultationHistory') || {};
-
-      // 将数据转换为按天分组的数组
       const historyData: DailyGroup[] = [];
 
-      // 遍历日期键
       Object.keys(consultationHistory).forEach(date => {
         const records = consultationHistory[date] as ConsultationRecord[];
         if (records && records.length > 0) {
@@ -179,77 +164,20 @@ Page({
           // 重新获取更新后的记录
           const updatedRecords = wx.getStorageSync('consultationHistory')[date] as ConsultationRecord[];
 
-          // 按时间正序排列当天的记录（用于计算报钟顺序）
-          const sortedByTime = [...updatedRecords].sort((a, b) => {
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-          });
-
-          // 计算每个记录的报钟数量
-          const technicianCounts: Record<string, number> = {};
-          const recordsWithCount = sortedByTime.map(record => {
-            // 初始化技师计数
-            if (!technicianCounts[record.technician]) {
-              technicianCounts[record.technician] = 0;
-            }
-
-            // 如果记录未作废，增加计数
-            if (!record.isVoided) {
-              technicianCounts[record.technician]++;
-            }
-
-            // 兼容旧数据：如果没有 startTime/endTime 字段，动态计算
-            let startTimeStr = record.startTime;
-            let endTimeStr = record.endTime;
-
-            if (!startTimeStr || !endTimeStr) {
-              const createdDate = new Date(record.createdAt);
-              startTimeStr = formatTime(createdDate, false);
-
-              const projectDuration = parseProjectDuration(record.project);
-              const extraTimeMinutes = (record.extraTime || 0) * 30;
-              const totalDuration = projectDuration + extraTimeMinutes + 10;
-              const endDate = new Date(createdDate.getTime() + totalDuration * 60 * 1000);
-              endTimeStr = formatTime(endDate, false);
-            }
-
-            // 返回带计数的记录，已作废的默认折叠
-            return {
-              ...record,
-              dailyCount: record.isVoided ? 0 : technicianCounts[record.technician],
-              startTime: startTimeStr,
-              endTime: endTimeStr,
-              collapsed: record.isVoided // 已作废的默认折叠
-            };
-          });
-
-          // 按时间倒序排列当天的记录（用于显示）
-          const sortedForDisplay = recordsWithCount.sort((a, b) => {
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          });
-
-          // 添加到历史数据
           historyData.push({
             date,
-            records: sortedForDisplay as DisplayRecord[]
+            records: this.processDailyRecords(updatedRecords)
           });
         }
       });
 
       // 按日期倒序排列
-      historyData.sort((a, b) => {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      });
+      historyData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-      // 更新页面数据
-      this.setData({
-        historyData
-      });
+      this.setData({historyData});
     } catch (error) {
       console.error('加载历史数据失败:', error);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'error'
-      });
+      wx.showToast({title: '加载失败', icon: 'error'});
     }
   },
 
@@ -258,7 +186,9 @@ Page({
     const {record} = e.currentTarget.dataset;
 
     // 格式化咨询单详情文本
-    let detailText = `客户姓名: ${ record.surname } ${ record.gender === 'male' ? '先生' : record.gender === 'female' ? '女士' : '' }\n`;
+    const genderObj = GENDERS.find(g => g.id === record.gender);
+    const genderText = genderObj ? genderObj.name : '';
+    let detailText = `客户姓名: ${ record.surname } ${ genderText }\n`;
     detailText += `项目: ${ record.project }\n`;
     detailText += `技师: ${ record.technician }${ record.dailyCount && !record.isVoided ? `(${ record.dailyCount })` : '' }\n`;
     detailText += `房间: ${ record.room }\n`;
@@ -274,8 +204,8 @@ Page({
     const selectedParts = Object.keys(record.selectedParts).filter(part => record.selectedParts[part]);
     detailText += `加强部位: ${ selectedParts.length > 0 ? selectedParts.join(', ') : '无' }\n\n`;
 
-    detailText += `创建时间: ${ this.formatDateTime(record.createdAt) }\n`;
-    detailText += `更新时间: ${ this.formatDateTime(record.updatedAt) }\n`;
+    detailText += `创建时间: ${ formatTime(new Date(record.createdAt)) }\n`;
+    detailText += `更新时间: ${ formatTime(new Date(record.updatedAt)) }\n`;
     detailText += `状态: ${ record.isVoided ? '已作废' : '正常' }`;
 
     // 显示详情
@@ -369,12 +299,8 @@ Page({
 
   // 获取按摩力度文本
   getMassageStrengthText(strength: string): string {
-    const strengthMap = {
-      'standard': '标准',
-      'soft': '轻柔',
-      'gravity': '重力'
-    };
-    return strengthMap[strength as keyof typeof strengthMap] || '';
+    const found = MASSAGE_STRENGTHS.find(s => s.id === strength);
+    return found ? found.name.split(' ')[0] : ''; // 只取中文部分
   },
 
   // 获取技师在特定日期的报钟数量（用于历史记录显示）
@@ -408,17 +334,6 @@ Page({
       console.error('计算技师报钟数量失败:', error);
       return 1;
     }
-  },
-
-  // 格式化日期时间
-  formatDateTime(dateTime: string): string {
-    const date = new Date(dateTime);
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-
-    return `${ month }-${ day } ${ hours }:${ minutes }`;
   },
 
   // 生成当日总结
@@ -608,7 +523,7 @@ Page({
   calculateOvertime(technician: string, date: string, startTime: string): number {
     try {
       // 获取当日排班
-      const schedule = db.findOne<{staffId: string; shift: any}>(Collections.SCHEDULE, {
+      const schedule = db.findOne<ScheduleRecord>(Collections.SCHEDULE, {
         date: date
       });
 
@@ -617,50 +532,17 @@ Page({
       }
 
       // 获取技师信息以匹配 staffId
-      const staff = db.findOne<{id: string; name: string}>(Collections.STAFF, {
+      const staff = db.findOne<StaffInfo>(Collections.STAFF, {
         name: technician,
         status: 'active'
       });
 
-      if (!staff) {
-        return 0; // 未找到技师
+      if (!staff || schedule.staffId !== staff.id) {
+        return 0; // 未找到技师或排班不匹配
       }
 
-      // 检查排班是否匹配该技师
-      if (schedule.staffId !== staff.id) {
-        return 0; // 排班不匹配，不计算加班
-      }
-
-      // 定义班次结束时间
-      const shiftEndTime: Record<string, string> = {
-        'morning': '22:00', // 早班结束时间
-        'evening': '23:00' // 晚班结束时间
-      };
-
-      const endTime = shiftEndTime[schedule.shift];
-      if (!endTime) {
-        return 0; // 休息或请假不计算加班
-      }
-
-      // 解析开始时间和班次结束时间
-      const [startHour, startMin] = startTime.split(':').map(Number);
-      const [endHour, endMin] = endTime.split(':').map(Number);
-
-      const startTotalMinutes = startHour * 60 + startMin;
-      const endTotalMinutes = endHour * 60 + endMin;
-
-      // 如果开始时间早于或等于班次结束时间，不计算加班
-      if (startTotalMinutes <= endTotalMinutes) {
-        return 0;
-      }
-
-      // 计算超出的分钟数
-      const overtimeMinutes = startTotalMinutes - endTotalMinutes;
-
-      // 每30分钟为1个加班单位：<30min=0, >=30&<60=1, >=60&<90=2，以此类推
-      const overtimeUnits = Math.floor(overtimeMinutes / 30);
-
-      return overtimeUnits;
+      const endTime = SHIFT_END_TIMES[schedule.shift];
+      return calculateOvertimeUnits(startTime, endTime);
     } catch (error) {
       console.error('计算加班时长失败:', error);
       return 0;
@@ -778,7 +660,9 @@ Page({
       const endTimeStr = formatTime(endTime, false);
 
       // 新的报钟信息格式
-      const clockInfo = `顾客：${ record.surname }${ record.gender === 'male' ? '先生' : '女士' }
+      const genderObj = GENDERS.find(g => g.id === record.gender);
+      const genderText = genderObj ? genderObj.name : '';
+      const clockInfo = `顾客：${ record.surname }${ genderText }
 项目：${ typeText }(${ inputValue })
 技师：${ record.technician }
 房间：${ record.room }
@@ -816,15 +700,11 @@ Page({
 
           // 如果是加钟，重新计算结束时间
           if (field === 'extraTime') {
-            const projectDuration = parseProjectDuration(record.project);
-            const extraTimeMinutes = value * 30; // 加钟时长（单位：分钟）
-            const totalDuration = projectDuration + extraTimeMinutes + 10; // 项目时长 + 加钟时长 + 10分钟
-
-            // 从 startTime 计算新的 endTime
             const [hours, minutes] = record.startTime.split(':').map(Number);
             const startDate = new Date();
             startDate.setHours(hours, minutes, 0, 0);
-            const endDate = new Date(startDate.getTime() + totalDuration * 60 * 1000);
+
+            const endDate = calculateProjectEndTime(startDate, record.project, value);
             record.endTime = formatTime(endDate, false);
           }
 

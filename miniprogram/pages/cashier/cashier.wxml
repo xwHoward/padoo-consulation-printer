@@ -1,23 +1,9 @@
-<navigation-bar
-  title="场控收银"
-  back="{{true}}"
-  color="black"
-  background="#FFF"
->
-</navigation-bar>
-<scroll-view
-  class="scrollarea"
-  scroll-y
-  type="list"
->
+<navigation-bar title="场控收银" back="{{true}}" color="black" background="#FFF"></navigation-bar>
+<scroll-view class="scrollarea" scroll-y type="list">
   <view class="container">
     <!-- 日期选择 -->
     <view class="header-picker">
-      <picker
-        mode="date"
-        value="{{selectedDate}}"
-        bindchange="onDateChange"
-      >
+      <picker mode="date" value="{{selectedDate}}" bindchange="onDateChange">
         <view class="date-display">
           <text class="calendar-icon">📅</text>
           <text class="date-text">{{selectedDate}}</text>
@@ -35,52 +21,24 @@
         <view class="timeline-container">
           <!-- 时间轴刻度 -->
           <view class="time-axis">
-            <view class="time-axis-spacer">
-            </view>
-            <view
-              class="time-mark"
-              wx:for="{{timeLabels}}"
-              wx:key="*this"
-            >
-              {{item}}
-            </view>
+            <view class="time-axis-spacer"></view>
+            <view class="time-mark" wx:for="{{timeLabels}}" wx:key="*this">{{item}}</view>
           </view>
           <!-- 员工行 -->
-          <view
-            class="staff-timeline-row"
-            wx:for="{{staffTimeline}}"
-            wx:key="id"
-          >
+          <view class="staff-timeline-row" wx:for="{{staffTimeline}}" wx:key="id">
             <view class="staff-name-col">
               <text>{{item.name}}</text>
-              <text class="shift-mini-tag {{item.shift}}">{{item.shift === 'morning' ? '早' : '晚'}}</text>
+              <text class="shift-mini-tag {{item.shift}}">
+                {{item.shift === 'morning' ? '早' : '晚'}}
+              </text>
             </view>
             <view class="timeline-track">
               <!-- 背景网格线 -->
-              <view
-                class="grid-line"
-                wx:for="{{timeLabels}}"
-                wx:key="*this"
-              >
-              </view>
+              <view class="grid-line" wx:for="{{timeLabels}}" wx:key="*this"></view>
               <!-- 当前时间线 -->
-              <view
-                class="current-time-line"
-                wx:if="{{showCurrentTimeLine}}"
-                style="left: {{currentTimePosition}};"
-              >
-              </view>
+              <view class="current-time-line" wx:if="{{showCurrentTimeLine}}" style="left: {{currentTimePosition}};"></view>
               <!-- 占用块 -->
-              <view
-                class="time-block {{block.isReservation ? 'reservation' : ''}}"
-                wx:for="{{item.blocks}}"
-                wx:for-item="block"
-                wx:key="startTime"
-                style="left: {{block.left}}; width: {{block.width}};"
-                bindtap="onBlockClick"
-                data-id="{{block.id}}"
-                data-reservation="{{block.isReservation}}"
-              >
+              <view class="time-block {{block.isReservation ? 'reservation' : ''}}" wx:for="{{item.blocks}}" wx:for-item="block" wx:key="startTime" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block.id}}" data-reservation="{{block.isReservation}}">
                 <view class="block-content">
                   <text class="block-customer">{{block.customerName}}</text>
                   <text class="block-time">{{block.startTime}}-{{block.endTime}}</text>
@@ -96,19 +54,10 @@
     <view class="section">
       <view class="section-title">房间状态</view>
       <view class="room-grid">
-        <view
-          class="room-item {{item.isOccupied ? 'occupied' : 'empty'}}"
-          wx:for="{{rooms}}"
-          wx:key="name"
-        >
+        <view class="room-item {{item.isOccupied ? 'occupied' : 'empty'}}" wx:for="{{rooms}}" wx:key="name">
           <view class="room-name">{{item.name}}</view>
           <view class="room-detail" wx:if="{{item.isOccupied}}">
-            <view
-              class="occupied-record"
-              wx:for="{{item.occupiedRecords}}"
-              wx:for-item="record"
-              wx:key="endTime"
-            >
+            <view class="occupied-record" wx:for="{{item.occupiedRecords}}" wx:for-item="record" wx:key="endTime">
               <text class="customer-tag">{{record.customerName}}</text>
               <text class="staff-tag">{{record.technician}}</text>
               <text class="time-tag">{{record.endTime}}</text>
@@ -121,11 +70,7 @@
     <view class="section">
       <view class="section-title">今日轮排</view>
       <view class="rotation-list" wx:if="{{rotationList.length > 0}}">
-        <view
-          class="rotation-item"
-          wx:for="{{rotationList}}"
-          wx:key="id"
-        >
+        <view class="rotation-item" wx:for="{{rotationList}}" wx:key="id">
           <view class="rank-num">{{index + 1}}</view>
           <view class="staff-info">
             <view class="staff-name-row">
@@ -138,20 +83,10 @@
             </view>
           </view>
           <view class="action-btns">
-            <view
-              class="btn move-up {{index === 0 ? 'disabled' : ''}}"
-              bindtap="moveRotation"
-              data-index="{{index}}"
-              data-direction="up"
-            >
+            <view class="btn move-up {{index === 0 ? 'disabled' : ''}}" bindtap="moveRotation" data-index="{{index}}" data-direction="up">
               <text>↑</text>
             </view>
-            <view
-              class="btn move-down {{index === rotationList.length - 1 ? 'disabled' : ''}}"
-              bindtap="moveRotation"
-              data-index="{{index}}"
-              data-direction="down"
-            >
+            <view class="btn move-down {{index === rotationList.length - 1 ? 'disabled' : ''}}" bindtap="moveRotation" data-index="{{index}}" data-direction="down">
               <text>↓</text>
             </view>
           </view>
@@ -162,114 +97,42 @@
   </view>
 </scroll-view>
 <!-- 预约弹窗 -->
-<view
-  class="modal-mask"
-  wx:if="{{showReserveModal}}"
-  bindtap="closeReserveModal"
->
+<view class="modal-mask" wx:if="{{showReserveModal}}" bindtap="closeReserveModal">
   <view class="modal-content" catchtap="stopBubble">
     <view class="modal-header">{{reserveForm.id ? '编辑预约' : '新增预约'}}</view>
     <view class="modal-body">
       <view class="form-item">
         <text class="form-label">日期</text>
-        <picker
-          mode="date"
-          value="{{reserveForm.date}}"
-          bindchange="onReserveFieldChange"
-          data-field="date"
-        >
+        <picker mode="date" value="{{reserveForm.date}}" bindchange="onReserveFieldChange" data-field="date">
           <view class="picker-val">{{reserveForm.date}}</view>
         </picker>
       </view>
       <view class="form-item combined-form-item">
         <view class="form-field">
           <text class="form-label">姓名</text>
-          <input
-            class="form-input"
-            placeholder="选填"
-            value="{{reserveForm.customerName}}"
-            bindinput="onReserveFieldChange"
-            data-field="customerName" />
+          <input class="form-input" placeholder="选填" value="{{reserveForm.customerName}}" bindinput="onReserveFieldChange" data-field="customerName" />
         </view>
         <view class="form-field">
-          <view class="gender-selector">
-            <label
-              class="gender-option {{reserveForm.gender === 'male' ? 'selected' : ''}}"
-              bindtap="setReserveGender"
-              data-gender="male"
-            >
-              <radio value="male" checked="{{reserveForm.gender === 'male'}}" />
-              先生
-            </label>
-            <label
-              class="gender-option {{reserveForm.gender === 'female' ? 'selected' : ''}}"
-              bindtap="setReserveGender"
-              data-gender="female"
-            >
-              <radio value="female" checked="{{reserveForm.gender === 'female'}}" />
-              女士
-            </label>
-          </view>
-        </view>
-      </view>
-            <view class="form-item">
-        <text class="form-label">手机号</text>
-        <input
-          class="form-input"
-          type="number"
-          maxlength="11"
-          placeholder="选填"
-          value="{{reserveForm.phone}}"
-          bindinput="onReserveFieldChange"
-          data-field="phone" />
-      </view>
-      <view class="form-item project-item">
-        <text class="form-label">项目</text>
-        <view class="project-selector">
-          <label
-            class="project-option {{reserveForm.project === item ? 'selected' : ''}}"
-            wx:for="{{projects}}"
-            wx:key="*this"
-            bindtap="selectReserveProject"
-            data-project="{{item}}"
-          >
-            <radio value="{{item}}" checked="{{reserveForm.project === item}}" />
-            {{item}}
-          </label>
-        </view>
-      </view>
-      <view class="form-item technician-item">
-        <text class="form-label">技师{{reserveForm.selectedTechnicians.length > 0 ? '(' + reserveForm.selectedTechnicians.length + ')' : ''}}</text>
-        <view class="technician-selector">
-          <label
-            class="technician-option {{item.isSelected ? 'selected' : ''}} {{item.isOccupied ? 'occupied' : ''}}"
-            wx:for="{{staffAvailability}}"
-            wx:key="id"
-            bindtap="selectReserveTechnician"
-            data-id="{{item.id}}"
-            data-name="{{item.name}}"
-            data-occupied="{{item.isOccupied}}"
-            data-reason="{{item.occupiedReason}}"
-          >
-            <checkbox
-              value="{{item.name}}"
-              checked="{{item.isSelected}}"
-              disabled="{{item.isOccupied}}" />
-            <view class="tech-info">
-              <text class="tech-name">{{item.name}}</text>
-              <text class="tech-reason" wx:if="{{item.isOccupied}}">{{item.occupiedReason}}</text>
-            </view>
-          </label>
+          <gender-selector selectedGender="{{reserveForm.gender}}" bind:change="onReserveGenderChange" />
         </view>
       </view>
       <view class="form-item">
+        <text class="form-label">手机号</text>
+        <input class="form-input" type="number" maxlength="11" placeholder="选填" value="{{reserveForm.phone}}" bindinput="onReserveFieldChange" data-field="phone" />
+      </view>
+      <view class="form-item project-item">
+        <text class="form-label">项目</text>
+        <project-selector selectedProject="{{reserveForm.project}}" bind:change="selectReserveProject" />
+      </view>
+      <view class="form-item technician-item">
+        <text class="form-label">
+          技师{{reserveForm.selectedTechnicians.length > 0 ? '(' + reserveForm.selectedTechnicians.length + ')' : ''}}
+        </text>
+        <technician-selector multi="{{true}}" technicianList="{{staffAvailability}}" bind:change="selectReserveTechnician" />
+      </view>
+      <view class="form-item">
         <text class="form-label">开始时间</text>
-        <picker
-          mode="time"
-          value="{{reserveForm.startTime}}"
-          bindchange="onReserveFieldChange"
-          data-field="startTime"
-        >
+        <picker mode="time" value="{{reserveForm.startTime}}" bindchange="onReserveFieldChange" data-field="startTime">
           <view class="picker-val">{{reserveForm.startTime}}</view>
         </picker>
       </view>
@@ -280,13 +143,8 @@
     </view>
   </view>
 </view>
-
 <!-- 结算弹窗 -->
-<view
-  class="modal-mask"
-  wx:if="{{showSettlementModal}}"
-  bindtap="closeSettlementModal"
->
+<view class="modal-mask" wx:if="{{showSettlementModal}}" bindtap="closeSettlementModal">
   <view class="modal-content settlement-modal" catchtap="stopBubble">
     <view class="modal-header">结算</view>
     <view class="modal-body">
@@ -295,16 +153,8 @@
         <text class="form-label">支付方式</text>
       </view>
       <view class="payment-methods">
-        <view
-          class="payment-item {{item.selected ? 'selected' : ''}}"
-          wx:for="{{paymentMethods}}"
-          wx:key="key"
-        >
-          <view
-            class="payment-header"
-            bindtap="togglePaymentMethod"
-            data-index="{{index}}"
-          >
+        <view class="payment-item {{item.selected ? 'selected' : ''}}" wx:for="{{paymentMethods}}" wx:key="key">
+          <view class="payment-header" bindtap="togglePaymentMethod" data-index="{{index}}">
             <view class="checkbox-wrapper">
               <view class="checkbox {{item.selected ? 'checked' : ''}}"></view>
               <text class="payment-label">{{item.label}}</text>
@@ -312,13 +162,7 @@
           </view>
           <view class="payment-amount" wx:if="{{item.selected && item.key !== 'free'}}">
             <text class="amount-label">金额：</text>
-            <input
-              class="amount-input"
-              type="digit"
-              placeholder="请输入金额"
-              value="{{item.amount}}"
-              bindinput="onPaymentAmountInput"
-              data-index="{{index}}" />
+            <input class="amount-input" type="digit" placeholder="请输入金额" value="{{item.amount}}" bindinput="onPaymentAmountInput" data-index="{{index}}" />
             <text class="amount-unit">元</text>
           </view>
         </view>
@@ -326,12 +170,7 @@
       <!-- 券码 -->
       <view class="form-item">
         <text class="form-label">券码</text>
-        <input
-          class="form-input"
-          type="number"
-          placeholder="选填"
-          value="{{settlementCouponCode}}"
-          bindinput="onCouponCodeInput" />
+        <input class="form-input" type="number" placeholder="选填" value="{{settlementCouponCode}}" bindinput="onCouponCodeInput" />
       </view>
     </view>
     <view class="modal-footer">

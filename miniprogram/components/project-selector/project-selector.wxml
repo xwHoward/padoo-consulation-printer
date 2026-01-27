@@ -1,0 +1,12 @@
+<view class="project-selector">
+  <label
+    wx:for="{{projects}}"
+    wx:key="*this"
+    class="project-option {{selectedProject === item ? 'selected' : ''}}"
+    bindtap="onProjectTap"
+    data-project="{{item}}"
+  >
+    <radio value="{{item}}" checked="{{selectedProject === item}}" />
+    {{item}}
+  </label>
+</view>

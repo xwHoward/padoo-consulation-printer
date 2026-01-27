@@ -1,8 +1,7 @@
 // staff.ts
 import {db, Collections, generateId, getTimestamp} from '../../utils/db';
-
-const SHIFT_TYPES: ShiftType[] = ['morning', 'evening', 'off', 'leave'];
-const SHIFT_NAMES = ['早班', '晚班', '休息', '请假'];
+import {SHIFT_TYPES, SHIFT_NAMES, DEFAULT_SHIFT, ShiftType} from '../../utils/constants';
+import {formatDate} from '../../utils/util';
 
 Component({
 	data: {
@@ -15,7 +14,7 @@ Component({
 		today: '',
 		dates: [] as any[],
 		scheduleMap: {} as any,
-		shiftNames: SHIFT_NAMES,
+		shiftNames: Object.values(SHIFT_NAMES),
 	},
 
 	lifetimes: {
@@ -35,7 +34,7 @@ Component({
 		// 初始化排班表
 		initSchedule() {
 			const now = new Date();
-			const todayStr = this.formatDate(now);
+			const todayStr = formatDate(now);
 			const dates = this.generateDateRange(now);
 
 			// 获取正常状态的员工
@@ -58,16 +57,17 @@ Component({
 					if (record) {
 						const index = SHIFT_TYPES.indexOf(record.shift);
 						scheduleMap[staff.id][d.date] = {
-							label: SHIFT_NAMES[index],
+							label: SHIFT_NAMES[record.shift],
 							type: record.shift,
 							index: index,
 						};
 					} else {
-						// 默认晚班
+						// 使用系统默认班次
+						const index = SHIFT_TYPES.indexOf(DEFAULT_SHIFT);
 						scheduleMap[staff.id][d.date] = {
-							label: '晚班',
-							type: 'evening',
-							index: 1,
+							label: SHIFT_NAMES[DEFAULT_SHIFT],
+							type: DEFAULT_SHIFT,
+							index: index,
 						};
 					}
 				});
@@ -84,12 +84,12 @@ Component({
 		generateDateRange(centerDate: Date) {
 			const dates = [];
 			const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-			const todayStr = this.formatDate(new Date());
+			const todayStr = formatDate(new Date());
 
 			for (let i = -7; i <= 7; i++) {
 				const d = new Date(centerDate);
 				d.setDate(centerDate.getDate() + i);
-				const dateStr = this.formatDate(d);
+				const dateStr = formatDate(d);
 				dates.push({
 					date: dateStr,
 					dayNum: d.getDate(),
@@ -98,13 +98,6 @@ Component({
 				});
 			}
 			return dates;
-		},
-
-		formatDate(date: Date) {
-			const year = date.getFullYear();
-			const month = String(date.getMonth() + 1).padStart(2, '0');
-			const day = String(date.getDate()).padStart(2, '0');
-			return `${ year }-${ month }-${ day }`;
 		},
 
 		// 排班变更
@@ -129,7 +122,7 @@ Component({
 			// 更新界面
 			const scheduleMap = this.data.scheduleMap;
 			scheduleMap[staffId][date] = {
-				label: SHIFT_NAMES[index],
+				label: SHIFT_NAMES[shiftType],
 				type: shiftType,
 				index: index,
 			};
@@ -145,8 +138,12 @@ Component({
 		// 加载员工列表
 		loadStaffList() {
 			const staffList = db.getAll<StaffInfo>(Collections.STAFF);
-			// 按创建时间倒序排列
-			staffList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+			// 按创建时间倒序排列，增加兼容性处理
+			staffList.sort((a, b) => {
+				const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+				const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+				return timeB - timeA;
+			});
 			this.setData({staffList});
 		},
 
@@ -259,21 +256,16 @@ Component({
 					return;
 				}
 
-				const now = getTimestamp();
-				const newStaff: StaffInfo = {
-					id: generateId(),
+				const inserted = db.insert<StaffInfo>(Collections.STAFF, {
 					name,
 					status: 'active',
-					createdAt: now,
-					updatedAt: now,
-				};
+				} as any);
 
-				// 直接保存到存储
-				const staffList = db.getAll<StaffInfo>(Collections.STAFF);
-				staffList.push(newStaff);
-				wx.setStorageSync('db_staff', staffList);
-
-				wx.showToast({title: '添加成功', icon: 'success'});
+				if (inserted) {
+					wx.showToast({title: '添加成功', icon: 'success'});
+				} else {
+					wx.showToast({title: '添加失败', icon: 'none'});
+				}
 			}
 
 			this.onCloseModal();

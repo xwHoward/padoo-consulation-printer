@@ -1,15 +1,5 @@
 /* staff.less */
-
-/* 主题色定义 */
-@primary-color: #FF6B00;
-@text-color: #333333;
-@text-color-secondary: #666666;
-@bg-color: #ffffff;
-@bg-color-light: #f5f5f5;
-@border-color: #e0e0e0;
-@border-color-light: #f0f0f0;
-@success-color: #52c41a;
-@danger-color: #ff4d4f;
+@import "../../app.less";
 
 /* 页面基础样式 */
 page {
@@ -172,25 +162,25 @@ page {
 }
 
 .shift-tag.morning {
-	background-color: rgba(52, 152, 219, 0.1);
+	background: rgba(52, 152, 219, 0.1);
 	color: #3498db;
 	border-color: rgba(52, 152, 219, 0.2);
 }
 
 .shift-tag.evening {
-	background-color: rgba(155, 89, 182, 0.1);
+	background: rgba(155, 89, 182, 0.1);
 	color: #9b59b6;
 	border-color: rgba(155, 89, 182, 0.2);
 }
 
 .shift-tag.off {
-	background-color: @bg-color-light;
+	background: rgba(0, 0, 0, 0.05);
 	color: @text-color-secondary;
-	border-color: @border-color;
+	border-color: @border-color-light;
 }
 
 .shift-tag.leave {
-	background-color: rgba(231, 76, 60, 0.1);
+	background: rgba(231, 76, 60, 0.1);
 	color: #e74c3c;
 	border-color: rgba(231, 76, 60, 0.2);
 }
@@ -304,7 +294,7 @@ page {
 }
 
 .toggle-btn {
-	color: #1890ff;
+	color: @info-color;
 	background-color: rgba(24, 144, 255, 0.1);
 	border: 1px solid rgba(24, 144, 255, 0.3);
 }
@@ -350,11 +340,13 @@ page {
 	top: 50%;
 	left: 50%;
 	transform: translate(-50%, -50%);
-	width: 300px;
+	width: 85%;
+	max-width: 400px;
 	background-color: @bg-color;
 	border-radius: 12px;
 	z-index: 1001;
 	overflow: hidden;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .modal-title {

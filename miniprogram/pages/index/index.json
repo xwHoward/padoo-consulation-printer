@@ -1,5 +1,13 @@
 {
   "usingComponents": {
-    "navigation-bar": "/components/navigation-bar/navigation-bar"
+    "navigation-bar": "/components/navigation-bar/navigation-bar",
+    "body-selector": "/components/body-selector/body-selector",
+    "oil-selector": "/components/oil-selector/oil-selector",
+    "project-selector": "/components/project-selector/project-selector",
+    "technician-selector": "/components/technician-selector/technician-selector",
+    "room-selector": "/components/room-selector/room-selector",
+    "strength-selector": "/components/strength-selector/strength-selector",
+    "gender-selector": "/components/gender-selector/gender-selector",
+    "platform-selector": "/components/platform-selector/platform-selector"
   }
 }

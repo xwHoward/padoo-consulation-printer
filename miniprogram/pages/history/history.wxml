@@ -20,7 +20,7 @@
               <view class="consultation-header" bindtap="toggleCollapse" data-group-index="{{index}}" data-record-index="{{recordIndex}}">
                 <view class="consultation-basic">
                   <text class="customer-info">
-                    {{group.records.length - recordIndex}}. {{record.surname}}{{record.gender === 'male' ? '先生' : '女士'}}
+                    {{group.records.length - recordIndex}}. {{record.surname}}{{genders[record.gender] || ''}}
                   </text>
                   <text class="tag">{{record.room}}</text>
                   <text class="tag">{{record.endTime}}</text>

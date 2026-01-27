@@ -1,0 +1,27 @@
+<view class="technician-selector">
+  <label
+    wx:for="{{technicianList}}"
+    wx:key="id"
+    class="technician-option {{(!multi ? selectedTechnician === item.name : item.isSelected) ? 'selected' : ''}} {{item.isOccupied ? 'occupied' : ''}}"
+    bindtap="onTechnicianTap"
+    data-id="{{item.id}}"
+    data-technician="{{item.name}}"
+    data-occupied="{{item.isOccupied}}"
+    data-reason="{{item.occupiedReason}}"
+  >
+    <checkbox
+      wx:if="{{multi}}"
+      value="{{item.name}}"
+      checked="{{item.isSelected}}"
+      disabled="{{item.isOccupied}}" />
+    <radio
+      wx:else
+      value="{{item.name}}"
+      checked="{{selectedTechnician === item.name}}"
+      disabled="{{item.isOccupied}}" />
+    <view class="tech-info">
+      <text class="tech-name">{{item.name}}</text>
+      <text class="tech-reason" wx:if="{{item.isOccupied}}">{{item.occupiedReason}}</text>
+    </view>
+  </label>
+</view>

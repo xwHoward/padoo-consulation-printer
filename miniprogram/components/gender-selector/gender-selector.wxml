@@ -1,0 +1,12 @@
+<view class="gender-selector">
+  <label
+    class="gender-option {{selectedGender === item.id ? 'selected' : ''}}"
+    wx:for="{{genders}}"
+    wx:key="id"
+    bindtap="onSelect"
+    data-id="{{item.id}}"
+  >
+    <radio value="{{item.id}}" checked="{{selectedGender === item.id}}" />
+    {{item.name}}
+  </label>
+</view>

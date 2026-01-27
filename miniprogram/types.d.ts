@@ -1,8 +1,8 @@
 // 基础数据记录接口
 interface BaseRecord {
-	id: string;
-	createdAt: string;
-	updatedAt: string;
+  id: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // 支付方式类型
@@ -10,16 +10,16 @@ type PaymentMethod = "meituan" | "dianping" | "douyin" | "wechat" | "alipay" | "
 
 // 单笔支付记录
 interface PaymentItem {
-	method: PaymentMethod;
-	amount: number; // 实付金额
+  method: PaymentMethod;
+  amount: number; // 实付金额
 }
 
 // 结算信息
 interface SettlementInfo {
-	payments: PaymentItem[]; // 支付列表（支持组合支付）
-	totalAmount: number; // 总金额
-	couponCode?: string; // 券码
-	settledAt: string; // 结算时间
+  payments: PaymentItem[]; // 支付列表（支持组合支付）
+  totalAmount: number; // 总金额
+  couponCode?: string; // 券码
+  settledAt: string; // 结算时间
 }
 
 // 定义咨询单数据结构
@@ -113,9 +113,30 @@ interface ReservationRecord {
 interface MembershipCard extends BaseRecord {
   name: string; // 会员卡名称
   originalPrice: number; // 原价
-  remainingTimes: number; // 剩余次数
+  totalTimes: number; // 总次数
   project: string; // 关联项目
   status: "active" | "disabled"; // 状态
+}
+
+// 顾客基础信息结构
+interface CustomerRecord extends BaseRecord {
+  phone: string;
+  name: string;
+  responsibleTechnician: string;
+  licensePlate: string;
+  remarks: string;
+  totalAmount: number;
+}
+
+// 顾客回访记录信息
+interface CustomerVisit {
+  id: string;
+  date: string;
+  project: string;
+  technician: string;
+  room: string;
+  amount?: number;
+  isClockIn: boolean;
 }
 
 // 顾客会员卡关联数据结构

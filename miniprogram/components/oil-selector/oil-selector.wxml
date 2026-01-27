@@ -1,0 +1,13 @@
+<view class="checkbox-group">
+  <label
+    wx:for="{{oils}}"
+    wx:key="id"
+    class="checkbox-item {{selectedOil === item.id ? 'selected' : ''}}"
+    bindtap="onOilTap"
+    data-oil="{{item.id}}"
+  >
+    <checkbox value="{{item.id}}" checked="{{selectedOil === item.id}}" />
+    <text>{{item.name}}</text>
+    <text class="oil-effect">{{item.effect}}</text>
+  </label>
+</view>

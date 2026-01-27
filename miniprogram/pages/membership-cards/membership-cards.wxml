@@ -1,13 +1,28 @@
-<navigation-bar title="会员卡管理" back="{{true}}" color="black" background="#FFF">
+<navigation-bar
+  title="会员卡管理"
+  back="{{true}}"
+  color="black"
+  background="#FFF"
+>
   <view slot="right" class="nav-btns">
-    <view bindtap="showAddCard" class="nav-btn" aria-role="button" aria-label="新增会员卡">
+    <view
+      bindtap="showAddCard"
+      class="nav-btn"
+      aria-role="button"
+      aria-label="新增会员卡"
+    >
       <text class="nav-btn-text">新增会员卡</text>
     </view>
   </view>
 </navigation-bar>
 <view class="cards-page">
   <view class="card-list">
-    <view wx:for="{{cardList}}" wx:key="id" class="card-item {{item.status === 'disabled' ? 'disabled' : ''}}" data-card="{{item}}">
+    <view
+      wx:for="{{cardList}}"
+      wx:key="id"
+      class="card-item {{item.status === 'disabled' ? 'disabled' : ''}}"
+      data-card="{{item}}"
+    >
       <view class="card-header">
         <view class="card-info">
           <view class="card-name">{{item.name}}</view>
@@ -18,9 +33,7 @@
             </view>
           </view>
         </view>
-        <view class="card-status {{item.status === 'active' ? 'active' : 'disabled'}}">
-          {{item.status === 'active' ? '启用' : '禁用'}}
-        </view>
+        <view class="card-status {{item.status === 'active' ? 'active' : 'disabled'}}">{{item.status === 'active' ? '启用' : '禁用'}}</view>
       </view>
       <view class="card-body">
         <view class="card-row">
@@ -33,11 +46,27 @@
         </view>
       </view>
       <view class="card-actions">
-        <view class="action-btn toggle" catch:tap="toggleCardStatus" data-card="{{item}}">
+        <view
+          class="action-btn toggle"
+          catch:tap="toggleCardStatus"
+          data-card="{{item}}"
+        >
           {{item.status === 'active' ? '禁用' : '启用'}}
         </view>
-        <view class="action-btn edit" catch:tap="showEditCard" data-card="{{item}}">编辑</view>
-        <view class="action-btn delete" catch:tap="deleteCard" data-card="{{item}}">删除</view>
+        <view
+          class="action-btn edit"
+          catch:tap="showEditCard"
+          data-card="{{item}}"
+        >
+          编辑
+        </view>
+        <view
+          class="action-btn delete"
+          catch:tap="deleteCard"
+          data-card="{{item}}"
+        >
+          删除
+        </view>
       </view>
     </view>
   </view>
@@ -46,29 +75,44 @@
     <view class="empty-text">暂无会员卡记录</view>
   </view>
 </view>
-<view class="modal-mask" wx:if="{{showEditModal}}" bindtap="onModalCancel"></view>
+<view
+  class="modal-mask"
+  wx:if="{{showEditModal}}"
+  bindtap="onModalCancel"
+>
+</view>
 <view class="modal-container" wx:if="{{showEditModal}}">
   <view class="modal-title">{{modalTitle}}</view>
   <view class="form-group">
     <text class="form-label">会员卡名称</text>
-    <input class="form-input" type="text" placeholder="请输入会员卡名称" bindinput="onNameInput" value="{{formName}}" />
+    <input
+      class="form-input"
+      type="text"
+      placeholder="请输入会员卡名称"
+      bindinput="onNameInput"
+      value="{{formName}}" />
   </view>
   <view class="form-group">
     <text class="form-label">原价</text>
-    <input class="form-input" type="digit" placeholder="请输入原价" bindinput="onOriginalPriceInput" value="{{formOriginalPrice}}" />
+    <input
+      class="form-input"
+      type="digit"
+      placeholder="请输入原价"
+      bindinput="onOriginalPriceInput"
+      value="{{formOriginalPrice}}" />
   </view>
   <view class="form-group">
     <text class="form-label">次数</text>
-    <input class="form-input" type="number" placeholder="请输入次数" bindinput="onRemainingTimesInput" value="{{formRemainingTimes}}" />
+    <input
+      class="form-input"
+      type="number"
+      placeholder="请输入次数"
+      bindinput="onRemainingTimesInput"
+      value="{{formRemainingTimes}}" />
   </view>
   <view class="form-group">
     <text class="form-label">关联项目</text>
-    <view class="project-selector">
-      <label wx:for="{{projects}}" wx:key="*this" wx:for-item="project" class="project-option {{formProject === project ? 'selected' : ''}}" bindtap="onProjectSelect" data-project="{{project}}">
-        <radio value="{{project}}" checked="{{formProject === project}}" />
-        <text>{{project}}</text>
-      </label>
-    </view>
+    <project-selector selectedProject="{{formProject}}" bind:change="onProjectSelect" />
   </view>
   <view class="modal-footer">
     <view class="modal-btn cancel-btn" bindtap="onModalCancel">取消</view>

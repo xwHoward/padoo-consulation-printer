@@ -1,5 +1,6 @@
-import {formatTime, parseProjectDuration} from "../../utils/util";
-import {db, Collections} from "../../utils/db";
+import {PROJECTS} from "../../utils/constants";
+import {Collections, db} from "../../utils/db";
+import {calculateOvertimeUnits, calculateProjectEndTime, formatDate, formatTime, isTimeOverlapping, parseProjectDuration, SHIFT_END_TIMES} from "../../utils/util";
 const GBK = require("gbk.js");
 
 // 定义每日咨询单集合
@@ -10,7 +11,7 @@ type DailyConsultations = {
 const DefaultConsultationInfo: ConsultationInfo = {
   surname: "",
   gender: "male",
-  project: "70min精油",
+  project: PROJECTS[1], // 70min精油
   technician: "",
   room: "",
   massageStrength: "standard",
@@ -36,14 +37,14 @@ const DefaultGuestInfo: GuestInfo = {
   couponCode: "",
   couponPlatform: "",
   upgradeHimalayanSaltStone: false,
-  project: "70min精油",
+  project: PROJECTS[1], // 70min精油
 };
 
 function ensureConsultationInfoCompatibility(data: any): ConsultationInfo {
   return {
     surname: data.surname || "",
     gender: data.gender || "male",
-    project: data.project || "70min精油",
+    project: data.project || PROJECTS[1],
     technician: data.technician || "",
     room: data.room || "",
     massageStrength: data.massageStrength || "standard",
@@ -71,11 +72,11 @@ function updateGuestField(context: GuestContext, fieldName: string, value: any):
   if (context.isDualMode) {
     const guestKey = context.activeGuest === 1 ? 'guest1Info' : 'guest2Info';
     return {
-      [`${guestKey}.${fieldName}`]: value
+      [`${ guestKey }.${ fieldName }`]: value
     };
   }
   return {
-    [`consultationInfo.${fieldName}`]: value
+    [`consultationInfo.${ fieldName }`]: value
   };
 }
 
@@ -125,10 +126,19 @@ Component({
   },
 
   methods: {
+    // 页面加载
+    onLoad(options: any) {
+      if (options.editId) {
+        this.loadEditData(options.editId);
+      } else if (options.reserveId) {
+        this.loadReservationData(options.reserveId);
+      }
+    },
+
     // 加载并检查技师可用性
     loadTechnicianList() {
       const now = new Date();
-      const today = this.formatDate(now);
+      const today = formatDate(now);
       const currentTimeStr = formatTime(now, false);
 
       // 获取当前选中的项目时长
@@ -158,7 +168,7 @@ Component({
           if (rName !== staff.name) return false;
 
           // 时间重叠检查: (StartA < EndB) && (EndA > StartB)
-          return currentTimeStr < r.endTime && proposedEndTimeStr > r.startTime;
+          return isTimeOverlapping(currentTimeStr, proposedEndTimeStr, r.startTime, r.endTime);
         });
 
         if (conflictTask) {
@@ -189,117 +199,8 @@ Component({
 
       this.setData({technicianList: list});
     },
+
     // 页面加载时获取参数
-    onLoad(options: Record<string, string | undefined>) {
-      if (options.editId) {
-        // 加载编辑数据
-        this.loadEditData(options.editId);
-      } else if (options.reserveId) {
-        // 加载预约数据
-        this.loadReserveData(options.reserveId);
-      }
-    },
-
-    // 加载预约数据
-    loadReserveData(reserveId: string) {
-      try {
-        const record = db.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
-        if (record) {
-          // 查找同组的所有预约（同一顾客、同一日期、同一时间）
-          const allReservations = db.find<ReservationRecord>(Collections.RESERVATIONS, {
-            date: record.date,
-            customerName: record.customerName,
-            startTime: record.startTime
-          });
-
-          // 提取预约ID列表
-          const reservationIds = allReservations.map(r => r.id);
-
-          // 如果有多个技师预约，启用双人模式
-          if (allReservations.length > 1) {
-            const reservation1 = allReservations[0];
-            const reservation2 = allReservations[1];
-
-            this.setData({
-              isDualMode: true,
-              activeGuest: 1,
-              guest1Info: {
-                surname: record.customerName,
-                gender: record.gender,
-                selectedParts: {},
-                massageStrength: 'standard',
-                essentialOil: 'lavender',
-                remarks: '',
-                technician: reservation1.technicianName || '',
-                isClockIn: false,
-                couponCode: '',
-                couponPlatform: '',
-                upgradeHimalayanSaltStone: false,
-                project: reservation1.project === '待定' ? '70min精油' : reservation1.project,
-              },
-              guest2Info: {
-                surname: record.customerName,
-                gender: record.gender,
-                selectedParts: {},
-                massageStrength: 'standard',
-                essentialOil: 'lavender',
-                remarks: '',
-                technician: reservation2.technicianName || '',
-                isClockIn: false,
-                couponCode: '',
-                couponPlatform: '',
-                upgradeHimalayanSaltStone: false,
-                project: reservation2.project === '待定' ? '70min精油' : reservation2.project,
-              },
-              consultationInfo: {
-                ...DefaultConsultationInfo,
-                surname: record.customerName,
-                gender: record.gender,
-                project: record.project === '待定' ? '70min精油' : record.project,
-                technician: '',
-                phone: record.phone || '',
-                selectedParts: {},
-              },
-              currentReservationIds: reservationIds,
-              matchedCustomer: null,
-              matchedCustomerApplied: false
-            });
-          } else {
-            // 单人预约
-            this.setData({
-              consultationInfo: {
-                ...DefaultConsultationInfo,
-                surname: record.customerName,
-                gender: record.gender,
-                project: record.project === '待定' ? '70min精油' : record.project,
-                technician: record.technicianName || '',
-                phone: record.phone || '',
-                selectedParts: {},
-              },
-              currentReservationIds: reservationIds,
-              matchedCustomer: null,
-              matchedCustomerApplied: false
-            });
-          }
-
-          this.loadTechnicianList();
-        }
-      } catch (e) {
-        console.error("加载预约数据失败", e);
-      }
-    },
-    // 检查数组是否包含某个元素（替代数组的includes方法）
-    arrayIncludes(array: string[], element: string): boolean {
-      if (!array || !Array.isArray(array)) {
-        return false;
-      }
-      for (let i = 0; i < array.length; i++) {
-        if (array[i] === element) {
-          return true;
-        }
-      }
-      return false;
-    },
 
     // 切换双人模式
     toggleDualMode() {
@@ -373,12 +274,13 @@ Component({
 
     // 性别选择
     onGenderSelect(e: any) {
+      const gender = e.detail.value;
       const {isDualMode, activeGuest} = this.data;
       if (isDualMode) {
         const key = activeGuest === 1 ? 'guest1Info.gender' : 'guest2Info.gender';
-        this.setData({[key]: e.currentTarget.dataset.gender});
+        this.setData({[key]: gender});
       } else {
-        this.setData({"consultationInfo.gender": e.currentTarget.dataset.gender});
+        this.setData({"consultationInfo.gender": gender});
       }
       // 触发顾客匹配
       this.searchCustomer();
@@ -386,7 +288,7 @@ Component({
 
     // 项目选择
     onProjectSelect(e: any) {
-      const project = e.currentTarget.dataset.project;
+      const project = e.detail.project || e.currentTarget.dataset.project;
       const {isDualMode, activeGuest} = this.data;
       if (isDualMode) {
         const key = activeGuest === 1 ? 'guest1Info.project' : 'guest2Info.project';
@@ -399,7 +301,7 @@ Component({
 
     // 技师选择
     onTechnicianSelect(e: any) {
-      const {technician, occupied, reason} = e.currentTarget.dataset;
+      const {technician, occupied, reason} = e.detail.technician ? e.detail : e.currentTarget.dataset;
       if (occupied) {
         wx.showToast({title: reason || '该技师当前时段已有安排', icon: 'none', duration: 2500});
         return;
@@ -458,7 +360,7 @@ Component({
 
     // 券码平台选择
     onCouponPlatformSelect(e: any) {
-      const platform = e.currentTarget.dataset.platform;
+      const platform = e.detail.value;
       const {isDualMode, activeGuest} = this.data;
       if (isDualMode) {
         const currentInfo = activeGuest === 1 ? this.data.guest1Info : this.data.guest2Info;
@@ -472,7 +374,7 @@ Component({
 
     // 房间选择
     onRoomSelect(e: any) {
-      const room = e.currentTarget.dataset.room;
+      const room = e.detail.room || e.currentTarget.dataset.room;
       this.setData({
         "consultationInfo.room": room,
       });
@@ -480,7 +382,7 @@ Component({
 
     // 按摩力度选择
     onMassageStrengthSelect(e: any) {
-      const strength = e.currentTarget.dataset.strength;
+      const strength = e.detail.strength || e.currentTarget.dataset.strength;
       const {isDualMode, activeGuest} = this.data;
       if (isDualMode) {
         const key = activeGuest === 1 ? 'guest1Info.massageStrength' : 'guest2Info.massageStrength';
@@ -492,7 +394,7 @@ Component({
 
     // 精油选择（单选）
     onEssentialOilSelect(e: any) {
-      const oil = e.currentTarget.dataset.oil;
+      const oil = e.detail.oil || e.currentTarget.dataset.oil;
       const {isDualMode, activeGuest} = this.data;
       if (isDualMode) {
         const key = activeGuest === 1 ? 'guest1Info.essentialOil' : 'guest2Info.essentialOil';
@@ -516,15 +418,15 @@ Component({
 
     // 加强部位选择（使用字段map控制）
     onBodyPartSelect(e: any) {
-      const part = e.currentTarget.dataset.part;
+      const part = e.detail.part || e.currentTarget.dataset.part;
       const {isDualMode, activeGuest} = this.data;
-      
+
       if (isDualMode) {
         const infoKey = activeGuest === 1 ? 'guest1Info' : 'guest2Info';
         const currentInfo = activeGuest === 1 ? this.data.guest1Info : this.data.guest2Info;
         const selectedParts = {...currentInfo.selectedParts};
         selectedParts[part] = !selectedParts[part];
-        this.setData({[`${infoKey}.selectedParts`]: selectedParts});
+        this.setData({[`${ infoKey }.selectedParts`]: selectedParts});
       } else {
         const selectedParts: Record<string, boolean> = {
           ...this.data.consultationInfo.selectedParts,
@@ -832,7 +734,7 @@ Component({
           couponPlatform: guest1Info.couponPlatform,
         };
         printContents.push(this.buildPrintContent(info1));
-        
+
         // 顾客2打印内容（使用顾客2的项目、技师、点钟、券码）
         const info2: ConsultationInfo = {
           ...consultationInfo,
@@ -860,7 +762,7 @@ Component({
     // 顺序打印多份内容
     printMultiple(contents: string[], deviceId: string, serviceId: string, characteristicId: string, index: number = 0) {
       if (index >= contents.length) {
-        const msg = contents.length > 1 ? `已打印${contents.length}张单据` : '打印成功';
+        const msg = contents.length > 1 ? `已打印${ contents.length }张单据` : '打印成功';
         wx.showToast({title: msg, icon: 'success'});
         return;
       }
@@ -945,7 +847,7 @@ Component({
             deletedCount++;
           }
         }
-        
+
         if (deletedCount > 0) {
           // 清空当前预约ID列表
           this.setData({currentReservationIds: []});
@@ -959,7 +861,7 @@ Component({
     calculateOvertime(technician: string, date: string, startTime: string): number {
       try {
         // 获取当日排班
-        const schedule = db.findOne<{staffId: string; shift: ShiftType}>(Collections.SCHEDULE, {
+        const schedule = db.findOne<ScheduleRecord>(Collections.SCHEDULE, {
           date: date
         });
 
@@ -968,50 +870,17 @@ Component({
         }
 
         // 获取技师信息以匹配 staffId
-        const staff = db.findOne<{id: string; name: string}>(Collections.STAFF, {
+        const staff = db.findOne<StaffInfo>(Collections.STAFF, {
           name: technician,
           status: 'active'
         });
 
-        if (!staff) {
-          return 0; // 未找到技师
+        if (!staff || schedule.staffId !== staff.id) {
+          return 0; // 未找到技师或排班不匹配
         }
 
-        // 检查排班是否匹配该技师
-        if (schedule.staffId !== staff.id) {
-          return 0; // 排班不匹配，不计算加班
-        }
-
-        // 定义班次结束时间
-        const shiftEndTime: Record<string, string> = {
-          'morning': '22:00', // 早班结束时间
-          'evening': '23:00' // 晚班结束时间
-        };
-
-        const endTime = shiftEndTime[schedule.shift];
-        if (!endTime) {
-          return 0; // 休息或请假不计算加班
-        }
-
-        // 解析开始时间和班次结束时间
-        const [startHour, startMin] = startTime.split(':').map(Number);
-        const [endHour, endMin] = endTime.split(':').map(Number);
-
-        const startTotalMinutes = startHour * 60 + startMin;
-        const endTotalMinutes = endHour * 60 + endMin;
-
-        // 如果开始时间早于或等于班次结束时间，不计算加班
-        if (startTotalMinutes <= endTotalMinutes) {
-          return 0;
-        }
-
-        // 计算超出的分钟数
-        const overtimeMinutes = startTotalMinutes - endTotalMinutes;
-
-        // 每30分钟为1个加班单位：<30min=0, >=30&<60=1, >=60&<90=2，以此类推
-        const overtimeUnits = Math.floor(overtimeMinutes / 30);
-
-        return overtimeUnits;
+        const endTime = SHIFT_END_TIMES[schedule.shift];
+        return calculateOvertimeUnits(startTime, endTime);
       } catch (error) {
         console.error('计算加班时长失败:', error);
         return 0;
@@ -1022,7 +891,7 @@ Component({
     saveConsultationToCache(consultation: ConsultationInfo, editId?: string) {
       try {
         const now = new Date();
-        const currentDate = this.formatDate(now);
+        const currentDate = formatDate(now);
         const timestamp = now.toISOString();
 
         // 获取现有缓存数据
@@ -1032,9 +901,7 @@ Component({
 
         // 计算开始时间和结束时间
         const startTimeStr = formatTime(now, false);
-        const projectDuration = parseProjectDuration(consultation.project);
-        const totalDuration = projectDuration + 10; // 项目时长 + 10分钟
-        const endTimeDate = new Date(now.getTime() + totalDuration * 60 * 1000);
+        const endTimeDate = calculateProjectEndTime(now, consultation.project);
         const endTimeStr = formatTime(endTimeDate, false);
 
         // 自动计算加班
@@ -1142,6 +1009,7 @@ Component({
             matchedCustomer: null,
             matchedCustomerApplied: false
           });
+          this.loadTechnicianList();
         } else {
           console.error("未找到要编辑的记录:", editId);
           wx.showToast({
@@ -1155,6 +1023,31 @@ Component({
           title: "加载失败",
           icon: "error",
         });
+      }
+    },
+
+    // 加载预约数据
+    loadReservationData(reserveId: string) {
+      try {
+        const record = db.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
+        if (record) {
+          this.setData({
+            consultationInfo: {
+              ...DefaultConsultationInfo,
+              surname: record.customerName,
+              gender: record.gender,
+              phone: record.phone,
+              project: record.project,
+              technician: record.technicianName || '',
+            },
+            currentReservationIds: [reserveId]
+          });
+          this.loadTechnicianList();
+        } else {
+          console.error("未找到要加载的预约:", reserveId);
+        }
+      } catch (error) {
+        console.error("加载预约数据失败:", error);
       }
     },
 
@@ -1393,13 +1286,13 @@ Component({
 
         // 更新顾客信息
         const updates: any = {
-          [`${guestKey}.surname`]: matchedCustomer.name.replace(/先生|女士/g, ''),
-          [`${guestKey}.gender`]: matchedCustomer.name.endsWith('女士') ? 'female' : 'male',
+          [`${ guestKey }.surname`]: matchedCustomer.name.replace(/先生|女士/g, ''),
+          [`${ guestKey }.gender`]: matchedCustomer.name.endsWith('女士') ? 'female' : 'male',
         };
 
         // 如果有责任技师，应用技师
         if (matchedCustomer.responsibleTechnician) {
-          updates[`${guestKey}.technician`] = matchedCustomer.responsibleTechnician;
+          updates[`${ guestKey }.technician`] = matchedCustomer.responsibleTechnician;
         }
 
         // 应用共享字段
@@ -1446,21 +1339,13 @@ Component({
       });
     },
 
-    // 格式化日期为 YYYY-MM-DD 格式
-    formatDate(date: Date): string {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return `${ year }-${ month }-${ day }`;
-    },
-
     // 清理超过30天的历史数据
     cleanupOldData(data: DailyConsultations) {
       const today = new Date();
       const thirtyDaysAgo = new Date(
         today.getTime() - 30 * 24 * 60 * 60 * 1000,
       );
-      const cutoffDate = this.formatDate(thirtyDaysAgo);
+      const cutoffDate = formatDate(thirtyDaysAgo);
 
       // 删除超过30天的日期键
       for (const date in data) {
@@ -1498,7 +1383,7 @@ Component({
           wx.showToast({title: '请选择称呼', icon: 'none'});
           return;
         }
-        
+
         const clockInInfo = this.formatClockInInfo(consultationInfo);
         const success = this.saveConsultationToCache(consultationInfo, editId);
 
@@ -1524,7 +1409,7 @@ Component({
     // 双人模式报钟
     doDualClockIn() {
       const {consultationInfo, guest1Info, guest2Info} = this.data;
-      
+
       // 验证两位顾客的项目
       if (!guest1Info.project) {
         wx.showToast({title: '请为顾客1选择项目', icon: 'none'});
@@ -1534,7 +1419,7 @@ Component({
         wx.showToast({title: '请为顾客2选择项目', icon: 'none'});
         return;
       }
-      
+
       // 验证两位顾客的技师
       if (!guest1Info.technician) {
         wx.showToast({title: '请为顾客1选择技师', icon: 'none'});
@@ -1594,10 +1479,10 @@ Component({
         const clockInInfo1 = this.formatClockInInfo(info1);
         const clockInInfo2 = this.formatClockInInfo(info2);
         const combinedInfo = `【顾客1】
-${clockInInfo1}
+${ clockInInfo1 }
 
 【顾客2】
-${clockInInfo2}`;
+${ clockInInfo2 }`;
 
         wx.setClipboardData({
           data: combinedInfo,
@@ -1618,7 +1503,7 @@ ${clockInInfo2}`;
     // 更新轮排顺序：将技师移到末尾
     updateRotationOrder(technicianName: string) {
       const now = new Date();
-      const today = this.formatDate(now);
+      const today = formatDate(now);
       const storageKey = `rotation_${ today }`;
 
       let rotation = wx.getStorageSync(storageKey) as string[];
@@ -1640,7 +1525,7 @@ ${clockInInfo2}`;
     // 计算技师当日的报钟数量
     getTechnicianDailyCount(technician: string) {
       try {
-        const currentDate = this.formatDate(new Date());
+        const currentDate = formatDate(new Date());
         const cachedData =
           (wx.getStorageSync("consultationHistory") as DailyConsultations) ||
           {};

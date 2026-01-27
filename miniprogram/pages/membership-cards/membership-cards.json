@@ -1,6 +1,7 @@
 {
 	"usingComponents": {
-		"navigation-bar": "../../components/navigation-bar/navigation-bar"
+		"navigation-bar": "/components/navigation-bar/navigation-bar",
+		"project-selector": "/components/project-selector/project-selector"
 	},
 	"navigationBarTitleText": "会员卡管理"
 }
