@@ -23,11 +23,18 @@
         "miniprogram": {
             "list": [
                 {
-                    "name": "membership-cards",
-                    "pathName": "pages/membership-cards/membership-cards",
+                    "name": "staff",
+                    "pathName": "pages/staff/staff",
                     "query": "",
                     "scene": null,
                     "launchMode": "default"
+                },
+                {
+                    "name": "membership-cards",
+                    "pathName": "pages/membership-cards/membership-cards",
+                    "query": "",
+                    "launchMode": "default",
+                    "scene": null
                 },
                 {
                     "name": "customers",

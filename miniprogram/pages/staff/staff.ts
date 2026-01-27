@@ -1,10 +1,13 @@
 // staff.ts
-import {db, Collections, generateId, getTimestamp} from '../../utils/db';
-import {SHIFT_TYPES, SHIFT_NAMES, DEFAULT_SHIFT, ShiftType} from '../../utils/constants';
-import {formatDate} from '../../utils/util';
+import { AppConfig } from '../../config/index';
+import { cloudDb as cloudDbService } from '../../utils/cloud-db';
+import { DEFAULT_SHIFT, SHIFT_NAMES, SHIFT_TYPES } from '../../utils/constants';
+import { Collections, db } from '../../utils/db';
+import { formatDate } from '../../utils/util';
 
 Component({
 	data: {
+		loading: false,
 		staffList: [] as StaffInfo[],
 		showModal: false,
 		editingStaff: null as StaffInfo | null,
@@ -27,57 +30,89 @@ Component({
 	pageLifetimes: {
 		show() {
 			this.loadStaffList();
+			this.initSchedule();
 		},
 	},
 
 	methods: {
+		// 获取数据库实例
+		getDb() {
+			return AppConfig.useCloudDatabase ? cloudDbService : db;
+		},
+
 		// 初始化排班表
-		initSchedule() {
-			const now = new Date();
-			const todayStr = formatDate(now);
-			const dates = this.generateDateRange(now);
+		async initSchedule() {
+			try {
+				const database = this.getDb();
+				const now = new Date();
+				const todayStr = formatDate(now);
+				const dates = this.generateDateRange(now);
 
-			// 获取正常状态的员工
-			const staffList = db.find<StaffInfo>(Collections.STAFF, {status: 'active'});
+				this.setData({loading: true});
 
-			// 获取时间范围内的排班记录
-			const startDate = dates[0].date;
-			const endDate = dates[dates.length - 1].date;
-			const allSchedules = db.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
-				return item.date >= startDate && item.date <= endDate;
-			});
+				// 获取正常状态的员工
+				let staffList: StaffInfo[];
+				if (AppConfig.useCloudDatabase) {
+					staffList = await database.find<StaffInfo>(Collections.STAFF, {status: 'active'});
+				} else {
+					staffList = database.find<StaffInfo>(Collections.STAFF, {status: 'active'});
+				}
 
-			// 构造渲染用的 Map
-			const scheduleMap: any = {};
-			staffList.forEach((staff) => {
-				scheduleMap[staff.id] = {};
-				dates.forEach((d) => {
-					// 查找是否存在排班
-					const record = allSchedules.find((s) => s.staffId === staff.id && s.date === d.date);
-					if (record) {
-						const index = SHIFT_TYPES.indexOf(record.shift);
-						scheduleMap[staff.id][d.date] = {
-							label: SHIFT_NAMES[record.shift],
-							type: record.shift,
-							index: index,
-						};
-					} else {
-						// 使用系统默认班次
-						const index = SHIFT_TYPES.indexOf(DEFAULT_SHIFT);
-						scheduleMap[staff.id][d.date] = {
-							label: SHIFT_NAMES[DEFAULT_SHIFT],
-							type: DEFAULT_SHIFT,
-							index: index,
-						};
-					}
+				// 获取时间范围内的排班记录
+				const startDate = dates[0].date;
+				const endDate = dates[dates.length - 1].date;
+				let allSchedules: ScheduleRecord[];
+				
+				if (AppConfig.useCloudDatabase) {
+					allSchedules = await database.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
+						return item.date >= startDate && item.date <= endDate;
+					});
+				} else {
+					allSchedules = database.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
+						return item.date >= startDate && item.date <= endDate;
+					});
+				}
+
+				// 构造渲染用的 Map
+				const scheduleMap: any = {};
+				staffList.forEach((staff) => {
+					scheduleMap[staff.id] = {};
+					dates.forEach((d) => {
+						// 查找是否存在排班
+						const record = allSchedules.find((s) => s.staffId === staff.id && s.date === d.date);
+						if (record) {
+							const index = SHIFT_TYPES.indexOf(record.shift);
+							scheduleMap[staff.id][d.date] = {
+								label: SHIFT_NAMES[record.shift],
+								type: record.shift,
+								index: index,
+							};
+						} else {
+							// 使用系统默认班次
+							const index = SHIFT_TYPES.indexOf(DEFAULT_SHIFT);
+							scheduleMap[staff.id][d.date] = {
+								label: SHIFT_NAMES[DEFAULT_SHIFT],
+								type: DEFAULT_SHIFT,
+								index: index,
+							};
+						}
+					});
 				});
-			});
 
-			this.setData({
-				today: todayStr,
-				dates,
-				scheduleMap,
-			});
+				this.setData({
+					today: todayStr,
+					dates,
+					scheduleMap,
+					loading: false
+				});
+			} catch (error) {
+				console.error('初始化排班表失败:', error);
+				this.setData({loading: false});
+				wx.showToast({
+					title: '加载失败',
+					icon: 'none'
+				});
+			}
 		},
 
 		// 生成前后7天的日期
@@ -101,50 +136,93 @@ Component({
 		},
 
 		// 排班变更
-		onShiftChange(e: any) {
-			const {staffId, date} = e.currentTarget.dataset;
-			const index = parseInt(e.detail.value);
-			const shiftType = SHIFT_TYPES[index];
+		async onShiftChange(e: any) {
+			try {
+				const {staffId, date} = e.currentTarget.dataset;
+				const index = parseInt(e.detail.value);
+				const shiftType = SHIFT_TYPES[index];
+				const database = this.getDb();
 
-			// 查找现有记录
-			const existing = db.findOne<ScheduleRecord>(Collections.SCHEDULE, {staffId, date});
+				wx.showLoading({title: '更新中...'});
 
-			if (existing) {
-				db.updateById<ScheduleRecord>(Collections.SCHEDULE, existing.id, {shift: shiftType});
-			} else {
-				db.insert<ScheduleRecord>(Collections.SCHEDULE, {
-					date,
-					staffId,
-					shift: shiftType,
-				} as any);
+				if (AppConfig.useCloudDatabase) {
+					const existing = await database.findOne<ScheduleRecord>(Collections.SCHEDULE, {staffId, date});
+
+					if (existing) {
+						await database.updateById<ScheduleRecord>(Collections.SCHEDULE, existing.id, {shift: shiftType});
+					} else {
+						await database.insert<ScheduleRecord>(Collections.SCHEDULE, {
+							date,
+							staffId,
+							shift: shiftType,
+						} as any);
+					}
+				} else {
+					const existing = database.findOne<ScheduleRecord>(Collections.SCHEDULE, {staffId, date});
+
+					if (existing) {
+						database.updateById<ScheduleRecord>(Collections.SCHEDULE, existing.id, {shift: shiftType});
+					} else {
+						database.insert<ScheduleRecord>(Collections.SCHEDULE, {
+							date,
+							staffId,
+							shift: shiftType,
+						} as any);
+					}
+				}
+
+				wx.hideLoading();
+
+				// 更新界面
+				const scheduleMap = this.data.scheduleMap;
+				scheduleMap[staffId][date] = {
+					label: SHIFT_NAMES[shiftType],
+					type: shiftType,
+					index: index,
+				};
+
+				this.setData({scheduleMap});
+
+				wx.showToast({
+					title: '已更新',
+					icon: 'none',
+				});
+			} catch (error) {
+				console.error('排班变更失败:', error);
+				wx.hideLoading();
+				wx.showToast({
+					title: '更新失败',
+					icon: 'none'
+				});
 			}
-
-			// 更新界面
-			const scheduleMap = this.data.scheduleMap;
-			scheduleMap[staffId][date] = {
-				label: SHIFT_NAMES[shiftType],
-				type: shiftType,
-				index: index,
-			};
-
-			this.setData({scheduleMap});
-
-			wx.showToast({
-				title: '已更新',
-				icon: 'none',
-			});
 		},
 
 		// 加载员工列表
-		loadStaffList() {
-			const staffList = db.getAll<StaffInfo>(Collections.STAFF);
-			// 按创建时间倒序排列，增加兼容性处理
-			staffList.sort((a, b) => {
-				const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-				const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-				return timeB - timeA;
-			});
-			this.setData({staffList});
+		async loadStaffList() {
+			try {
+				const database = this.getDb();
+				let staffList: StaffInfo[];
+
+				if (AppConfig.useCloudDatabase) {
+					staffList = await database.getAll<StaffInfo>(Collections.STAFF);
+				} else {
+					staffList = database.getAll<StaffInfo>(Collections.STAFF);
+				}
+
+				// 按创建时间倒序排列，增加兼容性处理
+				staffList.sort((a, b) => {
+					const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+					const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+					return timeB - timeA;
+				});
+				this.setData({staffList});
+			} catch (error) {
+				console.error('加载员工列表失败:', error);
+				wx.showToast({
+					title: '加载失败',
+					icon: 'none'
+				});
+			}
 		},
 
 		// 添加员工
@@ -158,56 +236,116 @@ Component({
 		},
 
 		// 编辑员工
-		onEditStaff(e: WechatMiniprogram.TouchEvent) {
-			const id = e.currentTarget.dataset.id as string;
-			const staff = db.findById<StaffInfo>(Collections.STAFF, id);
+		async onEditStaff(e: WechatMiniprogram.TouchEvent) {
+			try {
+				const id = e.currentTarget.dataset.id as string;
+				const database = this.getDb();
+				let staff: StaffInfo | null;
 
-			if (staff) {
-				this.setData({
-					showModal: true,
-					editingStaff: staff,
-					inputName: staff.name,
-					inputStatus: staff.status,
+				if (AppConfig.useCloudDatabase) {
+					staff = await database.findById<StaffInfo>(Collections.STAFF, id);
+				} else {
+					staff = database.findById<StaffInfo>(Collections.STAFF, id);
+				}
+
+				if (staff) {
+					this.setData({
+						showModal: true,
+						editingStaff: staff,
+						inputName: staff.name,
+						inputStatus: staff.status,
+					});
+				}
+			} catch (error) {
+				console.error('编辑员工失败:', error);
+				wx.showToast({
+					title: '加载失败',
+					icon: 'none'
 				});
 			}
 		},
 
 		// 切换员工状态
-		onToggleStatus(e: WechatMiniprogram.TouchEvent) {
-			const id = e.currentTarget.dataset.id as string;
-			const staff = db.findById<StaffInfo>(Collections.STAFF, id);
+		async onToggleStatus(e: WechatMiniprogram.TouchEvent) {
+			try {
+				const id = e.currentTarget.dataset.id as string;
+				const database = this.getDb();
+				let staff: StaffInfo | null;
 
-			if (staff) {
-				const newStatus: StaffStatus = staff.status === 'active' ? 'disabled' : 'active';
-				db.updateById<StaffInfo>(Collections.STAFF, id, {status: newStatus});
-				this.loadStaffList();
+				if (AppConfig.useCloudDatabase) {
+					staff = await database.findById<StaffInfo>(Collections.STAFF, id);
+				} else {
+					staff = database.findById<StaffInfo>(Collections.STAFF, id);
+				}
 
+				if (staff) {
+					const newStatus: StaffStatus = staff.status === 'active' ? 'disabled' : 'active';
+
+					if (AppConfig.useCloudDatabase) {
+						await database.updateById<StaffInfo>(Collections.STAFF, id, {status: newStatus});
+					} else {
+						database.updateById<StaffInfo>(Collections.STAFF, id, {status: newStatus});
+					}
+
+					await this.loadStaffList();
+
+					wx.showToast({
+						title: newStatus === 'active' ? '已启用' : '已禁用',
+						icon: 'success',
+					});
+				}
+			} catch (error) {
+				console.error('切换员工状态失败:', error);
 				wx.showToast({
-					title: newStatus === 'active' ? '已启用' : '已禁用',
-					icon: 'success',
+					title: '操作失败',
+					icon: 'none'
 				});
 			}
 		},
 
 		// 删除员工
-		onDeleteStaff(e: WechatMiniprogram.TouchEvent) {
-			const id = e.currentTarget.dataset.id as string;
-			const staff = db.findById<StaffInfo>(Collections.STAFF, id);
+		async onDeleteStaff(e: WechatMiniprogram.TouchEvent) {
+			try {
+				const id = e.currentTarget.dataset.id as string;
+				const database = this.getDb();
+				let staff: StaffInfo | null;
 
-			if (!staff) return;
+				if (AppConfig.useCloudDatabase) {
+					staff = await database.findById<StaffInfo>(Collections.STAFF, id);
+				} else {
+					staff = database.findById<StaffInfo>(Collections.STAFF, id);
+				}
 
-			wx.showModal({
-				title: '确认删除',
-				content: `确定要删除员工"${ staff.name }"吗？`,
-				confirmColor: '#ff4d4f',
-				success: (res) => {
-					if (res.confirm) {
-						db.deleteById<StaffInfo>(Collections.STAFF, id);
-						this.loadStaffList();
-						wx.showToast({title: '已删除', icon: 'success'});
-					}
-				},
-			});
+				if (!staff) return;
+
+				wx.showModal({
+					title: '确认删除',
+					content: `确定要删除员工"${ staff.name }"吗？`,
+					confirmColor: '#ff4d4f',
+					success: async (res) => {
+						if (res.confirm) {
+							try {
+								if (AppConfig.useCloudDatabase) {
+									await database.deleteById<StaffInfo>(Collections.STAFF, id);
+								} else {
+									database.deleteById<StaffInfo>(Collections.STAFF, id);
+								}
+								await this.loadStaffList();
+								wx.showToast({title: '已删除', icon: 'success'});
+							} catch (error) {
+								console.error('删除员工失败:', error);
+								wx.showToast({title: '删除失败', icon: 'none'});
+							}
+						}
+					},
+				});
+			} catch (error) {
+				console.error('删除员工失败:', error);
+				wx.showToast({
+					title: '操作失败',
+					icon: 'none'
+				});
+			}
 		},
 
 		// 姓名输入
@@ -232,44 +370,77 @@ Component({
 		},
 
 		// 确认弹窗
-		onConfirmModal() {
-			const {inputName, inputStatus, editingStaff} = this.data;
-			const name = inputName.trim();
+		async onConfirmModal() {
+			try {
+				const {inputName, inputStatus, editingStaff} = this.data;
+				const name = inputName.trim();
 
-			if (!name) {
-				wx.showToast({title: '请输入员工姓名', icon: 'none'});
-				return;
-			}
-
-			if (editingStaff) {
-				// 编辑模式
-				db.updateById<StaffInfo>(Collections.STAFF, editingStaff.id, {
-					name,
-					status: inputStatus,
-				});
-				wx.showToast({title: '修改成功', icon: 'success'});
-			} else {
-				// 添加模式 - 检查重名
-				const exists = db.exists<StaffInfo>(Collections.STAFF, {name});
-				if (exists) {
-					wx.showToast({title: '员工姓名已存在', icon: 'none'});
+				if (!name) {
+					wx.showToast({title: '请输入员工姓名', icon: 'none'});
 					return;
 				}
 
-				const inserted = db.insert<StaffInfo>(Collections.STAFF, {
-					name,
-					status: 'active',
-				} as any);
+				const database = this.getDb();
+				wx.showLoading({title: '保存中...'});
 
-				if (inserted) {
-					wx.showToast({title: '添加成功', icon: 'success'});
+				if (editingStaff) {
+					if (AppConfig.useCloudDatabase) {
+						await database.updateById<StaffInfo>(Collections.STAFF, editingStaff.id, {
+							name,
+							status: inputStatus,
+						});
+					} else {
+						database.updateById<StaffInfo>(Collections.STAFF, editingStaff.id, {
+							name,
+							status: inputStatus,
+						});
+					}
+					wx.showToast({title: '修改成功', icon: 'success'});
 				} else {
-					wx.showToast({title: '添加失败', icon: 'none'});
-				}
-			}
+					let exists: boolean;
+					if (AppConfig.useCloudDatabase) {
+						exists = await database.exists<StaffInfo>(Collections.STAFF, {name});
+					} else {
+						exists = database.exists<StaffInfo>(Collections.STAFF, {name});
+					}
 
-			this.onCloseModal();
-			this.loadStaffList();
+					if (exists) {
+						wx.hideLoading();
+						wx.showToast({title: '员工姓名已存在', icon: 'none'});
+						return;
+					}
+
+					let inserted: StaffInfo | null;
+					if (AppConfig.useCloudDatabase) {
+						inserted = await database.insert<StaffInfo>(Collections.STAFF, {
+							name,
+							status: 'active',
+						} as any);
+					} else {
+						inserted = database.insert<StaffInfo>(Collections.STAFF, {
+							name,
+							status: 'active',
+						} as any);
+					}
+
+					if (inserted) {
+						wx.showToast({title: '添加成功', icon: 'success'});
+					} else {
+						wx.showToast({title: '添加失败', icon: 'none'});
+					}
+				}
+
+				wx.hideLoading();
+				this.onCloseModal();
+				await this.loadStaffList();
+			} catch (error) {
+				console.error('保存员工失败:', error);
+				wx.hideLoading();
+				wx.showToast({
+					title: '保存失败',
+					icon: 'none'
+				});
+			}
 		},
 	},
 });
