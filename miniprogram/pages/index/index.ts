@@ -107,6 +107,9 @@ Component({
     activeGuest: 1 as 1 | 2, // 当前活跃的顾客标签
     guest1Info: {...DefaultGuestInfo, selectedParts: {}} as GuestInfo, // 顾客1独立信息
     guest2Info: {...DefaultGuestInfo, selectedParts: {}} as GuestInfo, // 顾客2独立信息
+    // 顾客匹配相关
+    matchedCustomer: null as any | null, // 匹配到的顾客信息
+    matchedCustomerApplied: false, // 是否已应用匹配的顾客信息
   },
 
   lifetimes: {
@@ -258,6 +261,8 @@ Component({
                 selectedParts: {},
               },
               currentReservationIds: reservationIds,
+              matchedCustomer: null,
+              matchedCustomerApplied: false
             });
           } else {
             // 单人预约
@@ -272,6 +277,8 @@ Component({
                 selectedParts: {},
               },
               currentReservationIds: reservationIds,
+              matchedCustomer: null,
+              matchedCustomerApplied: false
             });
           }
 
@@ -318,6 +325,8 @@ Component({
             project: consultationInfo.project,
           },
           guest2Info: {...DefaultGuestInfo, selectedParts: {}},
+          matchedCustomer: null,
+          matchedCustomerApplied: false
         });
       } else {
         // 关闭双人模式时，将顾客1信息复制回咨询单
@@ -337,6 +346,8 @@ Component({
           'consultationInfo.couponPlatform': guest1Info.couponPlatform,
           'consultationInfo.upgradeHimalayanSaltStone': guest1Info.upgradeHimalayanSaltStone,
           'consultationInfo.project': guest1Info.project,
+          matchedCustomer: null,
+          matchedCustomerApplied: false
         });
       }
     },
@@ -356,6 +367,8 @@ Component({
       } else {
         this.setData({"consultationInfo.surname": e.detail.value});
       }
+      // 触发顾客匹配
+      this.searchCustomer();
     },
 
     // 性别选择
@@ -367,6 +380,8 @@ Component({
       } else {
         this.setData({"consultationInfo.gender": e.currentTarget.dataset.gender});
       }
+      // 触发顾客匹配
+      this.searchCustomer();
     },
 
     // 项目选择
@@ -426,6 +441,8 @@ Component({
       this.setData({
         "consultationInfo.phone": e.detail.value,
       });
+      // 触发顾客匹配
+      this.searchCustomer();
     },
 
     // 券码输入
@@ -930,7 +947,6 @@ Component({
         }
         
         if (deletedCount > 0) {
-          console.log(`[Reservation] 已删除 ${deletedCount} 条预约记录`);
           // 清空当前预约ID列表
           this.setData({currentReservationIds: []});
         }
@@ -943,7 +959,7 @@ Component({
     calculateOvertime(technician: string, date: string, startTime: string): number {
       try {
         // 获取当日排班
-        const schedule = db.findOne<{staffId: string; shift: any}>(Collections.SCHEDULE, {
+        const schedule = db.findOne<{staffId: string; shift: ShiftType}>(Collections.SCHEDULE, {
           date: date
         });
 
@@ -1095,7 +1111,6 @@ Component({
 
     // 加载编辑数据
     loadEditData(editId: string) {
-      console.log("loadEditData", editId);
       try {
         // 获取现有缓存数据
         const cachedData =
@@ -1124,6 +1139,8 @@ Component({
           this.setData({
             consultationInfo: ensureConsultationInfoCompatibility(foundRecord),
             editId: editId,
+            matchedCustomer: null,
+            matchedCustomerApplied: false
           });
         } else {
           console.error("未找到要编辑的记录:", editId);
@@ -1268,6 +1285,165 @@ Component({
     // 取消编辑
     cancelEdit() {
       wx.navigateBack();
+    },
+
+    // 搜索匹配顾客
+    searchCustomer() {
+      const {consultationInfo, isDualMode, activeGuest} = this.data;
+
+      // 获取当前顾客信息
+      let currentSurname = '';
+      let currentGender = '';
+      let currentPhone = '';
+
+      if (isDualMode) {
+        const guestInfo = activeGuest === 1 ? this.data.guest1Info : this.data.guest2Info;
+        currentSurname = guestInfo.surname;
+        currentGender = guestInfo.gender;
+      } else {
+        currentSurname = consultationInfo.surname;
+        currentGender = consultationInfo.gender;
+      }
+      currentPhone = consultationInfo.phone;
+
+      // 如果没有输入任何信息，清除匹配
+      if (!currentSurname && !currentPhone) {
+        this.setData({
+          matchedCustomer: null,
+          matchedCustomerApplied: false
+        });
+        return;
+      }
+
+      // 从系统存储中获取所有顾客信息
+      const savedCustomers = wx.getStorageSync('customers') || {};
+      const customerList = Object.keys(savedCustomers).map(key => ({
+        id: key,
+        ...savedCustomers[key]
+      }));
+
+
+      // 查找最佳匹配
+      let bestMatch: any | null = null;
+      let bestScore = 0;
+
+      customerList.forEach(customer => {
+        let score = 0;
+
+        // 手机号模糊匹配（包含匹配，最高优先级）
+        if (currentPhone && customer.phone && customer.phone.includes(currentPhone)) {
+          // 完全匹配给最高分
+          if (customer.phone === currentPhone) {
+            score += 100;
+          } else {
+            // 模糊匹配根据输入长度给分
+            const matchRatio = currentPhone.length / customer.phone.length;
+            score += Math.round(matchRatio * 80);
+          }
+        }
+
+        // 姓氏匹配
+        if (currentSurname && customer.name && customer.name.includes(currentSurname)) {
+          score += 50;
+        }
+
+        // 性别匹配
+        if (currentGender && customer.name) {
+          // 从姓名中推断性别（简单实现）
+          const nameEndsWith = customer.name.slice(-1);
+          if (currentGender === 'male' && nameEndsWith === '先生') {
+            score += 30;
+          } else if (currentGender === 'female' && nameEndsWith === '女士') {
+            score += 30;
+          }
+        }
+
+
+        // 更新最佳匹配
+        if (score > bestScore && score >= 30) {
+          bestScore = score;
+          bestMatch = customer;
+        }
+      });
+
+      // 如果找到匹配，更新状态
+      if (bestMatch) {
+        this.setData({
+          matchedCustomer: bestMatch,
+          matchedCustomerApplied: false
+        });
+      } else {
+        this.setData({
+          matchedCustomer: null,
+          matchedCustomerApplied: false
+        });
+      }
+    },
+
+    // 应用匹配的顾客信息
+    applyMatchedCustomer() {
+      const {matchedCustomer, consultationInfo, isDualMode, activeGuest} = this.data;
+
+      if (!matchedCustomer) return;
+
+      // 应用顾客信息到表单
+      if (isDualMode) {
+        const guestInfo = activeGuest === 1 ? this.data.guest1Info : this.data.guest2Info;
+        const guestKey = activeGuest === 1 ? 'guest1Info' : 'guest2Info';
+
+        // 更新顾客信息
+        const updates: any = {
+          [`${guestKey}.surname`]: matchedCustomer.name.replace(/先生|女士/g, ''),
+          [`${guestKey}.gender`]: matchedCustomer.name.endsWith('女士') ? 'female' : 'male',
+        };
+
+        // 如果有责任技师，应用技师
+        if (matchedCustomer.responsibleTechnician) {
+          updates[`${guestKey}.technician`] = matchedCustomer.responsibleTechnician;
+        }
+
+        // 应用共享字段
+        if (matchedCustomer.phone) {
+          updates['consultationInfo.phone'] = matchedCustomer.phone;
+        }
+
+        this.setData({
+          ...updates,
+          matchedCustomerApplied: true
+        });
+      } else {
+        // 单人模式
+        const updates: any = {
+          'consultationInfo.surname': matchedCustomer.name.replace(/先生|女士/g, ''),
+          'consultationInfo.gender': matchedCustomer.name.endsWith('女士') ? 'female' : 'male',
+        };
+
+        if (matchedCustomer.phone) {
+          updates['consultationInfo.phone'] = matchedCustomer.phone;
+        }
+
+        if (matchedCustomer.responsibleTechnician) {
+          updates['consultationInfo.technician'] = matchedCustomer.responsibleTechnician;
+        }
+
+        this.setData({
+          ...updates,
+          matchedCustomerApplied: true
+        });
+      }
+
+      wx.showToast({
+        title: '已应用顾客信息',
+        icon: 'success'
+      });
+    },
+
+    // 清除匹配的顾客信息
+    clearMatchedCustomer() {
+      this.setData({
+        matchedCustomer: null,
+        matchedCustomerApplied: false
+      });
     },
 
     // 格式化日期为 YYYY-MM-DD 格式
@@ -1458,7 +1634,6 @@ ${clockInInfo2}`;
         rotation.splice(index, 1);
         rotation.push(staff.id);
         wx.setStorageSync(storageKey, rotation);
-        console.log(`[Rotation] 技师 ${ technicianName } 已移至轮排末尾`);
       }
     },
 

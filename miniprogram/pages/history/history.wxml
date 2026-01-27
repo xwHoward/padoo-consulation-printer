@@ -38,9 +38,13 @@
                       {{record.technician}}{{record.dailyCount && !record.isVoided ? '(' + record.dailyCount + ')' : ''}}{{record.isClockIn ? '[点]' : ''}}
                     </view>
                     <view class="text-info">{{record.project}}</view>
-                    <view class="text-info">{{record.startTime}}</view>
+                    <view class="text-info">{{record.startTime}} - {{record.endTime}}</view>
+                    <view wx:if="{{record.phone}}" class="text-info">{{record.phone}}</view>
+                    <view class="text-info" wx:if="{{!record.isVoided}}">
+                      加班{{record.overtime ? '(' + record.overtime + ')' : '(0)'}}
+                    </view>
                     <view wx:if="{{record.couponPlatform}}" class="text-info">
-                      {{platforms[record.couponPlatform]}}{{record.phone}}
+                      {{platforms[record.couponPlatform]}} {{record.couponCode}}
                     </view>
                   </view>
                 </view>
@@ -52,9 +56,6 @@
                   <button class="action-btn extra-btn" bindtap="onExtraTime" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
                     加钟{{record.extraTime ? '(' + record.extraTime + ')' : ''}}
                   </button>
-                  <view class="action-btn overtime-display" wx:if="{{!record.isVoided}}">
-                    加班{{record.overtime ? '(' + record.overtime + ')' : '(0)'}}
-                  </view>
                   <button class="action-btn void-btn" bindtap="voidConsultation" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
                     作废
                   </button>

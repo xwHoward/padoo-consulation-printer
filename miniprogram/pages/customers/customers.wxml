@@ -72,7 +72,7 @@
   </view>
   <view class="form-group">
     <text class="form-label">备注</text>
-    <textarea class="form-textarea" placeholder="选填" bindinput="onRemarksInput" value="{{formRemarks}}" maxlength="200" />
+     <input class="form-input" type="text" placeholder="选填" bindinput="onRemarksInput" value="{{formRemarks}}" />
   </view>
   <view class="modal-footer">
     <view class="modal-btn cancel-btn" bindtap="onModalCancel">取消</view>

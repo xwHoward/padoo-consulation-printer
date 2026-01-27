@@ -1,4 +1,4 @@
-<navigation-bar title="趴岛咨询单" back="{{false}}" color="black" background="#FFF">
+<navigation-bar title="" back="{{false}}" color="black" background="#FFF">
   <view slot="left" class="nav-btns">
     <view bindtap="goToHome" class="nav-btn" aria-role="button" aria-label="主页">
       <text class="nav-btn-text">主页</text>
@@ -249,13 +249,13 @@
     <!-- 备注信息 -->
     <view class="section">
       <view class="section-title">其他</view>
-      <!-- 个人信息 -->
-      <view class="form-item combined-form-item">
-        <view class="form-field">
+      <!-- 个人信息（合并一行） -->
+      <view wx:if="{{!matchedCustomerApplied}}" class="form-item combined-form-item customer-info-row">
+        <view class="form-field surname-field">
           <text class="form-label">姓氏</text>
           <input class="form-input" placeholder="选填" bind:input="onSurnameInput" value="{{isDualMode ? (activeGuest === 1 ? guest1Info.surname : guest2Info.surname) : consultationInfo.surname}}" />
         </view>
-        <view class="form-field">
+        <view class="form-field gender-field">
           <view class="gender-selector">
             <label class="gender-option {{(isDualMode ? (activeGuest === 1 ? guest1Info.gender : guest2Info.gender) : consultationInfo.gender) === 'male' ? 'selected' : ''}}" bindtap="onGenderSelect" data-gender="male">
               <radio value="male" checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.gender : guest2Info.gender) : consultationInfo.gender) === 'male'}}" />
@@ -267,11 +267,30 @@
             </label>
           </view>
         </view>
+        <view class="form-field phone-field {{isDualMode && activeGuest === 2 ? 'shared-field-disabled' : ''}}">
+          <text class="form-label">手机号{{isDualMode ? '（共享）' : ''}}</text>
+          <input class="form-input" type="number" placeholder="选填" maxlength="11" bind:input="onPhoneInput" value="{{consultationInfo.phone}}" disabled="{{isDualMode && activeGuest === 2}}" />
+        </view>
       </view>
-      <!-- 手机号 -->
-      <view class="form-item {{isDualMode && activeGuest === 2 ? 'shared-field-disabled' : ''}}">
-        <text class="form-label">手机号{{isDualMode ? '（共享）' : ''}}</text>
-        <input class="form-input" type="number" placeholder="选填" maxlength="11" bind:input="onPhoneInput" value="{{consultationInfo.phone}}" disabled="{{isDualMode && activeGuest === 2}}" />
+      <!-- 顾客匹配结果 -->
+      <view class="customer-match-result" wx:if="{{matchedCustomer}}">
+        <view class="match-info">
+          <view class="match-label">匹配顾客：</view>
+          <view class="match-name">
+            {{matchedCustomer.name}}{{matchedCustomer.gender === 'male' ? '先生' : '女士'}}
+          </view>
+          <view class="match-phone">{{matchedCustomer.phone || '无手机号'}}</view>
+          <view class="match-tech" wx:if="{{matchedCustomer.responsibleTechnician}}">
+            责任技师：{{matchedCustomer.responsibleTechnician}}
+          </view>
+          <view wx:if="{{matchedCustomer.remark}}" class="match-remark">
+            {{matchedCustomer.remark}}
+          </view>
+          <view class="match-actions">
+            <view wx:if="{{!matchedCustomerApplied}}" class="match-btn apply-btn" bindtap="applyMatchedCustomer">应用</view>
+            <view class="match-btn clear-btn" bindtap="clearMatchedCustomer">清除</view>
+          </view>
+        </view>
       </view>
       <!-- 券码 -->
       <view class="form-item coupon-form-item">
@@ -296,7 +315,7 @@
       </view>
       <view class="form-item">
         <text class="form-label">备注</text>
-        <textarea class="form-textarea" placeholder="选填" bind:input="onRemarksInput" value="{{isDualMode ? (activeGuest === 1 ? guest1Info.remarks : guest2Info.remarks) : consultationInfo.remarks}}" auto-height maxlength="200"></textarea>
+        <input class="form-input" placeholder="选填" bind:input="onRemarksInput" value="{{isDualMode ? (activeGuest === 1 ? guest1Info.remarks : guest2Info.remarks) : consultationInfo.remarks}}" />
       </view>
     </view>
     <!-- 提交和打印按钮 -->
