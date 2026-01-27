@@ -1,6 +1,5 @@
 import {db, Collections} from "../../utils/db";
-import {formatTime} from "../../utils/util";
-import {PROJECTS} from "../../utils/constants";
+import {AppConfig} from '../../config/index';
 
 Page({
   data: {
@@ -11,16 +10,40 @@ Page({
     formName: '',
     formOriginalPrice: '',
     formTotalTimes: '',
-    formProject: PROJECTS[1].name,
-    projects: PROJECTS
+    formProject: '',
+    projects: [] as AppProject[]
   },
 
   onLoad() {
     this.loadCardList();
+    this.loadProjects();
   },
 
   onShow() {
     this.loadCardList();
+  },
+
+  loadProjects() {
+    try {
+      const app = getApp<IAppOption>();
+      let allProjects = [];
+
+      if (AppConfig.useCloudDatabase && app.getProjects) {
+        allProjects = app.getProjects();
+      } else {
+        const {PROJECTS} = require('../../utils/constants');
+        allProjects = PROJECTS;
+      }
+
+      const defaultProject = allProjects.length > 1 ? allProjects[1].name : '';
+      this.setData({
+        projects: allProjects,
+        formProject: defaultProject
+      });
+    } catch (error) {
+      console.error('加载项目失败:', error);
+      this.setData({projects: []});
+    }
   },
 
   loadCardList() {
@@ -37,6 +60,7 @@ Page({
   },
 
   showAddCard() {
+    const defaultProject = this.data.projects.length > 1 ? this.data.projects[1].name : '';
     this.setData({
       showEditModal: true,
       modalTitle: '新增会员卡',
@@ -44,7 +68,7 @@ Page({
       formName: '',
       formOriginalPrice: '',
       formTotalTimes: '',
-      formProject: PROJECTS[1].name
+      formProject: defaultProject
     });
   },
 
@@ -62,13 +86,14 @@ Page({
   },
 
   onModalCancel() {
+    const defaultProject = this.data.projects.length > 1 ? this.data.projects[1].name : '';
     this.setData({
       showEditModal: false,
       editCard: null,
       formName: '',
       formOriginalPrice: '',
       formTotalTimes: '',
-      formProject: PROJECTS[1].name
+      formProject: defaultProject
     });
   },
 
@@ -79,122 +104,81 @@ Page({
       wx.showToast({title: '请输入会员卡名称', icon: 'none'});
       return;
     }
-    if (!formOriginalPrice.trim()) {
-      wx.showToast({title: '请输入原价', icon: 'none'});
-      return;
-    }
-    if (!formTotalTimes.trim()) {
-      wx.showToast({title: '请输入次数', icon: 'none'});
-      return;
-    }
-    if (!formProject) {
-      wx.showToast({title: '请选择项目', icon: 'none'});
-      return;
-    }
 
     const originalPrice = parseFloat(formOriginalPrice);
-    const totalTimes = parseInt(formTotalTimes);
-
     if (isNaN(originalPrice) || originalPrice <= 0) {
-      wx.showToast({title: '原价必须大于0', icon: 'none'});
+      wx.showToast({title: '请输入有效的原价', icon: 'none'});
       return;
     }
+
+    const totalTimes = parseInt(formTotalTimes);
     if (isNaN(totalTimes) || totalTimes <= 0) {
-      wx.showToast({title: '次数必须大于0', icon: 'none'});
+      wx.showToast({title: '请输入有效的次数', icon: 'none'});
       return;
     }
+
+    if (!formProject.trim()) {
+      wx.showToast({title: '请选择关联项目', icon: 'none'});
+      return;
+    }
+
+    const cardData: Omit<MembershipCard, 'id' | 'createdAt' | 'updatedAt'> = {
+      name: formName,
+      originalPrice,
+      totalTimes,
+      project: formProject,
+      status: 'active'
+    };
 
     try {
-      const now = new Date().toISOString();
-
       if (editCard) {
-        db.updateById<MembershipCard>(Collections.MEMBERSHIP, editCard.id, {
-          name: formName,
-          originalPrice,
-          totalTimes,
-          project: formProject
-        });
-        wx.showToast({title: '修改成功', icon: 'success'});
+        const success = db.updateById<MembershipCard>(Collections.MEMBERSHIP, editCard.id, cardData);
+        if (success) {
+          wx.showToast({title: '更新成功', icon: 'success'});
+          this.loadCardList();
+        } else {
+          wx.showToast({title: '更新失败', icon: 'none'});
+        }
       } else {
-        db.insert<MembershipCard>(Collections.MEMBERSHIP, {
-          name: formName,
-          originalPrice,
-          totalTimes,
-          project: formProject,
-          status: 'active'
-        });
-        wx.showToast({title: '新增成功', icon: 'success'});
+        const success = db.insert<MembershipCard>(Collections.MEMBERSHIP, cardData);
+        if (success) {
+          wx.showToast({title: '添加成功', icon: 'success'});
+          this.loadCardList();
+        } else {
+          wx.showToast({title: '添加失败', icon: 'none'});
+        }
       }
-
-      this.loadCardList();
       this.onModalCancel();
     } catch (error) {
       console.error('保存会员卡失败:', error);
-      wx.showToast({
-        title: '保存失败',
-        icon: 'error'
-      });
+      wx.showToast({title: '保存失败', icon: 'none'});
     }
   },
 
-  toggleCardStatus(e: any) {
-    const card = e.currentTarget.dataset.card as MembershipCard;
-    const newStatus = card.status === 'active' ? 'disabled' : 'active';
-
-    wx.showModal({
-      title: '确认操作',
-      content: newStatus === 'disabled' ? '确定要禁用该会员卡吗？' : '确定要启用该会员卡吗？',
-      success: (res) => {
-        if (res.confirm) {
-          try {
-            db.updateById<MembershipCard>(Collections.MEMBERSHIP, card.id, {
-              status: newStatus
-            });
-            this.loadCardList();
-            wx.showToast({title: '操作成功', icon: 'success'});
-          } catch (error) {
-            console.error('更新会员卡状态失败:', error);
-            wx.showToast({title: '操作失败', icon: 'error'});
-          }
-        }
-      }
-    });
-  },
-
-  deleteCard(e: any) {
+  onDeleteCard(e: any) {
     const card = e.currentTarget.dataset.card as MembershipCard;
 
     wx.showModal({
       title: '确认删除',
-      content: '确定要删除该会员卡吗？删除后不可恢复。',
+      content: `确定要删除会员卡"${ card.name }"吗？`,
+      confirmText: '删除',
+      cancelText: '取消',
       success: (res) => {
         if (res.confirm) {
           try {
-            db.deleteById(Collections.MEMBERSHIP, card.id);
-            this.loadCardList();
-            wx.showToast({title: '删除成功', icon: 'success'});
+            const success = db.deleteById(Collections.MEMBERSHIP, card.id);
+            if (success) {
+              wx.showToast({title: '删除成功', icon: 'success'});
+              this.loadCardList();
+            } else {
+              wx.showToast({title: '删除失败', icon: 'none'});
+            }
           } catch (error) {
             console.error('删除会员卡失败:', error);
-            wx.showToast({title: '删除失败', icon: 'error'});
+            wx.showToast({title: '删除失败', icon: 'none'});
           }
         }
       }
     });
-  },
-
-  onNameInput(e: any) {
-    this.setData({formName: e.detail.value});
-  },
-
-  onOriginalPriceInput(e: any) {
-    this.setData({formOriginalPrice: e.detail.value});
-  },
-
-  onTotalTimesInput(e: any) {
-    this.setData({formTotalTimes: e.detail.value});
-  },
-
-  onProjectSelect(e: any) {
-    this.setData({formProject: e.detail.project});
   }
 });

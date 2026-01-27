@@ -50,28 +50,19 @@ Component({
 
 				this.setData({loading: true});
 
-				// 获取正常状态的员工
-				let staffList: StaffInfo[];
-				if (AppConfig.useCloudDatabase) {
-					staffList = await database.find<StaffInfo>(Collections.STAFF, {status: 'active'});
-				} else {
-					staffList = database.find<StaffInfo>(Collections.STAFF, {status: 'active'});
-				}
+				const staffList = await (AppConfig.useCloudDatabase 
+					? database.find<StaffInfo>(Collections.STAFF, {status: 'active'})
+					: Promise.resolve(database.find<StaffInfo>(Collections.STAFF, {status: 'active'})));
 
-				// 获取时间范围内的排班记录
 				const startDate = dates[0].date;
 				const endDate = dates[dates.length - 1].date;
-				let allSchedules: ScheduleRecord[];
-				
-				if (AppConfig.useCloudDatabase) {
-					allSchedules = await database.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
+				const allSchedules = await (AppConfig.useCloudDatabase
+					? database.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
 						return item.date >= startDate && item.date <= endDate;
-					});
-				} else {
-					allSchedules = database.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
+					})
+					: Promise.resolve(database.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
 						return item.date >= startDate && item.date <= endDate;
-					});
-				}
+					})));
 
 				// 构造渲染用的 Map
 				const scheduleMap: any = {};
@@ -145,30 +136,18 @@ Component({
 
 				wx.showLoading({title: '更新中...'});
 
-				if (AppConfig.useCloudDatabase) {
-					const existing = await database.findOne<ScheduleRecord>(Collections.SCHEDULE, {staffId, date});
+				const existing = await (AppConfig.useCloudDatabase
+					? database.findOne<ScheduleRecord>(Collections.SCHEDULE, {staffId, date})
+					: Promise.resolve(database.findOne<ScheduleRecord>(Collections.SCHEDULE, {staffId, date})));
 
-					if (existing) {
-						await database.updateById<ScheduleRecord>(Collections.SCHEDULE, existing.id, {shift: shiftType});
-					} else {
-						await database.insert<ScheduleRecord>(Collections.SCHEDULE, {
-							date,
-							staffId,
-							shift: shiftType,
-						} as any);
-					}
+				if (existing) {
+					await database.updateById<ScheduleRecord>(Collections.SCHEDULE, existing.id, {shift: shiftType});
 				} else {
-					const existing = database.findOne<ScheduleRecord>(Collections.SCHEDULE, {staffId, date});
-
-					if (existing) {
-						database.updateById<ScheduleRecord>(Collections.SCHEDULE, existing.id, {shift: shiftType});
-					} else {
-						database.insert<ScheduleRecord>(Collections.SCHEDULE, {
-							date,
-							staffId,
-							shift: shiftType,
-						} as any);
-					}
+					await database.insert<ScheduleRecord>(Collections.SCHEDULE, {
+						date,
+						staffId,
+						shift: shiftType,
+					});
 				}
 
 				wx.hideLoading();
@@ -201,13 +180,9 @@ Component({
 		async loadStaffList() {
 			try {
 				const database = this.getDb();
-				let staffList: StaffInfo[];
-
-				if (AppConfig.useCloudDatabase) {
-					staffList = await database.getAll<StaffInfo>(Collections.STAFF);
-				} else {
-					staffList = database.getAll<StaffInfo>(Collections.STAFF);
-				}
+				const staffList = await (AppConfig.useCloudDatabase
+					? database.getAll<StaffInfo>(Collections.STAFF)
+					: Promise.resolve(database.getAll<StaffInfo>(Collections.STAFF)));
 
 				// 按创建时间倒序排列，增加兼容性处理
 				staffList.sort((a, b) => {
@@ -240,13 +215,9 @@ Component({
 			try {
 				const id = e.currentTarget.dataset.id as string;
 				const database = this.getDb();
-				let staff: StaffInfo | null;
-
-				if (AppConfig.useCloudDatabase) {
-					staff = await database.findById<StaffInfo>(Collections.STAFF, id);
-				} else {
-					staff = database.findById<StaffInfo>(Collections.STAFF, id);
-				}
+				const staff = await (AppConfig.useCloudDatabase
+					? database.findById<StaffInfo>(Collections.STAFF, id)
+					: Promise.resolve(database.findById<StaffInfo>(Collections.STAFF, id)));
 
 				if (staff) {
 					this.setData({
@@ -270,13 +241,9 @@ Component({
 			try {
 				const id = e.currentTarget.dataset.id as string;
 				const database = this.getDb();
-				let staff: StaffInfo | null;
-
-				if (AppConfig.useCloudDatabase) {
-					staff = await database.findById<StaffInfo>(Collections.STAFF, id);
-				} else {
-					staff = database.findById<StaffInfo>(Collections.STAFF, id);
-				}
+				const staff = await (AppConfig.useCloudDatabase
+					? database.findById<StaffInfo>(Collections.STAFF, id)
+					: Promise.resolve(database.findById<StaffInfo>(Collections.STAFF, id)));
 
 				if (staff) {
 					const newStatus: StaffStatus = staff.status === 'active' ? 'disabled' : 'active';
@@ -308,15 +275,13 @@ Component({
 			try {
 				const id = e.currentTarget.dataset.id as string;
 				const database = this.getDb();
-				let staff: StaffInfo | null;
+				const staff = await (AppConfig.useCloudDatabase
+					? database.findById<StaffInfo>(Collections.STAFF, id)
+					: Promise.resolve(database.findById<StaffInfo>(Collections.STAFF, id)));
 
-				if (AppConfig.useCloudDatabase) {
-					staff = await database.findById<StaffInfo>(Collections.STAFF, id);
-				} else {
-					staff = database.findById<StaffInfo>(Collections.STAFF, id);
+				if (!staff) {
+					return;
 				}
-
-				if (!staff) return;
 
 				wx.showModal({
 					title: '确认删除',
@@ -325,11 +290,7 @@ Component({
 					success: async (res) => {
 						if (res.confirm) {
 							try {
-								if (AppConfig.useCloudDatabase) {
-									await database.deleteById<StaffInfo>(Collections.STAFF, id);
-								} else {
-									database.deleteById<StaffInfo>(Collections.STAFF, id);
-								}
+								await database.deleteById(Collections.STAFF, id);
 								await this.loadStaffList();
 								wx.showToast({title: '已删除', icon: 'success'});
 							} catch (error) {
@@ -397,12 +358,9 @@ Component({
 					}
 					wx.showToast({title: '修改成功', icon: 'success'});
 				} else {
-					let exists: boolean;
-					if (AppConfig.useCloudDatabase) {
-						exists = await database.exists<StaffInfo>(Collections.STAFF, {name});
-					} else {
-						exists = database.exists<StaffInfo>(Collections.STAFF, {name});
-					}
+					const exists = await (AppConfig.useCloudDatabase
+						? database.exists<StaffInfo>(Collections.STAFF, {name})
+						: Promise.resolve(database.exists<StaffInfo>(Collections.STAFF, {name})));
 
 					if (exists) {
 						wx.hideLoading();
@@ -410,18 +368,9 @@ Component({
 						return;
 					}
 
-					let inserted: StaffInfo | null;
-					if (AppConfig.useCloudDatabase) {
-						inserted = await database.insert<StaffInfo>(Collections.STAFF, {
-							name,
-							status: 'active',
-						} as any);
-					} else {
-						inserted = database.insert<StaffInfo>(Collections.STAFF, {
-							name,
-							status: 'active',
-						} as any);
-					}
+					const inserted = await (AppConfig.useCloudDatabase
+						? database.insert<StaffInfo>(Collections.STAFF, {name, status: 'active'})
+						: Promise.resolve(database.insert<StaffInfo>(Collections.STAFF, {name, status: 'active'})));
 
 					if (inserted) {
 						wx.showToast({title: '添加成功', icon: 'success'});

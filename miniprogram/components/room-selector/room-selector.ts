@@ -1,15 +1,4 @@
-import {cloudDb} from '../../utils/cloud-db';
-import {Collections} from '../../utils/db';
-
-type ItemStatus = 'normal' | 'disabled';
-
-interface Room {
-	id: string;
-	name: string;
-	status: ItemStatus;
-	createdAt?: string;
-	updatedAt?: string;
-}
+import {AppConfig} from '../../config/index';
 
 Component({
 	properties: {
@@ -27,12 +16,20 @@ Component({
 	},
 
 	methods: {
-		async loadRooms() {
+		loadRooms() {
 			try {
-				const database = cloudDb;
-				const allRooms = await database.getAll<Room>(Collections.ROOMS);
-				const normalRooms = allRooms.filter(r => r.status === 'normal' || !r.status);
-				const roomNames = normalRooms.map(r => r.name);
+				const app = getApp<IAppOption>();
+				let allRooms = [];
+
+				if (AppConfig.useCloudDatabase && app.getRooms) {
+					allRooms = app.getRooms();
+				} else {
+					const {ROOMS} = require('../../utils/constants');
+					allRooms = ROOMS;
+				}
+
+				const normalRooms = allRooms.filter((r: any) => r.status === 'normal' || !r.status);
+				const roomNames = normalRooms.map((r: any) => r.name);
 				this.setData({rooms: roomNames});
 			} catch (error) {
 				console.error('加载房间失败:', error);

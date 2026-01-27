@@ -150,14 +150,14 @@ class CloudDatabase {
 				id: this.generateId(),
 				createdAt: now,
 				updatedAt: now,
-			} as T;
+			} as unknown as T;
 
 			const res = await this.getCollection(collection).add({
 				data: newRecord
 			});
 
 			if (res._id) {
-				newRecord._id = res._id;
+				(newRecord as any)._id = res._id;
 				return newRecord;
 			}
 
@@ -181,7 +181,7 @@ class CloudDatabase {
 				id: this.generateId(),
 				createdAt: now,
 				updatedAt: now,
-			})) as T[];
+			})) as unknown as T[];
 
 			await Promise.all(newRecords.map(record =>
 				this.getCollection(collection).add({data: record})
@@ -255,7 +255,7 @@ class CloudDatabase {
 	/**
 	 * 根据ID删除记录
 	 */
-	async deleteById<T extends BaseRecord>(collection: string, id: string): Promise<boolean> {
+	async deleteById(collection: string, id: string): Promise<boolean> {
 		try {
 			await this.getCollection(collection).doc(id).remove();
 			return true;

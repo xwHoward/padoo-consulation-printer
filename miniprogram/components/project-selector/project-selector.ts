@@ -1,18 +1,4 @@
-import {cloudDb} from '../../utils/cloud-db';
-import {Collections} from '../../utils/db';
-
-type ItemStatus = 'normal' | 'disabled';
-
-interface Project {
-	id: string;
-	name: string;
-	duration: number;
-	price?: number;
-	isEssentialOilOnly?: boolean;
-	status: ItemStatus;
-	createdAt?: string;
-	updatedAt?: string;
-}
+import {AppConfig} from '../../config/index';
 
 Component({
 	properties: {
@@ -26,12 +12,20 @@ Component({
 	},
 
 	methods: {
-		async loadProjects() {
+		loadProjects() {
 			try {
-				const database = cloudDb;
-				const allProjects = await database.getAll<Project>(Collections.PROJECTS);
-				const normalProjects = allProjects.filter(p => p.status === 'normal' || !p.status);
-				const projectNames = normalProjects.map(p => p.name);
+				const app = getApp<IAppOption>();
+				let allProjects = [];
+
+				if (AppConfig.useCloudDatabase && app.getProjects) {
+					allProjects = app.getProjects();
+				} else {
+					const {PROJECTS} = require('../../utils/constants');
+					allProjects = PROJECTS;
+				}
+
+				const normalProjects = allProjects.filter((p: any) => p.status === 'normal' || !p.status);
+				const projectNames = normalProjects.map((p: any) => p.name);
 				this.setData({projects: projectNames});
 			} catch (error) {
 				console.error('加载项目失败:', error);

@@ -3,7 +3,6 @@ import {db, Collections} from '../../utils/db';
 import {cloudDb as cloudDbService} from '../../utils/cloud-db';
 import {AppConfig} from '../../config';
 import {parseProjectDuration, formatDate, getMinutesDiff, isTimeOverlapping, formatDuration} from '../../utils/util';
-import {PROJECTS, ROOMS as FIXED_ROOMS} from '../../utils/constants';
 
 interface RotationItem {
 	id: string;
@@ -67,7 +66,7 @@ Component({
 		showCurrentTimeLine: false,
 		// 预约弹窗相关
 		showReserveModal: false,
-		projects: PROJECTS,
+		projects: [] as any[],
 		staffNames: [] as string[],
 		activeStaffList: [] as StaffInfo[],
 		staffAvailability: [] as StaffAvailability[],
@@ -105,6 +104,7 @@ Component({
 		attached() {
 			const today = formatDate(new Date());
 			this.setData({selectedDate: today});
+			this.loadProjects();
 			this.loadData();
 		}
 	},
@@ -120,6 +120,25 @@ Component({
 			return AppConfig.useCloudDatabase ? cloudDbService : db;
 		},
 
+		loadProjects() {
+			try {
+				const app = getApp<IAppOption>();
+				let allProjects = [];
+
+				if (AppConfig.useCloudDatabase && app.getProjects) {
+					allProjects = app.getProjects();
+				} else {
+					const {PROJECTS} = require('../../utils/constants');
+					allProjects = PROJECTS;
+				}
+
+				this.setData({projects: allProjects});
+			} catch (error) {
+				console.error('加载项目失败:', error);
+				this.setData({projects: []});
+			}
+		},
+
 		async onDateChange(e: any) {
 			this.setData({selectedDate: e.detail.value});
 			await this.loadData();
@@ -129,7 +148,18 @@ Component({
 		async loadData() {
 			try {
 				const database = this.getDb();
+				const app = getApp<IAppOption>();
 				const today = this.data.selectedDate || formatDate(new Date());
+
+				let allRooms = [];
+				if (AppConfig.useCloudDatabase && app.getRooms) {
+					allRooms = app.getRooms();
+				} else {
+					const {ROOMS} = require('../../utils/constants');
+					allRooms = ROOMS;
+				}
+
+				const filteredRooms = allRooms.filter((r: AppRoom) => r.status === 'normal');
 
 				// 1. 获取房间状态
 				const history = (wx.getStorageSync('consultationHistory') as any) || {};
@@ -155,7 +185,7 @@ Component({
 					currentTime = `${ String(hours).padStart(2, '0') }:${ String(minutes).padStart(2, '0') }`;
 				}
 
-				const rooms = FIXED_ROOMS.map(room => {
+				const rooms = filteredRooms.map((room: AppRoom) => {
 					let occupiedRecords = activeRecords
 							.filter(r => r.room === room.name)
 							.map(r => ({
@@ -175,14 +205,14 @@ Component({
 					// 按结束时间降序排列
 					occupiedRecords.sort((a, b) => b.endTime.localeCompare(a.endTime));
 
-				const isOccupied = occupiedRecords.length > 0;
+					const isOccupied = occupiedRecords.length > 0;
 
-				return {
-					name: room,
-					isOccupied,
-					occupiedRecords
-				};
-			});
+					return {
+						name: room.name,
+						isOccupied,
+						occupiedRecords
+					};
+				});
 
 			// 2. 获取员工轮排与排钟表数据
 			let allSchedules: ScheduleRecord[];
@@ -347,7 +377,6 @@ Component({
 
 			// 检查第一个占用之前的时间
 			const firstOccupied = occupiedSlots[0];
-			const startOfDay = isToday ? now : new Date(`${ selectedDate } 12:00:00`);
 			let firstAvailableTime = '12:00';
 
 			if (isToday) {
@@ -627,10 +656,11 @@ Component({
 		async onReserveFieldChange(e: any) {
 			const {field} = e.currentTarget.dataset;
 			const val = e.detail.value;
-			const {reserveForm} = this.data;
+			const {reserveForm, projects} = this.data;
 
 			if (field === 'project') {
-				reserveForm.project = PROJECTS[val].name;
+				const project = projects[val];
+				reserveForm.project = project ? project.name : '';
 				this.setData({reserveForm});
 				await this.checkStaffAvailability();
 			} else if (field === 'startTime' || field === 'date') {

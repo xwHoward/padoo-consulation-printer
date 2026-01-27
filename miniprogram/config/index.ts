@@ -7,11 +7,11 @@ export const AppConfig = {
 	cloudEnvId: 'cloud1-0gkbm1dic147ccec',
 
 	getCloudEnvId(): string {
-		return this.cloudEnvId || wx.cloud?.getEnv?.()?.envId || '';
+		return AppConfig.cloudEnvId || '';
 	},
 
 	setCloudEnvId(envId: string) {
-		this.cloudEnvId = envId;
+		AppConfig.cloudEnvId = envId;
 		console.log('[AppConfig] 云环境ID已更新:', envId);
 	}
 };

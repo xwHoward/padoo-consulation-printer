@@ -198,11 +198,6 @@ class BackupManager {
 	async exportBackupAsJson(backupData: BackupData, filename?: string): Promise<void> {
 		try {
 			const jsonStr = JSON.stringify(backupData, null, 2);
-			const base64 = wx.base64ToArrayBuffer(
-				wx.arrayBufferToBase64(
-					new TextEncoder().encode(jsonStr).buffer
-				)
-			);
 
 			const tempFilePath = `${wx.env.USER_DATA_PATH}/${filename || `backup_${Date.now()}.json`}`;
 
@@ -236,9 +231,9 @@ class BackupManager {
 	async importBackupFromJson(): Promise<BackupData | null> {
 		return new Promise((resolve, reject) => {
 			wx.chooseMessageFile({
-				count: 1,
+				count:1,
 				type: 'file',
-				extension: 'json',
+				extension: ['json'],
 				success: async (res) => {
 					try {
 						const filePath = res.tempFiles[0].path;

@@ -1,16 +1,4 @@
-import {cloudDb} from '../../utils/cloud-db';
-import {Collections} from '../../utils/db';
-
-type ItemStatus = 'normal' | 'disabled';
-
-interface EssentialOil {
-	id: string;
-	name: string;
-	effect: string;
-	status: ItemStatus;
-	createdAt?: string;
-	updatedAt?: string;
-}
+import {AppConfig} from '../../config/index';
 
 Component({
 	properties: {
@@ -24,11 +12,19 @@ Component({
 	},
 
 	methods: {
-		async loadOils() {
+		loadOils() {
 			try {
-				const database = cloudDb;
-				const allOils = await database.getAll<EssentialOil>(Collections.ESSENTIAL_OILS);
-				const normalOils = allOils.filter(o => o.status === 'normal' || !o.status);
+				const app = getApp<IAppOption>();
+				let allOils = [];
+
+				if (AppConfig.useCloudDatabase && app.getEssentialOils) {
+					allOils = app.getEssentialOils();
+				} else {
+					const {ESSENTIAL_OILS} = require('../../utils/constants');
+					allOils = ESSENTIAL_OILS;
+				}
+
+				const normalOils = allOils.filter((o: any) => o.status === 'normal' || !o.status);
 				this.setData({oils: normalOils});
 			} catch (error) {
 				console.error('加载精油失败:', error);

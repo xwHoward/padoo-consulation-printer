@@ -1,36 +1,6 @@
 import {cloudDb} from '../../utils/cloud-db';
 import {Collections} from '../../utils/db';
 
-type ItemStatus = 'normal' | 'disabled';
-
-interface Project {
-	id: string;
-	name: string;
-	duration: number;
-	price?: number;
-	isEssentialOilOnly?: boolean;
-	status: ItemStatus;
-	createdAt?: string;
-	updatedAt?: string;
-}
-
-interface Room {
-	id: string;
-	name: string;
-	status: ItemStatus;
-	createdAt?: string;
-	updatedAt?: string;
-}
-
-interface EssentialOil {
-	id: string;
-	name: string;
-	effect: string;
-	status: ItemStatus;
-	createdAt?: string;
-	updatedAt?: string;
-}
-
 Component({
 	data: {
 		activeTab: 'projects',
@@ -174,7 +144,7 @@ Component({
 				}
 
 				if (activeTab === 'projects') {
-					const projectData: Partial<Project> = {
+					const projectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt'> = {
 						name: formData.name,
 						duration: formData.duration,
 						price: formData.price,
@@ -190,7 +160,7 @@ Component({
 						wx.showToast({title: '添加成功', icon: 'success'});
 					}
 				} else if (activeTab === 'rooms') {
-					const roomData: Partial<Room> = {
+					const roomData: Omit<Room, 'id' | 'createdAt' | 'updatedAt'> = {
 						name: formData.name,
 						status: formData.status
 					};
@@ -203,7 +173,7 @@ Component({
 						wx.showToast({title: '添加成功', icon: 'success'});
 					}
 				} else if (activeTab === 'oils') {
-					const oilData: Partial<EssentialOil> = {
+					const oilData: Omit<EssentialOil, 'id' | 'createdAt' | 'updatedAt'> = {
 						name: formData.name,
 						effect: formData.effect,
 						status: formData.status

@@ -173,15 +173,21 @@ interface Project extends BaseRecord {
   name: string;
   duration: number;
   price?: number;
+  isEssentialOilOnly?: boolean;
+  status: ItemStatus;
 }
 
 interface Room extends BaseRecord {
   id: string;
   name: string;
+  status: ItemStatus;
 }
+
+type ItemStatus = 'normal' | 'disabled';
 
 interface EssentialOil extends BaseRecord {
   id: string;
   name: string;
   effect: string;
+  status: ItemStatus;
 }

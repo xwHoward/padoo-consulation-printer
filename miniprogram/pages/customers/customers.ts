@@ -60,7 +60,6 @@ Page({
 
       // 2. 从咨询单历史中同步未保存的顾客（向前兼容/补全逻辑）
       const consultationHistory = wx.getStorageSync('consultationHistory') || {};
-      let hasNewCustomer = false;
 
       Object.keys(consultationHistory).forEach(date => {
         const records = consultationHistory[date] as any[];
@@ -70,9 +69,9 @@ Page({
           const phone = record.phone || '';
           const name = record.surname || '';
           const gender = record.gender || '';
-          const customerKey = phone || record.id;
+          const customerKey = phone || (record.id as string | undefined);
 
-          if (!customerMap[customerKey]) {
+          if (customerKey && !customerMap[customerKey]) {
             const newCustomer: Omit<CustomerRecord, 'id' | 'createdAt' | 'updatedAt'> = {
               phone,
               name,
@@ -85,7 +84,6 @@ Page({
             const inserted = db.insert<CustomerRecord>(Collections.CUSTOMERS, newCustomer);
             if (inserted) {
               customerMap[customerKey] = inserted;
-              hasNewCustomer = true;
             }
           }
         });
@@ -246,10 +244,10 @@ Page({
           return;
         }
 
-        const customerKey = record.phone || record.id;
+        const customerKey = record.phone || (record.id as string | undefined);
         const targetKey = customer.phone || customer.id;
 
-        if (customerKey === targetKey) {
+        if (customerKey && targetKey && customerKey === targetKey) {
           visitRecords.push({
             id: record.id,
             date,
@@ -410,7 +408,6 @@ Page({
     }
 
     try {
-      const now = new Date().toISOString();
       db.insert(Collections.CUSTOMER_MEMBERSHIP, {
         customerId: selectedCustomerForCard.id,
         customerName: selectedCustomerForCard.name,

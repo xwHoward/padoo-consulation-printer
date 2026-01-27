@@ -1,7 +1,6 @@
-import {PROJECTS} from "../../utils/constants";
+import {AppConfig} from '../../config/index';
 import {Collections, db} from "../../utils/db";
 import {cloudDb as cloudDbService} from '../../utils/cloud-db';
-import {AppConfig} from '../../config/index';
 import {calculateOvertimeUnits, calculateProjectEndTime, formatDate, formatTime, isTimeOverlapping, parseProjectDuration, SHIFT_END_TIMES} from "../../utils/util";
 const GBK = require("gbk.js");
 
@@ -13,17 +12,17 @@ type DailyConsultations = {
 const DefaultConsultationInfo: ConsultationInfo = {
   surname: "",
   gender: "male",
-  project: PROJECTS[1].name, // 70min精油
+  project: "",
   technician: "",
   room: "",
   massageStrength: "standard",
   essentialOil: "lavender",
   selectedParts: {},
-  isClockIn: false, // 默认不勾选点钟
-  remarks: "", // 默认无备注
-  phone: "", // 默认无手机号
-  couponCode: "", // 默认无券码
-  couponPlatform: "meituan", // 默认无平台
+  isClockIn: false,
+  remarks: "",
+  phone: "",
+  couponCode: "",
+  couponPlatform: "meituan",
   upgradeHimalayanSaltStone: false,
 };
 
@@ -39,14 +38,15 @@ const DefaultGuestInfo: GuestInfo = {
   couponCode: "",
   couponPlatform: "",
   upgradeHimalayanSaltStone: false,
-  project: PROJECTS[1].name, // 70min精油
+  project: "",
 };
 
-function ensureConsultationInfoCompatibility(data: any): ConsultationInfo {
+function ensureConsultationInfoCompatibility(data: any, projects: any[] = []): ConsultationInfo {
+  const defaultProject = projects.length > 1 ? projects[1].name : '';
   return {
     surname: data.surname || "",
     gender: data.gender || "male",
-    project: data.project || PROJECTS[1].name,
+    project: data.project || defaultProject,
     technician: data.technician || "",
     room: data.room || "",
     massageStrength: data.massageStrength || "standard",
@@ -97,6 +97,7 @@ function getGuestFieldValue(context: GuestContext, fieldName: string): any {
 
 Component({
   data: {
+    projects: [] as any[],
     consultationInfo: {...DefaultConsultationInfo, selectedParts: {}},
     isPrinterConnected: false,
     printerDeviceId: "",
@@ -118,6 +119,7 @@ Component({
 
   lifetimes: {
     async attached() {
+      await this.loadProjects();
       await this.loadTechnicianList();
     }
   },
@@ -227,6 +229,25 @@ Component({
           title: '加载技师列表失败',
           icon: 'none'
         });
+      }
+    },
+
+    loadProjects() {
+      try {
+        const app = getApp<IAppOption>();
+        let allProjects = [];
+
+        if (AppConfig.useCloudDatabase && app.getProjects) {
+          allProjects = app.getProjects();
+        } else {
+          const {PROJECTS} = require('../../utils/constants');
+          allProjects = PROJECTS;
+        }
+
+        this.setData({projects: allProjects});
+      } catch (error) {
+        console.error('加载项目失败:', error);
+        this.setData({projects: []});
       }
     },
 
@@ -1034,7 +1055,7 @@ Component({
         if (foundRecord) {
           // 设置表单数据和编辑ID，使用兼容性函数确保旧数据正确初始化
           this.setData({
-            consultationInfo: ensureConsultationInfoCompatibility(foundRecord),
+            consultationInfo: ensureConsultationInfoCompatibility(foundRecord, this.data.projects),
             editId: editId,
             matchedCustomer: null,
             matchedCustomerApplied: false
@@ -1306,13 +1327,12 @@ Component({
 
     // 应用匹配的顾客信息
     applyMatchedCustomer() {
-      const {matchedCustomer, consultationInfo, isDualMode, activeGuest} = this.data;
+      const {matchedCustomer, isDualMode, activeGuest} = this.data;
 
       if (!matchedCustomer) return;
 
       // 应用顾客信息到表单
       if (isDualMode) {
-        const guestInfo = activeGuest === 1 ? this.data.guest1Info : this.data.guest2Info;
         const guestKey = activeGuest === 1 ? 'guest1Info' : 'guest2Info';
 
         // 更新顾客信息
@@ -1388,7 +1408,7 @@ Component({
 
     // 报钟功能
     onClockIn() {
-      const {consultationInfo, editId, isDualMode, guest1Info, guest2Info} = this.data;
+      const {consultationInfo, editId, isDualMode} = this.data;
 
       // 验证必填信息（房间是共享的，项目各自选择）
       if (!consultationInfo.room) {
@@ -1645,7 +1665,6 @@ ${ clockInInfo2 }`;
       // ESC ! 0x30 (48) - 设置双倍高度和宽度
       const ESC = String.fromCharCode(0x1b);
       const setLargeFont = ESC + "!" + String.fromCharCode(0x30); // 设置双倍高度和宽度
-      const setNormalFont = ESC + "!" + String.fromCharCode(0x00); // 恢复正常字体
 
       // 将整个打印内容都设置为大号字体
       let content = setLargeFont + "\n\n\n\n趴岛 SPA&MASSAGE\n";
