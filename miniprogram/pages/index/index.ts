@@ -1,5 +1,7 @@
 import {PROJECTS} from "../../utils/constants";
 import {Collections, db} from "../../utils/db";
+import {cloudDb as cloudDbService} from '../../utils/cloud-db';
+import {AppConfig} from '../../config/index';
 import {calculateOvertimeUnits, calculateProjectEndTime, formatDate, formatTime, isTimeOverlapping, parseProjectDuration, SHIFT_END_TIMES} from "../../utils/util";
 const GBK = require("gbk.js");
 
@@ -103,6 +105,7 @@ Component({
     editId: "", // 正在编辑的记录ID
     technicianList: [] as any[], // 动态技师列表
     currentReservationIds: [] as string[], // 当前加载的预约ID列表（用于冲突检查时排除）
+    loadingTechnicians: false, // 加载技师状态
     // 双人模式相关
     isDualMode: false, // 是否为双人模式
     activeGuest: 1 as 1 | 2, // 当前活跃的顾客标签
@@ -114,90 +117,117 @@ Component({
   },
 
   lifetimes: {
-    attached() {
-      this.loadTechnicianList();
+    async attached() {
+      await this.loadTechnicianList();
     }
   },
 
   pageLifetimes: {
-    show() {
-      this.loadTechnicianList();
+    async show() {
+      await this.loadTechnicianList();
     }
   },
 
   methods: {
+    // 获取数据库实例
+    getDb() {
+      return AppConfig.useCloudDatabase ? cloudDbService : db;
+    },
+
     // 页面加载
-    onLoad(options: any) {
+    async onLoad(options: any) {
       if (options.editId) {
-        this.loadEditData(options.editId);
+        await this.loadEditData(options.editId);
       } else if (options.reserveId) {
-        this.loadReservationData(options.reserveId);
+        await this.loadReservationData(options.reserveId);
       }
     },
 
     // 加载并检查技师可用性
-    loadTechnicianList() {
-      const now = new Date();
-      const today = formatDate(now);
-      const currentTimeStr = formatTime(now, false);
+    async loadTechnicianList() {
+      try {
+        const now = new Date();
+        const today = formatDate(now);
+        const currentTimeStr = formatTime(now, false);
 
-      // 获取当前选中的项目时长
-      const projectDuration = parseProjectDuration(this.data.consultationInfo.project) || 60;
-      const proposedEndTime = new Date(now.getTime() + (projectDuration + 10) * 60 * 1000);
-      const proposedEndTimeStr = formatTime(proposedEndTime, false);
+        this.setData({loadingTechnicians: true});
 
-      // 1. 获取今日所有单据和预约
-      const history = (wx.getStorageSync('consultationHistory') as any) || {};
-      const todayRecords = (history[today] || []) as ConsultationRecord[];
-      const activeRecords = todayRecords.filter(r => !r.isVoided);
-      const reservations = db.find<ReservationRecord>(Collections.RESERVATIONS, {date: today});
+        // 获取当前选中的项目时长
+        const projectDuration = parseProjectDuration(this.data.consultationInfo.project) || 60;
+        const proposedEndTime = new Date(now.getTime() + (projectDuration + 10) * 60 * 1000);
+        const proposedEndTimeStr = formatTime(proposedEndTime, false);
 
-      // 2. 获取轮排顺序
-      const activeStaff = db.getAll<StaffInfo>(Collections.STAFF).filter(s => s.status === 'active');
-      const savedRotation = wx.getStorageSync(`rotation_${ today }`) as string[];
+        //1. 获取今日所有单据和预约
+        const history = (wx.getStorageSync('consultationHistory') as any) || {};
+        const todayRecords = (history[today] || []) as ConsultationRecord[];
+        const activeRecords = todayRecords.filter(r => !r.isVoided);
 
-      // 3. 构建技师列表并检查冲突
-      // 排除当前正在加载的预约（允许选择预约技师）
-      const filteredReservations = reservations.filter(r => !this.data.currentReservationIds.includes(r.id));
+        const database = this.getDb();
+        let reservations: ReservationRecord[];
+        let activeStaff: StaffInfo[];
 
-      let list = activeStaff.map(staff => {
-        // 检查冲突：查找是否有重叠的任务
-        let occupiedReason = '';
-        const conflictTask = [...activeRecords, ...filteredReservations].find(r => {
-          const rName = (r as any).technician || (r as any).technicianName;
-          if (rName !== staff.name) return false;
-
-          // 时间重叠检查: (StartA < EndB) && (EndA > StartB)
-          return isTimeOverlapping(currentTimeStr, proposedEndTimeStr, r.startTime, r.endTime);
-        });
-
-        if (conflictTask) {
-          const isReservation = !(conflictTask as any).technician;
-          const customerName = (conflictTask as any).surname || (conflictTask as any).customerName || '顾客';
-          const gender = conflictTask.gender === 'male' ? '先生' : '女士';
-          occupiedReason = `${ conflictTask.startTime }-${ conflictTask.endTime } ${ customerName }${ gender }${ isReservation ? '(预约)' : '' }`;
+        if (AppConfig.useCloudDatabase) {
+          reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, {date: today});
+          const allStaff = await database.getAll<StaffInfo>(Collections.STAFF);
+          activeStaff = allStaff.filter(s => s.status === 'active');
+        } else {
+          reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, {date: today});
+          activeStaff = (await database.getAll<StaffInfo>(Collections.STAFF)).filter(s => s.status === 'active');
         }
 
-        return {
-          id: staff.id,
-          name: staff.name,
-          isOccupied: !!conflictTask,
-          occupiedReason
-        };
-      });
+        // 2. 获取轮排顺序
+        const savedRotation = wx.getStorageSync(`rotation_${ today }`) as string[];
 
-      // 4. 按轮排顺序排序
-      if (savedRotation && savedRotation.length > 0) {
-        list.sort((a, b) => {
-          const idxA = savedRotation.indexOf(a.id);
-          const idxB = savedRotation.indexOf(b.id);
-          if (idxA === -1) return 1;
-          if (idxB === -1) return -1;
-          return idxA - idxB;
+        // 3. 构建技师列表并检查冲突
+        // 排除当前正在加载的预约（允许选择预约技师）
+        const filteredReservations = reservations.filter(r => !this.data.currentReservationIds.includes(r.id));
+
+        let list = activeStaff.map(staff => {
+          // 检查冲突：查找是否有重叠的任务
+          let occupiedReason = '';
+          const conflictTask = [...activeRecords, ...filteredReservations].find(r => {
+            const rName = (r as any).technician || (r as any).technicianName;
+            if (rName !== staff.name) return false;
+
+            // 时间重叠检查: (StartA < EndB) && (EndA > StartB)
+            return isTimeOverlapping(currentTimeStr, proposedEndTimeStr, r.startTime, r.endTime);
+          });
+
+          if (conflictTask) {
+            const isReservation = !(conflictTask as any).technician;
+            const customerName = (conflictTask as any).surname || (conflictTask as any).customerName || '顾客';
+            const gender = conflictTask.gender === 'male' ? '先生' : '女士';
+            occupiedReason = `${ conflictTask.startTime }-${ conflictTask.endTime } ${ customerName }${ gender }${ isReservation ? '(预约)' : '' }`;
+          }
+
+          return {
+            id: staff.id,
+            name: staff.name,
+            isOccupied: !!conflictTask,
+            occupiedReason
+          };
+        });
+
+        // 4. 按轮排顺序排序
+        if (savedRotation && savedRotation.length > 0) {
+          list.sort((a, b) => {
+            const idxA = savedRotation.indexOf(a.id);
+            const idxB = savedRotation.indexOf(b.id);
+            if (idxA === -1) return 1;
+            if (idxB === -1) return -1;
+            return idxA - idxB;
+          });
+        }
+
+        this.setData({technicianList: list, loadingTechnicians: false});
+      } catch (error) {
+        console.error('加载技师列表失败:', error);
+        this.setData({loadingTechnicians: false});
+        wx.showToast({
+          title: '加载技师列表失败',
+          icon: 'none'
         });
       }
-
-      this.setData({technicianList: list});
     },
 
     // 页面加载时获取参数
@@ -287,7 +317,7 @@ Component({
     },
 
     // 项目选择
-    onProjectSelect(e: any) {
+     onProjectSelect(e: any) {
       const project = e.detail.project || e.currentTarget.dataset.project;
       const {isDualMode, activeGuest} = this.data;
       if (isDualMode) {
@@ -296,7 +326,7 @@ Component({
       } else {
         this.setData({"consultationInfo.project": project});
       }
-      this.loadTechnicianList(); // 项目变更可能影响可用性（时长不同）
+       this.loadTechnicianList(); // 项目变更可能影响可用性（时长不同）
     },
 
     // 技师选择
@@ -977,7 +1007,7 @@ Component({
     },
 
     // 加载编辑数据
-    loadEditData(editId: string) {
+    async loadEditData(editId: string) {
       try {
         // 获取现有缓存数据
         const cachedData =
@@ -1027,9 +1057,10 @@ Component({
     },
 
     // 加载预约数据
-    loadReservationData(reserveId: string) {
+    async loadReservationData(reserveId: string) {
       try {
-        const record = db.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
+        const database = this.getDb();
+        const record = await database.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
         if (record) {
           this.setData({
             consultationInfo: {
@@ -1042,7 +1073,7 @@ Component({
             },
             currentReservationIds: [reserveId]
           });
-          this.loadTechnicianList();
+          await this.loadTechnicianList();
         } else {
           console.error("未找到要加载的预约:", reserveId);
         }
@@ -1393,9 +1424,9 @@ Component({
           }
           wx.setClipboardData({
             data: clockInInfo,
-            success: () => {
+            success: async () => {
               wx.showToast({title: '上钟信息已复制', icon: 'success'});
-              this.loadTechnicianList();
+              await this.loadTechnicianList();
             },
             fail: (err) => {
               wx.showToast({title: '复制失败', icon: 'none'});
@@ -1486,9 +1517,9 @@ ${ clockInInfo2 }`;
 
         wx.setClipboardData({
           data: combinedInfo,
-          success: () => {
+          success: async () => {
             wx.showToast({title: '双人报钟已复制', icon: 'success'});
-            this.loadTechnicianList();
+            await this.loadTechnicianList();
           },
           fail: (err) => {
             wx.showToast({title: '复制失败', icon: 'none'});

@@ -6,7 +6,6 @@ Component({
 			{key: 'cashier', name: '场控收银', icon: '💰'},
 			{key: 'customer', name: '顾客管理', icon: '👤'},
 			{key: 'membership', name: '会员卡', icon: '💳'},
-			{key: 'reservation', name: '预约', icon: '📅'},
 			{key: 'orders', name: '单据管理', icon: '📋'},
 			{key: 'reports', name: '报表分析', icon: '📊'},
 		]
@@ -30,10 +29,6 @@ Component({
 					break;
 				case 'membership':
 					wx.navigateTo({ url: '/pages/membership-cards/membership-cards' });
-					break;
-				case 'reservation':
-					wx.showToast({title: '预约', icon: 'none'});
-					// wx.navigateTo({ url: '/pages/reservation/reservation' });
 					break;
 				case 'orders':
 					wx.showToast({title: '单据管理', icon: 'none'});
