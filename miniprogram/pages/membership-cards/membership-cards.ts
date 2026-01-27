@@ -10,7 +10,7 @@ Page({
     editCard: null as MembershipCard | null,
     formName: '',
     formOriginalPrice: '',
-    formRemainingTimes: '',
+    formTotalTimes: '',
     formProject: PROJECTS[1],
     projects: PROJECTS
   },
@@ -43,7 +43,7 @@ Page({
       editCard: null,
       formName: '',
       formOriginalPrice: '',
-      formRemainingTimes: '',
+      formTotalTimes: '',
       formProject: PROJECTS[1]
     });
   },
@@ -56,7 +56,7 @@ Page({
       editCard: card,
       formName: card.name,
       formOriginalPrice: card.originalPrice.toString(),
-      formRemainingTimes: card.totalTimes.toString(),
+      formTotalTimes: card.totalTimes.toString(),
       formProject: card.project
     });
   },
@@ -67,13 +67,13 @@ Page({
       editCard: null,
       formName: '',
       formOriginalPrice: '',
-      formRemainingTimes: '',
+      formTotalTimes: '',
       formProject: PROJECTS[1]
     });
   },
 
   onModalConfirm() {
-    const {formName, formOriginalPrice, formRemainingTimes, formProject, editCard} = this.data;
+    const {formName, formOriginalPrice, formTotalTimes, formProject, editCard} = this.data;
 
     if (!formName.trim()) {
       wx.showToast({title: '请输入会员卡名称', icon: 'none'});
@@ -83,7 +83,7 @@ Page({
       wx.showToast({title: '请输入原价', icon: 'none'});
       return;
     }
-    if (!formRemainingTimes.trim()) {
+    if (!formTotalTimes.trim()) {
       wx.showToast({title: '请输入次数', icon: 'none'});
       return;
     }
@@ -93,7 +93,7 @@ Page({
     }
 
     const originalPrice = parseFloat(formOriginalPrice);
-    const totalTimes = parseInt(formRemainingTimes);
+    const totalTimes = parseInt(formTotalTimes);
 
     if (isNaN(originalPrice) || originalPrice <= 0) {
       wx.showToast({title: '原价必须大于0', icon: 'none'});
@@ -190,8 +190,8 @@ Page({
     this.setData({formOriginalPrice: e.detail.value});
   },
 
-  onRemainingTimesInput(e: any) {
-    this.setData({formRemainingTimes: e.detail.value});
+  onTotalTimesInput(e: any) {
+    this.setData({formTotalTimes: e.detail.value});
   },
 
   onProjectSelect(e: any) {

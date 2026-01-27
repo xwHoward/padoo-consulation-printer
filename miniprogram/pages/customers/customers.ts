@@ -8,6 +8,7 @@ Page({
     editCustomer: null as CustomerRecord | null,
     formPhone: '',
     formName: '',
+    formGender: '' as 'male' | 'female' | '',
     formResponsibleTechnician: '',
     formLicensePlate: '',
     formRemarks: '',
@@ -68,12 +69,14 @@ Page({
 
           const phone = record.phone || '';
           const name = record.surname || '';
+          const gender = record.gender || '';
           const customerKey = phone || record.id;
 
           if (!customerMap[customerKey]) {
             const newCustomer: Omit<CustomerRecord, 'id' | 'createdAt' | 'updatedAt'> = {
               phone,
               name,
+              gender: gender as 'male' | 'female' | '',
               responsibleTechnician: '',
               licensePlate: '',
               remarks: '',
@@ -109,6 +112,7 @@ Page({
       editCustomer: null,
       formPhone: '',
       formName: '',
+      formGender: '',
       formResponsibleTechnician: '',
       formLicensePlate: '',
       formRemarks: ''
@@ -123,6 +127,7 @@ Page({
       editCustomer: customer,
       formPhone: customer.phone,
       formName: customer.name,
+      formGender: customer.gender || '',
       formResponsibleTechnician: customer.responsibleTechnician,
       formLicensePlate: customer.licensePlate,
       formRemarks: customer.remarks
@@ -135,6 +140,7 @@ Page({
       editCustomer: null,
       formPhone: '',
       formName: '',
+      formGender: '',
       formResponsibleTechnician: '',
       formLicensePlate: '',
       formRemarks: ''
@@ -142,7 +148,7 @@ Page({
   },
 
   onModalConfirm() {
-    const {editCustomer, formPhone, formName, formResponsibleTechnician, formLicensePlate, formRemarks} = this.data;
+    const {editCustomer, formPhone, formName, formGender, formResponsibleTechnician, formLicensePlate, formRemarks} = this.data;
 
     if (!formPhone && !formName) {
       wx.showToast({
@@ -155,9 +161,10 @@ Page({
     try {
       if (editCustomer) {
         // 更新现有顾客
-        db.updateById(Collections.CUSTOMERS, editCustomer.id, {
+        db.updateById<CustomerRecord>(Collections.CUSTOMERS, editCustomer.id, {
           phone: formPhone,
           name: formName,
+          gender: formGender,
           responsibleTechnician: formResponsibleTechnician,
           licensePlate: formLicensePlate,
           remarks: formRemarks
@@ -167,6 +174,7 @@ Page({
         db.insert<CustomerRecord>(Collections.CUSTOMERS, {
           phone: formPhone,
           name: formName,
+          gender: formGender,
           responsibleTechnician: formResponsibleTechnician,
           licensePlate: formLicensePlate,
           remarks: formRemarks,
@@ -179,6 +187,7 @@ Page({
         editCustomer: null,
         formPhone: '',
         formName: '',
+        formGender: '',
         formResponsibleTechnician: '',
         formLicensePlate: '',
         formRemarks: ''
@@ -205,6 +214,11 @@ Page({
 
   onNameInput(e: any) {
     this.setData({formName: e.detail.value});
+  },
+
+  onGenderChange(e: any) {
+    const gender = e.currentTarget.dataset.gender;
+    this.setData({formGender: gender});
   },
 
   onTechnicianSelect(e: any) {
@@ -405,7 +419,7 @@ Page({
         cardName: selectedCardInfo.name,
         originalPrice: selectedCardInfo.originalPrice,
         paidAmount,
-        remainingTimes: selectedCardInfo.remainingTimes,
+        remainingTimes: selectedCardInfo.totalTimes,
         project: selectedCardInfo.project,
         salesStaff: formSalesStaff,
         remarks: formCardRemarks,

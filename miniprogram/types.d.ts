@@ -6,7 +6,7 @@ interface BaseRecord {
 }
 
 // 支付方式类型
-type PaymentMethod = "meituan" | "dianping" | "douyin" | "wechat" | "alipay" | "cash" | "free";
+type PaymentMethod = "meituan" | "dianping" | "douyin" | "wechat" | "alipay" | "cash" | "free" | "membership";
 
 // 单笔支付记录
 interface PaymentItem {
@@ -36,7 +36,7 @@ interface ConsultationInfo {
   remarks: string;
   phone: string;
   couponCode: string;
-  couponPlatform: "meituan" | "dianping" | "douyin" | "";
+  couponPlatform: "meituan" | "dianping" | "douyin" | "membership" | "";
   upgradeHimalayanSaltStone: boolean;
 }
 
@@ -50,7 +50,7 @@ interface GuestInfo {
   technician: string;
   isClockIn: boolean;
   couponCode: string;
-  couponPlatform: '' | 'meituan' | 'dianping' | 'douyin';
+  couponPlatform: "" | "meituan" | "dianping" | "douyin" | "membership";
   upgradeHimalayanSaltStone: boolean;
   project: string;
 }
@@ -122,6 +122,7 @@ interface MembershipCard extends BaseRecord {
 interface CustomerRecord extends BaseRecord {
   phone: string;
   name: string;
+  gender: 'male' | 'female' | '';
   responsibleTechnician: string;
   licensePlate: string;
   remarks: string;
@@ -156,8 +157,7 @@ interface CustomerMembership extends BaseRecord {
 }
 
 // 会员卡使用记录
-interface MembershipUsageRecord {
-  id: string;
+interface MembershipUsageRecord extends BaseRecord {
   cardId: string; // 会员卡ID
   cardName: string; // 会员卡名称
   date: string; // 使用日期
@@ -166,5 +166,4 @@ interface MembershipUsageRecord {
   technician: string; // 技师
   room: string; // 房间
   consultationId: string; // 关联的咨询单ID
-  createdAt: string; // 创建时间
 }

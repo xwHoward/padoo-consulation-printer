@@ -161,9 +161,9 @@
             </view>
           </view>
           <view class="payment-amount" wx:if="{{item.selected && item.key !== 'free'}}">
-            <text class="amount-label">金额：</text>
-            <input class="amount-input" type="digit" placeholder="请输入金额" value="{{item.amount}}" bindinput="onPaymentAmountInput" data-index="{{index}}" />
-            <text class="amount-unit">元</text>
+            <text class="amount-label">{{item.key === 'membership' ? '次数：' : '金额：'}}</text>
+            <input class="amount-input" type="{{item.key === 'membership' ? 'number' : 'digit'}}" placeholder="{{item.key === 'membership' ? '请输入扣减次数' : '请输入金额'}}" value="{{item.amount}}" bindinput="onPaymentAmountInput" data-index="{{index}}" />
+            <text class="amount-unit">{{item.key === 'membership' ? '次' : '元'}}</text>
           </view>
         </view>
       </view>

@@ -29,7 +29,8 @@ export const GENDERS = [
 export const COUPON_PLATFORMS = [
 	{id: 'meituan', name: '美团'},
 	{id: 'dianping', name: '点评'},
-	{id: 'douyin', name: '抖音'}
+	{id: 'douyin', name: '抖音'},
+	{id: 'membership', name: '划卡'}
 ];
 
 export const SHIFT_TYPES = ['morning', 'evening', 'off', 'leave'] as const;

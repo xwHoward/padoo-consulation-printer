@@ -94,6 +94,7 @@ Component({
 			{key: 'alipay', label: '支付宝', selected: false, amount: ''},
 			{key: 'cash', label: '现金', selected: false, amount: ''},
 			{key: 'free', label: '免单', selected: false, amount: ''},
+			{key: 'membership', label: '划卡', selected: false, amount: ''},
 		]
 	},
 
@@ -797,6 +798,13 @@ Component({
 						paymentMethods[methodIndex].amount = payment.amount.toString();
 					}
 				});
+			} else if (record.couponPlatform === 'membership') {
+				// 如果预约/咨询单选择了“划卡”，预勾选划卡支付
+				const membershipIndex = paymentMethods.findIndex(m => m.key === 'membership');
+				if (membershipIndex !== -1) {
+					paymentMethods[membershipIndex].selected = true;
+					paymentMethods[membershipIndex].amount = '1'; // 默认扣1次，虽然这里是金额输入，但划卡逻辑特殊
+				}
 			}
 
 			this.setData({
@@ -883,12 +891,15 @@ Component({
 
 				const amount = parseFloat(method.amount);
 				if (!method.amount || isNaN(amount) || amount <= 0) {
-					wx.showToast({title: `请输入${ method.label }的有效金额`, icon: 'none'});
+					wx.showToast({title: `请输入${ method.label }的有效${ method.key === 'membership' ? '次数' : '金额' }`, icon: 'none'});
 					return;
 				}
 
 				payments.push({method: method.key as PaymentMethod, amount});
-				totalAmount += amount;
+				// 划卡不计入现金总额
+				if (method.key !== 'membership') {
+					totalAmount += amount;
+				}
 			}
 
 			// 保存结算信息
@@ -909,6 +920,46 @@ Component({
 				couponCode: settlementCouponCode,
 				settledAt: now.toISOString()
 			};
+
+			// 处理划卡逻辑
+			const membershipPayment = payments.find(p => p.method === 'membership');
+			if (membershipPayment) {
+				const record = todayRecords[recordIndex];
+				// 优先使用手机号匹配会员
+				const customerMembership = db.findOne<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, (m) => {
+					return (m.customerPhone === record.phone || m.customerName === record.surname) &&
+						m.remainingTimes > 0 && m.status === 'active';
+				});
+
+				if (!customerMembership) {
+					wx.showToast({title: '未找到有效会员卡或余额不足', icon: 'none'});
+					return;
+				}
+
+				// 扣减次数
+				const deduction = membershipPayment.amount || 1; // 如果没填默认扣1次
+				const newRemaining = customerMembership.remainingTimes - deduction;
+				if (newRemaining < 0) {
+					wx.showToast({title: '会员卡余额不足', icon: 'none'});
+					return;
+				}
+
+				db.updateById<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, customerMembership.id, {
+					remainingTimes: newRemaining
+				});
+
+				// 记录会员卡使用历史
+				db.insert<MembershipUsageRecord>(Collections.MEMBERSHIP_USAGE, {
+					cardId: customerMembership.cardId,
+					cardName: customerMembership.cardName,
+					date: today,
+					customerName: record.surname,
+					project: record.project,
+					technician: record.technician,
+					room: record.room,
+					consultationId: record.id
+				} as any);
+			}
 
 			todayRecords[recordIndex].settlement = settlement;
 			todayRecords[recordIndex].updatedAt = now.toISOString();

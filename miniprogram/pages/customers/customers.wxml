@@ -58,6 +58,19 @@
     <input class="form-input" type="text" placeholder="选填" bindinput="onNameInput" value="{{formName}}" />
   </view>
   <view class="form-group">
+    <text class="form-label">性别</text>
+    <view class="gender-selector">
+      <view class="gender-option {{formGender === 'male' ? 'selected' : ''}}" bindtap="onGenderChange" data-gender="male">
+        <text class="gender-icon">♂️</text>
+        <text>先生</text>
+      </view>
+      <view class="gender-option {{formGender === 'female' ? 'selected' : ''}}" bindtap="onGenderChange" data-gender="female">
+        <text class="gender-icon">♀️</text>
+        <text>女士</text>
+      </view>
+    </view>
+  </view>
+  <view class="form-group">
     <text class="form-label">责任技师</text>
     <view class="technician-selector">
       <label wx:for="{{technicianList}}" wx:key="id" wx:for-item="tech" class="technician-option {{formResponsibleTechnician === tech.name ? 'selected' : ''}}" bindtap="onTechnicianSelect" data-technician="{{tech.name}}">
@@ -72,7 +85,7 @@
   </view>
   <view class="form-group">
     <text class="form-label">备注</text>
-     <input class="form-input" type="text" placeholder="选填" bindinput="onRemarksInput" value="{{formRemarks}}" />
+    <input class="form-input" type="text" placeholder="选填" bindinput="onRemarksInput" value="{{formRemarks}}" />
   </view>
   <view class="modal-footer">
     <view class="modal-btn cancel-btn" bindtap="onModalCancel">取消</view>
@@ -101,7 +114,7 @@
           <view class="card-option-name">{{card.name}}</view>
           <view class="card-option-meta">
             <text class="meta-text">{{card.project}}</text>
-            <text class="meta-text">{{card.remainingTimes}}次</text>
+            <text class="meta-text">{{card.totalTimes}}次</text>
             <text class="meta-text">¥{{card.originalPrice}}</text>
           </view>
         </view>
@@ -118,8 +131,8 @@
       <text class="info-value">¥{{selectedCardInfo.originalPrice}}</text>
     </view>
     <view class="info-row">
-      <text class="info-label">次数:</text>
-      <text class="info-value">{{selectedCardInfo.remainingTimes}}次</text>
+      <text class="info-label">总次数:</text>
+      <text class="info-value">{{selectedCardInfo.totalTimes}}次</text>
     </view>
     <view class="info-row">
       <text class="info-label">项目:</text>
@@ -158,7 +171,9 @@
     <view class="detail-info">
       <view class="detail-row">
         <text class="detail-label">姓名:</text>
-        <text class="detail-value">{{selectedCustomer.name}}</text>
+        <text class="detail-value">
+          {{selectedCustomer.name}}{{selectedCustomer.gender === 'male' ? '先生' : (selectedCustomer.gender === 'female' ? '女士' : '')}}
+        </text>
       </view>
       <view wx:if="{{selectedCustomer.phone}}" class="detail-row">
         <text class="detail-label">手机号:</text>

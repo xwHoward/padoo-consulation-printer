@@ -324,6 +324,7 @@ export const Collections = {
 	SETTINGS: 'settings',     // 设置
 	SCHEDULE: 'schedule',     // 排班
 	ROTATION: 'rotation',     // 轮排
+	MEMBERSHIP_USAGE: 'membership_usage', // 会员卡使用记录
 } as const;
 
 export type CollectionName = typeof Collections[keyof typeof Collections];
