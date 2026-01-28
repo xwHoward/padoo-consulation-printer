@@ -1,4 +1,4 @@
-import { AppConfig } from '../../config/index';
+
 
 Component({
 	properties: {

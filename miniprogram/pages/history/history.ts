@@ -1,6 +1,7 @@
-import {COUPON_PLATFORMS, GENDERS, MASSAGE_STRENGTHS} from "../../utils/constants";
-import {Collections, db} from "../../utils/db";
-import {calculateOvertimeUnits, calculateProjectEndTime, formatTime, SHIFT_END_TIMES} from "../../utils/util";
+import { cloudDb as cloudDbService } from '../../utils/cloud-db';
+import { COUPON_PLATFORMS, GENDERS, MASSAGE_STRENGTHS } from "../../utils/constants";
+import { Collections } from "../../utils/db";
+import { calculateOvertimeUnits, calculateProjectEndTime, formatTime, SHIFT_END_TIMES } from "../../utils/util";
 
 // 扩展记录类型，添加折叠状态
 interface DisplayRecord extends ConsultationRecord {
@@ -17,8 +18,8 @@ interface DailyGroup {
 Page({
   data: {
     historyData: [] as DailyGroup[], // 按天分组的历史记录
-    platforms: COUPON_PLATFORMS.reduce((acc, p) => ({...acc, [p.id]: p.name}), {}),
-    genders: GENDERS.reduce((acc, g) => ({...acc, [g.id]: g.name}), {}),
+    platforms: COUPON_PLATFORMS.reduce((acc, p) => ({ ...acc, [p.id]: p.name }), {}),
+    genders: GENDERS.reduce((acc, g) => ({ ...acc, [g.id]: g.name }), {}),
     customerPhone: '', // 顾客手机号
     customerId: '', // 顾客ID
     // 数字输入弹窗状态
@@ -100,29 +101,36 @@ Page({
   },
 
   // 加载顾客历史记录
-  loadCustomerHistory(customerPhone: string, customerId: string) {
+  async loadCustomerHistory(customerPhone: string, customerId: string) {
     try {
-      const consultationHistory = wx.getStorageSync('consultationHistory') || {};
+      const database = cloudDbService;
+      const consultationHistory: Record<string, ConsultationRecord[]> = {};
+
+      const allRecords = await database.getConsultationsByCustomer<ConsultationRecord>(customerPhone) as ConsultationRecord[];
+      allRecords.forEach((record: ConsultationRecord) => {
+        const date = record.createdAt.substring(0, 10);
+        if (!consultationHistory[date]) {
+          consultationHistory[date] = [];
+        }
+        consultationHistory[date].push(record);
+      });
+
+
       const historyData: DailyGroup[] = [];
 
-      Object.keys(consultationHistory).forEach(date => {
-        const records = consultationHistory[date] as ConsultationRecord[];
+      for (const date of Object.keys(consultationHistory)) {
+        const records = consultationHistory[date];
         if (records && records.length > 0) {
-          // 过滤出该顾客的记录
           const customerRecords = records.filter(record => {
             const recordKey = record.phone || record.id;
             return recordKey === customerId && !record.isVoided;
           });
 
           if (customerRecords.length > 0) {
-            // 自动计算该日期所有记录的加班
-            this.autoUpdateOvertimeForDate(date);
+            await this.autoUpdateOvertimeForDate(date);
 
-            // 重新获取更新后的记录
-            const updatedRecords = wx.getStorageSync('consultationHistory')[date] as ConsultationRecord[];
-
-            // 再次过滤并处理
-            const filteredRecords = updatedRecords.filter(record => {
+            const updatedRecords = await database.getConsultationsByDate<ConsultationRecord>(date) as ConsultationRecord[];
+            const filteredRecords = updatedRecords.filter((record: ConsultationRecord) => {
               const recordKey = record.phone || record.id;
               return recordKey === customerId && !record.isVoided;
             });
@@ -133,9 +141,8 @@ Page({
             });
           }
         }
-      });
+      }
 
-      // 按日期倒序排列
       historyData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       this.setData({
@@ -145,55 +152,56 @@ Page({
       });
     } catch (error) {
       console.error('加载顾客历史失败:', error);
-      wx.showToast({title: '加载失败', icon: 'error'});
+      wx.showToast({ title: '加载失败', icon: 'error' });
     }
   },
 
   // 加载历史数据
-  loadHistoryData() {
+  async loadHistoryData() {
     try {
-      const consultationHistory = wx.getStorageSync('consultationHistory') || {};
+      const database = cloudDbService;
+      const consultationHistory: Record<string, ConsultationRecord[]> = await database.getAllConsultations<ConsultationRecord>() as Record<string, ConsultationRecord[]>;
+
+
       const historyData: DailyGroup[] = [];
 
-      Object.keys(consultationHistory).forEach(date => {
-        const records = consultationHistory[date] as ConsultationRecord[];
-        if (records && records.length > 0) {
-          // 自动计算该日期所有记录的加班
-          this.autoUpdateOvertimeForDate(date);
+      for (const date in consultationHistory) {
+        if (consultationHistory.hasOwnProperty(date)) {
+          const records = consultationHistory[date];
+          if (records && records.length > 0) {
+            await this.autoUpdateOvertimeForDate(date);
+            const updatedRecords = await database.getConsultationsByDate<ConsultationRecord>(date) as ConsultationRecord[];
+            historyData.push({
+              date,
+              records: this.processDailyRecords(updatedRecords)
+            });
 
-          // 重新获取更新后的记录
-          const updatedRecords = wx.getStorageSync('consultationHistory')[date] as ConsultationRecord[];
-
-          historyData.push({
-            date,
-            records: this.processDailyRecords(updatedRecords)
-          });
+          }
         }
-      });
+      }
 
-      // 按日期倒序排列
       historyData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-      this.setData({historyData});
+      this.setData({ historyData });
     } catch (error) {
       console.error('加载历史数据失败:', error);
-      wx.showToast({title: '加载失败', icon: 'error'});
+      wx.showToast({ title: '加载失败', icon: 'error' });
     }
   },
 
   // 显示咨询单详情
   showConsultationDetail(e: WechatMiniprogram.TouchEvent) {
-    const {record} = e.currentTarget.dataset;
+    const { record } = e.currentTarget.dataset;
 
     // 格式化咨询单详情文本
     const genderObj = GENDERS.find(g => g.id === record.gender);
     const genderText = genderObj ? genderObj.name : '';
-    let detailText = `客户姓名: ${ record.surname } ${ genderText }\n`;
-    detailText += `项目: ${ record.project }\n`;
-    detailText += `技师: ${ record.technician }${ record.dailyCount && !record.isVoided ? `(${ record.dailyCount })` : '' }\n`;
-    detailText += `房间: ${ record.room }\n`;
-    detailText += `按摩力度: ${ this.getMassageStrengthText(record.massageStrength) }\n`;
-    detailText += `精油选择: ${ record.essentialOil || '无' }\n`;
+    let detailText = `客户姓名: ${record.surname} ${genderText}\n`;
+    detailText += `项目: ${record.project}\n`;
+    detailText += `技师: ${record.technician}${record.dailyCount && !record.isVoided ? `(${record.dailyCount})` : ''}\n`;
+    detailText += `房间: ${record.room}\n`;
+    detailText += `按摩力度: ${this.getMassageStrengthText(record.massageStrength)}\n`;
+    detailText += `精油选择: ${record.essentialOil || '无'}\n`;
 
     // 处理升级选项
     if (record.upgradeHimalayanSaltStone) {
@@ -202,11 +210,11 @@ Page({
 
     // 处理加强部位
     const selectedParts = Object.keys(record.selectedParts).filter(part => record.selectedParts[part]);
-    detailText += `加强部位: ${ selectedParts.length > 0 ? selectedParts.join(', ') : '无' }\n\n`;
+    detailText += `加强部位: ${selectedParts.length > 0 ? selectedParts.join(', ') : '无'}\n\n`;
 
-    detailText += `创建时间: ${ formatTime(new Date(record.createdAt)) }\n`;
-    detailText += `更新时间: ${ formatTime(new Date(record.updatedAt)) }\n`;
-    detailText += `状态: ${ record.isVoided ? '已作废' : '正常' }`;
+    detailText += `创建时间: ${formatTime(new Date(record.createdAt))}\n`;
+    detailText += `更新时间: ${formatTime(new Date(record.updatedAt))}\n`;
+    detailText += `状态: ${record.isVoided ? '已作废' : '正常'}`;
 
     // 显示详情
     wx.showModal({
@@ -219,72 +227,46 @@ Page({
 
   // 修改咨询单
   editConsultation(e: WechatMiniprogram.TouchEvent) {
-    const {record} = e.currentTarget.dataset;
+    const { record } = e.currentTarget.dataset;
 
     // 跳转到主页面，并传递要编辑的记录ID
     wx.navigateTo({
-      url: `/pages/index/index?editId=${ record.id }`
+      url: `/pages/index/index?editId=${record.id}`
     });
   },
 
   // 作废咨询单
   voidConsultation(e: WechatMiniprogram.TouchEvent) {
-    const {record, date} = e.currentTarget.dataset;
+    const { record } = e.currentTarget.dataset;
 
-    // 确认作废操作
     wx.showModal({
       title: '确认作废',
       content: '确定要作废该咨询单吗？',
-      success: (res) => {
+      success: async (res) => {
         if (res.confirm) {
           try {
-            // 获取当前历史数据
-            const consultationHistory = wx.getStorageSync('consultationHistory') || {};
+            const database = cloudDbService;
 
-            // 确保 consultationHistory 是一个对象
-            if (typeof consultationHistory === 'object' && consultationHistory !== null) {
-              // 找到对应的咨询单并标记为作废
-              const dailyRecords = consultationHistory[date];
+            const updated = await (database).updateById(
+              Collections.CONSULTATION,
+              record.id,
+              { isVoided: true }
+            );
 
-              // 确保 dailyRecords 是一个数组
-              if (Array.isArray(dailyRecords)) {
-                const recordIndex = dailyRecords.findIndex(item => item.id === record.id);
-
-                if (recordIndex !== -1) {
-                  dailyRecords[recordIndex].isVoided = true;
-                  dailyRecords[recordIndex].updatedAt = new Date().toISOString();
-
-                  // 更新缓存
-                  wx.setStorageSync('consultationHistory', consultationHistory);
-
-                  // 重新加载数据
-                  this.loadHistoryData();
-
-                  wx.showToast({
-                    title: '作废成功',
-                    icon: 'success'
-                  });
-                } else {
-                  console.error('未找到要作废的记录:', record.id);
-                  wx.showToast({
-                    title: '记录不存在',
-                    icon: 'error'
-                  });
-                }
-              } else {
-                console.error('当日记录不是数组:', dailyRecords);
-                wx.showToast({
-                  title: '数据格式错误',
-                  icon: 'error'
-                });
-              }
-            } else {
-              console.error('历史数据格式错误:', consultationHistory);
+            if (updated) {
               wx.showToast({
-                title: '数据格式错误',
+                title: '作废成功',
+                icon: 'success'
+              });
+              await this.loadHistoryData();
+            } else {
+              console.error('未找到要作废的记录:', record.id);
+              wx.showToast({
+                title: '记录不存在',
                 icon: 'error'
               });
             }
+
           } catch (error) {
             console.error('作废咨询单失败:', error);
             wx.showToast({
@@ -337,13 +319,15 @@ Page({
   },
 
   // 生成当日总结
-  onGenerateSummary(e: WechatMiniprogram.TouchEvent) {
-    const {date} = e.currentTarget.dataset;
+  async onGenerateSummary(e: WechatMiniprogram.TouchEvent) {
+    const { date } = e.currentTarget.dataset;
 
     try {
-      // 获取该日期的所有记录
-      const cachedData = wx.getStorageSync('consultationHistory') || {};
-      if (!cachedData[date]) {
+      const database = cloudDbService;
+      const records = await (database).getConsultationsByDate<ConsultationRecord>(date);
+
+
+      if (records.length === 0) {
         wx.showToast({
           title: '当日无记录',
           icon: 'error'
@@ -351,106 +335,89 @@ Page({
         return;
       }
 
-      const records = cachedData[date] as ConsultationRecord[];
-
-      // 按技师分组统计
       const technicianStats: Record<string, any> = {};
 
       records.forEach(record => {
-        // 只统计未作废的记录
         if (!record.isVoided) {
           const technician = record.technician;
 
-          // 如果技师不存在，初始化统计数据
           if (!technicianStats[technician]) {
             technicianStats[technician] = {
               projects: {} as Record<string, number>,
               clockInCount: 0,
               totalCount: 0,
-              extraTimeCount: 0, // 加钟次数
-              extraTimeTotal: 0, // 加钟总半小时数
-              overtimeCount: 0, // 加班次数
-              overtimeTotal: 0 // 加班总半小时数
+              extraTimeCount: 0,
+              extraTimeTotal: 0,
+              overtimeCount: 0,
+              overtimeTotal: 0
             };
           }
 
-          // 统计项目数量
           if (!technicianStats[technician].projects[record.project]) {
             technicianStats[technician].projects[record.project] = 0;
           }
           technicianStats[technician].projects[record.project]++;
 
-          // 统计点钟数
           if (record.isClockIn) {
             technicianStats[technician].clockInCount++;
           }
 
-          // 统计加钟
           if (record.extraTime && record.extraTime > 0) {
             technicianStats[technician].extraTimeCount++;
             technicianStats[technician].extraTimeTotal += record.extraTime;
           }
 
-          // 统计加班
           if (record.overtime && record.overtime > 0) {
             technicianStats[technician].overtimeCount++;
             technicianStats[technician].overtimeTotal += record.overtime;
           }
 
-          // 统计总记录数
           technicianStats[technician].totalCount++;
         }
       });
 
-      // 格式化统计结果
-      let summaryText = `=== ${ date } 每日总结 ===\n\n`;
+      let summaryText = `=== ${date} 每日总结 ===\n\n`;
 
-      // 遍历每个技师的统计数据
       Object.keys(technicianStats).forEach(technician => {
         const stats = technicianStats[technician];
-        summaryText += `技师: ${ technician }\n`;
-        summaryText += `总单数: ${ stats.totalCount }\n`;
-        summaryText += `点钟数: ${ stats.clockInCount }\n`;
+        summaryText += `技师: ${technician}\n`;
+        summaryText += `总单数: ${stats.totalCount}\n`;
+        summaryText += `点钟数: ${stats.clockInCount}\n`;
 
-        // 加钟统计
         if (stats.extraTimeTotal > 0) {
-          summaryText += `加钟: ${ stats.extraTimeCount }\n`;
+          summaryText += `加钟: ${stats.extraTimeCount}\n`;
         }
 
-        // 加班统计
         if (stats.overtimeTotal > 0) {
           const overtimeHours = (stats.overtimeTotal * 0.5).toFixed(1);
-          summaryText += `加班: ${ stats.overtimeCount } (${ overtimeHours }小时)\n`;
+          summaryText += `加班: ${stats.overtimeCount} (${overtimeHours}小时)\n`;
         }
 
         summaryText += `项目统计:\n`;
 
-        // 遍历每个项目的统计数据
         Object.keys(stats.projects).forEach(project => {
-          summaryText += `  ${ project }: ${ stats.projects[project] }\n`;
+          summaryText += `  ${project}: ${stats.projects[project]}\n`;
         });
 
         summaryText += `\n`;
       });
 
-      // 添加总计信息
       const totalRecords = Object.values(technicianStats).reduce((sum: number, stats: any) => sum + stats.totalCount, 0);
       const totalClockIn = Object.values(technicianStats).reduce((sum: number, stats: any) => sum + stats.clockInCount, 0);
       const totalExtraTime = Object.values(technicianStats).reduce((sum: number, stats: any) => sum + stats.extraTimeTotal, 0);
       const totalOvertime = Object.values(technicianStats).reduce((sum: number, stats: any) => sum + stats.overtimeTotal, 0);
 
       summaryText += `=== 总计 ===\n`;
-      summaryText += `总单数: ${ totalRecords }\n`;
-      summaryText += `总点钟数: ${ totalClockIn }\n`;
+      summaryText += `总单数: ${totalRecords}\n`;
+      summaryText += `总点钟数: ${totalClockIn}\n`;
 
       if (totalExtraTime > 0) {
-        summaryText += `总加钟: ${ (totalExtraTime) }\n`;
+        summaryText += `总加钟: ${(totalExtraTime)}\n`;
       }
       if (totalOvertime > 0) {
-        summaryText += `总加班: ${ (totalOvertime) }\n`;
+        summaryText += `总加班: ${(totalOvertime)}\n`;
       }
 
-      // 复制到剪贴板
       wx.setClipboardData({
         data: summaryText,
         success: () => {
@@ -468,9 +435,8 @@ Page({
         }
       });
 
-      // 显示统计结果
       wx.showModal({
-        title: `${ date } 统计报告`,
+        title: `${date} 统计报告`,
         content: summaryText,
         showCancel: false,
         confirmText: '确定'
@@ -487,8 +453,8 @@ Page({
 
   // 切换记录的折叠状态
   toggleCollapse(e: WechatMiniprogram.TouchEvent) {
-    const {groupIndex, recordIndex} = e.currentTarget.dataset;
-    const key = `historyData[${ groupIndex }].records[${ recordIndex }].collapsed`;
+    const { groupIndex, recordIndex } = e.currentTarget.dataset;
+    const key = `historyData[${groupIndex}].records[${recordIndex}].collapsed`;
     const currentValue = this.data.historyData[groupIndex].records[recordIndex].collapsed;
 
     this.setData({
@@ -503,7 +469,7 @@ Page({
 
   // 加钟操作 - 显示弹窗
   onExtraTime(e: WechatMiniprogram.TouchEvent) {
-    const {record, date} = e.currentTarget.dataset;
+    const { record, date } = e.currentTarget.dataset;
     const currentValue = record.extraTime || 0;
 
     this.setData({
@@ -520,25 +486,26 @@ Page({
   },
 
   // 计算加班时长（根据排班和起始时间）
-  calculateOvertime(technician: string, date: string, startTime: string): number {
+  async calculateOvertime(technician: string, date: string, startTime: string): Promise<number> {
     try {
-      // 获取当日排班
-      const schedule = db.findOne<ScheduleRecord>(Collections.SCHEDULE, {
+      const database = cloudDbService;
+      const schedule = await database.findOne<ScheduleRecord>(Collections.SCHEDULE, {
         date: date
       });
 
+
       if (!schedule) {
-        return 0; // 没有排班，不计算加班
+        return 0;
       }
 
-      // 获取技师信息以匹配 staffId
-      const staff = db.findOne<StaffInfo>(Collections.STAFF, {
+      const staff = await database.findOne<StaffInfo>(Collections.STAFF, {
         name: technician,
         status: 'active'
       });
 
+
       if (!staff || schedule.staffId !== staff.id) {
-        return 0; // 未找到技师或排班不匹配
+        return 0;
       }
 
       const endTime = SHIFT_END_TIMES[schedule.shift];
@@ -550,34 +517,27 @@ Page({
   },
 
   // 自动计算并更新所有记录的加班
-  autoUpdateOvertimeForDate(date: string) {
+  async autoUpdateOvertimeForDate(date: string) {
     try {
-      const consultationHistory = wx.getStorageSync('consultationHistory') || {};
+      const database = cloudDbService;
 
-      if (!consultationHistory[date]) {
-        return;
-      }
+      const records = await (database).getConsultationsByDate<ConsultationRecord>(date);
+      const overtimeUpdates: Record<string, number> = {};
 
-      const records = consultationHistory[date] as ConsultationRecord[];
-      let hasChanges = false;
-
-      records.forEach(record => {
-        // 只计算未作废的记录
+      for (const record of records) {
         if (!record.isVoided) {
-          const calculatedOvertime = this.calculateOvertime(record.technician, date, record.startTime);
+          const calculatedOvertime = await this.calculateOvertime(record.technician, date, record.startTime);
 
-          // 如果计算的加班与当前值不同，更新
           if (record.overtime !== calculatedOvertime) {
-            record.overtime = calculatedOvertime;
-            record.updatedAt = new Date().toISOString();
-            hasChanges = true;
+            overtimeUpdates[record.id] = calculatedOvertime;
           }
         }
-      });
-
-      if (hasChanges) {
-        wx.setStorageSync('consultationHistory', consultationHistory);
       }
+
+      if (Object.keys(overtimeUpdates).length > 0) {
+        await (database as any).updateOvertimeForDate(date, overtimeUpdates);
+      }
+
     } catch (error) {
       console.error('自动更新加班失败:', error);
     }
@@ -623,8 +583,8 @@ Page({
   },
 
   // 弹窗确认
-  onModalConfirm() {
-    const {type, inputValue, record, date} = this.data.numberInputModal;
+  async onModalConfirm() {
+    const { type, inputValue, record, date } = this.data.numberInputModal;
 
     if (!record || inputValue < 0) {
       wx.showToast({
@@ -634,45 +594,39 @@ Page({
       return;
     }
 
-    // 直接替换为新值
-    this.updateExtraTimeOrOvertime(record.id, date, type, inputValue);
+    await this.updateExtraTimeOrOvertime(record.id, date, type, inputValue);
 
-    // 关闭弹窗
     this.setData({
       'numberInputModal.show': false
     });
 
     if (type === 'overtime') {
-      // 加班操作，不生成报钟信息
       return;
     }
 
-    // 仅当值>0时生成报钟信息并复制
     if (inputValue > 0) {
       const typeText = type === 'extraTime' ? '加钟' : '加班';
 
-      // 计算时间
       const currentTime = new Date();
-      const durationMinutes = inputValue * 30; // 每个半小时=30分钟
+      const durationMinutes = inputValue * 30;
       const endTime = new Date(currentTime.getTime() + durationMinutes * 60 * 1000 + 5 * 60 * 1000);
 
       const startTimeStr = formatTime(currentTime, false);
       const endTimeStr = formatTime(endTime, false);
 
-      // 新的报钟信息格式
       const genderObj = GENDERS.find(g => g.id === record.gender);
       const genderText = genderObj ? genderObj.name : '';
-      const clockInfo = `顾客：${ record.surname }${ genderText }
-项目：${ typeText }(${ inputValue })
-技师：${ record.technician }
-房间：${ record.room }
-时间：${ startTimeStr } - ${ endTimeStr }`;
+      const clockInfo = `顾客：${record.surname}${genderText}
+项目：${typeText}(${inputValue})
+技师：${record.technician}
+房间：${record.room}
+时间：${startTimeStr} - ${endTimeStr}`;
 
       wx.setClipboardData({
         data: clockInfo,
         success: () => {
           wx.showToast({
-            title: `${ typeText }信息已复制`,
+            title: `${typeText}信息已复制`,
             icon: 'success'
           });
         }
@@ -686,32 +640,28 @@ Page({
   },
 
   // 更新加钟或加班数据
-  updateExtraTimeOrOvertime(recordId: string, date: string, field: 'extraTime' | 'overtime', value: number) {
+  async updateExtraTimeOrOvertime(recordId: string, date: string, field: 'extraTime' | 'overtime', value: number) {
     try {
-      const consultationHistory = wx.getStorageSync('consultationHistory') || {};
+      const database = cloudDbService;
 
-      if (consultationHistory[date]) {
-        const recordIndex = consultationHistory[date].findIndex((item: ConsultationRecord) => item.id === recordId);
+      const updateData: any = { [field]: value };
 
-        if (recordIndex !== -1) {
-          const record = consultationHistory[date][recordIndex];
-          record[field] = value;
-          record.updatedAt = new Date().toISOString();
+      if (field === 'extraTime') {
+        const record = await database.findById<ConsultationRecord>(Collections.CONSULTATION, recordId) as ConsultationRecord | null;
+        if (record) {
+          const [hours, minutes] = record.startTime.split(':').map(Number);
+          const startDate = new Date();
+          startDate.setHours(hours, minutes, 0, 0);
 
-          // 如果是加钟，重新计算结束时间
-          if (field === 'extraTime') {
-            const [hours, minutes] = record.startTime.split(':').map(Number);
-            const startDate = new Date();
-            startDate.setHours(hours, minutes, 0, 0);
-
-            const endDate = calculateProjectEndTime(startDate, record.project, value);
-            record.endTime = formatTime(endDate, false);
-          }
-
-          wx.setStorageSync('consultationHistory', consultationHistory);
-          this.loadHistoryData();
+          const endDate = calculateProjectEndTime(startDate, record.project, value);
+          updateData.endTime = formatTime(endDate, false);
         }
       }
+
+      await database.updateById(Collections.CONSULTATION, recordId, updateData);
+
+
+      await this.loadHistoryData();
     } catch (error) {
       console.error('更新失败:', error);
       wx.showToast({

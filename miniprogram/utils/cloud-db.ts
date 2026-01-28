@@ -4,6 +4,19 @@
  * 提供统一的 CRUD 接口，与本地数据库接口保持一致
  */
 
+interface ConsultationRecord {
+	id: string;
+	_id: string;
+	createdAt: string;
+	updatedAt: string;
+	isVoided: boolean;
+	extraTime: number;
+	overtime: number;
+	startTime: string;
+	endTime: string;
+	[key: string]: any;
+}
+
 export type QueryCondition<T> = Partial<T> | ((item: T) => boolean);
 
 export interface CloudDbConfig {
@@ -14,7 +27,7 @@ export interface CloudDbConfig {
 /**
  * 云数据库类
  */
-class CloudDatabase {
+class CloudDatabase implements IDatabase {
 	private db: any;
 	private envId: string = '';
 	private initialized: boolean = false;
@@ -172,7 +185,7 @@ class CloudDatabase {
 	/**
 	 * 批量插入记录
 	 */
-	async insertMany<T extends BaseRecord>(collection: string, records: Omit<T, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<T[]> {
+	async insertMany<T extends BaseRecord>(collection: string, records: Add<T>[]): Promise<T[]> {
 		try {
 			const now = this.getTimestamp();
 
@@ -208,7 +221,7 @@ class CloudDatabase {
 	/**
 	 * 根据ID更新记录
 	 */
-	async updateById<T extends BaseRecord>(collection: string, id: string, updates: Partial<Omit<T, 'id' | 'createdAt'>>): Promise<boolean> {
+	async updateById<T extends BaseRecord>(collection: string, id: string, updates: Partial<Update<T>>): Promise<boolean> {
 		try {
 			const updateData = {
 				...updates,
@@ -233,7 +246,7 @@ class CloudDatabase {
 	/**
 	 * 根据条件更新记录
 	 */
-	async update<T extends BaseRecord>(collection: string, condition: QueryCondition<T>, updates: Partial<Omit<T, 'id' | 'createdAt'>>): Promise<number> {
+	async update<T extends BaseRecord>(collection: string, condition: QueryCondition<T>, updates: Partial<Update<T>>): Promise<number> {
 		try {
 			const collectionRef = this.getCollection(collection);
 			const updateData = {
@@ -298,7 +311,7 @@ class CloudDatabase {
 				return matchedRecords.length;
 			}
 
-			const res = await collectionRef.where(condition as any).remove();
+			const res = await collectionRef.where(condition).remove();
 			return res.stats?.removed || 0;
 		} catch (error) {
 			console.error(`[CloudDB] 批量删除记录失败:`, error);
@@ -412,6 +425,158 @@ class CloudDatabase {
 			return {data: [], total: 0, hasMore: false};
 		}
 	}
+
+	/**
+	 * 保存咨询单（新建或更新）
+	 */
+	async saveConsultation<T extends ConsultationRecord>(
+		consultation: Add<T>,
+		editId?: string
+	): Promise<T | null> {
+		try {
+			if (editId) {
+				const existing = await this.findById<T>(Collections.CONSULTATION, editId);
+				if (!existing) {
+					console.error('[CloudDB] 未找到要更新的咨询单:', editId);
+					return null;
+				}
+				await this.updateById<T>(Collections.CONSULTATION, editId, consultation);
+				return {...existing, ...consultation, updatedAt: this.getTimestamp()} as T;
+			} else {
+				return await this.insert<T>(Collections.CONSULTATION, consultation);
+			}
+		} catch (error) {
+			console.error('[CloudDB] 保存咨询单失败:', error);
+			return null;
+		}
+	}
+
+	/**
+	 * 获取指定日期的咨询单记录
+	 */
+	async getConsultationsByDate<T extends ConsultationRecord>(date: string): Promise<T[]> {
+		try {
+			const res = await this.getCollection(Collections.CONSULTATION)
+				.where({
+					createdAt: this.db.RegExp({
+						regexp: `^${date}`,
+						options: 'i'
+					})
+				})
+				.orderBy('createdAt', 'asc')
+				.get();
+			return res.data || [];
+		} catch (error) {
+			console.error('[CloudDB] 获取日期咨询单失败:', error);
+			return [];
+		}
+	}
+
+	/**
+	 * 获取所有咨询单记录（按日期分组）
+	 */
+	async getAllConsultations<T extends ConsultationRecord>(): Promise<Record<string, T[]>> {
+		try {
+			const allRecords = await this.getAll<T>(Collections.CONSULTATION);
+			const grouped: Record<string, T[]> = {};
+
+			allRecords.forEach(record => {
+				const date = record.createdAt.substring(0, 10);
+				if (!grouped[date]) {
+					grouped[date] = [];
+				}
+				grouped[date].push(record);
+			});
+
+			return grouped;
+		} catch (error) {
+			console.error('[CloudDB] 获取所有咨询单失败:', error);
+			return {};
+		}
+	}
+
+	/**
+	 * 获取指定顾客的所有咨询单记录
+	 */
+	async getConsultationsByCustomer<T extends ConsultationRecord>(phone: string): Promise<T[]> {
+		try {
+			const res = await this.getCollection(Collections.CONSULTATION)
+				.where({phone})
+				.orderBy('createdAt', 'desc')
+				.get();
+			return res.data || [];
+		} catch (error) {
+			console.error('[CloudDB] 获取顾客咨询单失败:', error);
+			return [];
+		}
+	}
+
+	/**
+	 * 根据技师获取咨询单记录
+	 */
+	async getConsultationsByTechnician<T extends ConsultationRecord>(technician: string): Promise<T[]> {
+		try {
+			const res = await this.getCollection(Collections.CONSULTATION)
+				.where({technician})
+				.orderBy('createdAt', 'desc')
+				.get();
+			return res.data || [];
+		} catch (error) {
+			console.error('[CloudDB] 获取技师咨询单失败:', error);
+			return [];
+		}
+	}
+
+	/**
+	 * 批量更新指定日期的咨询单加班数据
+	 */
+	async updateOvertimeForDate(date: string, overtimeUpdates: Record<string, number>): Promise<boolean> {
+		try {
+			const records = await this.getConsultationsByDate<ConsultationRecord>(date);
+
+			await Promise.all(
+				records
+					.filter(record => overtimeUpdates[record.id] !== undefined)
+					.map(record =>
+						this.updateById(
+							Collections.CONSULTATION,
+							record.id,
+							{overtime: overtimeUpdates[record.id]} as any
+						)
+					)
+			);
+
+			return true;
+		} catch (error) {
+			console.error('[CloudDB] 批量更新加班数据失败:', error);
+			return false;
+		}
+	}
+
+	/**
+	 * 清理超过指定天数的旧咨询单记录
+	 */
+	async cleanupOldConsultations(days: number = 30): Promise<number> {
+		try {
+			const cutoffDate = new Date();
+			cutoffDate.setDate(cutoffDate.getDate() - days);
+			const cutoffStr = cutoffDate.toISOString().substring(0, 10);
+
+			const allRecords = await this.getAll<ConsultationRecord>(Collections.CONSULTATION);
+			const oldRecords = allRecords.filter(record =>
+				record.createdAt.substring(0, 10) < cutoffStr
+			);
+
+			await Promise.all(oldRecords.map(record =>
+				this.deleteById(Collections.CONSULTATION, record.id)
+			));
+
+			return oldRecords.length;
+		} catch (error) {
+			console.error('[CloudDB] 清理旧咨询单失败:', error);
+			return 0;
+		}
+	}
 }
 
 export const cloudDb = new CloudDatabase();
@@ -427,6 +592,10 @@ export const Collections = {
 	SCHEDULE: 'schedule',
 	ROTATION: 'rotation',
 	MEMBERSHIP_USAGE: 'membership_usage',
+	PROJECTS: 'projects',
+	ROOMS: 'rooms',
+	ESSENTIAL_OILS: 'essential_oils',
+	CONSULTATION: 'consultation_records',
 } as const;
 
 export type CollectionName = typeof Collections[keyof typeof Collections];

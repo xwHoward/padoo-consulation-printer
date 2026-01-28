@@ -3,7 +3,6 @@
  */
 
 export const AppConfig = {
-	useCloudDatabase: true,
 	cloudEnvId: 'cloud1-0gkbm1dic147ccec',
 
 	getCloudEnvId(): string {

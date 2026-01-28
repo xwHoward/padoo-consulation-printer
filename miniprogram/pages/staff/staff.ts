@@ -1,8 +1,7 @@
 // staff.ts
-import { AppConfig } from '../../config/index';
 import { cloudDb as cloudDbService } from '../../utils/cloud-db';
 import { DEFAULT_SHIFT, SHIFT_NAMES, SHIFT_TYPES } from '../../utils/constants';
-import { Collections, db } from '../../utils/db';
+import { Collections } from '../../utils/db';
 import { formatDate } from '../../utils/util';
 
 Component({
@@ -37,7 +36,7 @@ Component({
 	methods: {
 		// 获取数据库实例
 		getDb() {
-			return AppConfig.useCloudDatabase ? cloudDbService : db;
+			return cloudDbService;
 		},
 
 		// 初始化排班表
@@ -48,21 +47,15 @@ Component({
 				const todayStr = formatDate(now);
 				const dates = this.generateDateRange(now);
 
-				this.setData({loading: true});
+				this.setData({ loading: true });
 
-				const staffList = await (AppConfig.useCloudDatabase 
-					? database.find<StaffInfo>(Collections.STAFF, {status: 'active'})
-					: Promise.resolve(database.find<StaffInfo>(Collections.STAFF, {status: 'active'})));
+				const staffList = await (database.find<StaffInfo>(Collections.STAFF, { status: 'active' }));
 
 				const startDate = dates[0].date;
 				const endDate = dates[dates.length - 1].date;
-				const allSchedules = await (AppConfig.useCloudDatabase
-					? database.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
-						return item.date >= startDate && item.date <= endDate;
-					})
-					: Promise.resolve(database.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
-						return item.date >= startDate && item.date <= endDate;
-					})));
+				const allSchedules = await (database.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
+					return item.date >= startDate && item.date <= endDate;
+				}));
 
 				// 构造渲染用的 Map
 				const scheduleMap: any = {};
@@ -98,7 +91,7 @@ Component({
 				});
 			} catch (error) {
 				console.error('初始化排班表失败:', error);
-				this.setData({loading: false});
+				this.setData({ loading: false });
 				wx.showToast({
 					title: '加载失败',
 					icon: 'none'
@@ -129,19 +122,17 @@ Component({
 		// 排班变更
 		async onShiftChange(e: any) {
 			try {
-				const {staffId, date} = e.currentTarget.dataset;
+				const { staffId, date } = e.currentTarget.dataset;
 				const index = parseInt(e.detail.value);
 				const shiftType = SHIFT_TYPES[index];
 				const database = this.getDb();
 
-				wx.showLoading({title: '更新中...'});
+				wx.showLoading({ title: '更新中...' });
 
-				const existing = await (AppConfig.useCloudDatabase
-					? database.findOne<ScheduleRecord>(Collections.SCHEDULE, {staffId, date})
-					: Promise.resolve(database.findOne<ScheduleRecord>(Collections.SCHEDULE, {staffId, date})));
+				const existing = await (database.findOne<ScheduleRecord>(Collections.SCHEDULE, { staffId, date }));
 
 				if (existing) {
-					await database.updateById<ScheduleRecord>(Collections.SCHEDULE, existing.id, {shift: shiftType});
+					await database.updateById<ScheduleRecord>(Collections.SCHEDULE, existing.id, { shift: shiftType });
 				} else {
 					await database.insert<ScheduleRecord>(Collections.SCHEDULE, {
 						date,
@@ -160,7 +151,7 @@ Component({
 					index: index,
 				};
 
-				this.setData({scheduleMap});
+				this.setData({ scheduleMap });
 
 				wx.showToast({
 					title: '已更新',
@@ -179,11 +170,9 @@ Component({
 		// 加载员工列表
 		async loadStaffList() {
 			try {
-				this.setData({loading: true});
+				this.setData({ loading: true });
 				const database = this.getDb();
-				const staffList = await (AppConfig.useCloudDatabase
-					? database.getAll<StaffInfo>(Collections.STAFF)
-					: Promise.resolve(database.getAll<StaffInfo>(Collections.STAFF)));
+				const staffList = await (database.getAll<StaffInfo>(Collections.STAFF));
 
 				// 按创建时间倒序排列，增加兼容性处理
 				staffList.sort((a, b) => {
@@ -191,10 +180,10 @@ Component({
 					const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
 					return timeB - timeA;
 				});
-				this.setData({staffList, loading: false});
+				this.setData({ staffList, loading: false });
 			} catch (error) {
 				console.error('加载员工列表失败:', error);
-				this.setData({loading: false});
+				this.setData({ loading: false });
 				wx.showToast({
 					title: '加载失败',
 					icon: 'none'
@@ -216,11 +205,9 @@ Component({
 		async onEditStaff(e: WechatMiniprogram.TouchEvent) {
 			try {
 				const id = e.currentTarget.dataset.id as string;
-				this.setData({loading: true});
+				this.setData({ loading: true });
 				const database = this.getDb();
-				const staff = await (AppConfig.useCloudDatabase
-					? database.findById<StaffInfo>(Collections.STAFF, id)
-					: Promise.resolve(database.findById<StaffInfo>(Collections.STAFF, id)));
+				const staff = await (database.findById<StaffInfo>(Collections.STAFF, id));
 
 				if (staff) {
 					this.setData({
@@ -231,11 +218,11 @@ Component({
 						loading: false
 					});
 				} else {
-					this.setData({loading: false});
+					this.setData({ loading: false });
 				}
 			} catch (error) {
 				console.error('编辑员工失败:', error);
-				this.setData({loading: false});
+				this.setData({ loading: false });
 				wx.showToast({
 					title: '加载失败',
 					icon: 'none'
@@ -247,31 +234,29 @@ Component({
 		async onToggleStatus(e: WechatMiniprogram.TouchEvent) {
 			try {
 				const id = e.currentTarget.dataset.id as string;
-				this.setData({loading: true});
+				this.setData({ loading: true });
 				const database = this.getDb();
-				const staff = await (AppConfig.useCloudDatabase
-				? database.findById<StaffInfo>(Collections.STAFF, id)
-				: Promise.resolve(database.findById<StaffInfo>(Collections.STAFF, id)));
+				const staff = await (database.findById<StaffInfo>(Collections.STAFF, id));
 
-			if (staff) {
-				const newStatus: StaffStatus = staff.status === 'active' ? 'disabled' : 'active';
+				if (staff) {
+					const newStatus: StaffStatus = staff.status === 'active' ? 'disabled' : 'active';
 
-				await database.updateById<StaffInfo>(Collections.STAFF, id, {status: newStatus});
+					await database.updateById<StaffInfo>(Collections.STAFF, id, { status: newStatus });
 
-				await this.loadStaffList();
+					await this.loadStaffList();
 
-				this.setData({loading: false});
+					this.setData({ loading: false });
 
-				wx.showToast({
-					title: newStatus === 'active' ? '已启用' : '已禁用',
-					icon: 'success',
-				});
-			} else {
-				this.setData({loading: false});
-			}
+					wx.showToast({
+						title: newStatus === 'active' ? '已启用' : '已禁用',
+						icon: 'success',
+					});
+				} else {
+					this.setData({ loading: false });
+				}
 			} catch (error) {
 				console.error('切换员工状态失败:', error);
-				this.setData({loading: false});
+				this.setData({ loading: false });
 				wx.showToast({
 					title: '操作失败',
 					icon: 'none'
@@ -283,41 +268,39 @@ Component({
 		async onDeleteStaff(e: WechatMiniprogram.TouchEvent) {
 			try {
 				const id = e.currentTarget.dataset.id as string;
-				this.setData({loading: true});
+				this.setData({ loading: true });
 				const database = this.getDb();
-				const staff = await (AppConfig.useCloudDatabase
-					? database.findById<StaffInfo>(Collections.STAFF, id)
-					: Promise.resolve(database.findById<StaffInfo>(Collections.STAFF, id)));
+				const staff = await (database.findById<StaffInfo>(Collections.STAFF, id));
 
 				if (!staff) {
-					this.setData({loading: false});
+					this.setData({ loading: false });
 					return;
 				}
 
-				this.setData({loading: false});
+				this.setData({ loading: false });
 
 				wx.showModal({
 					title: '确认删除',
-					content: `确定要删除员工"${ staff.name }"吗？`,
+					content: `确定要删除员工"${staff.name}"吗？`,
 					confirmColor: '#ff4d4f',
 					success: async (res) => {
 						if (res.confirm) {
 							try {
-								this.setData({loading: true});
+								this.setData({ loading: true });
 								await database.deleteById(Collections.STAFF, id);
 								await this.loadStaffList();
-								wx.showToast({title: '已删除', icon: 'success'});
+								wx.showToast({ title: '已删除', icon: 'success' });
 							} catch (error) {
-								this.setData({loading: false});
+								this.setData({ loading: false });
 								console.error('删除员工失败:', error);
-								wx.showToast({title: '删除失败', icon: 'none'});
+								wx.showToast({ title: '删除失败', icon: 'none' });
 							}
 						}
 					},
 				});
 			} catch (error) {
 				console.error('删除员工失败:', error);
-				this.setData({loading: false});
+				this.setData({ loading: false });
 				wx.showToast({
 					title: '操作失败',
 					icon: 'none'
@@ -327,13 +310,13 @@ Component({
 
 		// 姓名输入
 		onNameInput(e: WechatMiniprogram.Input) {
-			this.setData({inputName: e.detail.value});
+			this.setData({ inputName: e.detail.value });
 		},
 
 		// 状态选择
 		onStatusSelect(e: WechatMiniprogram.TouchEvent) {
 			const status = e.currentTarget.dataset.status as StaffStatus;
-			this.setData({inputStatus: status});
+			this.setData({ inputStatus: status });
 		},
 
 		// 关闭弹窗
@@ -349,49 +332,39 @@ Component({
 		// 确认弹窗
 		async onConfirmModal() {
 			try {
-				const {inputName, inputStatus, editingStaff} = this.data;
+				const { inputName, inputStatus, editingStaff } = this.data;
 				const name = inputName.trim();
 
 				if (!name) {
-					wx.showToast({title: '请输入员工姓名', icon: 'none'});
+					wx.showToast({ title: '请输入员工姓名', icon: 'none' });
 					return;
 				}
 
 				const database = this.getDb();
-				wx.showLoading({title: '保存中...'});
+				wx.showLoading({ title: '保存中...' });
 
 				if (editingStaff) {
-					if (AppConfig.useCloudDatabase) {
-						await database.updateById<StaffInfo>(Collections.STAFF, editingStaff.id, {
-							name,
-							status: inputStatus,
-						});
-					} else {
-						database.updateById<StaffInfo>(Collections.STAFF, editingStaff.id, {
-							name,
-							status: inputStatus,
-						});
-					}
-					wx.showToast({title: '修改成功', icon: 'success'});
+					await database.updateById<StaffInfo>(Collections.STAFF, editingStaff.id, {
+						name,
+						status: inputStatus,
+					});
+
+					wx.showToast({ title: '修改成功', icon: 'success' });
 				} else {
-					const exists = await (AppConfig.useCloudDatabase
-						? database.exists<StaffInfo>(Collections.STAFF, {name})
-						: Promise.resolve(database.exists<StaffInfo>(Collections.STAFF, {name})));
+					const exists = await (database.exists<StaffInfo>(Collections.STAFF, { name }));
 
 					if (exists) {
 						wx.hideLoading();
-						wx.showToast({title: '员工姓名已存在', icon: 'none'});
+						wx.showToast({ title: '员工姓名已存在', icon: 'none' });
 						return;
 					}
 
-					const inserted = await (AppConfig.useCloudDatabase
-						? database.insert<StaffInfo>(Collections.STAFF, {name, status: 'active'})
-						: Promise.resolve(database.insert<StaffInfo>(Collections.STAFF, {name, status: 'active'})));
+					const inserted = await (database.insert<StaffInfo>(Collections.STAFF, { name, status: 'active' }));
 
 					if (inserted) {
-						wx.showToast({title: '添加成功', icon: 'success'});
+						wx.showToast({ title: '添加成功', icon: 'success' });
 					} else {
-						wx.showToast({title: '添加失败', icon: 'none'});
+						wx.showToast({ title: '添加失败', icon: 'none' });
 					}
 				}
 

@@ -212,3 +212,21 @@ interface IAppOption<T extends Record<string, any> = AppGlobalData> {
 	getRooms: () => Promise<Room[]>;
 	getEssentialOils: () => Promise<EssentialOil[]>;
 }
+
+interface IDatabase {
+	getAll<T extends BaseRecord>(collection: string): Promise<T[]> | T[];
+	findById<T extends BaseRecord>(collection: string, id: string): Promise<T | null> | T | null;
+	find<T extends BaseRecord>(collection: string, condition: any): Promise<T[]> | T[];
+	findOne<T extends BaseRecord>(collection: string, condition: any): Promise<T | null> | T | null;
+	insert<T extends BaseRecord>(collection: string, record: Omit<T, 'id' | 'createdAt' | 'updatedAt' | '_id'>): Promise<T | null> | T | null;
+	insertMany<T extends BaseRecord>(collection: string, records: Omit<T, 'id' | 'createdAt' | 'updatedAt' | '_id'>[]): Promise<T[]> | T[];
+	updateById<T extends BaseRecord>(collection: string, id: string, updates: Partial<Omit<T, 'id' | 'createdAt'>>): Promise<boolean> | boolean;
+	update<T extends BaseRecord>(collection: string, condition: any, updates: Partial<Omit<T, 'id' | 'createdAt'>>): Promise<number> | number;
+	deleteById(collection: string, id: string): Promise<boolean> | boolean;
+	deleteMany<T extends BaseRecord>(collection: string, condition: any): Promise<number> | number;
+	clear(collection: string): Promise<boolean> | boolean;
+	getConsultationsByDate<T extends BaseRecord>(date: string): Promise<T[]> | T[];
+	getAllConsultations<T extends BaseRecord>(): Promise<Record<string, T[]>> | Record<string, T[]>;
+	getConsultationsByCustomer<T extends BaseRecord>(phone: string): Promise<T[]> | T[];
+	getConsultationsByTechnician<T extends BaseRecord>(technician: string): Promise<T[]> | T[];
+}

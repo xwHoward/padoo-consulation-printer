@@ -1,4 +1,5 @@
-import {db, Collections} from "../../utils/db";
+import { cloudDb as cloudDbService } from '../../utils/cloud-db';
+import { Collections } from "../../utils/db";
 
 Page({
   data: {
@@ -13,7 +14,7 @@ Page({
     formResponsibleTechnician: '',
     formLicensePlate: '',
     formRemarks: '',
-    technicianList: [] as {id: string; name: string;}[],
+    technicianList: [] as { id: string; name: string; }[],
     selectedCustomer: null as CustomerRecord | null,
     visitRecords: [] as CustomerVisit[],
     showDetailModal: false,
@@ -37,22 +38,23 @@ Page({
     this.loadCustomerList();
   },
 
-  loadTechnicianList() {
+  async loadTechnicianList() {
     try {
-      const staffList = db.find<StaffInfo>(Collections.STAFF, {
+      const staffList = await cloudDbService.find<StaffInfo>(Collections.STAFF, {
         status: 'active'
       });
-      this.setData({technicianList: staffList});
+      this.setData({ technicianList: staffList });
     } catch (error) {
       console.error('加载技师列表失败:', error);
     }
   },
 
-  loadCustomerList() {
+  async loadCustomerList() {
     try {
-      this.setData({loading: true});
-      // 1. 获取数据库中已保存的顾客
-      const savedCustomers = db.getAll<CustomerRecord>(Collections.CUSTOMERS);
+      this.setData({ loading: true });
+      const database = cloudDbService;
+
+      const savedCustomers = await database.getAll<CustomerRecord>(Collections.CUSTOMERS);
       const customerMap: Record<string, CustomerRecord> = {};
 
       savedCustomers.forEach(c => {
@@ -60,45 +62,14 @@ Page({
         customerMap[key] = c;
       });
 
-      // 2. 从咨询单历史中同步未保存的顾客（向前兼容/补全逻辑）
-      const consultationHistory = wx.getStorageSync('consultationHistory') || {};
-
-      Object.keys(consultationHistory).forEach(date => {
-        const records = consultationHistory[date] as any[];
-        records.forEach((record: any) => {
-          if (record.isVoided) return;
-
-          const phone = record.phone || '';
-          const name = record.surname || '';
-          const gender = record.gender || '';
-          const customerKey = phone || (record.id as string | undefined);
-
-          if (customerKey && !customerMap[customerKey]) {
-            const newCustomer: Add<CustomerRecord> = {
-              phone,
-              name,
-              gender: gender as 'male' | 'female' | '',
-              responsibleTechnician: '',
-              licensePlate: '',
-              remarks: '',
-              totalAmount: 0
-            };
-            const inserted = db.insert<CustomerRecord>(Collections.CUSTOMERS, newCustomer);
-            if (inserted) {
-              customerMap[customerKey] = inserted;
-            }
-          }
-        });
-      });
-
       const customerList = Object.values(customerMap).sort((a, b) => {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
 
-      this.setData({customerList, loading: false});
+      this.setData({ customerList, loading: false });
     } catch (error) {
       console.error('加载顾客列表失败:', error);
-      this.setData({loading: false});
+      this.setData({ loading: false });
       wx.showToast({
         title: '加载失败',
         icon: 'error'
@@ -148,8 +119,8 @@ Page({
     });
   },
 
-  onModalConfirm() {
-    const {editCustomer, formPhone, formName, formGender, formResponsibleTechnician, formLicensePlate, formRemarks} = this.data;
+  async onModalConfirm() {
+    const { editCustomer, formPhone, formName, formGender, formResponsibleTechnician, formLicensePlate, formRemarks } = this.data;
 
     if (!formPhone && !formName) {
       wx.showToast({
@@ -160,10 +131,9 @@ Page({
     }
 
     try {
-      this.setData({loading: true});
+      this.setData({ loading: true });
       if (editCustomer) {
-        // 更新现有顾客
-        db.updateById<CustomerRecord>(Collections.CUSTOMERS, editCustomer.id, {
+        await cloudDbService.updateById<CustomerRecord>(Collections.CUSTOMERS, editCustomer.id, {
           phone: formPhone,
           name: formName,
           gender: formGender,
@@ -172,8 +142,7 @@ Page({
           remarks: formRemarks
         });
       } else {
-        // 新增顾客
-        db.insert<CustomerRecord>(Collections.CUSTOMERS, {
+        await cloudDbService.insert(Collections.CUSTOMERS, {
           phone: formPhone,
           name: formName,
           gender: formGender,
@@ -200,10 +169,10 @@ Page({
         icon: 'success'
       });
 
-      this.loadCustomerList();
+      await this.loadCustomerList();
     } catch (error) {
       console.error('保存顾客信息失败:', error);
-      this.setData({loading: false});
+      this.setData({ loading: false });
       wx.showToast({
         title: '保存失败',
         icon: 'error'
@@ -212,67 +181,63 @@ Page({
   },
 
   onPhoneInput(e: any) {
-    this.setData({formPhone: e.detail.value});
+    this.setData({ formPhone: e.detail.value });
   },
 
   onNameInput(e: any) {
-    this.setData({formName: e.detail.value});
+    this.setData({ formName: e.detail.value });
   },
 
   onGenderChange(e: any) {
     const gender = e.currentTarget.dataset.gender;
-    this.setData({formGender: gender});
+    this.setData({ formGender: gender });
   },
 
   onTechnicianSelect(e: any) {
     const technician = e.currentTarget.dataset.technician;
-    this.setData({formResponsibleTechnician: technician});
+    this.setData({ formResponsibleTechnician: technician });
   },
 
   onLicensePlateInput(e: any) {
-    this.setData({formLicensePlate: e.detail.value});
+    this.setData({ formLicensePlate: e.detail.value });
   },
 
   onRemarksInput(e: any) {
-    this.setData({formRemarks: e.detail.value});
+    this.setData({ formRemarks: e.detail.value });
   },
 
-  loadCustomerVisits(e: any) {
+  async loadCustomerVisits(e: any) {
     try {
-      this.setData({loading: true});
+      this.setData({ loading: true });
       const customer = e.currentTarget.dataset.customer as CustomerRecord;
-      const consultationHistory = wx.getStorageSync('consultationHistory') || {};
+      const database = cloudDbService;
       const visitRecords: CustomerVisit[] = [];
-      Object.keys(consultationHistory).forEach(date => {
-        const records = consultationHistory[date] as any[];
 
-        records.forEach((record: any) => {
+      if (customer.phone) {
+        const allRecords = await database.getConsultationsByCustomer(customer.phone);
+        allRecords.forEach((record) => {
           if (record.isVoided) {
             return;
           }
 
-          const customerKey = record.phone || (record.id as string | undefined);
-          const targetKey = customer.phone || customer.id;
-
-          if (customerKey && targetKey && customerKey === targetKey) {
-            visitRecords.push({
-              id: record.id,
-              date,
-              project: record.project,
-              technician: record.technician,
-              room: record.room,
-              amount: record.amount,
-              isClockIn: record.isClockIn,
-            });
-          }
+          const date = record.createdAt.substring(0, 10);
+          visitRecords.push({
+            id: record.id,
+            date,
+            project: record.project,
+            technician: record.technician,
+            room: record.room,
+            amount: record.amount,
+            isClockIn: record.isClockIn,
+          });
         });
-      });
+      }
 
       visitRecords.sort((a, b) => {
         return new Date(b.date).getTime() - new Date(a.date).getTime();
       });
 
-      const memberships = db.find<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, {
+      const memberships = await database.find<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, {
         customerId: customer.id
       });
       this.setData({
@@ -284,7 +249,7 @@ Page({
       });
     } catch (error) {
       console.error('加载顾客会员卡失败:', error);
-      this.setData({loading: false});
+      this.setData({ loading: false });
     }
   },
 
@@ -300,19 +265,19 @@ Page({
   goToConsultationDetail() {
     const selectedCustomer = this.data.selectedCustomer!;
     wx.navigateTo({
-      url: `/pages/history/history?customerPhone=${ selectedCustomer.phone }&customerId=${ selectedCustomer.phone || selectedCustomer.id }&readonly=true`
+      url: `/pages/history/history?customerPhone=${selectedCustomer.phone}&customerId=${selectedCustomer.phone || selectedCustomer.id}&readonly=true`
     });
   },
 
-  loadMembershipCards() {
+  async loadMembershipCards() {
     try {
-      this.setData({loading: true});
-      const cards = db.getAll<MembershipCard>(Collections.MEMBERSHIP);
+      this.setData({ loading: true });
+      const cards = await cloudDbService.getAll<MembershipCard>(Collections.MEMBERSHIP);
       const activeCards = cards.filter(card => card.status === 'active');
-      this.setData({membershipCards: activeCards, loading: false});
+      this.setData({ membershipCards: activeCards, loading: false });
     } catch (error) {
       console.error('加载会员卡列表失败:', error);
-      this.setData({loading: false});
+      this.setData({ loading: false });
       wx.showToast({
         title: '加载会员卡失败',
         icon: 'error'
@@ -355,20 +320,20 @@ Page({
   },
 
   onPaidAmountInput(e: any) {
-    this.setData({formPaidAmount: e.detail.value});
+    this.setData({ formPaidAmount: e.detail.value });
   },
 
   onSalesStaffSelect(e: any) {
     const staff = e.currentTarget.dataset.staff;
-    this.setData({formSalesStaff: staff});
+    this.setData({ formSalesStaff: staff });
   },
 
   onCardRemarksInput(e: any) {
-    this.setData({formCardRemarks: e.detail.value});
+    this.setData({ formCardRemarks: e.detail.value });
   },
 
-  onOpenCardConfirm() {
-    const {selectedCustomerForCard, selectedCardInfo, formPaidAmount, formSalesStaff, formCardRemarks} = this.data;
+  async onOpenCardConfirm() {
+    const { selectedCustomerForCard, selectedCardInfo, formPaidAmount, formSalesStaff, formCardRemarks } = this.data;
 
     if (!selectedCustomerForCard) {
       wx.showToast({
@@ -412,8 +377,8 @@ Page({
     }
 
     try {
-      this.setData({loading: true});
-      db.insert(Collections.CUSTOMER_MEMBERSHIP, {
+      this.setData({ loading: true });
+      await cloudDbService.insert(Collections.CUSTOMER_MEMBERSHIP, {
         customerId: selectedCustomerForCard.id,
         customerName: selectedCustomerForCard.name,
         customerPhone: selectedCustomerForCard.phone,
@@ -445,7 +410,7 @@ Page({
       });
     } catch (error) {
       console.error('开卡失败:', error);
-      this.setData({loading: false});
+      this.setData({ loading: false });
       wx.showToast({
         title: '开卡失败',
         icon: 'error'

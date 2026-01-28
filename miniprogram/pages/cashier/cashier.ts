@@ -1,8 +1,7 @@
 // cashier.ts
-import { db, Collections } from '../../utils/db';
 import { cloudDb as cloudDbService } from '../../utils/cloud-db';
-import { AppConfig } from '../../config/index';
-import { parseProjectDuration, formatDate, getMinutesDiff, isTimeOverlapping, formatDuration } from '../../utils/util';
+import { Collections } from '../../utils/db';
+import { formatDate, formatDuration, getMinutesDiff, isTimeOverlapping, parseProjectDuration } from '../../utils/util';
 
 interface RotationItem {
 	id: string;
@@ -117,7 +116,7 @@ Component({
 
 	methods: {
 		getDb() {
-			return AppConfig.useCloudDatabase ? cloudDbService : db;
+			return cloudDbService;
 		},
 
 		async loadProjects() {
@@ -145,20 +144,11 @@ Component({
 				const allRooms = await app.getRooms();
 				const filteredRooms = allRooms.filter((r: Room) => r.status === 'normal');
 
-				// 1. 获取房间状态
-				const history = (wx.getStorageSync('consultationHistory')) || {};
-				const todayRecords = (history[today] || []) as ConsultationRecord[];
+				const todayRecords = await (database).getConsultationsByDate<ConsultationRecord>(today);
 				const activeRecords = todayRecords.filter(r => !r.isVoided);
 
-				// 获取预约记录
-				let reservations: ReservationRecord[];
-				if (AppConfig.useCloudDatabase) {
-					reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, { date: today });
-				} else {
-					reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, { date: today });
-				}
+				const reservations = await (database).find<ReservationRecord>(Collections.RESERVATIONS, { date: today });
 
-				// 获取当前时间
 				const now = new Date();
 				const todayStr = formatDate(now);
 				const isToday = today === todayStr;
@@ -199,17 +189,12 @@ Component({
 				});
 
 				// 2. 获取员工轮排与排钟表数据
-				let allSchedules: ScheduleRecord[];
-				let activeStaff: StaffInfo[];
+				const allSchedules = await (database).getAll<ScheduleRecord>(Collections.SCHEDULE);
+				const allStaff = await (database).getAll<StaffInfo>(Collections.STAFF);
+				const activeStaffList = allStaff.filter(s => s.status === 'active');
+				const scheduledStaff = allSchedules.map(s => s.staffId);
+				const activeStaff = activeStaffList.filter(s => scheduledStaff.includes(s.id));
 
-				if (AppConfig.useCloudDatabase) {
-					allSchedules = await database.getAll<ScheduleRecord>(Collections.SCHEDULE);
-					const allStaff = await database.getAll<StaffInfo>(Collections.STAFF);
-					activeStaff = allStaff.filter(s => s.status === 'active');
-				} else {
-					allSchedules = await database.getAll<ScheduleRecord>(Collections.SCHEDULE);
-					activeStaff = (await database.getAll<StaffInfo>(Collections.STAFF)).filter(s => s.status === 'active');
-				}
 
 				const savedRotation = wx.getStorageSync(`rotation_${today}`) as string[];
 
@@ -523,9 +508,8 @@ Component({
 		async editReservation(id: string) {
 			try {
 				const database = this.getDb();
-				const record = await database.findById<ReservationRecord>(Collections.RESERVATIONS, id);
+				const record = await (database).findById<ReservationRecord>(Collections.RESERVATIONS, id);
 				if (record) {
-					// 编辑时将单个技师放入数组
 					const selectedTechnicians: Array<{ id: string; name: string; }> = [];
 					if (record.technicianId && record.technicianName) {
 						selectedTechnicians.push({ id: record.technicianId, name: record.technicianName });
@@ -564,7 +548,6 @@ Component({
 
 				const database = this.getDb();
 
-				// 计算结束时间 (用于冲突检查)
 				const [h, m] = startTime.split(':').map(Number);
 				const startTotal = h * 60 + m;
 				let duration = 60;
@@ -577,26 +560,14 @@ Component({
 				const endM = endTotal % 60;
 				const endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 
-				// 获取该日期的所有任务
-				const history = (wx.getStorageSync('consultationHistory') as any) || {};
-				const activeRecords = (history[date] || []).filter((r: any) => !r.isVoided);
-				let reservations: ReservationRecord[];
+				const activeRecords = (await (database).getConsultationsByDate<ConsultationRecord>(date)).filter(r => !r.isVoided);
 
-				if (AppConfig.useCloudDatabase) {
-					reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, { date });
-				} else {
-					reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, { date });
-				}
+				const reservations = await (database).find<ReservationRecord>(Collections.RESERVATIONS, { date });
 
 				const allTasks = [...activeRecords, ...reservations];
 
-				let activeStaff: StaffInfo[];
-				if (AppConfig.useCloudDatabase) {
-					const allStaff = await database.getAll<StaffInfo>(Collections.STAFF);
-					activeStaff = allStaff.filter(s => s.status === 'active');
-				} else {
-					activeStaff = (await database.getAll<StaffInfo>(Collections.STAFF)).filter(s => s.status === 'active');
-				}
+				const allStaff = await (database).getAll<StaffInfo>(Collections.STAFF);
+				const activeStaff = allStaff.filter(s => s.status === 'active');
 
 				const staffAvailability = activeStaff.map(staff => {
 					let occupiedReason = '';
@@ -741,7 +712,7 @@ Component({
 						startTime: reserveForm.startTime,
 						endTime: endTime
 					};
-					const success = await database.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm.id, record);
+					const success = await (database).updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm.id, record);
 					if (success) {
 						wx.showToast({ title: '更新成功', icon: 'success' });
 						this.closeReserveModal();
@@ -768,7 +739,7 @@ Component({
 						startTime: reserveForm.startTime,
 						endTime: endTime
 					};
-					const success = await database.insert<ReservationRecord>(Collections.RESERVATIONS, record);
+					const success = await (database).insert<ReservationRecord>(Collections.RESERVATIONS, record);
 					if (success) {
 						wx.showToast({ title: '预约成功', icon: 'success' });
 						this.closeReserveModal();
@@ -793,7 +764,8 @@ Component({
 						startTime: reserveForm.startTime,
 						endTime: endTime
 					};
-					if (await database.insert<ReservationRecord>(Collections.RESERVATIONS, record)) {
+					const insertResult = await (database).insert<ReservationRecord>(Collections.RESERVATIONS, record);
+					if (insertResult) {
 						successCount++;
 					}
 				}
@@ -823,10 +795,10 @@ Component({
 					if (res.confirm) {
 						try {
 							const database = this.getDb();
-							const success = await database.deleteById(Collections.RESERVATIONS, id);
+							const success = await (database).deleteById(Collections.RESERVATIONS, id);
 							if (success) {
 								wx.showToast({ title: '已取消预约', icon: 'success' });
-								await this.loadData(); // 重新加载数据，释放占用
+								await this.loadData();
 							} else {
 								wx.showToast({ title: '取消失败', icon: 'none' });
 							}
@@ -840,30 +812,34 @@ Component({
 		},
 
 		// 打开结算弹窗
-		openSettlement(id: string) {
-			const today = this.data.selectedDate || formatDate(new Date());
-			const history = (wx.getStorageSync('consultationHistory') as any) || {};
-			const todayRecords = (history[today] || []) as ConsultationRecord[];
-			const record = todayRecords.find(r => r.id === id);
+		async openSettlement(id: string) {
+			try {
+				const database = this.getDb();
+				const today = this.data.selectedDate || formatDate(new Date());
+				const records = await (database).getConsultationsByDate<ConsultationRecord>(today);
+				const record = records.find(r => r.id === id) || null;
 
-			if (!record) {
-				wx.showToast({ title: '未找到该单据', icon: 'none' });
-				return;
-			}
+				if (!record) {
+					wx.showToast({ title: '未找到该单据', icon: 'none' });
+					return;
+				}
 
-			// 如果已经结算，提示
-			if (record.settlement) {
-				wx.showModal({
-					title: '已结算',
-					content: '该单据已经结算，是否重新结算？',
-					success: (res) => {
-						if (res.confirm) {
-							this.loadSettlement(id, record);
+				if (record.settlement) {
+					wx.showModal({
+						title: '已结算',
+						content: '该单据已经结算，是否重新结算？',
+						success: (res) => {
+							if (res.confirm) {
+								this.loadSettlement(id, record);
+							}
 						}
-					}
-				});
-			} else {
-				this.loadSettlement(id, record);
+					});
+				} else {
+					this.loadSettlement(id, record);
+				}
+			} catch (error) {
+				console.error('打开结算失败:', error);
+				wx.showToast({ title: '加载失败', icon: 'none' });
 			}
 		},
 
@@ -1010,45 +986,48 @@ Component({
 					settledAt: now.toISOString()
 				};
 
-				// 处理划卡逻辑
 				const membershipPayment = payments.find(p => p.method === 'membership');
 				if (membershipPayment) {
-					const record = todayRecords[recordIndex];
-					// 优先使用手机号匹配会员
-					let customerMembership: CustomerMembership | null = null;
 
-					if (AppConfig.useCloudDatabase) {
-						const allMemberships = await database.getAll<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP);
-						customerMembership = allMemberships.find(m => {
-							return (m.customerPhone === record.phone || m.customerName === record.surname) &&
-								m.remainingTimes > 0 && m.status === 'active';
-						}) || null;
-					} else {
-						customerMembership = (await database.findOne<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, (m) => {
-							return (m.customerPhone === record.phone || m.customerName === record.surname) &&
-								m.remainingTimes > 0 && m.status === 'active';
-						})) || null;
+					const allMemberships = await (database).getAll<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP);
+					const allRecords = await (database).getConsultationsByDate<ConsultationRecord>(today);
+					const target = allRecords.find(r => r.id === settlementRecordId);
+					if (!target) {
+						wx.showToast({ title: '未找到该单据', icon: 'none' });
+						return;
 					}
+					const customerMembership = allMemberships.find(m => {
+						return (m.customerPhone === target.phone || m.customerName === target.surname) &&
+							m.remainingTimes > 0 && m.status === 'active';
+					}) || null;
+
 
 					if (!customerMembership) {
 						wx.showToast({ title: '未找到有效会员卡或余额不足', icon: 'none' });
 						return;
 					}
 
-					// 扣减次数
-					const deduction = membershipPayment.amount || 1; // 如果没填默认扣1次
+					const deduction = membershipPayment.amount || 1;
 					const newRemaining = customerMembership.remainingTimes - deduction;
 					if (newRemaining < 0) {
 						wx.showToast({ title: '会员卡余额不足', icon: 'none' });
 						return;
 					}
 
-					await database.updateById<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, customerMembership.id, {
+					await (database).updateById<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, customerMembership.id, {
 						remainingTimes: newRemaining
 					});
 
-					// 记录会员卡使用历史
-					await database.insert<MembershipUsageRecord>(Collections.MEMBERSHIP_USAGE, {
+
+					const records = await (database).getConsultationsByDate<ConsultationRecord>(today);
+					const record = records.find(r => r.id === settlementRecordId) || null;
+
+					if (!record) {
+						wx.showToast({ title: '未找到该单据', icon: 'none' });
+						return;
+					}
+
+					await (database).insert<MembershipUsageRecord>(Collections.MEMBERSHIP_USAGE, {
 						cardId: customerMembership.cardId,
 						cardName: customerMembership.cardName,
 						date: today,
@@ -1057,14 +1036,18 @@ Component({
 						technician: record.technician,
 						room: record.room,
 						consultationId: record.id
-					} as any);
+					});
 				}
 
-				todayRecords[recordIndex].settlement = settlement;
-				todayRecords[recordIndex].updatedAt = now.toISOString();
-				history[today] = todayRecords;
+				const records = await (database).getConsultationsByDate<ConsultationRecord>(today);
+				const record = records.find(r => r.id === settlementRecordId);
+				if (record) {
+					await (database).updateById(Collections.CONSULTATION, settlementRecordId, {
+						settlement: settlement,
+						updatedAt: now.toISOString()
+					});
+				}
 
-				wx.setStorageSync('consultationHistory', history);
 				wx.showToast({ title: '结算成功', icon: 'success' });
 				this.closeSettlementModal();
 				await this.loadData();

@@ -1,5 +1,5 @@
-import { db, Collections } from "../../utils/db";
-import { AppConfig } from '../../config/index';
+import { cloudDb as cloudDbService } from '../../utils/cloud-db';
+import { Collections } from "../../utils/db";
 
 Page({
   data: {
@@ -38,10 +38,10 @@ Page({
     }
   },
 
-  loadCardList() {
+  async loadCardList() {
     try {
       this.setData({ loading: true });
-      const cards = db.getAll<MembershipCard>(Collections.MEMBERSHIP);
+      const cards = await cloudDbService.getAll<MembershipCard>(Collections.MEMBERSHIP);
       this.setData({ cardList: cards, loading: false });
     } catch (error) {
       console.error('加载会员卡列表失败:', error);
@@ -91,7 +91,7 @@ Page({
     });
   },
 
-  onModalConfirm() {
+  async onModalConfirm() {
     const { formName, formOriginalPrice, formTotalTimes, formProject, editCard } = this.data;
 
     if (!formName.trim()) {
@@ -127,19 +127,19 @@ Page({
     try {
       this.setData({ loading: true });
       if (editCard) {
-        const success = db.updateById<MembershipCard>(Collections.MEMBERSHIP, editCard.id, cardData);
+        const success = await cloudDbService.updateById<MembershipCard>(Collections.MEMBERSHIP, editCard.id, cardData);
         if (success) {
           wx.showToast({ title: '更新成功', icon: 'success' });
-          this.loadCardList();
+          await this.loadCardList();
         } else {
           this.setData({ loading: false });
           wx.showToast({ title: '更新失败', icon: 'none' });
         }
       } else {
-        const success = db.insert<MembershipCard>(Collections.MEMBERSHIP, cardData);
-        if (success) {
+        const result = await cloudDbService.insert<MembershipCard>(Collections.MEMBERSHIP, cardData);
+        if (result) {
           wx.showToast({ title: '添加成功', icon: 'success' });
-          this.loadCardList();
+          await this.loadCardList();
         } else {
           this.setData({ loading: false });
           wx.showToast({ title: '添加失败', icon: 'none' });
@@ -153,7 +153,7 @@ Page({
     }
   },
 
-  onDeleteCard(e: any) {
+  async onDeleteCard(e: any) {
     const card = e.currentTarget.dataset.card as MembershipCard;
 
     wx.showModal({
@@ -161,11 +161,11 @@ Page({
       content: `确定要删除会员卡"${card.name}"吗？`,
       confirmText: '删除',
       cancelText: '取消',
-      success: (res) => {
+      success: async (res) => {
         if (res.confirm) {
           try {
             this.setData({ loading: true });
-            const success = db.deleteById(Collections.MEMBERSHIP, card.id);
+            const success = await cloudDbService.deleteById(Collections.MEMBERSHIP, card.id);
             if (success) {
               wx.showToast({ title: '删除成功', icon: 'success' });
               this.loadCardList();

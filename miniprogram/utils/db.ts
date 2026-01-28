@@ -16,7 +16,7 @@ export type QueryCondition<T> = Partial<T> | ((item: T) => boolean);
 export function generateId(): string {
 	const timestamp = Date.now().toString(36);
 	const randomStr = Math.random().toString(36).substring(2, 10);
-	return `${ timestamp }_${ randomStr }`;
+	return `${timestamp}_${randomStr}`;
 }
 
 /**
@@ -29,12 +29,12 @@ export function getTimestamp(): string {
 /**
  * 数据库类
  */
-class Database {
+class Database implements IDatabase {
 	/**
 	 * 获取存储键名
 	 */
 	private getStorageKey(collection: string): string {
-		return `${ DB_PREFIX }${ collection }`;
+		return `${DB_PREFIX}${collection}`;
 	}
 
 	/**
@@ -46,7 +46,7 @@ class Database {
 			const data = wx.getStorageSync(key);
 			return Array.isArray(data) ? data : [];
 		} catch (error) {
-			console.error(`[DB] 获取集合 ${ collection } 数据失败:`, error);
+			console.error(`[DB] 获取集合 ${collection} 数据失败:`, error);
 			return [];
 		}
 	}
@@ -60,7 +60,7 @@ class Database {
 			wx.setStorageSync(key, data);
 			return true;
 		} catch (error) {
-			console.error(`[DB] 保存集合 ${ collection } 数据失败:`, error);
+			console.error(`[DB] 保存集合 ${collection} 数据失败:`, error);
 			return false;
 		}
 	}
@@ -105,7 +105,7 @@ class Database {
 	/**
 	 * 插入单条记录
 	 */
-	insert<T extends BaseRecord>(collection: string, record: Omit<T, 'id' | 'createdAt' | 'updatedAt' | '_id'>): T | null {
+	insert<T extends BaseRecord>(collection: string, record: Add<T>): T | null {
 		try {
 			const data = this.getAll<T>(collection);
 			const now = getTimestamp();
@@ -115,7 +115,7 @@ class Database {
 				id: generateId(),
 				createdAt: now,
 				updatedAt: now,
-			} as T;
+			} as unknown as T;
 
 			data.push(newRecord);
 
@@ -124,7 +124,7 @@ class Database {
 			}
 			return null;
 		} catch (error) {
-			console.error(`[DB] 插入记录到 ${ collection } 失败:`, error);
+			console.error(`[DB] 插入记录到 ${collection} 失败:`, error);
 			return null;
 		}
 	}
@@ -132,7 +132,7 @@ class Database {
 	/**
 	 * 批量插入记录
 	 */
-	insertMany<T extends BaseRecord>(collection: string, records: Omit<T, 'id' | 'createdAt' | 'updatedAt' | '_id'>[]): T[] {
+	insertMany<T extends BaseRecord>(collection: string, records: Add<T>[]): T[] {
 		try {
 			const data = this.getAll<T>(collection);
 			const now = getTimestamp();
@@ -142,7 +142,7 @@ class Database {
 				id: generateId(),
 				createdAt: now,
 				updatedAt: now,
-			})) as T[];
+			})) as unknown as T[];
 
 			data.push(...newRecords);
 
@@ -151,7 +151,7 @@ class Database {
 			}
 			return [];
 		} catch (error) {
-			console.error(`[DB] 批量插入记录到 ${ collection } 失败:`, error);
+			console.error(`[DB] 批量插入记录到 ${collection} 失败:`, error);
 			return [];
 		}
 	}
@@ -159,13 +159,13 @@ class Database {
 	/**
 	 * 根据ID更新记录
 	 */
-	updateById<T extends BaseRecord>(collection: string, id: string, updates: Partial<Omit<T, 'id' | 'createdAt' | '_id'>>): boolean {
+	updateById<T extends BaseRecord>(collection: string, id: string, updates: Partial<Omit<T, 'id' | 'createdAt'>>): boolean {
 		try {
 			const data = this.getAll<T>(collection);
 			const index = data.findIndex(item => item.id === id);
 
 			if (index === -1) {
-				console.warn(`[DB] 未找到ID为 ${ id } 的记录`);
+				console.warn(`[DB] 未找到ID为 ${id} 的记录`);
 				return false;
 			}
 
@@ -177,7 +177,7 @@ class Database {
 
 			return this.saveAll(collection, data);
 		} catch (error) {
-			console.error(`[DB] 更新记录 ${ id } 失败:`, error);
+			console.error(`[DB] 更新记录 ${id} 失败:`, error);
 			return false;
 		}
 	}
@@ -233,14 +233,14 @@ class Database {
 			const index = data.findIndex(item => item.id === id);
 
 			if (index === -1) {
-				console.warn(`[DB] 未找到ID为 ${ id } 的记录`);
+				console.warn(`[DB] 未找到ID为 ${id} 的记录`);
 				return false;
 			}
 
 			data.splice(index, 1);
 			return this.saveAll(collection, data);
 		} catch (error) {
-			console.error(`[DB] 删除记录 ${ id } 失败:`, error);
+			console.error(`[DB] 删除记录 ${id} 失败:`, error);
 			return false;
 		}
 	}
@@ -287,7 +287,7 @@ class Database {
 			wx.removeStorageSync(key);
 			return true;
 		} catch (error) {
-			console.error(`[DB] 清空集合 ${ collection } 失败:`, error);
+			console.error(`[DB] 清空集合 ${collection} 失败:`, error);
 			return false;
 		}
 	}
@@ -307,6 +307,77 @@ class Database {
 	 */
 	exists<T extends BaseRecord>(collection: string, condition: QueryCondition<T>): boolean {
 		return this.findOne<T>(collection, condition) !== null;
+	}
+
+	/**
+	 * 获取指定日期的咨询单记录
+	 */
+	getConsultationsByDate<T extends BaseRecord>(date: string): T[] {
+		const allData = this.getAll<T>(Collections.CONSULTATION);
+		return allData.filter((record: any) => record.createdAt && record.createdAt.startsWith(date));
+	}
+
+	/**
+	 * 获取所有咨询单记录（按日期分组）
+	 */
+	getAllConsultations<T extends BaseRecord>(): Record<string, T[]> {
+		const allRecords = this.getAll<T>(Collections.CONSULTATION);
+		const grouped: Record<string, T[]> = {};
+
+		allRecords.forEach((record: any) => {
+			if (!record.createdAt) return;
+			const date = record.createdAt.substring(0, 10);
+			if (!grouped[date]) {
+				grouped[date] = [];
+			}
+			grouped[date].push(record);
+		});
+
+		return grouped;
+	}
+
+	/**
+	 * 获取指定顾客的所有咨询单记录
+	 */
+	getConsultationsByCustomer<T extends BaseRecord>(phone: string): T[] {
+		const allRecords = this.getAll<T>(Collections.CONSULTATION);
+		return allRecords.filter((record: any) => record.phone === phone);
+	}
+
+	/**
+	 * 获取指定技师的所有咨询单记录
+	 */
+	getConsultationsByTechnician<T extends BaseRecord>(technician: string): T[] {
+		const allRecords = this.getAll<T>(Collections.CONSULTATION);
+		return allRecords.filter((record: any) => record.technician === technician);
+	}
+
+	/**
+	 * 获取指定日期的咨询单记录（异步接口，兼容云数据库）
+	 */
+	async getConsultationsByDateAsync<T extends BaseRecord>(date: string): Promise<T[]> {
+		return Promise.resolve(this.getConsultationsByDate<T>(date));
+	}
+
+	/**
+	 * 获取所有咨询单记录（按日期分组）（异步接口，兼容云数据库）
+	 */
+	async getAllConsultationsAsync<T extends BaseRecord>(): Promise<Record<string, T[]>> {
+		return Promise.resolve(this.getAllConsultations<T>());
+	}
+
+	/**
+	 * 获取指定顾客的所有咨询单记录（异步接口，兼容云数据库）
+	 */
+	async getConsultationsByCustomerAsync<T extends BaseRecord>(phone: string): Promise<T[]> {
+		return Promise.resolve(this.getConsultationsByCustomer<T>(phone));
+	}
+
+	/**
+	 * 获取指定技师的所有咨询单记录（异步接口，兼容云数据库）
+	 */
+	async getConsultationsByTechnicianAsync<T extends BaseRecord>(technician: string): Promise<T[]> {
+		return Promise.resolve(this.getConsultationsByTechnician<T>(technician));
 	}
 }
 
@@ -328,6 +399,7 @@ export const Collections = {
 	PROJECTS: 'projects',     // 项目
 	ROOMS: 'rooms',         // 房间
 	ESSENTIAL_OILS: 'essential_oils', // 精油
+	CONSULTATION: 'consultation_records', // 咨询单
 } as const;
 
 export type CollectionName = typeof Collections[keyof typeof Collections];

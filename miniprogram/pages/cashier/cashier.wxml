@@ -66,9 +66,9 @@
         </view>
       </view>
     </view>
-    <!-- 员工轮排 -->
+    <!-- 员工轮牌 -->
     <view class="section">
-      <view class="section-title">今日轮排</view>
+      <view class="section-title">今日轮牌</view>
       <view class="rotation-list" wx:if="{{rotationList.length > 0}}">
         <view class="rotation-item" wx:for="{{rotationList}}" wx:key="id">
           <view class="rank-num">{{index + 1}}</view>
