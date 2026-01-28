@@ -104,7 +104,7 @@
         <view
           class="staff-info"
           bindtap="onEditStaff"
-          data-id="{{item.id}}"
+          data-id="{{item._id}}"
         >
           <text class="staff-name">{{item.name}}</text>
           <text class="staff-status {{item.status}}">{{item.status === 'active' ? '正常' : '禁用'}}</text>
@@ -113,14 +113,14 @@
           <view
             class="action-btn toggle-btn"
             bindtap="onToggleStatus"
-            data-id="{{item.id}}"
+            data-id="{{item._id}}"
           >
             <text>{{item.status === 'active' ? '禁用' : '启用'}}</text>
           </view>
           <view
             class="action-btn delete-btn"
             bindtap="onDeleteStaff"
-            data-id="{{item.id}}"
+            data-id="{{item._id}}"
           >
             <text>删除</text>
           </view>
@@ -133,6 +133,15 @@
     </view>
   </view>
 </scroll-view>
+
+<!-- Loading 遮罩 -->
+<view class="loading-mask" wx:if="{{loading}}">
+  <view class="loading-content">
+    <view class="loading-spinner"></view>
+    <view class="loading-text">加载中...</view>
+  </view>
+</view>
+
 <!-- 添加/编辑弹窗 -->
 <view
   class="modal-mask"
@@ -177,4 +186,3 @@
     <view class="modal-btn confirm-btn" bindtap="onConfirmModal">确定</view>
   </view>
 </view>
-<!-- TODO: 追加“项目管理”模块，对可选项目进行增删改查和排序，项目信息有名称、时长（min）、状态（启用/禁用）。在所有选择项目的地方替换成动态加载 -->

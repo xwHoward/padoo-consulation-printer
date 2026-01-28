@@ -3,6 +3,7 @@ import {Collections} from '../../utils/db';
 
 Component({
 	data: {
+		loading: false,
 		activeTab: 'projects',
 		projects: [] as Project[],
 		rooms: [] as Room[],
@@ -32,21 +33,23 @@ Component({
 
 		async loadData() {
 			try {
+				this.setData({loading: true});
 				const database = this.getDb();
 				const tab = this.data.activeTab;
 
 				if (tab === 'projects') {
 					const projects = await database.getAll<Project>(Collections.PROJECTS);
-					this.setData({projects});
+					this.setData({projects, loading: false});
 				} else if (tab === 'rooms') {
 					const rooms = await database.getAll<Room>(Collections.ROOMS);
-					this.setData({rooms});
+					this.setData({rooms, loading: false});
 				} else if (tab === 'oils') {
 					const oils = await database.getAll<EssentialOil>(Collections.ESSENTIAL_OILS);
-					this.setData({essentialOils: oils});
+					this.setData({essentialOils: oils, loading: false});
 				}
 			} catch (error) {
 				console.error('加载数据失败:', error);
+				this.setData({loading: false});
 				wx.showToast({
 					title: '加载失败',
 					icon: 'none'
@@ -124,8 +127,8 @@ Component({
 			this.setData({'formData.status': e.detail.value as ItemStatus});
 		},
 
-		onIsEssentialOilOnlyChange(e: any) {
-			this.setData({'formData.isEssentialOilOnly': e.detail.checked});
+		onIsEssentialOilOnlyChange() {
+			this.setData({'formData.isEssentialOilOnly': !this.data.formData.isEssentialOilOnly});
 		},
 
 		async handleSave() {
@@ -142,9 +145,9 @@ Component({
 					wx.showToast({title: '功效不能为空', icon: 'none'});
 					return;
 				}
-
+				this.setData({loading: true});
 				if (activeTab === 'projects') {
-					const projectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt'> = {
+					const projectData: Update<Project> = {
 						name: formData.name,
 						duration: formData.duration,
 						price: formData.price,
@@ -153,41 +156,41 @@ Component({
 					};
 
 					if (editingItem) {
-						await database.updateById<Project>(Collections.PROJECTS, editingItem.id, projectData);
+						await database.updateById<Project>(Collections.PROJECTS, editingItem._id, projectData);
 						wx.showToast({title: '更新成功', icon: 'success'});
 					} else {
 						await database.insert<Project>(Collections.PROJECTS, projectData);
 						wx.showToast({title: '添加成功', icon: 'success'});
 					}
 				} else if (activeTab === 'rooms') {
-					const roomData: Omit<Room, 'id' | 'createdAt' | 'updatedAt'> = {
+					const roomData: Update<Room> = {
 						name: formData.name,
 						status: formData.status
 					};
 
 					if (editingItem) {
-						await database.updateById<Room>(Collections.ROOMS, editingItem.id, roomData);
+						await database.updateById<Room>(Collections.ROOMS, editingItem._id, roomData);
 						wx.showToast({title: '更新成功', icon: 'success'});
 					} else {
 						await database.insert<Room>(Collections.ROOMS, roomData);
 						wx.showToast({title: '添加成功', icon: 'success'});
 					}
 				} else if (activeTab === 'oils') {
-					const oilData: Omit<EssentialOil, 'id' | 'createdAt' | 'updatedAt'> = {
+					const oilData: Update<EssentialOil> = {
 						name: formData.name,
 						effect: formData.effect,
 						status: formData.status
 					};
 
 					if (editingItem) {
-						await database.updateById<EssentialOil>(Collections.ESSENTIAL_OILS, editingItem.id, oilData);
+						await database.updateById<EssentialOil>(Collections.ESSENTIAL_OILS, editingItem._id, oilData);
 						wx.showToast({title: '更新成功', icon: 'success'});
 					} else {
 						await database.insert<EssentialOil>(Collections.ESSENTIAL_OILS, oilData);
 						wx.showToast({title: '添加成功', icon: 'success'});
 					}
 				}
-
+				this.setData({loading: false});
 				this.closeModal();
 				await this.loadData();
 			} catch (error) {
@@ -203,13 +206,13 @@ Component({
 			let collectionName = '';
 
 			if (activeTab === 'projects' && this.data.projects[index]) {
-				id = this.data.projects[index].id;
+				id = this.data.projects[index]._id;
 				collectionName = Collections.PROJECTS;
 			} else if (activeTab === 'rooms' && this.data.rooms[index]) {
-				id = this.data.rooms[index].id;
+				id = this.data.rooms[index]._id;
 				collectionName = Collections.ROOMS;
 			} else if (activeTab === 'oils' && this.data.essentialOils[index]) {
-				id = this.data.essentialOils[index].id;
+				id = this.data.essentialOils[index]._id;
 				collectionName = Collections.ESSENTIAL_OILS;
 			}
 
@@ -222,6 +225,7 @@ Component({
 				confirmColor: '#ff0000',
 				success: async (res) => {
 					if (res.confirm) {
+						this.setData({loading: true});
 						try {
 							const database = this.getDb();
 							await database.deleteById(collectionName, id);
@@ -231,6 +235,7 @@ Component({
 							console.error('删除失败:', error);
 							wx.showToast({title: '删除失败', icon: 'none'});
 						}
+						this.setData({loading: false});
 					}
 				}
 			});
@@ -242,25 +247,25 @@ Component({
 
 			try {
 				const database = this.getDb();
-
+				this.setData({loading: true});
 				if (activeTab === 'projects' && this.data.projects[index]) {
 					const item = this.data.projects[index];
 					const newStatus = item.status === 'normal' ? 'disabled' : 'normal';
-					await database.updateById<Project>(Collections.PROJECTS, item.id, {status: newStatus});
+					await database.updateById<Project>(Collections.PROJECTS, item._id, {status: newStatus});
 					this.setData({[`projects[${index}].status`]: newStatus});
 				} else if (activeTab === 'rooms' && this.data.rooms[index]) {
 					const item = this.data.rooms[index];
 					const newStatus = item.status === 'normal' ? 'disabled' : 'normal';
-					await database.updateById<Room>(Collections.ROOMS, item.id, {status: newStatus});
+					await database.updateById<Room>(Collections.ROOMS, item._id, {status: newStatus});
 					this.setData({[`rooms[${index}].status`]: newStatus});
 				} else if (activeTab === 'oils' && this.data.essentialOils[index]) {
 					const item = this.data.essentialOils[index];
 					const newStatus = item.status === 'normal' ? 'disabled' : 'normal';
-					await database.updateById<EssentialOil>(Collections.ESSENTIAL_OILS, item.id, {status: newStatus});
+					await database.updateById<EssentialOil>(Collections.ESSENTIAL_OILS, item._id, {status: newStatus});
 					this.setData({[`essentialOils[${index}].status`]: newStatus});
 				}
+				this.setData({loading: false});
 			} catch (error) {
-				console.error('更新状态失败:', error);
 				wx.showToast({title: '更新失败', icon: 'none'});
 			}
 		},

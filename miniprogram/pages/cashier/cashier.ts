@@ -1,8 +1,8 @@
 // cashier.ts
-import {db, Collections} from '../../utils/db';
-import {cloudDb as cloudDbService} from '../../utils/cloud-db';
-import {AppConfig} from '../../config';
-import {parseProjectDuration, formatDate, getMinutesDiff, isTimeOverlapping, formatDuration} from '../../utils/util';
+import { db, Collections } from '../../utils/db';
+import { cloudDb as cloudDbService } from '../../utils/cloud-db';
+import { AppConfig } from '../../config/index';
+import { parseProjectDuration, formatDate, getMinutesDiff, isTimeOverlapping, formatDuration } from '../../utils/util';
 
 interface RotationItem {
 	id: string;
@@ -38,7 +38,7 @@ interface ReserveForm {
 	project: string;
 	phone: string;
 	// 支持多位技师
-	selectedTechnicians: Array<{id: string; name: string;}>;
+	selectedTechnicians: Array<{ id: string; name: string; }>;
 	startTime: string;
 	// 编辑时用
 	id?: string;
@@ -57,7 +57,7 @@ interface StaffAvailability {
 Component({
 	data: {
 		selectedDate: '',
-		rooms: [] as any[],
+		rooms: [] as Room[],
 		rotationList: [] as RotationItem[],
 		staffTimeline: [] as StaffTimeline[],
 		timeLabels: ['12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'],
@@ -66,7 +66,7 @@ Component({
 		showCurrentTimeLine: false,
 		// 预约弹窗相关
 		showReserveModal: false,
-		projects: [] as any[],
+		projects: [] as Project[],
 		staffNames: [] as string[],
 		activeStaffList: [] as StaffInfo[],
 		staffAvailability: [] as StaffAvailability[],
@@ -77,7 +77,7 @@ Component({
 			gender: 'male' as 'male' | 'female',
 			project: '',
 			phone: '',
-			selectedTechnicians: [] as Array<{id: string; name: string;}>,
+			selectedTechnicians: [] as Array<{ id: string; name: string; }>,
 			startTime: '',
 			// 兼容编辑模式
 			technicianId: '',
@@ -88,22 +88,22 @@ Component({
 		settlementRecordId: '',
 		settlementCouponCode: '',
 		paymentMethods: [
-			{key: 'meituan', label: '美团', selected: false, amount: ''},
-			{key: 'dianping', label: '大众点评', selected: false, amount: ''},
-			{key: 'douyin', label: '抖音', selected: false, amount: ''},
-			{key: 'wechat', label: '微信', selected: false, amount: ''},
-			{key: 'alipay', label: '支付宝', selected: false, amount: ''},
-			{key: 'cash', label: '现金', selected: false, amount: ''},
-			{key: 'gaode', label: '高德', selected: false, amount: ''},
-			{key: 'free', label: '免单', selected: false, amount: ''},
-			{key: 'membership', label: '划卡', selected: false, amount: ''},
+			{ key: 'meituan', label: '美团', selected: false, amount: '' },
+			{ key: 'dianping', label: '大众点评', selected: false, amount: '' },
+			{ key: 'douyin', label: '抖音', selected: false, amount: '' },
+			{ key: 'wechat', label: '微信', selected: false, amount: '' },
+			{ key: 'alipay', label: '支付宝', selected: false, amount: '' },
+			{ key: 'cash', label: '现金', selected: false, amount: '' },
+			{ key: 'gaode', label: '高德', selected: false, amount: '' },
+			{ key: 'free', label: '免单', selected: false, amount: '' },
+			{ key: 'membership', label: '划卡', selected: false, amount: '' },
 		]
 	},
 
 	lifetimes: {
 		attached() {
 			const today = formatDate(new Date());
-			this.setData({selectedDate: today});
+			this.setData({ selectedDate: today });
 			this.loadProjects();
 			this.loadData();
 		}
@@ -120,27 +120,19 @@ Component({
 			return AppConfig.useCloudDatabase ? cloudDbService : db;
 		},
 
-		loadProjects() {
+		async loadProjects() {
 			try {
 				const app = getApp<IAppOption>();
-				let allProjects = [];
-
-				if (AppConfig.useCloudDatabase && app.getProjects) {
-					allProjects = app.getProjects();
-				} else {
-					const {PROJECTS} = require('../../utils/constants');
-					allProjects = PROJECTS;
-				}
-
-				this.setData({projects: allProjects});
+				const allProjects = await app.getProjects();
+				this.setData({ projects: allProjects });
 			} catch (error) {
 				console.error('加载项目失败:', error);
-				this.setData({projects: []});
+				this.setData({ projects: [] });
 			}
 		},
 
 		async onDateChange(e: any) {
-			this.setData({selectedDate: e.detail.value});
+			this.setData({ selectedDate: e.detail.value });
 			await this.loadData();
 		},
 
@@ -150,28 +142,20 @@ Component({
 				const database = this.getDb();
 				const app = getApp<IAppOption>();
 				const today = this.data.selectedDate || formatDate(new Date());
-
-				let allRooms = [];
-				if (AppConfig.useCloudDatabase && app.getRooms) {
-					allRooms = app.getRooms();
-				} else {
-					const {ROOMS} = require('../../utils/constants');
-					allRooms = ROOMS;
-				}
-
-				const filteredRooms = allRooms.filter((r: AppRoom) => r.status === 'normal');
+				const allRooms = await app.getRooms();
+				const filteredRooms = allRooms.filter((r: Room) => r.status === 'normal');
 
 				// 1. 获取房间状态
-				const history = (wx.getStorageSync('consultationHistory') as any) || {};
+				const history = (wx.getStorageSync('consultationHistory')) || {};
 				const todayRecords = (history[today] || []) as ConsultationRecord[];
 				const activeRecords = todayRecords.filter(r => !r.isVoided);
 
 				// 获取预约记录
 				let reservations: ReservationRecord[];
 				if (AppConfig.useCloudDatabase) {
-					reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, {date: today});
+					reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, { date: today });
 				} else {
-					reservations = await  database.find<ReservationRecord>(Collections.RESERVATIONS, {date: today});
+					reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, { date: today });
 				}
 
 				// 获取当前时间
@@ -182,18 +166,18 @@ Component({
 				if (isToday) {
 					const hours = now.getHours();
 					const minutes = now.getMinutes();
-					currentTime = `${ String(hours).padStart(2, '0') }:${ String(minutes).padStart(2, '0') }`;
+					currentTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 				}
 
-				const rooms = filteredRooms.map((room: AppRoom) => {
+				const rooms = filteredRooms.map((room) => {
 					let occupiedRecords = activeRecords
-							.filter(r => r.room === room.name)
-							.map(r => ({
-								customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
-								technician: r.technician || '',
-								startTime: r.startTime,
-								endTime: r.endTime || ''
-							}));
+						.filter(r => r.room === room.name)
+						.map(r => ({
+							customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
+							technician: r.technician || '',
+							startTime: r.startTime,
+							endTime: r.endTime || ''
+						}));
 
 					// 只显示当前时间正在占用的记录（对于今天）
 					if (isToday && currentTime) {
@@ -208,115 +192,115 @@ Component({
 					const isOccupied = occupiedRecords.length > 0;
 
 					return {
-						name: room.name,
+						...room,
 						isOccupied,
 						occupiedRecords
 					};
 				});
 
-			// 2. 获取员工轮排与排钟表数据
-			let allSchedules: ScheduleRecord[];
-			let activeStaff: StaffInfo[];
+				// 2. 获取员工轮排与排钟表数据
+				let allSchedules: ScheduleRecord[];
+				let activeStaff: StaffInfo[];
 
-			if (AppConfig.useCloudDatabase) {
-				allSchedules = await database.getAll<ScheduleRecord>(Collections.SCHEDULE);
-				const allStaff = await database.getAll<StaffInfo>(Collections.STAFF);
-				activeStaff = allStaff.filter(s => s.status === 'active');
-			} else {
-				allSchedules = await database.getAll<ScheduleRecord>(Collections.SCHEDULE);
-				activeStaff = (await database.getAll<StaffInfo>(Collections.STAFF)).filter(s => s.status === 'active');
-			}
+				if (AppConfig.useCloudDatabase) {
+					allSchedules = await database.getAll<ScheduleRecord>(Collections.SCHEDULE);
+					const allStaff = await database.getAll<StaffInfo>(Collections.STAFF);
+					activeStaff = allStaff.filter(s => s.status === 'active');
+				} else {
+					allSchedules = await database.getAll<ScheduleRecord>(Collections.SCHEDULE);
+					activeStaff = (await database.getAll<StaffInfo>(Collections.STAFF)).filter(s => s.status === 'active');
+				}
 
-			const savedRotation = wx.getStorageSync(`rotation_${ today }`) as string[];
+				const savedRotation = wx.getStorageSync(`rotation_${today}`) as string[];
 
-			this.setData({
-				activeStaffList: activeStaff,
-				staffNames: activeStaff.map(s => s.name)
-			});
+				this.setData({
+					activeStaffList: activeStaff,
+					staffNames: activeStaff.map(s => s.name)
+				});
 
-			// 转换排钟数据
-			const staffTimeline: StaffTimeline[] = [];
+				// 转换排钟数据
+				const staffTimeline: StaffTimeline[] = [];
 
-			let rotationList: RotationItem[] = activeStaff.map(staff => {
-				const schedule = allSchedules.find(s => s.date === today && s.staffId === staff.id);
-				const shift = schedule ? schedule.shift : 'evening';
+				let rotationList: RotationItem[] = activeStaff.map(staff => {
+					const schedule = allSchedules.find(s => s.date === today && s.staffId === staff.id);
+					const shift = schedule ? schedule.shift : 'evening';
 
-				// 过滤出上钟员工
-				if (shift === 'morning' || shift === 'evening') {
-					// 处理排钟表数据 (合并实际报钟和预约)
-					const staffRecords = activeRecords.filter(r => r.technician === staff.name);
-					const staffReservations = reservations.filter(r => r.technicianName === staff.name || r.technicianId === staff.id);
+					// 过滤出上钟员工
+					if (shift === 'morning' || shift === 'evening') {
+						// 处理排钟表数据 (合并实际报钟和预约)
+						const staffRecords = activeRecords.filter(r => r.technician === staff.name);
+						const staffReservations = reservations.filter(r => r.technicianName === staff.name || r.technicianId === staff.id);
 
-					// 合并并处理块
-					const blocks: TimelineBlock[] = [
-						...staffRecords.map(r => ({...r, isReservation: false})),
-						...staffReservations.map(r => ({
-							id: r.id,
-							surname: r.customerName,
-							gender: r.gender,
-							project: r.project,
-							room: '预约',
-							startTime: r.startTime,
-							endTime: r.endTime,
-							isReservation: true
-						}))
-					].map(r => {
-						const [startH, startM] = r.startTime.split(':').map(Number);
-						const [endH, endM] = r.endTime.split(':').map(Number);
+						// 合并并处理块
+						const blocks: TimelineBlock[] = [
+							...staffRecords.map(r => ({ ...r, isReservation: false })),
+							...staffReservations.map(r => ({
+								id: r.id,
+								surname: r.customerName,
+								gender: r.gender,
+								project: r.project,
+								room: '预约',
+								startTime: r.startTime,
+								endTime: r.endTime,
+								isReservation: true
+							}))
+						].map(r => {
+							const [startH, startM] = r.startTime.split(':').map(Number);
+							const [endH, endM] = r.endTime.split(':').map(Number);
 
-						const startMinutes = (startH - 12) * 60 + startM;
-						const duration = (endH - startH) * 60 + (endM - startM);
+							const startMinutes = (startH - 12) * 60 + startM;
+							const duration = (endH - startH) * 60 + (endM - startM);
 
-						return {
-							id: r.id,
-							customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
-							startTime: r.startTime,
-							endTime: r.endTime,
-							project: r.project,
-							room: r.room,
-							left: (startMinutes / 660 * 100) + '%',
-							width: (duration / 660 * 100) + '%',
-							isReservation: (r as any).isReservation
-						};
-					});
+							return {
+								id: r.id,
+								customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
+								startTime: r.startTime,
+								endTime: r.endTime,
+								project: r.project,
+								room: r.room,
+								left: (startMinutes / 660 * 100) + '%',
+								width: (duration / 660 * 100) + '%',
+								isReservation: (r as any).isReservation
+							};
+						});
 
-					staffTimeline.push({
+						staffTimeline.push({
+							id: staff.id,
+							name: staff.name,
+							shift: shift as ShiftType,
+							blocks
+						});
+					}
+
+					// 计算可约时段
+					const availableSlots = this.calculateAvailableSlots(staff.name, activeRecords, reservations, today);
+
+					return {
 						id: staff.id,
 						name: staff.name,
 						shift: shift as ShiftType,
-						blocks
-					});
+						shiftLabel: shift === 'morning' ? '早班' : '晚班',
+						availableSlots
+					};
+				}).filter(item => item.shift === 'morning' || item.shift === 'evening');
+
+				// 按保存的顺序排序
+				if (savedRotation && savedRotation.length > 0) {
+					const sortFn = (a: any, b: any) => {
+						const idxA = savedRotation.indexOf(a.id);
+						const idxB = savedRotation.indexOf(b.id);
+						if (idxA === -1) return 1;
+						if (idxB === -1) return -1;
+						return idxA - idxB;
+					};
+					rotationList.sort(sortFn);
+					staffTimeline.sort(sortFn);
 				}
 
-				// 计算可约时段
-				const availableSlots = this.calculateAvailableSlots(staff.name, activeRecords, reservations, today);
+				this.setData({ rooms, rotationList, staffTimeline });
 
-				return {
-					id: staff.id,
-					name: staff.name,
-					shift: shift as ShiftType,
-					shiftLabel: shift === 'morning' ? '早班' : '晚班',
-					availableSlots
-				};
-			}).filter(item => item.shift === 'morning' || item.shift === 'evening');
-
-			// 按保存的顺序排序
-			if (savedRotation && savedRotation.length > 0) {
-				const sortFn = (a: any, b: any) => {
-					const idxA = savedRotation.indexOf(a.id);
-					const idxB = savedRotation.indexOf(b.id);
-					if (idxA === -1) return 1;
-					if (idxB === -1) return -1;
-					return idxA - idxB;
-				};
-				rotationList.sort(sortFn);
-				staffTimeline.sort(sortFn);
-			}
-
-			this.setData({rooms, rotationList, staffTimeline});
-
-			// 计算当前时间线位置
-			this.updateCurrentTimeLine();
+				// 计算当前时间线位置
+				this.updateCurrentTimeLine();
 			} catch (error) {
 				console.error('加载数据失败:', error);
 				wx.showToast({
@@ -359,17 +343,17 @@ Component({
 					}
 					if (currentHour < 12) {
 						const duration = getMinutesDiff('12:00', '23:00');
-						return `12:00-23:00(${ formatDuration(duration) })`;
+						return `12:00-23:00(${formatDuration(duration)})`;
 					}
 					// 从下一个半点或整点开始
 					const nextMinute = currentMinute < 30 ? 30 : 0;
 					const nextHour = nextMinute === 0 ? currentHour + 1 : currentHour;
-					const startTimeStr = `${ String(nextHour).padStart(2, '0') }:${ String(nextMinute).padStart(2, '0') }`;
+					const startTimeStr = `${String(nextHour).padStart(2, '0')}:${String(nextMinute).padStart(2, '0')}`;
 					const duration = getMinutesDiff(startTimeStr, '23:00');
-					return `${ startTimeStr }-23:00(${ formatDuration(duration) })`;
+					return `${startTimeStr}-23:00(${formatDuration(duration)})`;
 				}
 				const duration = getMinutesDiff('12:00', '23:00');
-				return `12:00-23:00(${ formatDuration(duration) })`;
+				return `12:00-23:00(${formatDuration(duration)})`;
 			}
 
 			// 查找空闲时段（至少60分钟以上）
@@ -388,14 +372,14 @@ Component({
 				if (currentHour >= 12) {
 					const nextMinute = currentMinute < 30 ? 30 : 0;
 					const nextHour = nextMinute === 0 ? currentHour + 1 : currentHour;
-					firstAvailableTime = `${ String(nextHour).padStart(2, '0') }:${ String(nextMinute).padStart(2, '0') }`;
+					firstAvailableTime = `${String(nextHour).padStart(2, '0')}:${String(nextMinute).padStart(2, '0')}`;
 				}
 			}
 
 			// 计算第一个空闲时段
 			const gapMinutes = getMinutesDiff(firstAvailableTime, firstOccupied.startTime);
 			if (gapMinutes >= 60) {
-				availableSlots.push(`${ firstAvailableTime }-${ firstOccupied.startTime }(${ formatDuration(gapMinutes) })`);
+				availableSlots.push(`${firstAvailableTime}-${firstOccupied.startTime}(${formatDuration(gapMinutes)})`);
 			}
 
 			// 检查占用时段之间的空闲时间
@@ -404,7 +388,7 @@ Component({
 				const next = occupiedSlots[i + 1];
 				const gap = getMinutesDiff(current.endTime, next.startTime);
 				if (gap >= 60) {
-					availableSlots.push(`${ current.endTime }-${ next.startTime }(${ formatDuration(gap) })`);
+					availableSlots.push(`${current.endTime}-${next.startTime}(${formatDuration(gap)})`);
 				}
 			}
 
@@ -412,7 +396,7 @@ Component({
 			const lastOccupied = occupiedSlots[occupiedSlots.length - 1];
 			const lastGap = getMinutesDiff(lastOccupied.endTime, '23:00');
 			if (lastGap >= 60) {
-				availableSlots.push(`${ lastOccupied.endTime }-23:00(${ formatDuration(lastGap) })`);
+				availableSlots.push(`${lastOccupied.endTime}-23:00(${formatDuration(lastGap)})`);
 			}
 
 			if (availableSlots.length === 0) {
@@ -430,7 +414,7 @@ Component({
 
 			// 只有当选中的是今天时才显示当前时间线
 			if (selectedDate !== todayStr) {
-				this.setData({showCurrentTimeLine: false});
+				this.setData({ showCurrentTimeLine: false });
 				return;
 			}
 
@@ -439,7 +423,7 @@ Component({
 
 			// 只在12:00-23:00之间显示时间线
 			if (hours < 12 || hours >= 23) {
-				this.setData({showCurrentTimeLine: false});
+				this.setData({ showCurrentTimeLine: false });
 				return;
 			}
 
@@ -457,7 +441,7 @@ Component({
 
 		// 调整轮排顺序
 		moveRotation(e: WechatMiniprogram.TouchEvent) {
-			const {index, direction} = e.currentTarget.dataset;
+			const { index, direction } = e.currentTarget.dataset;
 			const list = [...this.data.rotationList];
 
 			if (direction === 'up' && index > 0) {
@@ -468,11 +452,11 @@ Component({
 				return;
 			}
 
-			this.setData({rotationList: list});
+			this.setData({ rotationList: list });
 
 			// 持久化顺序
 			const today = this.data.selectedDate || formatDate(new Date());
-			wx.setStorageSync(`rotation_${ today }`, list.map(item => item.id));
+			wx.setStorageSync(`rotation_${today}`, list.map(item => item.id));
 		},
 
 		// 预约相关
@@ -489,7 +473,7 @@ Component({
 				startTime.setMinutes(30);
 			}
 
-			const startTimeStr = `${ String(startTime.getHours()).padStart(2, '0') }:${ String(startTime.getMinutes()).padStart(2, '0') }`;
+			const startTimeStr = `${String(startTime.getHours()).padStart(2, '0')}:${String(startTime.getMinutes()).padStart(2, '0')}`;
 
 			this.setData({
 				showReserveModal: true,
@@ -511,7 +495,7 @@ Component({
 
 		// 点击排钟项目操作
 		onBlockClick(e: any) {
-			const {id, reservation} = e.currentTarget.dataset;
+			const { id, reservation } = e.currentTarget.dataset;
 			const itemList = reservation ? ['编辑', '到店', '取消预约'] : ['编辑', '结算'];
 
 			wx.showActionSheet({
@@ -522,10 +506,10 @@ Component({
 						if (reservation) {
 							this.editReservation(id);
 						} else {
-							wx.navigateTo({url: `/pages/index/index?editId=${ id }`});
+							wx.navigateTo({ url: `/pages/index/index?editId=${id}` });
 						}
 					} else if (action === '到店') {
-						wx.navigateTo({url: `/pages/index/index?reserveId=${ id }`});
+						wx.navigateTo({ url: `/pages/index/index?reserveId=${id}` });
 					} else if (action === '取消预约') {
 						this.cancelReservation(id);
 					} else if (action === '结算') {
@@ -542,9 +526,9 @@ Component({
 				const record = await database.findById<ReservationRecord>(Collections.RESERVATIONS, id);
 				if (record) {
 					// 编辑时将单个技师放入数组
-					const selectedTechnicians: Array<{id: string; name: string;}> = [];
+					const selectedTechnicians: Array<{ id: string; name: string; }> = [];
 					if (record.technicianId && record.technicianName) {
-						selectedTechnicians.push({id: record.technicianId, name: record.technicianName});
+						selectedTechnicians.push({ id: record.technicianId, name: record.technicianName });
 					}
 					this.setData({
 						showReserveModal: true,
@@ -575,7 +559,7 @@ Component({
 		// 检查技师在预约时段的可用性
 		async checkStaffAvailability() {
 			try {
-				const {date, startTime, project} = this.data.reserveForm;
+				const { date, startTime, project } = this.data.reserveForm;
 				if (!date || !startTime) return;
 
 				const database = this.getDb();
@@ -591,7 +575,7 @@ Component({
 				const endTotal = startTotal + duration + 10;
 				const endH = Math.floor(endTotal / 60);
 				const endM = endTotal % 60;
-				const endTimeStr = `${ String(endH).padStart(2, '0') }:${ String(endM).padStart(2, '0') }`;
+				const endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 
 				// 获取该日期的所有任务
 				const history = (wx.getStorageSync('consultationHistory') as any) || {};
@@ -599,9 +583,9 @@ Component({
 				let reservations: ReservationRecord[];
 
 				if (AppConfig.useCloudDatabase) {
-					reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, {date});
+					reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, { date });
 				} else {
-					reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, {date});
+					reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, { date });
 				}
 
 				const allTasks = [...activeRecords, ...reservations];
@@ -615,68 +599,68 @@ Component({
 				}
 
 				const staffAvailability = activeStaff.map(staff => {
-				let occupiedReason = '';
-				const conflictTask = allTasks.find(r => {
-					const rName = (r as any).technician || (r as any).technicianName;
-					if (rName !== staff.name) return false;
-					return isTimeOverlapping(startTime, endTimeStr, r.startTime, r.endTime);
+					let occupiedReason = '';
+					const conflictTask = allTasks.find(r => {
+						const rName = (r as any).technician || (r as any).technicianName;
+						if (rName !== staff.name) return false;
+						return isTimeOverlapping(startTime, endTimeStr, r.startTime, r.endTime);
+					});
+
+					if (conflictTask) {
+						const isReservation = !(conflictTask as any).technician;
+						const customerName = (conflictTask as any).surname || (conflictTask as any).customerName || '顾客';
+						const gender = conflictTask.gender === 'male' ? '先生' : '女士';
+						occupiedReason = `${conflictTask.startTime}-${conflictTask.endTime} ${customerName}${gender}${isReservation ? '(预约)' : ''}`;
+					}
+
+					// 检查是否已选中
+					const isSelected = this.data.reserveForm.selectedTechnicians.some(t => t.id === staff.id);
+
+					return {
+						id: staff.id,
+						name: staff.name,
+						isOccupied: !!conflictTask,
+						occupiedReason,
+						isSelected
+					};
 				});
 
-				if (conflictTask) {
-					const isReservation = !(conflictTask as any).technician;
-					const customerName = (conflictTask as any).surname || (conflictTask as any).customerName || '顾客';
-					const gender = conflictTask.gender === 'male' ? '先生' : '女士';
-					occupiedReason = `${ conflictTask.startTime }-${ conflictTask.endTime } ${ customerName }${ gender }${ isReservation ? '(预约)' : '' }`;
-				}
-
-				// 检查是否已选中
-				const isSelected = this.data.reserveForm.selectedTechnicians.some(t => t.id === staff.id);
-
-				return {
-					id: staff.id,
-					name: staff.name,
-					isOccupied: !!conflictTask,
-					occupiedReason,
-					isSelected
-				};
-			});
-
-			this.setData({staffAvailability});
+				this.setData({ staffAvailability });
 			} catch (error) {
 				console.error('检查技师可用性失败:', error);
 			}
 		},
 
 		closeReserveModal() {
-			this.setData({showReserveModal: false});
+			this.setData({ showReserveModal: false });
 		},
 
 		stopBubble() { },
 
 		async onReserveFieldChange(e: any) {
-			const {field} = e.currentTarget.dataset;
+			const { field } = e.currentTarget.dataset;
 			const val = e.detail.value;
-			const {reserveForm, projects} = this.data;
+			const { reserveForm, projects } = this.data;
 
 			if (field === 'project') {
 				const project = projects[val];
 				reserveForm.project = project ? project.name : '';
-				this.setData({reserveForm});
+				this.setData({ reserveForm });
 				await this.checkStaffAvailability();
 			} else if (field === 'startTime' || field === 'date') {
 				reserveForm[field as 'startTime' | 'date'] = val;
-				this.setData({reserveForm});
+				this.setData({ reserveForm });
 				await this.checkStaffAvailability();
 			} else {
 				reserveForm[field as keyof ReserveForm] = val;
-				this.setData({reserveForm});
+				this.setData({ reserveForm });
 			}
 		},
 
 		selectReserveTechnician(e: any) {
-			const {id, technician: name, occupied, reason} = e.detail;
+			const { id, technician: name, occupied, reason } = e.detail;
 			if (occupied) {
-				wx.showToast({title: reason || '该技师在此时段已有安排', icon: 'none', duration: 2500});
+				wx.showToast({ title: reason || '该技师在此时段已有安排', icon: 'none', duration: 2500 });
 				return;
 			}
 
@@ -689,7 +673,7 @@ Component({
 				selectedTechnicians.splice(existingIndex, 1);
 			} else {
 				// 未选中，添加
-				selectedTechnicians.push({id, name});
+				selectedTechnicians.push({ id, name });
 			}
 
 			// 更新 staffAvailability 的 isSelected 状态
@@ -706,7 +690,7 @@ Component({
 
 		// 选择项目（平铺版）
 		async selectReserveProject(e: any) {
-			const {project} = e.detail;
+			const { project } = e.detail;
 			const currentProject = this.data.reserveForm.project;
 			// 切换选中状态
 			this.setData({
@@ -716,16 +700,16 @@ Component({
 		},
 
 		onReserveGenderChange(e: any) {
-			this.setData({'reserveForm.gender': e.detail.value});
+			this.setData({ 'reserveForm.gender': e.detail.value });
 		},
 
 		async confirmReserve() {
 			try {
-				const {reserveForm} = this.data;
+				const { reserveForm } = this.data;
 				const database = this.getDb();
 
 				if (!reserveForm.startTime) {
-					wx.showToast({title: '开始时间必填', icon: 'none'});
+					wx.showToast({ title: '开始时间必填', icon: 'none' });
 					return;
 				}
 
@@ -741,12 +725,12 @@ Component({
 				const endTotal = startTotal + duration;
 				const endH = Math.floor(endTotal / 60);
 				const endM = endTotal % 60;
-				const endTime = `${ String(endH).padStart(2, '0') }:${ String(endM).padStart(2, '0') }`;
+				const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 
 				// 如果是编辑模式，只更新第一个技师
 				if (reserveForm.id) {
 					const firstTech = reserveForm.selectedTechnicians[0];
-					const record: Omit<ReservationRecord, 'id' | 'createdAt' | 'updatedAt'> = {
+					const record: Omit<ReservationRecord, 'id' | 'createdAt' | 'updatedAt' | '_id'> = {
 						date: reserveForm.date,
 						customerName: reserveForm.customerName || '',
 						gender: reserveForm.gender,
@@ -759,11 +743,11 @@ Component({
 					};
 					const success = await database.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm.id, record);
 					if (success) {
-						wx.showToast({title: '更新成功', icon: 'success'});
+						wx.showToast({ title: '更新成功', icon: 'success' });
 						this.closeReserveModal();
 						await this.loadData();
 					} else {
-						wx.showToast({title: '保存失败', icon: 'none'});
+						wx.showToast({ title: '保存失败', icon: 'none' });
 					}
 					return;
 				}
@@ -773,7 +757,7 @@ Component({
 
 				// 如果没有选择技师，也允许创建一条预约（技师待定）
 				if (technicians.length === 0) {
-					const record: Omit<ReservationRecord, 'id' | 'createdAt' | 'updatedAt'> = {
+					const record: Omit<ReservationRecord, 'id' | 'createdAt' | 'updatedAt' | '_id'> = {
 						date: reserveForm.date,
 						customerName: reserveForm.customerName || '',
 						gender: reserveForm.gender,
@@ -786,11 +770,11 @@ Component({
 					};
 					const success = await database.insert<ReservationRecord>(Collections.RESERVATIONS, record);
 					if (success) {
-						wx.showToast({title: '预约成功', icon: 'success'});
+						wx.showToast({ title: '预约成功', icon: 'success' });
 						this.closeReserveModal();
 						await this.loadData();
 					} else {
-						wx.showToast({title: '保存失败', icon: 'none'});
+						wx.showToast({ title: '保存失败', icon: 'none' });
 					}
 					return;
 				}
@@ -798,7 +782,7 @@ Component({
 				// 为每位技师创建预约
 				let successCount = 0;
 				for (const tech of technicians) {
-					const record: Omit<ReservationRecord, 'id' | 'createdAt' | 'updatedAt'> = {
+					const record: Omit<ReservationRecord, 'id' | 'createdAt' | 'updatedAt' | '_id'> = {
 						date: reserveForm.date,
 						customerName: reserveForm.customerName || '',
 						gender: reserveForm.gender,
@@ -815,16 +799,16 @@ Component({
 				}
 
 				if (successCount === technicians.length) {
-					const msg = technicians.length > 1 ? `已创建${ technicians.length }条预约` : '预约成功';
-					wx.showToast({title: msg, icon: 'success'});
+					const msg = technicians.length > 1 ? `已创建${technicians.length}条预约` : '预约成功';
+					wx.showToast({ title: msg, icon: 'success' });
 					this.closeReserveModal();
 					await this.loadData();
 				} else {
-					wx.showToast({title: `部分保存失败(${ successCount }/${ technicians.length })`, icon: 'none'});
+					wx.showToast({ title: `部分保存失败(${successCount}/${technicians.length})`, icon: 'none' });
 				}
 			} catch (error) {
 				console.error('保存预约失败:', error);
-				wx.showToast({title: '保存失败', icon: 'none'});
+				wx.showToast({ title: '保存失败', icon: 'none' });
 			}
 		},
 
@@ -841,14 +825,14 @@ Component({
 							const database = this.getDb();
 							const success = await database.deleteById(Collections.RESERVATIONS, id);
 							if (success) {
-								wx.showToast({title: '已取消预约', icon: 'success'});
+								wx.showToast({ title: '已取消预约', icon: 'success' });
 								await this.loadData(); // 重新加载数据，释放占用
 							} else {
-								wx.showToast({title: '取消失败', icon: 'none'});
+								wx.showToast({ title: '取消失败', icon: 'none' });
 							}
 						} catch (error) {
 							console.error('取消预约失败:', error);
-							wx.showToast({title: '取消失败', icon: 'none'});
+							wx.showToast({ title: '取消失败', icon: 'none' });
 						}
 					}
 				}
@@ -863,7 +847,7 @@ Component({
 			const record = todayRecords.find(r => r.id === id);
 
 			if (!record) {
-				wx.showToast({title: '未找到该单据', icon: 'none'});
+				wx.showToast({ title: '未找到该单据', icon: 'none' });
 				return;
 			}
 
@@ -920,12 +904,12 @@ Component({
 
 		// 关闭结算弹窗
 		closeSettlementModal() {
-			this.setData({showSettlementModal: false});
+			this.setData({ showSettlementModal: false });
 		},
 
 		// 切换支付方式
 		togglePaymentMethod(e: any) {
-			const {index} = e.currentTarget.dataset;
+			const { index } = e.currentTarget.dataset;
 			const paymentMethods = this.data.paymentMethods;
 			paymentMethods[index].selected = !paymentMethods[index].selected;
 
@@ -952,34 +936,34 @@ Component({
 				paymentMethods[index].amount = '';
 			}
 
-			this.setData({paymentMethods});
+			this.setData({ paymentMethods });
 		},
 
 		// 输入支付金额
 		onPaymentAmountInput(e: any) {
-			const {index} = e.currentTarget.dataset;
-			const {value} = e.detail;
+			const { index } = e.currentTarget.dataset;
+			const { value } = e.detail;
 			const paymentMethods = this.data.paymentMethods;
 			paymentMethods[index].amount = value;
-			this.setData({paymentMethods});
+			this.setData({ paymentMethods });
 		},
 
 		// 输入券码
 		onCouponCodeInput(e: any) {
-			this.setData({settlementCouponCode: e.detail.value});
+			this.setData({ settlementCouponCode: e.detail.value });
 		},
 
 		// 确认结算
 		async confirmSettlement() {
 			try {
-				const {settlementRecordId, paymentMethods, settlementCouponCode} = this.data;
+				const { settlementRecordId, paymentMethods, settlementCouponCode } = this.data;
 				const database = this.getDb();
 
 				// 收集所有已选择的支付方式
 				const selectedPayments = paymentMethods.filter(m => m.selected);
 
 				if (selectedPayments.length === 0) {
-					wx.showToast({title: '请选择支付方式', icon: 'none'});
+					wx.showToast({ title: '请选择支付方式', icon: 'none' });
 					return;
 				}
 
@@ -990,17 +974,17 @@ Component({
 				for (const method of selectedPayments) {
 					// 免单不需要输入金额
 					if (method.key === 'free') {
-						payments.push({method: method.key as PaymentMethod, amount: 0});
+						payments.push({ method: method.key as PaymentMethod, amount: 0 });
 						continue;
 					}
 
 					const amount = parseFloat(method.amount);
 					if (!method.amount || isNaN(amount) || amount <= 0) {
-						wx.showToast({title: `请输入${ method.label }的有效${ method.key === 'membership' ? '次数' : '金额' }`, icon: 'none'});
+						wx.showToast({ title: `请输入${method.label}的有效${method.key === 'membership' ? '次数' : '金额'}`, icon: 'none' });
 						return;
 					}
 
-					payments.push({method: method.key as PaymentMethod, amount});
+					payments.push({ method: method.key as PaymentMethod, amount });
 					// 划卡不计入现金总额
 					if (method.key !== 'membership') {
 						totalAmount += amount;
@@ -1013,80 +997,80 @@ Component({
 				const todayRecords = (history[today] || []) as ConsultationRecord[];
 				const recordIndex = todayRecords.findIndex(r => r.id === settlementRecordId);
 
-			if (recordIndex === -1) {
-				wx.showToast({title: '未找到该单据', icon: 'none'});
-				return;
-			}
-
-			const now = new Date();
-			const settlement: SettlementInfo = {
-				payments,
-				totalAmount,
-				couponCode: settlementCouponCode,
-				settledAt: now.toISOString()
-			};
-
-			// 处理划卡逻辑
-			const membershipPayment = payments.find(p => p.method === 'membership');
-			if (membershipPayment) {
-				const record = todayRecords[recordIndex];
-				// 优先使用手机号匹配会员
-				let customerMembership: CustomerMembership | null = null;
-
-				if (AppConfig.useCloudDatabase) {
-					const allMemberships = await database.getAll<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP);
-					customerMembership = allMemberships.find(m => {
-						return (m.customerPhone === record.phone || m.customerName === record.surname) &&
-							m.remainingTimes > 0 && m.status === 'active';
-					}) || null;
-				} else {
-					customerMembership = (await database.findOne<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, (m) => {
-						return (m.customerPhone === record.phone || m.customerName === record.surname) &&
-							m.remainingTimes > 0 && m.status === 'active';
-					})) || null;
-				}
-
-				if (!customerMembership) {
-					wx.showToast({title: '未找到有效会员卡或余额不足', icon: 'none'});
+				if (recordIndex === -1) {
+					wx.showToast({ title: '未找到该单据', icon: 'none' });
 					return;
 				}
 
-				// 扣减次数
-				const deduction = membershipPayment.amount || 1; // 如果没填默认扣1次
-				const newRemaining = customerMembership.remainingTimes - deduction;
-				if (newRemaining < 0) {
-					wx.showToast({title: '会员卡余额不足', icon: 'none'});
-					return;
+				const now = new Date();
+				const settlement: SettlementInfo = {
+					payments,
+					totalAmount,
+					couponCode: settlementCouponCode,
+					settledAt: now.toISOString()
+				};
+
+				// 处理划卡逻辑
+				const membershipPayment = payments.find(p => p.method === 'membership');
+				if (membershipPayment) {
+					const record = todayRecords[recordIndex];
+					// 优先使用手机号匹配会员
+					let customerMembership: CustomerMembership | null = null;
+
+					if (AppConfig.useCloudDatabase) {
+						const allMemberships = await database.getAll<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP);
+						customerMembership = allMemberships.find(m => {
+							return (m.customerPhone === record.phone || m.customerName === record.surname) &&
+								m.remainingTimes > 0 && m.status === 'active';
+						}) || null;
+					} else {
+						customerMembership = (await database.findOne<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, (m) => {
+							return (m.customerPhone === record.phone || m.customerName === record.surname) &&
+								m.remainingTimes > 0 && m.status === 'active';
+						})) || null;
+					}
+
+					if (!customerMembership) {
+						wx.showToast({ title: '未找到有效会员卡或余额不足', icon: 'none' });
+						return;
+					}
+
+					// 扣减次数
+					const deduction = membershipPayment.amount || 1; // 如果没填默认扣1次
+					const newRemaining = customerMembership.remainingTimes - deduction;
+					if (newRemaining < 0) {
+						wx.showToast({ title: '会员卡余额不足', icon: 'none' });
+						return;
+					}
+
+					await database.updateById<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, customerMembership.id, {
+						remainingTimes: newRemaining
+					});
+
+					// 记录会员卡使用历史
+					await database.insert<MembershipUsageRecord>(Collections.MEMBERSHIP_USAGE, {
+						cardId: customerMembership.cardId,
+						cardName: customerMembership.cardName,
+						date: today,
+						customerName: record.surname,
+						project: record.project,
+						technician: record.technician,
+						room: record.room,
+						consultationId: record.id
+					} as any);
 				}
 
-				await database.updateById<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, customerMembership.id, {
-					remainingTimes: newRemaining
-				});
+				todayRecords[recordIndex].settlement = settlement;
+				todayRecords[recordIndex].updatedAt = now.toISOString();
+				history[today] = todayRecords;
 
-				// 记录会员卡使用历史
-				await database.insert<MembershipUsageRecord>(Collections.MEMBERSHIP_USAGE, {
-					cardId: customerMembership.cardId,
-					cardName: customerMembership.cardName,
-					date: today,
-					customerName: record.surname,
-					project: record.project,
-					technician: record.technician,
-					room: record.room,
-					consultationId: record.id
-				} as any);
-			}
-
-			todayRecords[recordIndex].settlement = settlement;
-			todayRecords[recordIndex].updatedAt = now.toISOString();
-			history[today] = todayRecords;
-
-			wx.setStorageSync('consultationHistory', history);
-			wx.showToast({title: '结算成功', icon: 'success'});
-			this.closeSettlementModal();
-			await this.loadData();
+				wx.setStorageSync('consultationHistory', history);
+				wx.showToast({ title: '结算成功', icon: 'success' });
+				this.closeSettlementModal();
+				await this.loadData();
 			} catch (error) {
 				console.error('结算失败:', error);
-				wx.showToast({title: '结算失败', icon: 'none'});
+				wx.showToast({ title: '结算失败', icon: 'none' });
 			}
 		}
 	}

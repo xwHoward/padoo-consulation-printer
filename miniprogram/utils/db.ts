@@ -105,7 +105,7 @@ class Database {
 	/**
 	 * 插入单条记录
 	 */
-	insert<T extends BaseRecord>(collection: string, record: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): T | null {
+	insert<T extends BaseRecord>(collection: string, record: Omit<T, 'id' | 'createdAt' | 'updatedAt' | '_id'>): T | null {
 		try {
 			const data = this.getAll<T>(collection);
 			const now = getTimestamp();
@@ -132,7 +132,7 @@ class Database {
 	/**
 	 * 批量插入记录
 	 */
-	insertMany<T extends BaseRecord>(collection: string, records: Omit<T, 'id' | 'createdAt' | 'updatedAt'>[]): T[] {
+	insertMany<T extends BaseRecord>(collection: string, records: Omit<T, 'id' | 'createdAt' | 'updatedAt' | '_id'>[]): T[] {
 		try {
 			const data = this.getAll<T>(collection);
 			const now = getTimestamp();
@@ -159,7 +159,7 @@ class Database {
 	/**
 	 * 根据ID更新记录
 	 */
-	updateById<T extends BaseRecord>(collection: string, id: string, updates: Partial<Omit<T, 'id' | 'createdAt'>>): boolean {
+	updateById<T extends BaseRecord>(collection: string, id: string, updates: Partial<Omit<T, 'id' | 'createdAt' | '_id'>>): boolean {
 		try {
 			const data = this.getAll<T>(collection);
 			const index = data.findIndex(item => item.id === id);

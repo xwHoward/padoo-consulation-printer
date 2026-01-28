@@ -11,6 +11,7 @@
   ],
   "window": {
     "navigationBarTextStyle": "black",
+    "navigationBarBackgroundColor": "#fff",
     "navigationStyle": "custom"
   },
   "cloud": true,

@@ -18,7 +18,6 @@
 </navigation-bar>
 <scroll-view class="scrollarea" scroll-y type="list">
   <view class="container">
-    <!-- 加强部位 -->
     <view class="section">
       <!-- Logo -->
       <view class="logo-container">
@@ -50,6 +49,11 @@
           </text>
         </view>
       </view>
+      <view class="form-item">
+        <text class="form-label">项目</text>
+        <project-selector selectedProject="{{(isDualMode ? (activeGuest === 1 ? guest1Info.project : guest2Info.project) : consultationInfo.project)}}" bind:change="onProjectSelect" />
+      </view>
+      <!-- 加强部位 -->
       <view class="section-title">加强部位</view>
       <body-selector selectedParts="{{isDualMode ? (activeGuest === 1 ? guest1Info.selectedParts : guest2Info.selectedParts) : consultationInfo.selectedParts}}" bind:change="onBodyPartSelect" />
     </view>
@@ -59,9 +63,14 @@
       <strength-selector selectedStrength="{{(isDualMode ? (activeGuest === 1 ? guest1Info.massageStrength : guest2Info.massageStrength) : consultationInfo.massageStrength)}}" bind:change="onMassageStrengthSelect" />
     </view>
     <!-- 精油选择 -->
-    <view class="section">
+    <view class="section" wx:if="{{!currentProjectIsEssentialOilOnly}}">
       <view class="section-title">精油选择</view>
-      <oil-selector selectedOil="{{(isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil)}}" bind:change="onEssentialOilSelect" />
+      <oil-selector selectedOil="{{isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil}}" bind:change="onEssentialOilSelect" />
+    </view>
+    <!-- 专属精油显示 -->
+    <view class="section" wx:if="{{currentProjectIsEssentialOilOnly}}">
+      <view class="section-title">专属精油</view>
+      <image class="exclusive-oil-image" src="/assets/essential-oil.jpg" mode="aspectFill" />
     </view>
     <!-- 升级选项 -->
     <view class="section">
@@ -72,8 +81,6 @@
           <image class="upgrade-bg-qr" src="/assets/qr.jpg" mode="aspectFill" />
           <view class="upgrade-mask"></view>
           <view class="upgrade-gradient-mask"></view>
-          <checkbox checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.upgradeHimalayanSaltStone : guest2Info.upgradeHimalayanSaltStone) : consultationInfo.upgradeHimalayanSaltStone)}}" />
-          <text class="upgrade-text">加购冬季喜马拉雅热油盐石</text>
         </label>
       </view>
     </view>
@@ -81,16 +88,12 @@
     <view class="section">
       <view class="section-title">上钟信息</view>
       <view class="form-item">
-        <text class="form-label">项目</text>
-        <project-selector selectedProject="{{(isDualMode ? (activeGuest === 1 ? guest1Info.project : guest2Info.project) : consultationInfo.project)}}" bind:change="onProjectSelect" />
-      </view>
-      <view class="form-item">
         <text class="form-label">技师</text>
         <technician-selector selectedTechnician="{{(isDualMode ? (activeGuest === 1 ? guest1Info.technician : guest2Info.technician) : consultationInfo.technician)}}" technicianList="{{technicianList}}" bind:change="onTechnicianSelect" />
         <view class="checkbox-group">
           <label class="checkbox-item {{(isDualMode ? (activeGuest === 1 ? guest1Info.isClockIn : guest2Info.isClockIn) : consultationInfo.isClockIn) ? 'selected' : ''}}" bindtap="onClockInSelect">
             <checkbox checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.isClockIn : guest2Info.isClockIn) : consultationInfo.isClockIn)}}" />
-            点钟
+            点
           </label>
         </view>
       </view>

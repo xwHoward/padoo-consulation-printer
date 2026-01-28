@@ -46,6 +46,14 @@
     <view class="empty-text">暂无会员卡记录</view>
   </view>
 </view>
+
+<!-- Loading 遮罩 -->
+<view class="loading-mask" wx:if="{{loading}}">
+  <view class="loading-content">
+    <view class="loading-spinner"></view>
+    <view class="loading-text">加载中...</view>
+  </view>
+</view>
 <view class="modal-mask" wx:if="{{showEditModal}}" bindtap="onModalCancel"></view>
 <view class="modal-container" wx:if="{{showEditModal}}">
   <view class="modal-title">{{modalTitle}}</view>

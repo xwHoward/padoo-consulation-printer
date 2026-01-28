@@ -9,7 +9,7 @@ type DailyConsultations = {
   [date: string]: ConsultationRecord[];
 };
 
-const DefaultConsultationInfo: ConsultationInfo = {
+const DefaultConsultationInfo: Add<ConsultationInfo> = {
   surname: "",
   gender: "male",
   project: "",
@@ -41,7 +41,7 @@ const DefaultGuestInfo: GuestInfo = {
   project: "",
 };
 
-function ensureConsultationInfoCompatibility(data: any, projects: any[] = []): ConsultationInfo {
+function ensureConsultationInfoCompatibility(data: ConsultationInfo, projects: any[] = []): Update<ConsultationInfo> {
   const defaultProject = projects.length > 1 ? projects[1].name : '';
   return {
     surname: data.surname || "",
@@ -66,7 +66,7 @@ type GuestContext = {
   activeGuest: 1 | 2;
   guest1Info: GuestInfo;
   guest2Info: GuestInfo;
-  consultationInfo: ConsultationInfo;
+  consultationInfo: Add<ConsultationInfo>;
 };
 
 
@@ -107,6 +107,8 @@ Component({
     technicianList: [] as any[], // 动态技师列表
     currentReservationIds: [] as string[], // 当前加载的预约ID列表（用于冲突检查时排除）
     loadingTechnicians: false, // 加载技师状态
+    // 专用精油相关
+    currentProjectIsEssentialOilOnly: false, // 当前项目是否为专用精油项目
     // 双人模式相关
     isDualMode: false, // 是否为双人模式
     activeGuest: 1 as 1 | 2, // 当前活跃的顾客标签
@@ -232,18 +234,10 @@ Component({
       }
     },
 
-    loadProjects() {
+    async loadProjects() {
       try {
         const app = getApp<IAppOption>();
-        let allProjects = [];
-
-        if (AppConfig.useCloudDatabase && app.getProjects) {
-          allProjects = app.getProjects();
-        } else {
-          const {PROJECTS} = require('../../utils/constants');
-          allProjects = PROJECTS;
-        }
-
+        const allProjects = await app.getProjects();
         this.setData({projects: allProjects});
       } catch (error) {
         console.error('加载项目失败:', error);
@@ -307,7 +301,11 @@ Component({
     // 切换顾客标签
     switchGuest(e: any) {
       const guest = parseInt(e.currentTarget.dataset.guest) as 1 | 2;
-      this.setData({activeGuest: guest});
+      const {guest1Info, guest2Info, projects} = this.data;
+      const currentGuestProject = guest === 1 ? guest1Info.project : guest2Info.project;
+      const selectedProject = projects.find((p: any) => p.name === currentGuestProject);
+      const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
+      this.setData({activeGuest: guest, currentProjectIsEssentialOilOnly: isEssentialOilOnly});
     },
 
     // 姓氏输入
@@ -340,12 +338,16 @@ Component({
     // 项目选择
      onProjectSelect(e: any) {
       const project = e.detail.project || e.currentTarget.dataset.project;
-      const {isDualMode, activeGuest} = this.data;
+      const {isDualMode, activeGuest, projects} = this.data;
+
+      const selectedProject = projects.find((p: any) => p.name === project);
+      const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
+
       if (isDualMode) {
         const key = activeGuest === 1 ? 'guest1Info.project' : 'guest2Info.project';
-        this.setData({[key]: project});
+        this.setData({[key]: project, currentProjectIsEssentialOilOnly: isEssentialOilOnly});
       } else {
-        this.setData({"consultationInfo.project": project});
+        this.setData({"consultationInfo.project": project, currentProjectIsEssentialOilOnly: isEssentialOilOnly});
       }
        this.loadTechnicianList(); // 项目变更可能影响可用性（时长不同）
     },
@@ -457,7 +459,7 @@ Component({
 
     // 升级选项选择
     onUpgradeSelect() {
-      const context = {
+      const context:GuestContext = {
         isDualMode: this.data.isDualMode,
         activeGuest: this.data.activeGuest,
         guest1Info: this.data.guest1Info,
@@ -764,13 +766,21 @@ Component({
 
     // 执行实际的打印操作
     doPrint() {
-      const {isDualMode, guest1Info, guest2Info, consultationInfo, printerDeviceId, printerServiceId, printerCharacteristicId} = this.data;
+      const {isDualMode, guest1Info, guest2Info, consultationInfo, printerDeviceId, printerServiceId, printerCharacteristicId, projects, currentProjectIsEssentialOilOnly} = this.data;
 
       // 双人模式下构建两份打印内容
       let printContents: string[] = [];
       if (isDualMode) {
+        // 获取顾客1项目是否为专用精油
+        const guest1Project = projects.find((p: any) => p.name === guest1Info.project);
+        const guest1IsEssentialOilOnly = guest1Project?.isEssentialOilOnly || false;
+
+        // 获取顾客2项目是否为专用精油
+        const guest2Project = projects.find((p: any) => p.name === guest2Info.project);
+        const guest2IsEssentialOilOnly = guest2Project?.isEssentialOilOnly || false;
+
         // 顾客1打印内容（使用顾客1的项目、技师、点钟、券码）
-        const info1: ConsultationInfo = {
+        const info1: Add<ConsultationInfo> = {
           ...consultationInfo,
           surname: guest1Info.surname,
           gender: guest1Info.gender,
@@ -784,10 +794,10 @@ Component({
           couponCode: guest1Info.couponCode,
           couponPlatform: guest1Info.couponPlatform,
         };
-        printContents.push(this.buildPrintContent(info1));
+        printContents.push(this.buildPrintContent(info1, guest1IsEssentialOilOnly));
 
         // 顾客2打印内容（使用顾客2的项目、技师、点钟、券码）
-        const info2: ConsultationInfo = {
+        const info2: Add<ConsultationInfo> = {
           ...consultationInfo,
           surname: guest2Info.surname,
           gender: guest2Info.gender,
@@ -801,9 +811,9 @@ Component({
           couponCode: guest2Info.couponCode,
           couponPlatform: guest2Info.couponPlatform,
         };
-        printContents.push(this.buildPrintContent(info2));
+        printContents.push(this.buildPrintContent(info2, guest2IsEssentialOilOnly));
       } else {
-        printContents.push(this.buildPrintContent(consultationInfo));
+        printContents.push(this.buildPrintContent(consultationInfo, currentProjectIsEssentialOilOnly));
       }
 
       // 顺序打印所有内容
@@ -939,7 +949,7 @@ Component({
     },
 
     // 保存咨询单到缓存（支持新建和更新）
-    saveConsultationToCache(consultation: ConsultationInfo, editId?: string) {
+    saveConsultationToCache(consultation: Add<ConsultationInfo>, editId?: string) {
       try {
         const now = new Date();
         const currentDate = formatDate(now);
@@ -993,6 +1003,7 @@ Component({
           const record: ConsultationRecord = {
             ...consultation,
             id,
+            _id: id,
             createdAt: timestamp,
             updatedAt: timestamp,
             isVoided: false,
@@ -1053,10 +1064,15 @@ Component({
         }
 
         if (foundRecord) {
+          // 查找项目是否为专用精油
+          const selectedProject = this.data.projects.find((p: any) => p.name === foundRecord.project);
+          const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
+
           // 设置表单数据和编辑ID，使用兼容性函数确保旧数据正确初始化
           this.setData({
             consultationInfo: ensureConsultationInfoCompatibility(foundRecord, this.data.projects),
             editId: editId,
+            currentProjectIsEssentialOilOnly: isEssentialOilOnly,
             matchedCustomer: null,
             matchedCustomerApplied: false
           });
@@ -1083,6 +1099,9 @@ Component({
         const database = this.getDb();
         const record = await database.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
         if (record) {
+          const selectedProject = this.data.projects.find((p: any) => p.name === record.project);
+          const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
+          
           this.setData({
             consultationInfo: {
               ...DefaultConsultationInfo,
@@ -1092,6 +1111,7 @@ Component({
               project: record.project,
               technician: record.technicianName || '',
             },
+            currentProjectIsEssentialOilOnly: isEssentialOilOnly,
             currentReservationIds: [reserveId]
           });
           await this.loadTechnicianList();
@@ -1482,7 +1502,7 @@ Component({
       }
 
       // 构建两位顾客的完整信息（使用各自的项目、技师、点钟、券码）
-      const info1: ConsultationInfo = {
+      const info1: Add<ConsultationInfo> = {
         ...consultationInfo,
         surname: guest1Info.surname,
         gender: guest1Info.gender,
@@ -1497,7 +1517,7 @@ Component({
         couponPlatform: guest1Info.couponPlatform,
         upgradeHimalayanSaltStone: guest1Info.upgradeHimalayanSaltStone,
       };
-      const info2: ConsultationInfo = {
+      const info2: Add<ConsultationInfo> = {
         ...consultationInfo,
         surname: guest2Info.surname,
         gender: guest2Info.gender,
@@ -1600,7 +1620,7 @@ ${ clockInInfo2 }`;
     },
 
     // 格式化报钟信息
-    formatClockInInfo(info: ConsultationInfo) {
+    formatClockInInfo(info: Add<ConsultationInfo>) {
       const currentTime = new Date();
       const startTime = formatTime(currentTime, false);
       // 解析项目时长并计算结束时间
@@ -1631,7 +1651,7 @@ ${ clockInInfo2 }`;
     },
 
     // 构建打印内容
-    buildPrintContent(info: ConsultationInfo) {
+    buildPrintContent(info: Add<ConsultationInfo>, isEssentialOilOnly: boolean = false) {
       const strengthMap: Record<string, string> = {
         standard: "标准",
         soft: "轻柔",
@@ -1678,10 +1698,15 @@ ${ clockInInfo2 }`;
       content += `房间: ${ info.room }\n`;
       content += "力度:";
       content += `${ strengthMap[info.massageStrength] || "未选择" }\n`;
-      if (info.project !== "60min指压") {
+      
+      // 根据是否为专用精油项目显示不同内容
+      if (isEssentialOilOnly) {
+        content += "精油: 专属精油\n";
+      } else if (info.project !== "60min指压") {
         content += "精油:";
         content += `${ oilMap[info.essentialOil] || "未选择" }\n`;
       }
+      
       content += "加强部位:";
       const selectedPartsArray = Object.keys(info.selectedParts).filter(
         (key) => info.selectedParts[key],
@@ -1706,11 +1731,7 @@ ${ clockInInfo2 }`;
 
       content += "\n================\n";
       content += `打印时间: ${ formatTime(new Date(), false) }
-
-
-
       
-
 `;
 
       return content;

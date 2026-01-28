@@ -179,6 +179,7 @@ Component({
 		// 加载员工列表
 		async loadStaffList() {
 			try {
+				this.setData({loading: true});
 				const database = this.getDb();
 				const staffList = await (AppConfig.useCloudDatabase
 					? database.getAll<StaffInfo>(Collections.STAFF)
@@ -190,9 +191,10 @@ Component({
 					const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
 					return timeB - timeA;
 				});
-				this.setData({staffList});
+				this.setData({staffList, loading: false});
 			} catch (error) {
 				console.error('加载员工列表失败:', error);
+				this.setData({loading: false});
 				wx.showToast({
 					title: '加载失败',
 					icon: 'none'
@@ -214,6 +216,7 @@ Component({
 		async onEditStaff(e: WechatMiniprogram.TouchEvent) {
 			try {
 				const id = e.currentTarget.dataset.id as string;
+				this.setData({loading: true});
 				const database = this.getDb();
 				const staff = await (AppConfig.useCloudDatabase
 					? database.findById<StaffInfo>(Collections.STAFF, id)
@@ -225,10 +228,14 @@ Component({
 						editingStaff: staff,
 						inputName: staff.name,
 						inputStatus: staff.status,
+						loading: false
 					});
+				} else {
+					this.setData({loading: false});
 				}
 			} catch (error) {
 				console.error('编辑员工失败:', error);
+				this.setData({loading: false});
 				wx.showToast({
 					title: '加载失败',
 					icon: 'none'
@@ -240,29 +247,31 @@ Component({
 		async onToggleStatus(e: WechatMiniprogram.TouchEvent) {
 			try {
 				const id = e.currentTarget.dataset.id as string;
+				this.setData({loading: true});
 				const database = this.getDb();
 				const staff = await (AppConfig.useCloudDatabase
-					? database.findById<StaffInfo>(Collections.STAFF, id)
-					: Promise.resolve(database.findById<StaffInfo>(Collections.STAFF, id)));
+				? database.findById<StaffInfo>(Collections.STAFF, id)
+				: Promise.resolve(database.findById<StaffInfo>(Collections.STAFF, id)));
 
-				if (staff) {
-					const newStatus: StaffStatus = staff.status === 'active' ? 'disabled' : 'active';
+			if (staff) {
+				const newStatus: StaffStatus = staff.status === 'active' ? 'disabled' : 'active';
 
-					if (AppConfig.useCloudDatabase) {
-						await database.updateById<StaffInfo>(Collections.STAFF, id, {status: newStatus});
-					} else {
-						database.updateById<StaffInfo>(Collections.STAFF, id, {status: newStatus});
-					}
+				await database.updateById<StaffInfo>(Collections.STAFF, id, {status: newStatus});
 
-					await this.loadStaffList();
+				await this.loadStaffList();
 
-					wx.showToast({
-						title: newStatus === 'active' ? '已启用' : '已禁用',
-						icon: 'success',
-					});
-				}
+				this.setData({loading: false});
+
+				wx.showToast({
+					title: newStatus === 'active' ? '已启用' : '已禁用',
+					icon: 'success',
+				});
+			} else {
+				this.setData({loading: false});
+			}
 			} catch (error) {
 				console.error('切换员工状态失败:', error);
+				this.setData({loading: false});
 				wx.showToast({
 					title: '操作失败',
 					icon: 'none'
@@ -274,14 +283,18 @@ Component({
 		async onDeleteStaff(e: WechatMiniprogram.TouchEvent) {
 			try {
 				const id = e.currentTarget.dataset.id as string;
+				this.setData({loading: true});
 				const database = this.getDb();
 				const staff = await (AppConfig.useCloudDatabase
 					? database.findById<StaffInfo>(Collections.STAFF, id)
 					: Promise.resolve(database.findById<StaffInfo>(Collections.STAFF, id)));
 
 				if (!staff) {
+					this.setData({loading: false});
 					return;
 				}
+
+				this.setData({loading: false});
 
 				wx.showModal({
 					title: '确认删除',
@@ -290,10 +303,12 @@ Component({
 					success: async (res) => {
 						if (res.confirm) {
 							try {
+								this.setData({loading: true});
 								await database.deleteById(Collections.STAFF, id);
 								await this.loadStaffList();
 								wx.showToast({title: '已删除', icon: 'success'});
 							} catch (error) {
+								this.setData({loading: false});
 								console.error('删除员工失败:', error);
 								wx.showToast({title: '删除失败', icon: 'none'});
 							}
@@ -302,6 +317,7 @@ Component({
 				});
 			} catch (error) {
 				console.error('删除员工失败:', error);
+				this.setData({loading: false});
 				wx.showToast({
 					title: '操作失败',
 					icon: 'none'

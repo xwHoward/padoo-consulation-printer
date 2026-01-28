@@ -12,13 +12,13 @@ Component({
 	},
 
 	methods: {
-		loadOils() {
+		async loadOils() {
 			try {
 				const app = getApp<IAppOption>();
 				let allOils = [];
 
 				if (AppConfig.useCloudDatabase && app.getEssentialOils) {
-					allOils = app.getEssentialOils();
+					allOils = await app.getEssentialOils();
 				} else {
 					const {ESSENTIAL_OILS} = require('../../utils/constants');
 					allOils = ESSENTIAL_OILS;
@@ -39,8 +39,8 @@ Component({
 	},
 
 	lifetimes: {
-		attached() {
-			this.loadOils();
+		async attached() {
+			await this.loadOils();
 		}
 	}
 });

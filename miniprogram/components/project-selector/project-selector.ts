@@ -1,4 +1,3 @@
-import {AppConfig} from '../../config/index';
 
 Component({
 	properties: {
@@ -12,18 +11,10 @@ Component({
 	},
 
 	methods: {
-		loadProjects() {
+		async loadProjects() {
 			try {
 				const app = getApp<IAppOption>();
-				let allProjects = [];
-
-				if (AppConfig.useCloudDatabase && app.getProjects) {
-					allProjects = app.getProjects();
-				} else {
-					const {PROJECTS} = require('../../utils/constants');
-					allProjects = PROJECTS;
-				}
-
+				const allProjects = await app.getProjects();
 				const normalProjects = allProjects.filter((p: any) => p.status === 'normal' || !p.status);
 				const projectNames = normalProjects.map((p: any) => p.name);
 				this.setData({projects: projectNames});
@@ -40,8 +31,8 @@ Component({
 	},
 
 	lifetimes: {
-		attached() {
-			this.loadProjects();
+		async attached() {
+			await this.loadProjects();
 		}
 	}
 });

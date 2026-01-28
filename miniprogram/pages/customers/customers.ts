@@ -2,6 +2,7 @@ import {db, Collections} from "../../utils/db";
 
 Page({
   data: {
+    loading: false,
     customerList: [] as CustomerRecord[],
     showEditModal: false,
     modalTitle: '',
@@ -38,7 +39,7 @@ Page({
 
   loadTechnicianList() {
     try {
-      const staffList = db.find<{id: string; name: string; status: string; createdAt: string; updatedAt: string;}>(Collections.STAFF, {
+      const staffList = db.find<StaffInfo>(Collections.STAFF, {
         status: 'active'
       });
       this.setData({technicianList: staffList});
@@ -49,6 +50,7 @@ Page({
 
   loadCustomerList() {
     try {
+      this.setData({loading: true});
       // 1. 获取数据库中已保存的顾客
       const savedCustomers = db.getAll<CustomerRecord>(Collections.CUSTOMERS);
       const customerMap: Record<string, CustomerRecord> = {};
@@ -72,7 +74,7 @@ Page({
           const customerKey = phone || (record.id as string | undefined);
 
           if (customerKey && !customerMap[customerKey]) {
-            const newCustomer: Omit<CustomerRecord, 'id' | 'createdAt' | 'updatedAt'> = {
+            const newCustomer: Add<CustomerRecord> = {
               phone,
               name,
               gender: gender as 'male' | 'female' | '',
@@ -93,9 +95,10 @@ Page({
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
 
-      this.setData({customerList});
+      this.setData({customerList, loading: false});
     } catch (error) {
       console.error('加载顾客列表失败:', error);
+      this.setData({loading: false});
       wx.showToast({
         title: '加载失败',
         icon: 'error'
@@ -157,6 +160,7 @@ Page({
     }
 
     try {
+      this.setData({loading: true});
       if (editCustomer) {
         // 更新现有顾客
         db.updateById<CustomerRecord>(Collections.CUSTOMERS, editCustomer.id, {
@@ -199,6 +203,7 @@ Page({
       this.loadCustomerList();
     } catch (error) {
       console.error('保存顾客信息失败:', error);
+      this.setData({loading: false});
       wx.showToast({
         title: '保存失败',
         icon: 'error'
@@ -233,39 +238,40 @@ Page({
   },
 
   loadCustomerVisits(e: any) {
-    const customer = e.currentTarget.dataset.customer as CustomerRecord;
-    const consultationHistory = wx.getStorageSync('consultationHistory') || {};
-    const visitRecords: CustomerVisit[] = [];
-    Object.keys(consultationHistory).forEach(date => {
-      const records = consultationHistory[date] as any[];
-
-      records.forEach((record: any) => {
-        if (record.isVoided) {
-          return;
-        }
-
-        const customerKey = record.phone || (record.id as string | undefined);
-        const targetKey = customer.phone || customer.id;
-
-        if (customerKey && targetKey && customerKey === targetKey) {
-          visitRecords.push({
-            id: record.id,
-            date,
-            project: record.project,
-            technician: record.technician,
-            room: record.room,
-            amount: record.amount,
-            isClockIn: record.isClockIn,
-          });
-        }
-      });
-    });
-
-    visitRecords.sort((a, b) => {
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
-    });
-
     try {
+      this.setData({loading: true});
+      const customer = e.currentTarget.dataset.customer as CustomerRecord;
+      const consultationHistory = wx.getStorageSync('consultationHistory') || {};
+      const visitRecords: CustomerVisit[] = [];
+      Object.keys(consultationHistory).forEach(date => {
+        const records = consultationHistory[date] as any[];
+
+        records.forEach((record: any) => {
+          if (record.isVoided) {
+            return;
+          }
+
+          const customerKey = record.phone || (record.id as string | undefined);
+          const targetKey = customer.phone || customer.id;
+
+          if (customerKey && targetKey && customerKey === targetKey) {
+            visitRecords.push({
+              id: record.id,
+              date,
+              project: record.project,
+              technician: record.technician,
+              room: record.room,
+              amount: record.amount,
+              isClockIn: record.isClockIn,
+            });
+          }
+        });
+      });
+
+      visitRecords.sort((a, b) => {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+
       const memberships = db.find<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, {
         customerId: customer.id
       });
@@ -273,16 +279,12 @@ Page({
         selectedCustomer: customer,
         visitRecords,
         customerMemberships: memberships,
-        showDetailModal: true
+        showDetailModal: true,
+        loading: false
       });
     } catch (error) {
       console.error('加载顾客会员卡失败:', error);
-      this.setData({
-        selectedCustomer: customer,
-        visitRecords,
-        customerMemberships: [],
-        showDetailModal: true
-      });
+      this.setData({loading: false});
     }
   },
 
@@ -304,11 +306,13 @@ Page({
 
   loadMembershipCards() {
     try {
+      this.setData({loading: true});
       const cards = db.getAll<MembershipCard>(Collections.MEMBERSHIP);
       const activeCards = cards.filter(card => card.status === 'active');
-      this.setData({membershipCards: activeCards});
+      this.setData({membershipCards: activeCards, loading: false});
     } catch (error) {
       console.error('加载会员卡列表失败:', error);
+      this.setData({loading: false});
       wx.showToast({
         title: '加载会员卡失败',
         icon: 'error'
@@ -408,6 +412,7 @@ Page({
     }
 
     try {
+      this.setData({loading: true});
       db.insert(Collections.CUSTOMER_MEMBERSHIP, {
         customerId: selectedCustomerForCard.id,
         customerName: selectedCustomerForCard.name,
@@ -430,7 +435,8 @@ Page({
         selectedCardInfo: null,
         formPaidAmount: '',
         formSalesStaff: '',
-        formCardRemarks: ''
+        formCardRemarks: '',
+        loading: false
       });
 
       wx.showToast({
@@ -439,6 +445,7 @@ Page({
       });
     } catch (error) {
       console.error('开卡失败:', error);
+      this.setData({loading: false});
       wx.showToast({
         title: '开卡失败',
         icon: 'error'

@@ -7,54 +7,58 @@ App<IAppOption<AppGlobalData>>({
 		projects: [],
 		rooms: [],
 		essentialOils: [],
-		isDataLoaded: false
+		isDataLoaded: false,
+		loadPromise: null as Promise<void> | null
 	},
-	async onLaunch() {
-		try {
-			await this.loadGlobalData();
-		} catch (error) {
-			console.error('加载全局数据失败:', error);
-		}
+	 onLaunch() {
+		this.loadGlobalData();
 	},
 
 	async loadGlobalData() {
-		if (this.globalData.isDataLoaded) {
-			return;
+		if (this.globalData.loadPromise) {
+			return this.globalData.loadPromise;
 		}
 
-		try {
-			if (AppConfig.useCloudDatabase) {
+		this.globalData.loadPromise = (async () => {
+			try {
 				const database = cloudDb;
 				const [projects, rooms, essentialOils] = await Promise.all([
-					database.getAll(Collections.PROJECTS),
-					database.getAll(Collections.ROOMS),
-					database.getAll(Collections.ESSENTIAL_OILS)
+					database.getAll<Project>(Collections.PROJECTS),
+					database.getAll<Room>(Collections.ROOMS),
+					database.getAll<EssentialOil>(Collections.ESSENTIAL_OILS)
 				]);
-
-				this.globalData.projects = (projects || []) as AppProject[];
-				this.globalData.rooms = (rooms || []) as AppRoom[];
-				this.globalData.essentialOils = (essentialOils || []) as AppEssentialOil[];
-			} else {
-				const {PROJECTS, ROOMS, ESSENTIAL_OILS} = require('./utils/constants');
-				this.globalData.projects = PROJECTS as AppProject[];
-				this.globalData.rooms = ROOMS as AppRoom[];
-				this.globalData.essentialOils = ESSENTIAL_OILS as AppEssentialOil[];
+				this.globalData.projects = (projects || []) as Project[];
+				this.globalData.rooms = (rooms || []) as Room[];
+				this.globalData.essentialOils = (essentialOils || []) as EssentialOil[];
+				this.globalData.isDataLoaded = true;
+			} catch (error) {
+				console.error('加载全局数据失败:', error);
+			} finally {
+				this.globalData.loadPromise = null;
 			}
-			this.globalData.isDataLoaded = true;
-		} catch (error) {
-			console.error('加载全局数据失败:', error);
-		}
+		})();
+
+		return this.globalData.loadPromise;
 	},
 
-	getProjects() {
+	async getProjects(): Promise<Project[]> {
+		if (!this.globalData.isDataLoaded) {
+			await this.loadGlobalData();
+		}
 		return this.globalData.projects;
 	},
 
-	getRooms() {
+	async getRooms(): Promise<Room[]> {
+		if (!this.globalData.isDataLoaded) {
+			await this.loadGlobalData();
+		}
 		return this.globalData.rooms;
 	},
 
-	getEssentialOils() {
+	async getEssentialOils(): Promise<EssentialOil[]> {
+		if (!this.globalData.isDataLoaded) {
+			await this.loadGlobalData();
+		}
 		return this.globalData.essentialOils;
 	}
 });

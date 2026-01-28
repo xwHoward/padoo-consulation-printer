@@ -43,7 +43,7 @@
 							data-index="{{index}}"
 							bindtap="handleToggleStatus"
 						>
-							{{item.status === 'normal' ? '正常' : '禁用'}}
+							{{item.status === 'normal' ? '禁用' : item.status === 'disabled' ? '启用' : '未知状态'}}
 						</view>
 						<view 
 							class="action-btn edit-btn" 
@@ -84,7 +84,7 @@
 							data-index="{{index}}"
 							bindtap="handleToggleStatus"
 						>
-							{{item.status === 'normal' ? '正常' : '禁用'}}
+							{{item.status === 'normal' ? '禁用' : item.status === 'disabled' ? '启用' : '未知状态'}}
 						</view>
 						<view 
 							class="action-btn edit-btn" 
@@ -126,7 +126,7 @@
 							data-index="{{index}}"
 							bindtap="handleToggleStatus"
 						>
-							{{item.status === 'normal' ? '正常' : '禁用'}}
+							{{item.status === 'normal' ? '禁用' : item.status === 'disabled' ? '启用' : '未知状态'}}
 						</view>
 						<view 
 							class="action-btn edit-btn" 
@@ -149,6 +149,14 @@
 					<view>暂无精油数据</view>
 				</view>
 			</view>
+		</view>
+	</view>
+
+	<!-- Loading 遮罩 -->
+	<view class="loading-mask" wx:if="{{loading}}">
+		<view class="loading-content">
+			<view class="loading-spinner"></view>
+			<view class="loading-text">加载中...</view>
 		</view>
 	</view>
 
@@ -190,11 +198,10 @@
 				</view>
 				<view class="form-item" wx:if="{{activeTab === 'projects'}}">
 					<view class="form-label">是否专用精油</view>
-					<view class="checkbox-wrapper">
+					<view class="checkbox-wrapper" catch:tap="onIsEssentialOilOnlyChange">
 						<checkbox
 							class="form-checkbox"
 							checked="{{formData.isEssentialOilOnly}}"
-							bindchange="onIsEssentialOilOnlyChange"
 						/>
 						<view class="checkbox-label">专用精油</view>
 					</view>
@@ -214,7 +221,7 @@
 					<view class="radio-group">
 						<view class="radio-option {{formData.status === 'normal' ? 'selected' : ''}}" bindtap="onStatusChange" data-value="normal">
 							<radio value="normal" checked="{{formData.status === 'normal'}}" />
-							<view>正常</view>
+							<view>启用</view>
 						</view>
 						<view class="radio-option {{formData.status === 'disabled' ? 'selected' : ''}}" bindtap="onStatusChange" data-value="disabled">
 							<radio value="disabled" checked="{{formData.status === 'disabled'}}" />

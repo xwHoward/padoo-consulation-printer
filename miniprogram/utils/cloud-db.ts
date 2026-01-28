@@ -140,14 +140,15 @@ class CloudDatabase {
 	/**
 	 * 插入单条记录
 	 */
-	async insert<T extends BaseRecord>(collection: string, record: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<T | null> {
+	async insert<T extends BaseRecord>(collection: string, record: Omit<T, 'id' | 'createdAt' | 'updatedAt' | '_id'>): Promise<T | null> {
 		try {
 			const now = this.getTimestamp();
+			const generatedId = this.generateId();
 
 			const newRecord = {
 				...record,
-				_id: this.generateId(),
-				id: this.generateId(),
+				id: generatedId,
+				_id: generatedId,
 				createdAt: now,
 				updatedAt: now,
 			} as unknown as T;
@@ -156,12 +157,12 @@ class CloudDatabase {
 				data: newRecord
 			});
 
-			if (res._id) {
+			if (res._id && res._id !== generatedId) {
+				(newRecord as any).id = res._id;
 				(newRecord as any)._id = res._id;
-				return newRecord;
 			}
 
-			return null;
+			return newRecord;
 		} catch (error) {
 			console.error(`[CloudDB] 插入记录到 ${collection} 失败:`, error);
 			return null;
@@ -175,17 +176,27 @@ class CloudDatabase {
 		try {
 			const now = this.getTimestamp();
 
-			const newRecords = records.map(record => ({
-				...record,
-				_id: this.generateId(),
-				id: this.generateId(),
-				createdAt: now,
-				updatedAt: now,
-			})) as unknown as T[];
+			const newRecords = records.map(record => {
+				const generatedId = this.generateId();
+				return {
+					...record,
+					id: generatedId,
+					_id: generatedId,
+					createdAt: now,
+					updatedAt: now,
+				} as unknown as T;
+			});
 
-			await Promise.all(newRecords.map(record =>
+			const insertResults = await Promise.all(newRecords.map(record =>
 				this.getCollection(collection).add({data: record})
 			));
+
+			insertResults.forEach((res: any, index) => {
+				if (res._id && res._id !== (newRecords[index] as any).id) {
+					(newRecords[index] as any).id = res._id;
+					(newRecords[index] as any)._id = res._id;
+				}
+			});
 
 			return newRecords;
 		} catch (error) {

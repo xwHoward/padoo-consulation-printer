@@ -263,3 +263,11 @@
     </view>
   </view>
 </view>
+
+<!-- Loading 遮罩 -->
+<view class="loading-mask" wx:if="{{loading}}">
+  <view class="loading-content">
+    <view class="loading-spinner"></view>
+    <view class="loading-text">加载中...</view>
+  </view>
+</view>
