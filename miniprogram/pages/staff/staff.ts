@@ -1,7 +1,6 @@
 // staff.ts
-import { cloudDb as cloudDbService } from '../../utils/cloud-db';
+import { cloudDb as cloudDbService, Collections } from '../../utils/cloud-db';
 import { DEFAULT_SHIFT, SHIFT_NAMES, SHIFT_TYPES } from '../../utils/constants';
-import { Collections } from '../../utils/db';
 import { formatDate } from '../../utils/util';
 
 Component({
@@ -58,7 +57,7 @@ Component({
 				}));
 
 				// 构造渲染用的 Map
-				const scheduleMap: any = {};
+				const scheduleMap: Record<string, Record<string, { label: string; type: ShiftType; index: number }>> = {};
 				staffList.forEach((staff) => {
 					scheduleMap[staff.id] = {};
 					dates.forEach((d) => {
@@ -90,10 +89,9 @@ Component({
 					loading: false
 				});
 			} catch (error) {
-				console.error('初始化排班表失败:', error);
 				this.setData({ loading: false });
 				wx.showToast({
-					title: '加载失败',
+					title: '排班表加载失败',
 					icon: 'none'
 				});
 			}
@@ -126,9 +124,22 @@ Component({
 				const index = parseInt(e.detail.value);
 				const shiftType = SHIFT_TYPES[index];
 				const database = this.getDb();
+				const today = this.data.today;
+				const dates = this.data.dates;
+
+				// 检查是否为今日之前的日期
+				if (date < today) {
+					wx.showToast({
+						title: '不允许修改今日之前的排班',
+						icon: 'none',
+						duration: 2000
+					});
+					return;
+				}
 
 				wx.showLoading({ title: '更新中...' });
 
+				// 更新当前日期的排班
 				const existing = await (database.findOne<ScheduleRecord>(Collections.SCHEDULE, { staffId, date }));
 
 				if (existing) {
@@ -139,6 +150,34 @@ Component({
 						staffId,
 						shift: shiftType,
 					});
+				}
+
+				// 获取所有员工和已有的排班数据
+				const allStaff = await (database.getAll<StaffInfo>(Collections.STAFF));
+				const allSchedules = await (database.getAll<ScheduleRecord>(Collections.SCHEDULE));
+
+				// 获取今日及之后的所有可见日期
+				const futureDates = dates.filter(d => d.date >= today);
+
+				// 批量准备排班数据
+				const newSchedules: Add<ScheduleRecord>[] = [];
+
+				for (const staff of allStaff) {
+					for (const d of futureDates) {
+						const exists = allSchedules.find(s => s.staffId === staff.id && s.date === d.date);
+						if (!exists) {
+							newSchedules.push({
+								date: d.date,
+								staffId: staff.id,
+								shift: DEFAULT_SHIFT,
+							});
+						}
+					}
+				}
+
+				// 一次性批量插入所有缺失的排班
+				if (newSchedules.length > 0) {
+					await database.insertMany<ScheduleRecord>(Collections.SCHEDULE, newSchedules);
 				}
 
 				wx.hideLoading();

@@ -1,0 +1,9 @@
+{
+  "name": "getAll",
+  "version": "1.0.0",
+  "description": "获取集合所有数据（突破小程序端limit限制）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

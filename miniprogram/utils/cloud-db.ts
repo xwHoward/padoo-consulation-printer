@@ -27,7 +27,7 @@ export interface CloudDbConfig {
 /**
  * 云数据库类
  */
-class CloudDatabase implements IDatabase {
+class CloudDatabase {
 	private db: any;
 	private envId: string = '';
 	private initialized: boolean = false;
@@ -97,8 +97,22 @@ class CloudDatabase implements IDatabase {
 	 */
 	async getAll<T extends BaseRecord>(collection: string): Promise<T[]> {
 		try {
-			const res = await this.getCollection(collection).get();
-			return res.data || [];
+			const res = await wx.cloud.callFunction({
+				name: 'getAll',
+				data: { collection }
+			});
+
+			if (!res.result || typeof res.result !== 'object') {
+				console.error(`[CloudDB] 云函数 ${collection} 调用失败:`, res);
+				return [];
+			}
+
+			if (res.result.code === 0) {
+				return res.result.data || [];
+			} else {
+				console.error(`[CloudDB] 云函数获取集合 ${collection} 数据失败:`, res.result.message);
+				return [];
+			}
 		} catch (error) {
 			console.error(`[CloudDB] 获取集合 ${collection} 数据失败:`, error);
 			return [];
@@ -133,7 +147,7 @@ class CloudDatabase implements IDatabase {
 				return allData.filter(condition);
 			}
 
-			const query = collectionRef.where(condition as any);
+			const query = collectionRef.where(condition);
 			const res = await query.get();
 			return res.data || [];
 		} catch (error) {
@@ -171,8 +185,8 @@ class CloudDatabase implements IDatabase {
 			});
 
 			if (res._id && res._id !== generatedId) {
-				(newRecord as any).id = res._id;
-				(newRecord as any)._id = res._id;
+				(newRecord).id = res._id;
+				(newRecord)._id = res._id;
 			}
 
 			return newRecord;
@@ -201,13 +215,13 @@ class CloudDatabase implements IDatabase {
 			});
 
 			const insertResults = await Promise.all(newRecords.map(record =>
-				this.getCollection(collection).add({data: record})
+				this.getCollection(collection).add({ data: record })
 			));
 
 			insertResults.forEach((res: any, index) => {
-				if (res._id && res._id !== (newRecords[index] as any).id) {
-					(newRecords[index] as any).id = res._id;
-					(newRecords[index] as any)._id = res._id;
+				if (res._id && res._id !== (newRecords[index]).id) {
+					(newRecords[index]).id = res._id;
+					(newRecords[index])._id = res._id;
 				}
 			});
 
@@ -257,7 +271,7 @@ class CloudDatabase implements IDatabase {
 			if (typeof condition === 'function') {
 				const allData = await this.getAll<T>(collection);
 				const matchedRecords = allData.filter(condition);
-				
+
 				await Promise.all(matchedRecords.map(record =>
 					this.updateById(collection, record.id, updates)
 				));
@@ -265,7 +279,7 @@ class CloudDatabase implements IDatabase {
 				return matchedRecords.length;
 			}
 
-			const res = await collectionRef.where(condition as any).update({
+			const res = await collectionRef.where(condition).update({
 				data: updateData
 			});
 
@@ -303,7 +317,7 @@ class CloudDatabase implements IDatabase {
 			if (typeof condition === 'function') {
 				const allData = await this.getAll<T>(collection);
 				const matchedRecords = allData.filter(condition);
-				
+
 				await Promise.all(matchedRecords.map(record =>
 					this.deleteById(collection, record.id)
 				));
@@ -325,7 +339,7 @@ class CloudDatabase implements IDatabase {
 	async clear(collection: string): Promise<boolean> {
 		try {
 			const allData = await this.getAll(collection);
-			
+
 			if (allData.length === 0) {
 				return true;
 			}
@@ -358,7 +372,7 @@ class CloudDatabase implements IDatabase {
 				return results.length;
 			}
 
-			const res = await collectionRef.where(condition as any).count();
+			const res = await collectionRef.where(condition).count();
 			return res.total || 0;
 		} catch (error) {
 			console.error(`[CloudDB] 获取集合 ${collection} 数量失败:`, error);
@@ -382,8 +396,8 @@ class CloudDatabase implements IDatabase {
 		condition?: QueryCondition<T>,
 		page: number = 1,
 		pageSize: number = 20,
-		orderBy?: {field: string, direction: 'asc' | 'desc'}
-	): Promise<{data: T[], total: number, hasMore: boolean}> {
+		orderBy?: { field: string, direction: 'asc' | 'desc' }
+	): Promise<{ data: T[], total: number, hasMore: boolean }> {
 		try {
 			const collectionRef = this.getCollection(collection);
 
@@ -401,7 +415,7 @@ class CloudDatabase implements IDatabase {
 				};
 			}
 
-			let query = collectionRef.where(condition as any);
+			let query = collectionRef.where(condition);
 
 			if (orderBy) {
 				query = query.orderBy(orderBy.field, orderBy.direction);
@@ -412,7 +426,7 @@ class CloudDatabase implements IDatabase {
 
 			const [dataRes, countRes] = await Promise.all([
 				query.get(),
-				collectionRef.where(condition as any).count()
+				collectionRef.where(condition).count()
 			]);
 
 			return {
@@ -422,7 +436,7 @@ class CloudDatabase implements IDatabase {
 			};
 		} catch (error) {
 			console.error(`[CloudDB] 分页查询集合 ${collection} 失败:`, error);
-			return {data: [], total: 0, hasMore: false};
+			return { data: [], total: 0, hasMore: false };
 		}
 	}
 
@@ -441,7 +455,7 @@ class CloudDatabase implements IDatabase {
 					return null;
 				}
 				await this.updateById<T>(Collections.CONSULTATION, editId, consultation);
-				return {...existing, ...consultation, updatedAt: this.getTimestamp()} as T;
+				return { ...existing, ...consultation, updatedAt: this.getTimestamp() } as T;
 			} else {
 				return await this.insert<T>(Collections.CONSULTATION, consultation);
 			}
@@ -501,7 +515,7 @@ class CloudDatabase implements IDatabase {
 	async getConsultationsByCustomer<T extends ConsultationRecord>(phone: string): Promise<T[]> {
 		try {
 			const res = await this.getCollection(Collections.CONSULTATION)
-				.where({phone})
+				.where({ phone })
 				.orderBy('createdAt', 'desc')
 				.get();
 			return res.data || [];
@@ -517,7 +531,7 @@ class CloudDatabase implements IDatabase {
 	async getConsultationsByTechnician<T extends ConsultationRecord>(technician: string): Promise<T[]> {
 		try {
 			const res = await this.getCollection(Collections.CONSULTATION)
-				.where({technician})
+				.where({ technician })
 				.orderBy('createdAt', 'desc')
 				.get();
 			return res.data || [];
@@ -541,7 +555,7 @@ class CloudDatabase implements IDatabase {
 						this.updateById(
 							Collections.CONSULTATION,
 							record.id,
-							{overtime: overtimeUpdates[record.id]} as any
+							{ overtime: overtimeUpdates[record.id] }
 						)
 					)
 			);

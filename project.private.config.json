@@ -23,11 +23,18 @@
         "miniprogram": {
             "list": [
                 {
-                    "name": "data-management",
-                    "pathName": "pages/data-management/data-management",
+                    "name": "cashier",
+                    "pathName": "pages/cashier/cashier",
                     "query": "",
                     "scene": null,
                     "launchMode": "default"
+                },
+                {
+                    "name": "data-management",
+                    "pathName": "pages/data-management/data-management",
+                    "query": "",
+                    "launchMode": "default",
+                    "scene": null
                 },
                 {
                     "name": "staff",

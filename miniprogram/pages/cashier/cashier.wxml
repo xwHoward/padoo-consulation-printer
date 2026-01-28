@@ -1,20 +1,20 @@
 <navigation-bar title="场控收银" back="{{true}}" color="black" background="#FFF"></navigation-bar>
 <scroll-view class="scrollarea" scroll-y type="list">
   <view class="container">
-    <!-- 日期选择 -->
-    <view class="header-picker">
-      <picker mode="date" value="{{selectedDate}}" bindchange="onDateChange">
-        <view class="date-display">
-          <text class="calendar-icon">📅</text>
-          <text class="date-text">{{selectedDate}}</text>
-          <text class="arrow-down">▼</text>
-        </view>
-      </picker>
-    </view>
     <!-- 员工排钟表 -->
     <view class="section timeline-section">
       <view class="section-header">
-        <text class="section-title">排钟进度 (12:00 - 23:00)</text>
+        <view class="section-title">排钟进度</view>
+        <!-- 日期选择 -->
+        <view class="header-picker">
+          <picker mode="date" value="{{selectedDate}}" bindchange="onDateChange">
+            <view class="date-display">
+              <text class="calendar-icon">📅</text>
+              <text class="date-text">{{selectedDate}}</text>
+              <text class="arrow-down">▼</text>
+            </view>
+          </picker>
+        </view>
         <view class="reserve-btn" bindtap="openReserveModal">新增预约</view>
       </view>
       <scroll-view class="timeline-scroll" scroll-x>
@@ -27,10 +27,10 @@
           <!-- 员工行 -->
           <view class="staff-timeline-row" wx:for="{{staffTimeline}}" wx:key="id">
             <view class="staff-name-col">
-              <text>{{item.name}}</text>
-              <text class="shift-mini-tag {{item.shift}}">
+              <view>{{item.name}}</view>
+              <view class="shift-mini-tag {{item.shift}}">
                 {{item.shift === 'morning' ? '早' : '晚'}}
-              </text>
+              </view>
             </view>
             <view class="timeline-track">
               <!-- 背景网格线 -->

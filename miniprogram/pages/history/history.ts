@@ -1,6 +1,5 @@
-import { cloudDb as cloudDbService } from '../../utils/cloud-db';
+import { cloudDb as cloudDbService, Collections } from '../../utils/cloud-db';
 import { COUPON_PLATFORMS, GENDERS, MASSAGE_STRENGTHS } from "../../utils/constants";
-import { Collections } from "../../utils/db";
 import { calculateOvertimeUnits, calculateProjectEndTime, formatTime, SHIFT_END_TIMES } from "../../utils/util";
 
 // 扩展记录类型，添加折叠状态

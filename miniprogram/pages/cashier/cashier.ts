@@ -1,6 +1,6 @@
 // cashier.ts
-import { cloudDb as cloudDbService } from '../../utils/cloud-db';
-import { Collections } from '../../utils/db';
+import { cloudDb as cloudDbService, Collections } from '../../utils/cloud-db';
+import { DEFAULT_SHIFT } from '../../utils/constants';
 import { formatDate, formatDuration, getMinutesDiff, isTimeOverlapping, parseProjectDuration } from '../../utils/util';
 
 interface RotationItem {
@@ -205,10 +205,9 @@ Component({
 
 				// 转换排钟数据
 				const staffTimeline: StaffTimeline[] = [];
-
-				let rotationList: RotationItem[] = activeStaff.map(staff => {
+				const rotationList: RotationItem[] = activeStaff.map(staff => {
 					const schedule = allSchedules.find(s => s.date === today && s.staffId === staff.id);
-					const shift = schedule ? schedule.shift : 'evening';
+					const shift = schedule ? schedule.shift : DEFAULT_SHIFT;
 
 					// 过滤出上钟员工
 					if (shift === 'morning' || shift === 'evening') {

@@ -1,5 +1,4 @@
-import { Collections } from "../../utils/db";
-import { cloudDb as cloudDbService } from '../../utils/cloud-db';
+import { cloudDb as cloudDbService, Collections } from "../../utils/cloud-db";
 import { calculateOvertimeUnits, calculateProjectEndTime, formatDate, formatTime, isTimeOverlapping, parseProjectDuration, SHIFT_END_TIMES } from "../../utils/util";
 const GBK = require("gbk.js");
 

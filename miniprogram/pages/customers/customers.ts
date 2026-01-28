@@ -1,5 +1,4 @@
-import { cloudDb as cloudDbService } from '../../utils/cloud-db';
-import { Collections } from "../../utils/db";
+import { cloudDb as cloudDbService, Collections } from '../../utils/cloud-db';
 
 Page({
   data: {

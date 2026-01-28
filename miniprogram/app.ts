@@ -1,6 +1,4 @@
-import {cloudDb} from './utils/cloud-db';
-import {Collections} from './utils/db';
-import {AppConfig} from './config/index';
+import { cloudDb, Collections } from './utils/cloud-db';
 
 App<IAppOption<AppGlobalData>>({
 	globalData: {
@@ -10,7 +8,7 @@ App<IAppOption<AppGlobalData>>({
 		isDataLoaded: false,
 		loadPromise: null as Promise<void> | null
 	},
-	 onLaunch() {
+	onLaunch() {
 		this.loadGlobalData();
 	},
 

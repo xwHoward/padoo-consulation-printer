@@ -1,5 +1,4 @@
-import {cloudDb} from '../../utils/cloud-db';
-import {Collections} from '../../utils/db';
+import { cloudDb, Collections } from '../../utils/cloud-db';
 
 Component({
 	data: {
