@@ -6,7 +6,7 @@
     bindtap="onOilTap"
     data-oil="{{item.id}}"
   >
-    <checkbox value="{{item.id}}" checked="{{selectedOil === item.id}}" />
+    <view class="oil-checkbox"></view>
     <view class="oil-name">{{item.name}}</view>
     <view class="oil-effect">{{item.effect}}</view>
   </label>

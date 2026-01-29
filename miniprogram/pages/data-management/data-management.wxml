@@ -220,11 +220,9 @@
 					<view class="form-label">状态</view>
 					<view class="radio-group">
 						<view class="radio-option {{formData.status === 'normal' ? 'selected' : ''}}" bindtap="onStatusChange" data-value="normal">
-							<radio value="normal" checked="{{formData.status === 'normal'}}" />
 							<view>启用</view>
 						</view>
 						<view class="radio-option {{formData.status === 'disabled' ? 'selected' : ''}}" bindtap="onStatusChange" data-value="disabled">
-							<radio value="disabled" checked="{{formData.status === 'disabled'}}" />
 							<view>禁用</view>
 						</view>
 					</view>

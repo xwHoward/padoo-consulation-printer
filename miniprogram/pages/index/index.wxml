@@ -25,32 +25,32 @@
       </view>
       <!-- 双人模式切换 -->
       <view class="dual-mode-switch" wx:if="{{!editId}}">
-        <text class="dual-mode-label">双人模式</text>
+        <view class="dual-mode-label">双人模式</view>
         <switch class="dual-mode-toggle" checked="{{isDualMode}}" bindchange="toggleDualMode" color="#FF6B00" />
       </view>
       <!-- 双人模式顾客切换标签 -->
       <view class="guest-tabs" wx:if="{{isDualMode}}">
         <view class="guest-tab {{activeGuest === 1 ? 'active' : ''}}" bindtap="switchGuest" data-guest="1">
-          <text>顾客1</text>
-          <text class="guest-name" wx:if="{{guest1Info.surname}}">
+          <view class="tab-text">顾客1</view>
+          <view class="guest-name" wx:if="{{guest1Info.surname}}">
             {{guest1Info.surname}}{{guest1Info.gender === 'male' ? '先生' : '女士'}}
-          </text>
-          <text class="guest-tech" wx:if="{{guest1Info.technician}}">
+          </view>
+          <view class="guest-tech" wx:if="{{guest1Info.technician}}">
             {{guest1Info.technician}}
-          </text>
+          </view>
         </view>
         <view class="guest-tab {{activeGuest === 2 ? 'active' : ''}}" bindtap="switchGuest" data-guest="2">
-          <text>顾客2</text>
-          <text class="guest-name" wx:if="{{guest2Info.surname}}">
+          <view class="tab-text">顾客2</view>
+          <view class="guest-name" wx:if="{{guest2Info.surname}}">
             {{guest2Info.surname}}{{guest2Info.gender === 'male' ? '先生' : '女士'}}
-          </text>
-          <text class="guest-tech" wx:if="{{guest2Info.technician}}">
+          </view>
+          <view class="guest-tech" wx:if="{{guest2Info.technician}}">
             {{guest2Info.technician}}
-          </text>
+          </view>
         </view>
       </view>
       <view class="form-item">
-        <text class="form-label">项目</text>
+        <view class="form-label">项目</view>
         <project-selector selectedProject="{{(isDualMode ? (activeGuest === 1 ? guest1Info.project : guest2Info.project) : consultationInfo.project)}}" bind:change="onProjectSelect" />
       </view>
       <!-- 加强部位 -->
@@ -77,6 +77,7 @@
       <view class="section-title">升级选项</view>
       <view class="checkbox-group">
         <label class="checkbox-item upgrade-option {{(isDualMode ? (activeGuest === 1 ? guest1Info.upgradeHimalayanSaltStone : guest2Info.upgradeHimalayanSaltStone) : consultationInfo.upgradeHimalayanSaltStone) ? 'selected' : ''}}" bindtap="onUpgradeSelect">
+          <view class="upgrade-checkbox"></view>
           <image class="upgrade-bg" src="/assets/saltstone.jpg" mode="aspectFill" />
           <image class="upgrade-bg-qr" src="/assets/qr.jpg" mode="aspectFill" />
           <view class="upgrade-mask"></view>

@@ -6,7 +6,6 @@
     bindtap="onSelect"
     data-id="{{item.id}}"
   >
-    <radio value="{{item.id}}" checked="{{selectedGender === item.id}}" />
     {{item.name}}
   </label>
 </view>

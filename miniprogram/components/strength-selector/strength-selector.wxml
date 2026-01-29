@@ -6,7 +6,7 @@
     bindtap="onStrengthTap"
     data-strength="{{item.id}}"
   >
-    <checkbox value="{{item.id}}" checked="{{selectedStrength === item.id}}" />
+    <view class="strength-checkbox"></view>
     {{item.name}}
   </label>
 </view>

@@ -1,5 +1,6 @@
 import { cloudDb as cloudDbService, Collections } from "../../utils/cloud-db";
-import { calculateOvertimeUnits, calculateProjectEndTime, formatDate, formatTime, isTimeOverlapping, parseProjectDuration, SHIFT_END_TIMES } from "../../utils/util";
+import { calculateOvertimeUnits, calculateProjectEndTime, formatDate, formatTime, parseProjectDuration, SHIFT_END_TIMES } from "../../utils/util";
+import { showValidationError, validateConsultationForPrint } from "../../utils/validators";
 const GBK = require("gbk.js");
 
 // 定义每日咨询单集合
@@ -155,56 +156,41 @@ Component({
         this.setData({ loadingTechnicians: true });
 
         const projectDuration = parseProjectDuration(this.data.consultationInfo.project) || 60;
-        const proposedEndTime = new Date(now.getTime() + (projectDuration + 10) * 60 * 1000);
-        const proposedEndTimeStr = formatTime(proposedEndTime, false);
-
-        const database = this.getDb();
-
-        const reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, { date: today }) as ReservationRecord[];
-        const allStaff = await database.getAll<StaffInfo>(Collections.STAFF) as StaffInfo[];
-        const activeStaff = allStaff.filter((s) => s.status === 'active');
-        const allTodayRecords = await database.getConsultationsByDate<ConsultationRecord>(today) as ConsultationRecord[];
-        const todayRecords = allTodayRecords.filter((r) => !r.isVoided);
-
         const savedRotation = wx.getStorageSync(`rotation_${today}`) as string[];
 
-        const filteredReservations = reservations.filter(r => !this.data.currentReservationIds.includes(r.id));
+        const res = await wx.cloud.callFunction({
+          name: 'getAvailableTechnicians',
+          data: {
+            date: today,
+            currentTime: currentTimeStr,
+            projectDuration: projectDuration,
+            currentReservationIds: this.data.currentReservationIds
+          }
+        });
+        if (!res.result || typeof res.result !== 'object') {
+          throw new Error('获取技师列表失败');
+        }
+        if (res.result.code === 0) {
+          const list = res.result.data as StaffAvailability[];
 
-        let list = activeStaff.map(staff => {
-          let occupiedReason = '';
-          const conflictTask = [...todayRecords, ...filteredReservations].find(r => {
-            const rName = (r as ConsultationRecord).technician || (r as ReservationRecord).technicianName;
-            if (rName !== staff.name) return false;
-            return isTimeOverlapping(currentTimeStr, proposedEndTimeStr, r.startTime, r.endTime);
-          });
-
-          if (conflictTask) {
-            const isReservation = !(conflictTask as ConsultationRecord).technician;
-            const customerName = (conflictTask as ConsultationRecord).surname || (conflictTask as ReservationRecord).customerName || '顾客';
-            const gender = conflictTask.gender === 'male' ? '先生' : '女士';
-            occupiedReason = `${conflictTask.startTime}-${conflictTask.endTime} ${customerName}${gender}${isReservation ? '(预约)' : ''}`;
+          if (savedRotation && savedRotation.length > 0) {
+            list.sort((a, b) => {
+              const idxA = savedRotation.indexOf(a.id);
+              const idxB = savedRotation.indexOf(b.id);
+              if (idxA === -1) return 1;
+              if (idxB === -1) return -1;
+              return idxA - idxB;
+            });
           }
 
-          return {
-            id: staff.id,
-            name: staff.name,
-            isOccupied: !!conflictTask,
-            occupiedReason
-          };
-        });
-
-        // 4. 按轮排顺序排序
-        if (savedRotation && savedRotation.length > 0) {
-          list.sort((a, b) => {
-            const idxA = savedRotation.indexOf(a.id);
-            const idxB = savedRotation.indexOf(b.id);
-            if (idxA === -1) return 1;
-            if (idxB === -1) return -1;
-            return idxA - idxB;
+          this.setData({ technicianList: list, loadingTechnicians: false });
+        } else {
+          wx.showToast({
+            title: res.result.message || '加载技师列表失败',
+            icon: 'none'
           });
+          this.setData({ loadingTechnicians: false });
         }
-
-        this.setData({ technicianList: list, loadingTechnicians: false });
       } catch (error) {
         console.error('加载技师列表失败:', error);
         this.setData({ loadingTechnicians: false });
@@ -600,8 +586,14 @@ Component({
 
     // 打印咨询单（自动连接打印机）
     printConsultation() {
-      const { printerDeviceId, printerServiceId, printerCharacteristicId } =
-        this.data;
+      const { isDualMode, consultationInfo, guest1Info, guest2Info } = this.data;
+
+      const validationResult = validateConsultationForPrint(consultationInfo, isDualMode, guest1Info, guest2Info);
+      if (!showValidationError(validationResult)) {
+        return;
+      }
+
+      const { printerDeviceId, printerServiceId, printerCharacteristicId } = this.data;
 
       // 检查是否已连接打印机
       if (!printerDeviceId || !printerServiceId || !printerCharacteristicId) {
@@ -1168,7 +1160,7 @@ Component({
     },
 
     // 搜索匹配顾客
-    searchCustomer() {
+    async searchCustomer() {
       const { consultationInfo, isDualMode, activeGuest } = this.data;
 
       // 获取当前顾客信息
@@ -1195,64 +1187,31 @@ Component({
         return;
       }
 
-      // 从系统存储中获取所有顾客信息
-      const savedCustomers = wx.getStorageSync('customers') || {};
-      const customerList = Object.keys(savedCustomers).map(key => ({
-        id: key,
-        ...savedCustomers[key]
-      }));
-
-
-      // 查找最佳匹配
-      let bestMatch: any | null = null;
-      let bestScore = 0;
-
-      customerList.forEach(customer => {
-        let score = 0;
-
-        // 手机号模糊匹配（包含匹配，最高优先级）
-        if (currentPhone && customer.phone && customer.phone.includes(currentPhone)) {
-          // 完全匹配给最高分
-          if (customer.phone === currentPhone) {
-            score += 100;
-          } else {
-            // 模糊匹配根据输入长度给分
-            const matchRatio = currentPhone.length / customer.phone.length;
-            score += Math.round(matchRatio * 80);
+      try {
+        const res = await wx.cloud.callFunction({
+          name: 'matchCustomer',
+          data: {
+            surname: currentSurname,
+            gender: currentGender,
+            phone: currentPhone
           }
-        }
-
-        // 姓氏匹配
-        if (currentSurname && customer.name && customer.name.includes(currentSurname)) {
-          score += 50;
-        }
-
-        // 性别匹配
-        if (currentGender && customer.name) {
-          // 从姓名中推断性别（简单实现）
-          const nameEndsWith = customer.name.slice(-1);
-          if (currentGender === 'male' && nameEndsWith === '先生') {
-            score += 30;
-          } else if (currentGender === 'female' && nameEndsWith === '女士') {
-            score += 30;
-          }
-        }
-
-
-        // 更新最佳匹配
-        if (score > bestScore && score >= 30) {
-          bestScore = score;
-          bestMatch = customer;
-        }
-      });
-
-      // 如果找到匹配，更新状态
-      if (bestMatch) {
-        this.setData({
-          matchedCustomer: bestMatch,
-          matchedCustomerApplied: false
         });
-      } else {
+        if (!res.result || typeof res.result !== 'object') {
+          throw new Error('匹配顾客失败');
+        }
+        if (res.result.code === 0 && res.result.data) {
+          this.setData({
+            matchedCustomer: res.result.data,
+            matchedCustomerApplied: false
+          });
+        } else {
+          this.setData({
+            matchedCustomer: null,
+            matchedCustomerApplied: false
+          });
+        }
+      } catch (error) {
+        console.error('匹配顾客失败:', error);
         this.setData({
           matchedCustomer: null,
           matchedCustomerApplied: false
@@ -1345,60 +1304,8 @@ Component({
     async onClockIn() {
       const { consultationInfo, editId, isDualMode, guest1Info, guest2Info } = this.data;
 
-      if (isDualMode) {
-        if (!guest1Info.surname) {
-          wx.showToast({ title: '请填写顾客1姓氏', icon: 'none' });
-          return;
-        }
-        if (!guest1Info.gender) {
-          wx.showToast({ title: '请选择顾客1称呼', icon: 'none' });
-          return;
-        }
-        if (!guest1Info.project) {
-          wx.showToast({ title: '请选择顾客1项目', icon: 'none' });
-          return;
-        }
-        if (!guest1Info.technician) {
-          wx.showToast({ title: '请选择顾客1技师', icon: 'none' });
-          return;
-        }
-        if (!guest2Info.surname) {
-          wx.showToast({ title: '请填写顾客2姓氏', icon: 'none' });
-          return;
-        }
-        if (!guest2Info.gender) {
-          wx.showToast({ title: '请选择顾客2称呼', icon: 'none' });
-          return;
-        }
-        if (!guest2Info.project) {
-          wx.showToast({ title: '请选择顾客2项目', icon: 'none' });
-          return;
-        }
-        if (!guest2Info.technician) {
-          wx.showToast({ title: '请选择顾客2技师', icon: 'none' });
-          return;
-        }
-      } else {
-        if (!consultationInfo.surname) {
-          wx.showToast({ title: '请填写姓氏', icon: 'none' });
-          return;
-        }
-        if (!consultationInfo.gender) {
-          wx.showToast({ title: '请选择称呼', icon: 'none' });
-          return;
-        }
-        if (!consultationInfo.project) {
-          wx.showToast({ title: '请选择项目', icon: 'none' });
-          return;
-        }
-        if (!consultationInfo.technician) {
-          wx.showToast({ title: '请选择技师', icon: 'none' });
-          return;
-        }
-      }
-
-      if (!consultationInfo.room) {
-        wx.showToast({ title: '请选择房间', icon: 'none' });
+      const validationResult = validateConsultationForPrint(consultationInfo, isDualMode, guest1Info, guest2Info);
+      if (!showValidationError(validationResult)) {
         return;
       }
 
@@ -1414,9 +1321,9 @@ Component({
           }
           wx.setClipboardData({
             data: clockInInfo,
-            success: async () => {
+            success: () => {
               wx.showToast({ title: '上钟信息已复制', icon: 'success' });
-              await this.loadTechnicianList();
+              this.loadTechnicianList();
             },
             fail: (err) => {
               wx.showToast({ title: '复制失败', icon: 'none' });
@@ -1431,25 +1338,6 @@ Component({
     async doDualClockIn() {
       const { consultationInfo, guest1Info, guest2Info } = this.data;
 
-      if (!guest1Info.project) {
-        wx.showToast({ title: '请为顾客1选择项目', icon: 'none' });
-        return;
-      }
-      if (!guest2Info.project) {
-        wx.showToast({ title: '请为顾客2选择项目', icon: 'none' });
-        return;
-      }
-
-      if (!guest1Info.technician) {
-        wx.showToast({ title: '请为顾客1选择技师', icon: 'none' });
-        return;
-      }
-      if (!guest2Info.technician) {
-        wx.showToast({ title: '请为顾客2选择技师', icon: 'none' });
-        return;
-      }
-
-      // 构建两位顾客的完整信息（使用各自的项目、技师、点钟、券码）
       const info1: Add<ConsultationInfo> = {
         ...consultationInfo,
         surname: guest1Info.surname,

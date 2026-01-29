@@ -1,6 +1,11 @@
 <navigation-bar title="场控收银" back="{{true}}" color="black" background="#FFF"></navigation-bar>
 <scroll-view class="scrollarea" scroll-y type="list">
   <view class="container">
+    <!-- loading遮罩 -->
+    <view class="loading-mask" wx:if="{{loading}}">
+      <view class="loading-spinner"></view>
+      <view class="loading-text">{{loadingText}}</view>
+    </view>
     <!-- 员工排钟表 -->
     <view class="section timeline-section">
       <view class="section-header">
@@ -40,9 +45,9 @@
               <!-- 占用块 -->
               <view class="time-block {{block.isReservation ? 'reservation' : ''}}" wx:for="{{item.blocks}}" wx:for-item="block" wx:key="startTime" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block.id}}" data-reservation="{{block.isReservation}}">
                 <view class="block-content">
-                  <view class="block-customer">{{block.customerName}}</view>
+                  <view class="block-customer">{{block.customerName}} | {{block.room}}</view>
                   <view class="block-time">{{block.startTime}}-{{block.endTime}}</view>
-                  <view class="block-info">{{block.project}} | {{block.room}}</view>
+                  <view class="block-info">{{block.project}}</view>
                 </view>
               </view>
             </view>
@@ -173,8 +178,8 @@
       </view>
     </view>
     <view class="modal-footer">
-      <button class="btn-cancel" bindtap="closeSettlementModal">取消</button>
-      <button class="btn-confirm" bindtap="confirmSettlement">确定</button>
+      <view class="btn btn-cancel" bindtap="closeSettlementModal">取消</view>
+      <view class="btn btn-confirm" bindtap="confirmSettlement">确定</view>
     </view>
   </view>
 </view>

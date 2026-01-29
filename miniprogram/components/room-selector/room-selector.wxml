@@ -6,10 +6,6 @@
     bindtap="onRoomTap"
     data-room="{{item}}"
   >
-    <radio
-      value="{{item}}"
-      checked="{{selectedRoom === item}}"
-      disabled="{{disabled}}" />
     <view class="room-name">{{item}}</view>
   </label>
 </view>

@@ -212,3 +212,11 @@ interface IAppOption<T extends Record<string, any> = AppGlobalData> {
 	getRooms: () => Promise<Room[]>;
 	getEssentialOils: () => Promise<EssentialOil[]>;
 }
+
+interface StaffAvailability {
+	id: string;
+	name: string;
+	isOccupied: boolean;
+	occupiedReason?: string;
+	isSelected?: boolean;
+}

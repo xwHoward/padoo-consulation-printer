@@ -50,22 +50,18 @@
 <view class="modal-container" wx:if="{{showEditModal}}">
   <view class="modal-title">{{modalTitle}}</view>
   <view class="form-group">
-    <text class="form-label">手机号</text>
-    <input class="form-input" type="number" placeholder="选填" maxlength="11" bindinput="onPhoneInput" value="{{formPhone}}" />
-  </view>
-  <view class="form-group">
     <text class="form-label">姓名</text>
     <input class="form-input" type="text" placeholder="选填" bindinput="onNameInput" value="{{formName}}" />
+    <text class="form-label">手机号</text>
+    <input class="form-input" type="number" placeholder="选填" maxlength="11" bindinput="onPhoneInput" value="{{formPhone}}" />
   </view>
   <view class="form-group">
     <text class="form-label">性别</text>
     <view class="gender-selector">
       <view class="gender-option {{formGender === 'male' ? 'selected' : ''}}" bindtap="onGenderChange" data-gender="male">
-        <text class="gender-icon">♂️</text>
         <text>先生</text>
       </view>
       <view class="gender-option {{formGender === 'female' ? 'selected' : ''}}" bindtap="onGenderChange" data-gender="female">
-        <text class="gender-icon">♀️</text>
         <text>女士</text>
       </view>
     </view>
@@ -74,7 +70,6 @@
     <text class="form-label">责任技师</text>
     <view class="technician-selector">
       <label wx:for="{{technicianList}}" wx:key="id" wx:for-item="tech" class="technician-option {{formResponsibleTechnician === tech.name ? 'selected' : ''}}" bindtap="onTechnicianSelect" data-technician="{{tech.name}}">
-        <radio value="{{tech.name}}" checked="{{formResponsibleTechnician === tech.name}}" />
         <text>{{tech.name}}</text>
       </label>
     </view>
@@ -109,7 +104,6 @@
     <text class="form-label">选择会员卡</text>
     <view class="membership-card-selector">
       <label wx:for="{{membershipCards}}" wx:key="id" wx:for-item="card" class="card-option {{selectedCardId === card.id ? 'selected' : ''}}" bindtap="onCardSelect" data-card="{{card}}">
-        <radio value="{{card.id}}" checked="{{selectedCardId === card.id}}" />
         <view class="card-option-content">
           <view class="card-option-name">{{card.name}}</view>
           <view class="card-option-meta">
@@ -147,7 +141,6 @@
     <text class="form-label">销售员工</text>
     <view class="technician-selector">
       <label wx:for="{{technicianList}}" wx:key="id" wx:for-item="tech" class="technician-option {{formSalesStaff === tech.name ? 'selected' : ''}}" bindtap="onSalesStaffSelect" data-staff="{{tech.name}}">
-        <radio value="{{tech.name}}" checked="{{formSalesStaff === tech.name}}" />
         <text>{{tech.name}}</text>
       </label>
     </view>

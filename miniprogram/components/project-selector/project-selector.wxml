@@ -6,7 +6,6 @@
     bindtap="onProjectTap"
     data-project="{{item}}"
   >
-    <radio value="{{item}}" checked="{{selectedProject === item}}" />
     <view class="project-name">{{item}}</view>
   </label>
 </view>

@@ -45,13 +45,7 @@ interface ReserveForm {
 	technicianName?: string;
 }
 
-interface StaffAvailability {
-	id: string;
-	name: string;
-	isOccupied: boolean;
-	occupiedReason?: string;
-	isSelected?: boolean;
-}
+
 
 Component({
 	data: {
@@ -96,7 +90,10 @@ Component({
 			{ key: 'gaode', label: '高德', selected: false, amount: '' },
 			{ key: 'free', label: '免单', selected: false, amount: '' },
 			{ key: 'membership', label: '划卡', selected: false, amount: '' },
-		]
+		],
+		// loading状态
+		loading: false,
+		loadingText: '加载中...'
 	},
 
 	lifetimes: {
@@ -120,6 +117,7 @@ Component({
 		},
 
 		async loadProjects() {
+			this.setData({ loading: true, loadingText: '加载项目...' });
 			try {
 				const app = getApp<IAppOption>();
 				const allProjects = await app.getProjects();
@@ -127,6 +125,8 @@ Component({
 			} catch (error) {
 				console.error('加载项目失败:', error);
 				this.setData({ projects: [] });
+			} finally {
+				this.setData({ loading: false });
 			}
 		},
 
@@ -137,6 +137,7 @@ Component({
 
 		// 加载数据
 		async loadData() {
+			this.setData({ loading: true, loadingText: '加载数据...' });
 			try {
 				const database = this.getDb();
 				const app = getApp<IAppOption>();
@@ -291,6 +292,8 @@ Component({
 					title: '加载数据失败',
 					icon: 'none'
 				});
+			} finally {
+				this.setData({ loading: false });
 			}
 		},
 
@@ -505,6 +508,7 @@ Component({
 
 		// 编辑预约
 		async editReservation(id: string) {
+			this.setData({ loading: true, loadingText: '加载中...' });
 			try {
 				const database = this.getDb();
 				const record = await (database).findById<ReservationRecord>(Collections.RESERVATIONS, id);
@@ -536,6 +540,8 @@ Component({
 					title: '加载预约失败',
 					icon: 'none'
 				});
+			} finally {
+				this.setData({ loading: false });
 			}
 		},
 
@@ -545,6 +551,7 @@ Component({
 				const { date, startTime, project } = this.data.reserveForm;
 				if (!date || !startTime) return;
 
+				this.setData({ loading: true, loadingText: '检查技师可用性...' });
 				const database = this.getDb();
 
 				const [h, m] = startTime.split(':').map(Number);
@@ -598,6 +605,8 @@ Component({
 				this.setData({ staffAvailability });
 			} catch (error) {
 				console.error('检查技师可用性失败:', error);
+			} finally {
+				this.setData({ loading: false });
 			}
 		},
 
@@ -675,15 +684,16 @@ Component({
 		},
 
 		async confirmReserve() {
+			const { reserveForm } = this.data;
+			const database = this.getDb();
+
+			if (!reserveForm.startTime) {
+				wx.showToast({ title: '开始时间必填', icon: 'none' });
+				return;
+			}
+
+			this.setData({ loading: true, loadingText: '保存中...' });
 			try {
-				const { reserveForm } = this.data;
-				const database = this.getDb();
-
-				if (!reserveForm.startTime) {
-					wx.showToast({ title: '开始时间必填', icon: 'none' });
-					return;
-				}
-
 				// 计算结束时间
 				const [h, m] = reserveForm.startTime.split(':').map(Number);
 				const startTotal = h * 60 + m;
@@ -781,6 +791,8 @@ Component({
 			} catch (error) {
 				console.error('保存预约失败:', error);
 				wx.showToast({ title: '保存失败', icon: 'none' });
+			} finally {
+				this.setData({ loading: false });
 			}
 		},
 
@@ -793,6 +805,7 @@ Component({
 				cancelText: '再想想',
 				success: async (res) => {
 					if (res.confirm) {
+						this.setData({ loading: true, loadingText: '取消中...' });
 						try {
 							const database = this.getDb();
 							const success = await (database).deleteById(Collections.RESERVATIONS, id);
@@ -805,6 +818,8 @@ Component({
 						} catch (error) {
 							console.error('取消预约失败:', error);
 							wx.showToast({ title: '取消失败', icon: 'none' });
+						} finally {
+							this.setData({ loading: false });
 						}
 					}
 				}
@@ -931,18 +946,19 @@ Component({
 
 		// 确认结算
 		async confirmSettlement() {
+			const { settlementRecordId, paymentMethods, settlementCouponCode } = this.data;
+			const database = this.getDb();
+
+			// 收集所有已选择的支付方式
+			const selectedPayments = paymentMethods.filter(m => m.selected);
+
+			if (selectedPayments.length === 0) {
+				wx.showToast({ title: '请选择支付方式', icon: 'none' });
+				return;
+			}
+
+			this.setData({ loading: true, loadingText: '结算中...' });
 			try {
-				const { settlementRecordId, paymentMethods, settlementCouponCode } = this.data;
-				const database = this.getDb();
-
-				// 收集所有已选择的支付方式
-				const selectedPayments = paymentMethods.filter(m => m.selected);
-
-				if (selectedPayments.length === 0) {
-					wx.showToast({ title: '请选择支付方式', icon: 'none' });
-					return;
-				}
-
 				// 验证金额
 				const payments: PaymentItem[] = [];
 				let totalAmount = 0;
@@ -1054,6 +1070,8 @@ Component({
 			} catch (error) {
 				console.error('结算失败:', error);
 				wx.showToast({ title: '结算失败', icon: 'none' });
+			} finally {
+				this.setData({ loading: false });
 			}
 		}
 	}
