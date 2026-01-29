@@ -58,7 +58,6 @@ Component({
     displayStyle: '',
     ios: false,
     innerPaddingRight: '',
-    leftWidth: '',
     safeAreaTop: ''
   },
   lifetimes: {
@@ -71,7 +70,6 @@ Component({
           this.setData({
             ios: !isAndroid,
             innerPaddingRight: `padding-right: ${res.windowWidth - rect.left}px`,
-            leftWidth: `width: ${res.windowWidth - rect.left}px`,
             safeAreaTop: `height: calc(var(--height) + ${statusBarHeight}px); padding-top: ${statusBarHeight}px`
           })
         }

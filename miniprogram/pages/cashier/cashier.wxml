@@ -9,9 +9,9 @@
         <view class="header-picker">
           <picker mode="date" value="{{selectedDate}}" bindchange="onDateChange">
             <view class="date-display">
-              <text class="calendar-icon">📅</text>
-              <text class="date-text">{{selectedDate}}</text>
-              <text class="arrow-down">▼</text>
+              <view class="calendar-icon">📅</view>
+              <view class="date-text">{{selectedDate}}</view>
+              <view class="arrow-down">▼</view>
             </view>
           </picker>
         </view>
@@ -40,9 +40,9 @@
               <!-- 占用块 -->
               <view class="time-block {{block.isReservation ? 'reservation' : ''}}" wx:for="{{item.blocks}}" wx:for-item="block" wx:key="startTime" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block.id}}" data-reservation="{{block.isReservation}}">
                 <view class="block-content">
-                  <text class="block-customer">{{block.customerName}}</text>
-                  <text class="block-time">{{block.startTime}}-{{block.endTime}}</text>
-                  <text class="block-info">{{block.project}} | {{block.room}}</text>
+                  <view class="block-customer">{{block.customerName}}</view>
+                  <view class="block-time">{{block.startTime}}-{{block.endTime}}</view>
+                  <view class="block-info">{{block.project}} | {{block.room}}</view>
                 </view>
               </view>
             </view>
@@ -58,9 +58,9 @@
           <view class="room-name">{{item.name}}</view>
           <view class="room-detail" wx:if="{{item.isOccupied}}">
             <view class="occupied-record" wx:for="{{item.occupiedRecords}}" wx:for-item="record" wx:key="endTime">
-              <text class="customer-tag">{{record.customerName}}</text>
-              <text class="staff-tag">{{record.technician}}</text>
-              <text class="time-tag">{{record.endTime}}</text>
+              <view class="customer-tag">{{record.customerName}}</view>
+              <view class="staff-tag">{{record.technician}}</view>
+              <view class="time-tag">{{record.endTime}}</view>
             </view>
           </view>
         </view>
@@ -74,12 +74,12 @@
           <view class="rank-num">{{index + 1}}</view>
           <view class="staff-info">
             <view class="staff-name-row">
-              <text class="staff-name">{{item.name}}</text>
-              <text class="shift-tag {{item.shift}}">{{item.shiftLabel}}</text>
+              <view class="staff-name">{{item.name}}</view>
+              <view class="shift-tag {{item.shift}}">{{item.shiftLabel}}</view>
             </view>
             <view class="available-slots" wx:if="{{item.availableSlots}}">
-              <text class="slots-label">可约:</text>
-              <text class="slots-time">{{item.availableSlots}}</text>
+              <view class="slots-label">可约:</view>
+              <view class="slots-time">{{item.availableSlots}}</view>
             </view>
           </view>
           <view class="action-btns">
@@ -102,14 +102,19 @@
     <view class="modal-header">{{reserveForm.id ? '编辑预约' : '新增预约'}}</view>
     <view class="modal-body">
       <view class="form-item">
-        <text class="form-label">日期</text>
+        <view class="form-label">日期</view>
         <picker mode="date" value="{{reserveForm.date}}" bindchange="onReserveFieldChange" data-field="date">
           <view class="picker-val">{{reserveForm.date}}</view>
+        </picker>
+        <view class="form-label"></view>
+        <view class="form-label">开始时间</view>
+        <picker mode="time" value="{{reserveForm.startTime}}" bindchange="onReserveFieldChange" data-field="startTime">
+          <view class="picker-val">{{reserveForm.startTime}}</view>
         </picker>
       </view>
       <view class="form-item combined-form-item">
         <view class="form-field">
-          <text class="form-label">姓名</text>
+          <view class="form-label">姓名</view>
           <input class="form-input" placeholder="选填" value="{{reserveForm.customerName}}" bindinput="onReserveFieldChange" data-field="customerName" />
         </view>
         <view class="form-field">
@@ -117,24 +122,18 @@
         </view>
       </view>
       <view class="form-item">
-        <text class="form-label">手机号</text>
+        <view class="form-label">手机号</view>
         <input class="form-input" type="number" maxlength="11" placeholder="选填" value="{{reserveForm.phone}}" bindinput="onReserveFieldChange" data-field="phone" />
       </view>
       <view class="form-item project-item">
-        <text class="form-label">项目</text>
+        <view class="form-label">项目</view>
         <project-selector selectedProject="{{reserveForm.project}}" bind:change="selectReserveProject" />
       </view>
       <view class="form-item technician-item">
-        <text class="form-label">
+        <view class="form-label">
           技师{{reserveForm.selectedTechnicians.length > 0 ? '(' + reserveForm.selectedTechnicians.length + ')' : ''}}
-        </text>
+        </view>
         <technician-selector multi="{{true}}" technicianList="{{staffAvailability}}" bind:change="selectReserveTechnician" />
-      </view>
-      <view class="form-item">
-        <text class="form-label">开始时间</text>
-        <picker mode="time" value="{{reserveForm.startTime}}" bindchange="onReserveFieldChange" data-field="startTime">
-          <view class="picker-val">{{reserveForm.startTime}}</view>
-        </picker>
       </view>
     </view>
     <view class="modal-footer">
@@ -150,26 +149,26 @@
     <view class="modal-body">
       <!-- 支付方式选择 -->
       <view class="form-item">
-        <text class="form-label">支付方式</text>
+        <view class="form-label">支付方式</view>
       </view>
       <view class="payment-methods">
         <view class="payment-item {{item.selected ? 'selected' : ''}}" wx:for="{{paymentMethods}}" wx:key="key">
           <view class="payment-header" bindtap="togglePaymentMethod" data-index="{{index}}">
             <view class="checkbox-wrapper">
               <view class="checkbox {{item.selected ? 'checked' : ''}}"></view>
-              <text class="payment-label">{{item.label}}</text>
+              <view class="payment-label">{{item.label}}</view>
             </view>
           </view>
           <view class="payment-amount" wx:if="{{item.selected && item.key !== 'free'}}">
-            <text class="amount-label">{{item.key === 'membership' ? '次数：' : '金额：'}}</text>
+            <view class="amount-label">{{item.key === 'membership' ? '次数：' : '金额：'}}</view>
             <input class="amount-input" type="{{item.key === 'membership' ? 'number' : 'digit'}}" placeholder="{{item.key === 'membership' ? '请输入扣减次数' : '请输入金额'}}" value="{{item.amount}}" bindinput="onPaymentAmountInput" data-index="{{index}}" />
-            <text class="amount-unit">{{item.key === 'membership' ? '次' : '元'}}</text>
+            <view class="amount-unit">{{item.key === 'membership' ? '次' : '元'}}</view>
           </view>
         </view>
       </view>
       <!-- 券码 -->
       <view class="form-item">
-        <text class="form-label">券码</text>
+        <view class="form-label">券码</view>
         <input class="form-input" type="number" placeholder="选填" value="{{settlementCouponCode}}" bindinput="onCouponCodeInput" />
       </view>
     </view>

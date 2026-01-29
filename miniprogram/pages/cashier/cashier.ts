@@ -607,7 +607,7 @@ Component({
 
 		stopBubble() { },
 
-		async onReserveFieldChange(e: any) {
+		onReserveFieldChange(e: any) {
 			const { field } = e.currentTarget.dataset;
 			const val = e.detail.value;
 			const { reserveForm, projects } = this.data;
@@ -616,13 +616,14 @@ Component({
 				const project = projects[val];
 				reserveForm.project = project ? project.name : '';
 				this.setData({ reserveForm });
-				await this.checkStaffAvailability();
+				this.checkStaffAvailability();
 			} else if (field === 'startTime' || field === 'date') {
 				reserveForm[field as 'startTime' | 'date'] = val;
 				this.setData({ reserveForm });
-				await this.checkStaffAvailability();
+				this.checkStaffAvailability();
 			} else {
 				reserveForm[field as keyof ReserveForm] = val;
+				console.log('更新后的 reserveForm:', reserveForm);
 				this.setData({ reserveForm });
 			}
 		},
