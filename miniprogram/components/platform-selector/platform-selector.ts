@@ -13,7 +13,7 @@ Component({
 	},
 
 	methods: {
-		onSelect(e: any) {
+		onSelect(e: WechatMiniprogram.CustomEvent) {
 			const {id} = e.currentTarget.dataset;
 			this.triggerEvent('change', {value: id});
 		}

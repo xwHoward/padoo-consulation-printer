@@ -3,6 +3,10 @@ import { cloudDb as cloudDbService, Collections } from '../../utils/cloud-db';
 import { DEFAULT_SHIFT, SHIFT_NAMES, SHIFT_TYPES } from '../../utils/constants';
 import { formatDate } from '../../utils/util';
 
+interface DateInfo {
+	date: string; dayNum: number; weekDay: string; isToday: boolean;
+}
+
 Component({
 	data: {
 		loading: false,
@@ -13,8 +17,8 @@ Component({
 		inputStatus: 'active' as StaffStatus,
 		// 排班相关
 		today: '',
-		dates: [] as any[],
-		scheduleMap: {} as any,
+		dates: [] as DateInfo[],
+		scheduleMap: {} as Record<string, Record<string, { label: string; type: ShiftType; index: number }>>,
 		shiftNames: Object.values(SHIFT_NAMES),
 	},
 
@@ -118,7 +122,7 @@ Component({
 		},
 
 		// 排班变更
-		async onShiftChange(e: any) {
+		async onShiftChange(e: WechatMiniprogram.CustomEvent) {
 			try {
 				const { staffId, date } = e.currentTarget.dataset;
 				const index = parseInt(e.detail.value);

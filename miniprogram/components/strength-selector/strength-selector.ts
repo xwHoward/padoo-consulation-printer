@@ -11,7 +11,7 @@ Component({
 		strengths: MASSAGE_STRENGTHS
 	},
 	methods: {
-		onStrengthTap(e: any) {
+		onStrengthTap(e: WechatMiniprogram.CustomEvent) {
 			const strength = e.currentTarget.dataset.strength;
 			this.triggerEvent('change', {strength});
 		}

@@ -51,7 +51,11 @@ class BackupManager {
 				throw new Error(res.errMsg);
 			}
 
-			const result = res.result as any;
+			const result = res.result;
+
+			if (!result || typeof result === 'string') {
+				throw new Error('备份数据格式错误');
+			}
 
 			if (result.code !== 0) {
 				throw new Error(result.message || '备份失败');
@@ -120,7 +124,11 @@ class BackupManager {
 				throw new Error(res.errMsg);
 			}
 
-			const result = res.result as any;
+			const result = res.result;
+
+			if (!result || typeof result === 'string') {
+				throw new Error('恢复数据格式错误');
+			}
 
 			if (result.code !== 0) {
 				throw new Error(result.message || '恢复失败');
@@ -231,7 +239,7 @@ class BackupManager {
 	async importBackupFromJson(): Promise<BackupData | null> {
 		return new Promise((resolve, reject) => {
 			wx.chooseMessageFile({
-				count:1,
+				count: 1,
 				type: 'file',
 				extension: ['json'],
 				success: async (res) => {

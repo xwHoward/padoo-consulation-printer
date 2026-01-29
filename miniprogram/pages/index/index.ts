@@ -14,7 +14,7 @@ const DefaultConsultationInfo: Add<ConsultationInfo> = {
   technician: "",
   room: "",
   massageStrength: "standard",
-  essentialOil: "lavender",
+  essentialOil: "",
   selectedParts: {},
   isClockIn: false,
   remarks: "",
@@ -29,7 +29,7 @@ const DefaultGuestInfo: GuestInfo = {
   gender: "male",
   selectedParts: {},
   massageStrength: "standard",
-  essentialOil: "lavender",
+  essentialOil: "",
   remarks: "",
   technician: "",
   isClockIn: false,
@@ -39,22 +39,22 @@ const DefaultGuestInfo: GuestInfo = {
   project: "",
 };
 
-function ensureConsultationInfoCompatibility(data: ConsultationInfo, projects: any[] = []): Update<ConsultationInfo> {
+function ensureConsultationInfoCompatibility(data: ConsultationInfo, projects: Project[] = []): Update<ConsultationInfo> {
   const defaultProject = projects.length > 1 ? projects[1].name : '';
   return {
     surname: data.surname || "",
-    gender: data.gender || "male",
+    gender: data.gender || "",
     project: data.project || defaultProject,
     technician: data.technician || "",
     room: data.room || "",
-    massageStrength: data.massageStrength || "standard",
-    essentialOil: data.essentialOil || "lavender",
+    massageStrength: data.massageStrength || "",
+    essentialOil: data.essentialOil || "",
     selectedParts: data.selectedParts || {},
     isClockIn: data.isClockIn || false,
     remarks: data.remarks || "",
     phone: data.phone || "",
     couponCode: data.couponCode || "",
-    couponPlatform: data.couponPlatform || "meituan",
+    couponPlatform: data.couponPlatform || "",
     upgradeHimalayanSaltStone: data.upgradeHimalayanSaltStone || false,
   };
 }
@@ -68,7 +68,7 @@ type GuestContext = {
 };
 
 
-function updateGuestField(context: GuestContext, fieldName: string, value: any): any {
+function updateGuestField(context: GuestContext, fieldName: string, value: any) {
   if (context.isDualMode) {
     const guestKey = context.activeGuest === 1 ? 'guest1Info' : 'guest2Info';
     return {
@@ -80,29 +80,29 @@ function updateGuestField(context: GuestContext, fieldName: string, value: any):
   };
 }
 
-function toggleGuestBooleanField(context: GuestContext, fieldName: string): any {
+function toggleGuestBooleanField(context: GuestContext, fieldName: keyof GuestInfo) {
   const currentValue = getGuestFieldValue(context, fieldName);
   return updateGuestField(context, fieldName, !currentValue);
 }
 
-function getGuestFieldValue(context: GuestContext, fieldName: string): any {
+function getGuestFieldValue(context: GuestContext, fieldName: keyof GuestInfo) {
   if (context.isDualMode) {
     const guestInfo = context.activeGuest === 1 ? context.guest1Info : context.guest2Info;
-    return (guestInfo as any)[fieldName];
+    return (guestInfo)[fieldName];
   }
-  return (context.consultationInfo as any)[fieldName];
+  return (context.consultationInfo)[fieldName];
 }
 
 Component({
   data: {
-    projects: [] as any[],
+    projects: [] as Project[],
     consultationInfo: { ...DefaultConsultationInfo, selectedParts: {} },
     isPrinterConnected: false,
     printerDeviceId: "",
     printerServiceId: "",
     printerCharacteristicId: "",
     editId: "", // 正在编辑的记录ID
-    technicianList: [] as any[], // 动态技师列表
+    technicianList: [] as { id: string, name: string; isOccupied: boolean }[], // 动态技师列表
     currentReservationIds: [] as string[], // 当前加载的预约ID列表（用于冲突检查时排除）
     loadingTechnicians: false, // 加载技师状态
     // 专用精油相关
@@ -113,7 +113,7 @@ Component({
     guest1Info: { ...DefaultGuestInfo, selectedParts: {} } as GuestInfo, // 顾客1独立信息
     guest2Info: { ...DefaultGuestInfo, selectedParts: {} } as GuestInfo, // 顾客2独立信息
     // 顾客匹配相关
-    matchedCustomer: null as any | null, // 匹配到的顾客信息
+    matchedCustomer: null as CustomerRecord | null, // 匹配到的顾客信息
     matchedCustomerApplied: false, // 是否已应用匹配的顾客信息
   },
 
@@ -137,7 +137,7 @@ Component({
     },
 
     // 页面加载
-    async onLoad(options: any) {
+    async onLoad(options: Record<string, string>) {
       if (options.editId) {
         await this.loadEditData(options.editId);
       } else if (options.reserveId) {
@@ -162,9 +162,9 @@ Component({
 
         const reservations = await database.find<ReservationRecord>(Collections.RESERVATIONS, { date: today }) as ReservationRecord[];
         const allStaff = await database.getAll<StaffInfo>(Collections.STAFF) as StaffInfo[];
-        const activeStaff = allStaff.filter((s: StaffInfo) => s.status === 'active');
+        const activeStaff = allStaff.filter((s) => s.status === 'active');
         const allTodayRecords = await database.getConsultationsByDate<ConsultationRecord>(today) as ConsultationRecord[];
-        const todayRecords = allTodayRecords.filter((r: ConsultationRecord) => !r.isVoided);
+        const todayRecords = allTodayRecords.filter((r) => !r.isVoided);
 
         const savedRotation = wx.getStorageSync(`rotation_${today}`) as string[];
 
@@ -173,14 +173,14 @@ Component({
         let list = activeStaff.map(staff => {
           let occupiedReason = '';
           const conflictTask = [...todayRecords, ...filteredReservations].find(r => {
-            const rName = (r as any).technician || (r as any).technicianName;
+            const rName = (r as ConsultationRecord).technician || (r as ReservationRecord).technicianName;
             if (rName !== staff.name) return false;
             return isTimeOverlapping(currentTimeStr, proposedEndTimeStr, r.startTime, r.endTime);
           });
 
           if (conflictTask) {
-            const isReservation = !(conflictTask as any).technician;
-            const customerName = (conflictTask as any).surname || (conflictTask as any).customerName || '顾客';
+            const isReservation = !(conflictTask as ConsultationRecord).technician;
+            const customerName = (conflictTask as ConsultationRecord).surname || (conflictTask as ReservationRecord).customerName || '顾客';
             const gender = conflictTask.gender === 'male' ? '先生' : '女士';
             occupiedReason = `${conflictTask.startTime}-${conflictTask.endTime} ${customerName}${gender}${isReservation ? '(预约)' : ''}`;
           }
@@ -280,17 +280,17 @@ Component({
     },
 
     // 切换顾客标签
-    switchGuest(e: any) {
+    switchGuest(e: WechatMiniprogram.CustomEvent) {
       const guest = parseInt(e.currentTarget.dataset.guest) as 1 | 2;
       const { guest1Info, guest2Info, projects } = this.data;
       const currentGuestProject = guest === 1 ? guest1Info.project : guest2Info.project;
-      const selectedProject = projects.find((p: any) => p.name === currentGuestProject);
+      const selectedProject = projects.find((p) => p.name === currentGuestProject);
       const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
       this.setData({ activeGuest: guest, currentProjectIsEssentialOilOnly: isEssentialOilOnly });
     },
 
     // 姓氏输入
-    onSurnameInput(e: any) {
+    onSurnameInput(e: WechatMiniprogram.CustomEvent) {
       const { isDualMode, activeGuest } = this.data;
       if (isDualMode) {
         const key = activeGuest === 1 ? 'guest1Info.surname' : 'guest2Info.surname';
@@ -303,7 +303,7 @@ Component({
     },
 
     // 性别选择
-    onGenderSelect(e: any) {
+    onGenderSelect(e: WechatMiniprogram.CustomEvent) {
       const gender = e.detail.value;
       const { isDualMode, activeGuest } = this.data;
       if (isDualMode) {
@@ -317,11 +317,11 @@ Component({
     },
 
     // 项目选择
-    onProjectSelect(e: any) {
+    onProjectSelect(e: WechatMiniprogram.CustomEvent) {
       const project = e.detail.project || e.currentTarget.dataset.project;
       const { isDualMode, activeGuest, projects } = this.data;
 
-      const selectedProject = projects.find((p: any) => p.name === project);
+      const selectedProject = projects.find((p) => p.name === project);
       const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
 
       if (isDualMode) {
@@ -334,7 +334,7 @@ Component({
     },
 
     // 技师选择
-    onTechnicianSelect(e: any) {
+    onTechnicianSelect(e: WechatMiniprogram.CustomEvent) {
       const { technician, occupied, reason } = e.detail.technician ? e.detail : e.currentTarget.dataset;
       if (occupied) {
         wx.showToast({ title: reason || '该技师当前时段已有安排', icon: 'none', duration: 2500 });
@@ -362,7 +362,7 @@ Component({
     },
 
     // 备注输入
-    onRemarksInput(e: any) {
+    onRemarksInput(e: WechatMiniprogram.CustomEvent) {
       const { isDualMode, activeGuest } = this.data;
       if (isDualMode) {
         const key = activeGuest === 1 ? 'guest1Info.remarks' : 'guest2Info.remarks';
@@ -373,7 +373,7 @@ Component({
     },
 
     // 手机号输入
-    onPhoneInput(e: any) {
+    onPhoneInput(e: WechatMiniprogram.CustomEvent) {
       this.setData({
         "consultationInfo.phone": e.detail.value,
       });
@@ -382,7 +382,7 @@ Component({
     },
 
     // 券码输入
-    onCouponCodeInput(e: any) {
+    onCouponCodeInput(e: WechatMiniprogram.CustomEvent) {
       const { isDualMode, activeGuest } = this.data;
       if (isDualMode) {
         const key = activeGuest === 1 ? 'guest1Info.couponCode' : 'guest2Info.couponCode';
@@ -393,7 +393,7 @@ Component({
     },
 
     // 券码平台选择
-    onCouponPlatformSelect(e: any) {
+    onCouponPlatformSelect(e: WechatMiniprogram.CustomEvent) {
       const platform = e.detail.value;
       const { isDualMode, activeGuest } = this.data;
       if (isDualMode) {
@@ -407,7 +407,7 @@ Component({
     },
 
     // 房间选择
-    onRoomSelect(e: any) {
+    onRoomSelect(e: WechatMiniprogram.CustomEvent) {
       const room = e.detail.room || e.currentTarget.dataset.room;
       this.setData({
         "consultationInfo.room": room,
@@ -415,7 +415,7 @@ Component({
     },
 
     // 按摩力度选择
-    onMassageStrengthSelect(e: any) {
+    onMassageStrengthSelect(e: WechatMiniprogram.CustomEvent) {
       const strength = e.detail.strength || e.currentTarget.dataset.strength;
       const { isDualMode, activeGuest } = this.data;
       if (isDualMode) {
@@ -427,7 +427,7 @@ Component({
     },
 
     // 精油选择（单选）
-    onEssentialOilSelect(e: any) {
+    onEssentialOilSelect(e: WechatMiniprogram.CustomEvent) {
       const oil = e.detail.oil || e.currentTarget.dataset.oil;
       const { isDualMode, activeGuest } = this.data;
       if (isDualMode) {
@@ -451,7 +451,7 @@ Component({
     },
 
     // 加强部位选择（使用字段map控制）
-    onBodyPartSelect(e: any) {
+    onBodyPartSelect(e: WechatMiniprogram.CustomEvent) {
       const part = e.detail.part || e.currentTarget.dataset.part;
       const { isDualMode, activeGuest } = this.data;
 
@@ -753,11 +753,11 @@ Component({
       let printContents: string[] = [];
       if (isDualMode) {
         // 获取顾客1项目是否为专用精油
-        const guest1Project = projects.find((p: any) => p.name === guest1Info.project);
+        const guest1Project = projects.find((p) => p.name === guest1Info.project);
         const guest1IsEssentialOilOnly = guest1Project?.isEssentialOilOnly || false;
 
         // 获取顾客2项目是否为专用精油
-        const guest2Project = projects.find((p: any) => p.name === guest2Info.project);
+        const guest2Project = projects.find((p) => p.name === guest2Info.project);
         const guest2IsEssentialOilOnly = guest2Project?.isEssentialOilOnly || false;
 
         // 顾客1打印内容（使用顾客1的项目、技师、点钟、券码）
@@ -957,7 +957,7 @@ Component({
           endTime: endTimeStr,
         };
 
-        const result = await (database as any).saveConsultation(recordData, editId);
+        const result = await (database).saveConsultation(recordData, editId);
         this.setData({ loading: false });
 
         if (!result) {
@@ -986,7 +986,7 @@ Component({
 
 
         if (foundRecord) {
-          const selectedProject = this.data.projects.find((p: any) => p.name === foundRecord.project);
+          const selectedProject = this.data.projects.find((p) => p.name === foundRecord.project);
           const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
 
           this.setData({
@@ -1019,7 +1019,7 @@ Component({
         const database = this.getDb();
         const record = await database.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
         if (record) {
-          const selectedProject = this.data.projects.find((p: any) => p.name === record.project);
+          const selectedProject = this.data.projects.find((p) => p.name === record.project);
           const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
 
           this.setData({
@@ -1343,7 +1343,59 @@ Component({
 
     // 报钟功能
     async onClockIn() {
-      const { consultationInfo, editId, isDualMode } = this.data;
+      const { consultationInfo, editId, isDualMode, guest1Info, guest2Info } = this.data;
+
+      if (isDualMode) {
+        if (!guest1Info.surname) {
+          wx.showToast({ title: '请填写顾客1姓氏', icon: 'none' });
+          return;
+        }
+        if (!guest1Info.gender) {
+          wx.showToast({ title: '请选择顾客1称呼', icon: 'none' });
+          return;
+        }
+        if (!guest1Info.project) {
+          wx.showToast({ title: '请选择顾客1项目', icon: 'none' });
+          return;
+        }
+        if (!guest1Info.technician) {
+          wx.showToast({ title: '请选择顾客1技师', icon: 'none' });
+          return;
+        }
+        if (!guest2Info.surname) {
+          wx.showToast({ title: '请填写顾客2姓氏', icon: 'none' });
+          return;
+        }
+        if (!guest2Info.gender) {
+          wx.showToast({ title: '请选择顾客2称呼', icon: 'none' });
+          return;
+        }
+        if (!guest2Info.project) {
+          wx.showToast({ title: '请选择顾客2项目', icon: 'none' });
+          return;
+        }
+        if (!guest2Info.technician) {
+          wx.showToast({ title: '请选择顾客2技师', icon: 'none' });
+          return;
+        }
+      } else {
+        if (!consultationInfo.surname) {
+          wx.showToast({ title: '请填写姓氏', icon: 'none' });
+          return;
+        }
+        if (!consultationInfo.gender) {
+          wx.showToast({ title: '请选择称呼', icon: 'none' });
+          return;
+        }
+        if (!consultationInfo.project) {
+          wx.showToast({ title: '请选择项目', icon: 'none' });
+          return;
+        }
+        if (!consultationInfo.technician) {
+          wx.showToast({ title: '请选择技师', icon: 'none' });
+          return;
+        }
+      }
 
       if (!consultationInfo.room) {
         wx.showToast({ title: '请选择房间', icon: 'none' });
@@ -1353,19 +1405,6 @@ Component({
       if (isDualMode) {
         await this.doDualClockIn();
       } else {
-        if (!consultationInfo.project) {
-          wx.showToast({ title: '请选择项目', icon: 'none' });
-          return;
-        }
-        if (!consultationInfo.technician) {
-          wx.showToast({ title: '请选择技师', icon: 'none' });
-          return;
-        }
-        if (!consultationInfo.gender) {
-          wx.showToast({ title: '请选择称呼', icon: 'none' });
-          return;
-        }
-
         const clockInInfo = await this.formatClockInInfo(consultationInfo);
         const success = await this.saveConsultationToCache(consultationInfo, editId);
 

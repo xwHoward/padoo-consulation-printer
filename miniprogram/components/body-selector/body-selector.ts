@@ -19,7 +19,7 @@ Component({
 		]
 	},
 	methods: {
-		onPartTap(e: any) {
+		onPartTap(e: WechatMiniprogram.CustomEvent) {
 			const part = e.currentTarget.dataset.part;
 			this.triggerEvent('change', {part});
 		}

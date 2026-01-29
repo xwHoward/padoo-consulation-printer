@@ -130,7 +130,7 @@ Component({
 			}
 		},
 
-		async onDateChange(e: any) {
+		async onDateChange(e: WechatMiniprogram.CustomEvent) {
 			this.setData({ selectedDate: e.detail.value });
 			await this.loadData();
 		},
@@ -244,7 +244,7 @@ Component({
 								room: r.room,
 								left: (startMinutes / 660 * 100) + '%',
 								width: (duration / 660 * 100) + '%',
-								isReservation: (r as any).isReservation
+								isReservation: (r).isReservation
 							};
 						});
 
@@ -478,7 +478,7 @@ Component({
 		},
 
 		// 点击排钟项目操作
-		onBlockClick(e: any) {
+		onBlockClick(e: WechatMiniprogram.CustomEvent) {
 			const { id, reservation } = e.currentTarget.dataset;
 			const itemList = reservation ? ['编辑', '到店', '取消预约'] : ['编辑', '结算'];
 
@@ -571,14 +571,14 @@ Component({
 				const staffAvailability = activeStaff.map(staff => {
 					let occupiedReason = '';
 					const conflictTask = allTasks.find(r => {
-						const rName = (r as any).technician || (r as any).technicianName;
+						const rName = (r as ConsultationRecord).technician || (r as ReservationRecord).technicianName;
 						if (rName !== staff.name) return false;
 						return isTimeOverlapping(startTime, endTimeStr, r.startTime, r.endTime);
 					});
 
 					if (conflictTask) {
-						const isReservation = !(conflictTask as any).technician;
-						const customerName = (conflictTask as any).surname || (conflictTask as any).customerName || '顾客';
+						const isReservation = !(conflictTask as ConsultationRecord).technician;
+						const customerName = (conflictTask as ConsultationRecord).surname || (conflictTask as ReservationRecord).customerName || '顾客';
 						const gender = conflictTask.gender === 'male' ? '先生' : '女士';
 						occupiedReason = `${conflictTask.startTime}-${conflictTask.endTime} ${customerName}${gender}${isReservation ? '(预约)' : ''}`;
 					}
@@ -607,7 +607,7 @@ Component({
 
 		stopBubble() { },
 
-		onReserveFieldChange(e: any) {
+		onReserveFieldChange(e: WechatMiniprogram.CustomEvent) {
 			const { field } = e.currentTarget.dataset;
 			const val = e.detail.value;
 			const { reserveForm, projects } = this.data;
@@ -628,7 +628,7 @@ Component({
 			}
 		},
 
-		selectReserveTechnician(e: any) {
+		selectReserveTechnician(e: WechatMiniprogram.CustomEvent) {
 			const { id, technician: name, occupied, reason } = e.detail;
 			if (occupied) {
 				wx.showToast({ title: reason || '该技师在此时段已有安排', icon: 'none', duration: 2500 });
@@ -660,7 +660,7 @@ Component({
 		},
 
 		// 选择项目（平铺版）
-		async selectReserveProject(e: any) {
+		async selectReserveProject(e: WechatMiniprogram.CustomEvent) {
 			const { project } = e.detail;
 			const currentProject = this.data.reserveForm.project;
 			// 切换选中状态
@@ -670,7 +670,7 @@ Component({
 			await this.checkStaffAvailability();
 		},
 
-		onReserveGenderChange(e: any) {
+		onReserveGenderChange(e: WechatMiniprogram.CustomEvent) {
 			this.setData({ 'reserveForm.gender': e.detail.value });
 		},
 
@@ -884,7 +884,7 @@ Component({
 		},
 
 		// 切换支付方式
-		togglePaymentMethod(e: any) {
+		togglePaymentMethod(e: WechatMiniprogram.CustomEvent) {
 			const { index } = e.currentTarget.dataset;
 			const paymentMethods = this.data.paymentMethods;
 			paymentMethods[index].selected = !paymentMethods[index].selected;
@@ -916,7 +916,7 @@ Component({
 		},
 
 		// 输入支付金额
-		onPaymentAmountInput(e: any) {
+		onPaymentAmountInput(e: WechatMiniprogram.CustomEvent) {
 			const { index } = e.currentTarget.dataset;
 			const { value } = e.detail;
 			const paymentMethods = this.data.paymentMethods;
@@ -925,7 +925,7 @@ Component({
 		},
 
 		// 输入券码
-		onCouponCodeInput(e: any) {
+		onCouponCodeInput(e: WechatMiniprogram.CustomEvent) {
 			this.setData({ settlementCouponCode: e.detail.value });
 		},
 

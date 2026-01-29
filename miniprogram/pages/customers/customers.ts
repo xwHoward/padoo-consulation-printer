@@ -90,7 +90,7 @@ Page({
     });
   },
 
-  showEditCustomer(e: any) {
+  showEditCustomer(e: WechatMiniprogram.CustomEvent) {
     const customer = e.currentTarget.dataset.customer as CustomerRecord;
     this.setData({
       showEditModal: true,
@@ -179,33 +179,33 @@ Page({
     }
   },
 
-  onPhoneInput(e: any) {
+  onPhoneInput(e: WechatMiniprogram.CustomEvent) {
     this.setData({ formPhone: e.detail.value });
   },
 
-  onNameInput(e: any) {
+  onNameInput(e: WechatMiniprogram.CustomEvent) {
     this.setData({ formName: e.detail.value });
   },
 
-  onGenderChange(e: any) {
+  onGenderChange(e: WechatMiniprogram.CustomEvent) {
     const gender = e.currentTarget.dataset.gender;
     this.setData({ formGender: gender });
   },
 
-  onTechnicianSelect(e: any) {
+  onTechnicianSelect(e: WechatMiniprogram.CustomEvent) {
     const technician = e.currentTarget.dataset.technician;
     this.setData({ formResponsibleTechnician: technician });
   },
 
-  onLicensePlateInput(e: any) {
+  onLicensePlateInput(e: WechatMiniprogram.CustomEvent) {
     this.setData({ formLicensePlate: e.detail.value });
   },
 
-  onRemarksInput(e: any) {
+  onRemarksInput(e: WechatMiniprogram.CustomEvent) {
     this.setData({ formRemarks: e.detail.value });
   },
 
-  async loadCustomerVisits(e: any) {
+  async loadCustomerVisits(e: WechatMiniprogram.CustomEvent) {
     try {
       this.setData({ loading: true });
       const customer = e.currentTarget.dataset.customer as CustomerRecord;
@@ -284,7 +284,7 @@ Page({
     }
   },
 
-  showOpenCardModal(e: any) {
+  showOpenCardModal(e: WechatMiniprogram.CustomEvent) {
     const customer = e.currentTarget.dataset.customer as CustomerRecord;
     this.loadMembershipCards();
     this.setData({
@@ -310,7 +310,7 @@ Page({
     });
   },
 
-  onCardSelect(e: any) {
+  onCardSelect(e: WechatMiniprogram.CustomEvent) {
     const card = e.currentTarget.dataset.card as MembershipCard;
     this.setData({
       selectedCardId: card.id,
@@ -318,16 +318,16 @@ Page({
     });
   },
 
-  onPaidAmountInput(e: any) {
+  onPaidAmountInput(e: WechatMiniprogram.CustomEvent) {
     this.setData({ formPaidAmount: e.detail.value });
   },
 
-  onSalesStaffSelect(e: any) {
+  onSalesStaffSelect(e: WechatMiniprogram.CustomEvent) {
     const staff = e.currentTarget.dataset.staff;
     this.setData({ formSalesStaff: staff });
   },
 
-  onCardRemarksInput(e: any) {
+  onCardRemarksInput(e: WechatMiniprogram.CustomEvent) {
     this.setData({ formCardRemarks: e.detail.value });
   },
 

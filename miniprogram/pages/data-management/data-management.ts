@@ -25,7 +25,7 @@ Component({
 			return cloudDb;
 		},
 
-		onTabChange(e: any) {
+		onTabChange(e: WechatMiniprogram.CustomEvent) {
 			this.setData({activeTab: e.currentTarget.dataset.value});
 			this.loadData();
 		},
@@ -72,7 +72,7 @@ Component({
 			});
 		},
 
-		openEditModal(e: any) {
+		openEditModal(e: WechatMiniprogram.CustomEvent) {
 			const {type, index} = e.currentTarget.dataset;
 			const tab = this.data.activeTab;
 			let item: Project | Room | EssentialOil | null = null;
@@ -106,23 +106,23 @@ Component({
 			this.setData({showModal: false});
 		},
 
-		onNameInput(e: any) {
+		onNameInput(e: WechatMiniprogram.CustomEvent) {
 			this.setData({'formData.name': e.detail.value});
 		},
 
-		onDurationInput(e: any) {
+		onDurationInput(e: WechatMiniprogram.CustomEvent) {
 			this.setData({'formData.duration': parseInt(e.detail.value) || 60});
 		},
 
-		onPriceInput(e: any) {
+		onPriceInput(e: WechatMiniprogram.CustomEvent) {
 			this.setData({'formData.price': parseFloat(e.detail.value) || 0});
 		},
 
-		onEffectInput(e: any) {
+		onEffectInput(e: WechatMiniprogram.CustomEvent) {
 			this.setData({'formData.effect': e.detail.value});
 		},
 
-		onStatusChange(e: any) {
+		onStatusChange(e: WechatMiniprogram.CustomEvent) {
 			this.setData({'formData.status': e.detail.value as ItemStatus});
 		},
 
@@ -198,7 +198,7 @@ Component({
 			}
 		},
 
-		async handleDelete(e: any) {
+		async handleDelete(e: WechatMiniprogram.CustomEvent) {
 			const {index} = e.currentTarget.dataset;
 			const {activeTab} = this.data;
 			let id = '';
@@ -240,7 +240,7 @@ Component({
 			});
 		},
 
-		async handleToggleStatus(e: any) {
+		async handleToggleStatus(e: WechatMiniprogram.CustomEvent) {
 			const {index} = e.currentTarget.dataset;
 			const {activeTab} = this.data;
 

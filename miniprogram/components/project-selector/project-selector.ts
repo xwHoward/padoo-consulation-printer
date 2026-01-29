@@ -15,8 +15,8 @@ Component({
 			try {
 				const app = getApp<IAppOption>();
 				const allProjects = await app.getProjects();
-				const normalProjects = allProjects.filter((p: any) => p.status === 'normal' || !p.status);
-				const projectNames = normalProjects.map((p: any) => p.name);
+				const normalProjects = allProjects.filter((p) => p.status === 'normal' || !p.status);
+				const projectNames = normalProjects.map((p) => p.name);
 				this.setData({projects: projectNames});
 			} catch (error) {
 				console.error('加载项目失败:', error);
@@ -24,7 +24,7 @@ Component({
 			}
 		},
 
-		onProjectTap(e: any) {
+		onProjectTap(e: WechatMiniprogram.CustomEvent) {
 			const project = e.currentTarget.dataset.project;
 			this.triggerEvent('change', {project});
 		}

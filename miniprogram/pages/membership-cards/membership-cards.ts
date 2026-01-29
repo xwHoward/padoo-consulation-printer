@@ -65,7 +65,7 @@ Page({
     });
   },
 
-  showEditCard(e: any) {
+  showEditCard(e: WechatMiniprogram.CustomEvent) {
     const card = e.currentTarget.dataset.card as MembershipCard;
     this.setData({
       showEditModal: true,
@@ -152,7 +152,7 @@ Page({
     }
   },
 
-  async onDeleteCard(e: any) {
+  async onDeleteCard(e: WechatMiniprogram.CustomEvent) {
     const card = e.currentTarget.dataset.card as MembershipCard;
 
     wx.showModal({

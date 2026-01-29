@@ -11,7 +11,7 @@ Component({
 	},
 
 	methods: {
-		onTabChange(e: any) {
+		onTabChange(e: WechatMiniprogram.CustomEvent) {
 			const tab = e.currentTarget.dataset.tab;
 			this.triggerEvent('change', {value: tab});
 		}

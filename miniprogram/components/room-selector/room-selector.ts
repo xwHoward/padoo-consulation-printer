@@ -29,7 +29,7 @@ Component({
 			}
 		},
 
-		onRoomTap(e: any) {
+		onRoomTap(e: WechatMiniprogram.CustomEvent) {
 			if (this.properties.disabled) return;
 			const room = e.currentTarget.dataset.room;
 			this.triggerEvent('change', { room });

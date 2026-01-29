@@ -534,7 +534,7 @@ Page({
       }
 
       if (Object.keys(overtimeUpdates).length > 0) {
-        await (database as any).updateOvertimeForDate(date, overtimeUpdates);
+        await (database).updateOvertimeForDate(date, overtimeUpdates);
       }
 
     } catch (error) {

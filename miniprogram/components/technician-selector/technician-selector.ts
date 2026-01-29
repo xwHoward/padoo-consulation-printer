@@ -18,7 +18,7 @@ Component({
 		}
 	},
 	methods: {
-		onTechnicianTap(e: any) {
+		onTechnicianTap(e: WechatMiniprogram.CustomEvent) {
 			const {technician, id, occupied, reason} = e.currentTarget.dataset;
 			this.triggerEvent('change', {technician, id, occupied, reason});
 		}

@@ -23,7 +23,7 @@ Component({
 			}
 		},
 
-		onOilTap(e: any) {
+		onOilTap(e: WechatMiniprogram.CustomEvent) {
 			const oil = e.currentTarget.dataset.oil;
 			this.triggerEvent('change', { oil });
 		}
