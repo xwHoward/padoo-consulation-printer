@@ -45,6 +45,14 @@ interface ReserveForm {
 	technicianName?: string;
 }
 
+interface PaymentMethodItem {
+	key: string;
+	label: string;
+	selected: boolean;
+	amount: string;
+	couponCode?: string;
+}
+
 
 
 Component({
@@ -80,16 +88,18 @@ Component({
 		showSettlementModal: false,
 		settlementRecordId: '',
 		settlementCouponCode: '',
+		projectOriginalPrice: 0,
+		totalSettlementAmount: 0,
 		paymentMethods: [
-			{ key: 'meituan', label: '美团', selected: false, amount: '' },
-			{ key: 'dianping', label: '大众点评', selected: false, amount: '' },
-			{ key: 'douyin', label: '抖音', selected: false, amount: '' },
-			{ key: 'wechat', label: '微信', selected: false, amount: '' },
-			{ key: 'alipay', label: '支付宝', selected: false, amount: '' },
-			{ key: 'cash', label: '现金', selected: false, amount: '' },
-			{ key: 'gaode', label: '高德', selected: false, amount: '' },
-			{ key: 'free', label: '免单', selected: false, amount: '' },
-			{ key: 'membership', label: '划卡', selected: false, amount: '' },
+			{ key: 'meituan', label: '美团', selected: false, amount: '', couponCode: '' },
+			{ key: 'dianping', label: '大众点评', selected: false, amount: '', couponCode: '' },
+			{ key: 'douyin', label: '抖音', selected: false, amount: '', couponCode: '' },
+			{ key: 'wechat', label: '微信', selected: false, amount: '', couponCode: '' },
+			{ key: 'alipay', label: '支付宝', selected: false, amount: '', couponCode: '' },
+			{ key: 'cash', label: '现金', selected: false, amount: '', couponCode: '' },
+			{ key: 'gaode', label: '高德', selected: false, amount: '', couponCode: '' },
+			{ key: 'free', label: '免单', selected: false, amount: '', couponCode: '' },
+			{ key: 'membership', label: '划卡', selected: false, amount: '', couponCode: '' },
 		],
 		// loading状态
 		loading: false,
@@ -860,35 +870,46 @@ Component({
 
 		// 加载结算信息
 		loadSettlement(id: string, record: ConsultationRecord) {
-			// 重置支付方式
+			const app = getApp<IAppOption>();
+			const projects = app.globalData.projects || [];
+			const currentProject = projects.find((p: Project) => p.name === record.project);
+
+			let originalPrice = 0;
+			if (currentProject && currentProject.price) {
+				originalPrice = currentProject.price;
+			}
+
 			const paymentMethods = this.data.paymentMethods.map(m => ({
 				...m,
 				selected: false,
-				amount: ''
+				amount: '',
+				couponCode: ''
 			}));
 
-			// 如果已有结算信息，回显
 			if (record.settlement) {
 				record.settlement.payments.forEach(payment => {
 					const methodIndex = paymentMethods.findIndex(m => m.key === payment.method);
 					if (methodIndex !== -1) {
 						paymentMethods[methodIndex].selected = true;
 						paymentMethods[methodIndex].amount = payment.amount.toString();
+						paymentMethods[methodIndex].couponCode = payment.couponCode || '';
 					}
 				});
+				this.calculateTotalAmount(paymentMethods);
 			} else if (record.couponPlatform === 'membership') {
-				// 如果预约/咨询单选择了“划卡”，预勾选划卡支付
 				const membershipIndex = paymentMethods.findIndex(m => m.key === 'membership');
 				if (membershipIndex !== -1) {
 					paymentMethods[membershipIndex].selected = true;
-					paymentMethods[membershipIndex].amount = '1'; // 默认扣1次，虽然这里是金额输入，但划卡逻辑特殊
+					paymentMethods[membershipIndex].amount = '1';
 				}
+				this.calculateTotalAmount(paymentMethods);
 			}
 
 			this.setData({
 				showSettlementModal: true,
 				settlementRecordId: id,
 				settlementCouponCode: record.settlement?.couponCode || record.couponCode || '',
+				projectOriginalPrice: originalPrice,
 				paymentMethods
 			});
 		},
@@ -896,6 +917,20 @@ Component({
 		// 关闭结算弹窗
 		closeSettlementModal() {
 			this.setData({ showSettlementModal: false });
+		},
+
+		// 计算组合支付总额
+		calculateTotalAmount(paymentMethods: PaymentMethodItem[]) {
+			let total = 0;
+			paymentMethods.forEach(method => {
+				if (method.selected && method.key !== 'membership' && method.key !== 'free') {
+					const amount = parseFloat(method.amount);
+					if (!isNaN(amount) && amount > 0) {
+						total += amount;
+					}
+				}
+			});
+			this.setData({ totalSettlementAmount: total });
 		},
 
 		// 切换支付方式
@@ -928,6 +963,7 @@ Component({
 			}
 
 			this.setData({ paymentMethods });
+			this.calculateTotalAmount(paymentMethods);
 		},
 
 		// 输入支付金额
@@ -936,6 +972,16 @@ Component({
 			const { value } = e.detail;
 			const paymentMethods = this.data.paymentMethods;
 			paymentMethods[index].amount = value;
+			this.setData({ paymentMethods });
+			this.calculateTotalAmount(paymentMethods);
+		},
+
+		// 输入支付方式券码
+		onPaymentCouponCodeInput(e: WechatMiniprogram.CustomEvent) {
+			const { index } = e.currentTarget.dataset;
+			const { value } = e.detail;
+			const paymentMethods = this.data.paymentMethods;
+			paymentMethods[index].couponCode = value;
 			this.setData({ paymentMethods });
 		},
 
@@ -949,7 +995,6 @@ Component({
 			const { settlementRecordId, paymentMethods, settlementCouponCode } = this.data;
 			const database = this.getDb();
 
-			// 收集所有已选择的支付方式
 			const selectedPayments = paymentMethods.filter(m => m.selected);
 
 			if (selectedPayments.length === 0) {
@@ -959,14 +1004,21 @@ Component({
 
 			this.setData({ loading: true, loadingText: '结算中...' });
 			try {
-				// 验证金额
+				const today = this.data.selectedDate || formatDate(new Date());
+				const allRecords = await (database).getConsultationsByDate<ConsultationRecord>(today);
+				const target = allRecords.find(r => r.id === settlementRecordId);
+
+				if (!target) {
+					wx.showToast({ title: '未找到该单据', icon: 'none' });
+					return;
+				}
+
 				const payments: PaymentItem[] = [];
 				let totalAmount = 0;
 
 				for (const method of selectedPayments) {
-					// 免单不需要输入金额
 					if (method.key === 'free') {
-						payments.push({ method: method.key as PaymentMethod, amount: 0 });
+						payments.push({ method: method.key as PaymentMethod, amount: 0, couponCode: method.couponCode || settlementCouponCode });
 						continue;
 					}
 
@@ -976,22 +1028,10 @@ Component({
 						return;
 					}
 
-					payments.push({ method: method.key as PaymentMethod, amount });
-					// 划卡不计入现金总额
+					payments.push({ method: method.key as PaymentMethod, amount, couponCode: method.couponCode || settlementCouponCode });
 					if (method.key !== 'membership') {
 						totalAmount += amount;
 					}
-				}
-
-				// 保存结算信息
-				const today = this.data.selectedDate || formatDate(new Date());
-				const history = (wx.getStorageSync('consultationHistory') as any) || {};
-				const todayRecords = (history[today] || []) as ConsultationRecord[];
-				const recordIndex = todayRecords.findIndex(r => r.id === settlementRecordId);
-
-				if (recordIndex === -1) {
-					wx.showToast({ title: '未找到该单据', icon: 'none' });
-					return;
 				}
 
 				const now = new Date();
@@ -1004,19 +1044,11 @@ Component({
 
 				const membershipPayment = payments.find(p => p.method === 'membership');
 				if (membershipPayment) {
-
 					const allMemberships = await (database).getAll<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP);
-					const allRecords = await (database).getConsultationsByDate<ConsultationRecord>(today);
-					const target = allRecords.find(r => r.id === settlementRecordId);
-					if (!target) {
-						wx.showToast({ title: '未找到该单据', icon: 'none' });
-						return;
-					}
 					const customerMembership = allMemberships.find(m => {
 						return (m.customerPhone === target.phone || m.customerName === target.surname) &&
 							m.remainingTimes > 0 && m.status === 'active';
 					}) || null;
-
 
 					if (!customerMembership) {
 						wx.showToast({ title: '未找到有效会员卡或余额不足', icon: 'none' });
@@ -1034,35 +1066,22 @@ Component({
 						remainingTimes: newRemaining
 					});
 
-
-					const records = await (database).getConsultationsByDate<ConsultationRecord>(today);
-					const record = records.find(r => r.id === settlementRecordId) || null;
-
-					if (!record) {
-						wx.showToast({ title: '未找到该单据', icon: 'none' });
-						return;
-					}
-
 					await (database).insert<MembershipUsageRecord>(Collections.MEMBERSHIP_USAGE, {
 						cardId: customerMembership.cardId,
 						cardName: customerMembership.cardName,
 						date: today,
-						customerName: record.surname,
-						project: record.project,
-						technician: record.technician,
-						room: record.room,
-						consultationId: record.id
+						customerName: target.surname,
+						project: target.project,
+						technician: target.technician,
+						room: target.room,
+						consultationId: target.id
 					});
 				}
 
-				const records = await (database).getConsultationsByDate<ConsultationRecord>(today);
-				const record = records.find(r => r.id === settlementRecordId);
-				if (record) {
-					await (database).updateById(Collections.CONSULTATION, settlementRecordId, {
-						settlement: settlement,
-						updatedAt: now.toISOString()
-					});
-				}
+				await (database).updateById(Collections.CONSULTATION, settlementRecordId, {
+					settlement: settlement,
+					updatedAt: now.toISOString()
+				});
 
 				wx.showToast({ title: '结算成功', icon: 'success' });
 				this.closeSettlementModal();

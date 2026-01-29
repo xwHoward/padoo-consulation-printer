@@ -1,21 +1,3 @@
-/**
- * 云数据库服务
- * 基于微信小程序云开发数据库实现
- * 提供统一的 CRUD 接口，与本地数据库接口保持一致
- */
-
-interface ConsultationRecord {
-	id: string;
-	_id: string;
-	createdAt: string;
-	updatedAt: string;
-	isVoided: boolean;
-	extraTime: number;
-	overtime: number;
-	startTime: string;
-	endTime: string;
-	[key: string]: any;
-}
 
 export type QueryCondition<T> = Partial<T> | ((item: T) => boolean);
 

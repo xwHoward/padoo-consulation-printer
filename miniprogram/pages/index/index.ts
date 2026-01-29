@@ -21,6 +21,7 @@ const DefaultConsultationInfo: Add<ConsultationInfo> = {
   remarks: "",
   phone: "",
   couponCode: "",
+  extraTime: 0,
   couponPlatform: "meituan",
   upgradeHimalayanSaltStone: false,
 };
@@ -48,6 +49,7 @@ function ensureConsultationInfoCompatibility(data: ConsultationInfo, projects: P
     project: data.project || defaultProject,
     technician: data.technician || "",
     room: data.room || "",
+    extraTime: data.extraTime || 0,
     massageStrength: data.massageStrength || "",
     essentialOil: data.essentialOil || "",
     selectedParts: data.selectedParts || {},
@@ -1097,60 +1099,218 @@ Component({
       }
     },
 
-    // 重新报钟（编辑模式）
-    async reClockIn() {
-      const { consultationInfo, editId } = this.data;
+    // 仅保存（编辑模式）
+    async saveOnly() {
+      const { consultationInfo, editId, isDualMode, guest1Info, guest2Info } = this.data;
 
-      if (!consultationInfo.gender) {
-        wx.showToast({ title: "请选择称呼", icon: "none" });
+      const validationResult = validateConsultationForPrint(consultationInfo, isDualMode, guest1Info, guest2Info);
+      if (!showValidationError(validationResult)) {
         return;
       }
-      if (!consultationInfo.project) {
-        wx.showToast({ title: "请选择项目", icon: "none" });
-        return;
-      }
-      if (!consultationInfo.technician) {
-        wx.showToast({ title: "请选择技师", icon: "none" });
-        return;
-      }
-      if (!consultationInfo.room) {
-        wx.showToast({ title: "请选择房间", icon: "none" });
-        return;
-      }
-
-      const clockInInfo = await this.formatClockInInfo(consultationInfo);
 
       const success = await this.saveConsultationToCache(consultationInfo, editId);
 
       if (success) {
-        // 复制到剪贴板
-        wx.setClipboardData({
-          data: clockInInfo,
-          success: () => {
-            wx.showToast({
-              title: "上钟信息已复制",
-              icon: "success",
-              success: () => {
-                // 延迟返回
-                setTimeout(() => {
-                  wx.navigateBack();
-                }, 1000);
-              }
-            });
-          },
-          fail: (err) => {
-            wx.showToast({
-              title: "复制失败",
-              icon: "none",
-            });
-            console.error("复制到剪贴板失败:", err);
-          },
+        wx.showToast({
+          title: '保存成功',
+          icon: 'success'
         });
       } else {
         wx.showToast({
-          title: "保存失败",
-          icon: "error"
+          title: '保存失败',
+          icon: 'error'
         });
+      }
+    },
+
+    // 复制报钟信息（编辑模式）
+    async copyClockInInfo() {
+      const { consultationInfo, isDualMode, guest1Info, guest2Info } = this.data;
+
+      const validationResult = validateConsultationForPrint(consultationInfo, isDualMode, guest1Info, guest2Info);
+      if (!showValidationError(validationResult)) {
+        return;
+      }
+
+      try {
+        if (isDualMode) {
+          const clockInInfo1 = await this.formatClockInInfo({
+            ...consultationInfo,
+            surname: guest1Info.surname,
+            gender: guest1Info.gender,
+            project: guest1Info.project,
+            selectedParts: guest1Info.selectedParts,
+            massageStrength: guest1Info.massageStrength,
+            essentialOil: guest1Info.essentialOil,
+            remarks: guest1Info.remarks,
+            technician: guest1Info.technician,
+            isClockIn: guest1Info.isClockIn,
+            couponCode: guest1Info.couponCode,
+            couponPlatform: guest1Info.couponPlatform,
+            upgradeHimalayanSaltStone: guest1Info.upgradeHimalayanSaltStone,
+          });
+          const clockInInfo2 = await this.formatClockInInfo({
+            ...consultationInfo,
+            surname: guest2Info.surname,
+            gender: guest2Info.gender,
+            project: guest2Info.project,
+            selectedParts: guest2Info.selectedParts,
+            massageStrength: guest2Info.massageStrength,
+            essentialOil: guest2Info.essentialOil,
+            remarks: guest2Info.remarks,
+            technician: guest2Info.technician,
+            isClockIn: guest2Info.isClockIn,
+            couponCode: guest2Info.couponCode,
+            couponPlatform: guest2Info.couponPlatform,
+            upgradeHimalayanSaltStone: guest2Info.upgradeHimalayanSaltStone,
+          });
+          const combinedInfo = `${clockInInfo1}\n\n${clockInInfo2}`;
+          wx.setClipboardData({
+            data: combinedInfo,
+            success: () => {
+              wx.showToast({ title: '报钟信息已复制', icon: 'success' });
+            },
+            fail: (err) => {
+              wx.showToast({ title: '复制失败', icon: 'none' });
+              console.error('复制到剪贴板失败:', err);
+            },
+          });
+        } else {
+          const clockInInfo = await this.formatClockInInfo(consultationInfo);
+          wx.setClipboardData({
+            data: clockInInfo,
+            success: () => {
+              wx.showToast({ title: '报钟信息已复制', icon: 'success' });
+            },
+            fail: (err) => {
+              wx.showToast({ title: '复制失败', icon: 'none' });
+              console.error('复制到剪贴板失败:', err);
+            },
+          });
+        }
+      } catch (error) {
+        console.error('生成报钟信息失败:', error);
+        wx.showToast({ title: '生成报钟信息失败', icon: 'none' });
+      }
+    },
+
+    // 重新计算开始和结束时间
+    recalculateTime(project: string, extraTime: number = 0): { startTime: string; endTime: string } {
+      const now = new Date();
+      const startTime = now;
+      const endTime = calculateProjectEndTime(startTime, project, extraTime);
+
+      const formatTime = (date: Date) => {
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      };
+
+      return {
+        startTime: formatTime(startTime),
+        endTime: formatTime(endTime)
+      };
+    },
+
+    // 重新报钟（编辑模式）
+    async reClockIn() {
+      const { consultationInfo, editId, isDualMode, guest1Info, guest2Info } = this.data;
+
+      const validationResult = validateConsultationForPrint(consultationInfo, isDualMode, guest1Info, guest2Info);
+      if (!showValidationError(validationResult)) {
+        return;
+      }
+
+      try {
+        if (isDualMode) {
+          const time1 = this.recalculateTime(guest1Info.project, consultationInfo.extraTime || 0);
+          const time2 = this.recalculateTime(guest2Info.project, consultationInfo.extraTime || 0);
+
+          const info1 = {
+            ...consultationInfo,
+            ...guest1Info,
+            startTime: time1.startTime,
+            endTime: time1.endTime,
+          };
+          const info2 = {
+            ...consultationInfo,
+            ...guest2Info,
+            startTime: time2.startTime,
+            endTime: time2.endTime,
+          };
+
+          const [success1, success2] = await Promise.all([
+            this.saveConsultationToCache(info1, editId),
+            this.saveConsultationToCache(info2)
+          ]);
+
+          if (success1 && success2) {
+            const clockInInfo1 = await this.formatClockInInfo(info1);
+            const clockInInfo2 = await this.formatClockInInfo(info2);
+            const combinedInfo = `${clockInInfo1}\n\n${clockInInfo2}`;
+
+            wx.setClipboardData({
+              data: combinedInfo,
+              success: () => {
+                wx.showToast({
+                  title: '重新报钟成功',
+                  icon: 'success',
+                  success: () => {
+                    setTimeout(() => {
+                      wx.navigateBack();
+                    }, 1000);
+                  }
+                });
+              },
+              fail: (err) => {
+                wx.showToast({ title: '复制失败', icon: 'none' });
+                console.error('复制到剪贴板失败:', err);
+              },
+            });
+          } else {
+            wx.showToast({ title: '保存失败', icon: 'error' });
+          }
+        } else {
+          const newTime = this.recalculateTime(consultationInfo.project, consultationInfo.extraTime || 0);
+          const updatedInfo = {
+            ...consultationInfo,
+            startTime: newTime.startTime,
+            endTime: newTime.endTime,
+          };
+
+          const success = await this.saveConsultationToCache(updatedInfo, editId);
+
+          if (success) {
+            const clockInInfo = await this.formatClockInInfo(updatedInfo);
+
+            wx.setClipboardData({
+              data: clockInInfo,
+              success: () => {
+                wx.showToast({
+                  title: '重新报钟成功',
+                  icon: 'success',
+                  success: () => {
+                    setTimeout(() => {
+                      wx.navigateBack();
+                    }, 1000);
+                  }
+                });
+              },
+              fail: (err) => {
+                wx.showToast({ title: '复制失败', icon: 'none' });
+                console.error('复制到剪贴板失败:', err);
+              },
+            });
+          } else {
+            wx.showToast({
+              title: '保存失败',
+              icon: 'error'
+            });
+          }
+        }
+      } catch (error) {
+        console.error('重新报钟失败:', error);
+        wx.showToast({ title: '重新报钟失败', icon: 'none' });
       }
     },
 

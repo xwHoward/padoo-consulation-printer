@@ -163,6 +163,8 @@
     <!-- 编辑模式按钮 -->
     <view class="button-container" wx:if="{{editId}}">
       <button class="primary-button" bindtap="printConsultation">打印</button>
+      <button class="primary-button" bindtap="saveOnly">仅保存</button>
+      <button class="primary-button" bindtap="copyClockInInfo">复制报钟信息</button>
       <button class="primary-button" bindtap="reClockIn">重新报钟</button>
       <button class="primary-button secondary-button" bindtap="cancelEdit">取消</button>
     </view>

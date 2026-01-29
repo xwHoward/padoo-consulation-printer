@@ -17,12 +17,14 @@ type Update<T> = T extends BaseRecord ? Omit<T,'id'| 'createdAt' | 'updatedAt' |
 
 
 // 支付方式类型
-type PaymentMethod = "meituan" | "dianping" | "douyin" | "wechat" | "alipay" | "cash" | "free" | "membership";
+type PaymentMethod = 'meituan' | 'dianping' | 'douyin' | 'wechat' | 'alipay' | 'cash' | 'gaode' | 'free' | 'membership';
+
 
 // 单笔支付记录
 interface PaymentItem {
   method: PaymentMethod;
   amount: number; // 实付金额
+  couponCode?: string;
 }
 
 // 结算信息
@@ -46,6 +48,7 @@ interface ConsultationInfo extends BaseRecord {
   isClockIn: boolean;
   remarks: string;
   phone: string;
+	extraTime: number;
   couponCode: string;
   couponPlatform: "meituan" | "dianping" | "douyin" | "membership" | "";
   upgradeHimalayanSaltStone: boolean;

@@ -1,4 +1,5 @@
 <!-- history.wxml -->
+<wxs src="./format.wxs" module="format" />
 <navigation-bar title="{{customerPhone ? '顾客咨询单' : '咨询单历史'}}" back="{{true}}" color="black" background="#FFF"></navigation-bar>
 <scroll-view class="scrollarea" scroll-y type="list">
   <view class="container">
@@ -45,6 +46,28 @@
                     </view>
                     <view wx:if="{{record.couponPlatform}}" class="text-info">
                       {{platforms[record.couponPlatform]}} {{record.couponCode}}
+                    </view>
+                  </view>
+                </view>
+                <!-- 结算信息 -->
+                <view class="settlement-info" wx:if="{{record.settlement}}">
+                  <view class="settlement-header">
+                    <view class="settlement-label">✓ 已结算</view>
+                    <view class="settlement-time">{{format.formatSettlementTime(record.settlement.settledAt)}}</view>
+                  </view>
+                  <view class="settlement-amount">
+                    实收总额：¥{{record.settlement.totalAmount}}
+                  </view>
+                  <view class="payment-list">
+                    <view class="payment-item" wx:for="{{record.settlement.payments}}" wx:key="method" wx:for-item="payment">
+                      <view class="payment-platform">{{paymentPlatformLabels[payment.method]}}</view>
+                      <view class="payment-detail">
+                        <text wx:if="{{payment.method === 'membership'}}">{{payment.amount}}次</text>
+                        <text wx:else>¥{{payment.amount}}</text>
+                      </view>
+                      <view class="payment-coupon" wx:if="{{payment.couponCode}}">
+                        券码：{{payment.couponCode}}
+                      </view>
                     </view>
                   </view>
                 </view>

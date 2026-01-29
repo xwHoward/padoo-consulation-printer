@@ -23,11 +23,18 @@
         "miniprogram": {
             "list": [
                 {
-                    "name": "cashier",
-                    "pathName": "pages/cashier/cashier",
+                    "name": "单据",
+                    "pathName": "pages/history/history",
                     "query": "",
                     "scene": null,
                     "launchMode": "default"
+                },
+                {
+                    "name": "cashier",
+                    "pathName": "pages/cashier/cashier",
+                    "query": "",
+                    "launchMode": "default",
+                    "scene": null
                 },
                 {
                     "name": "data-management",

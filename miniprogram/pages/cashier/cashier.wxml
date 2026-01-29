@@ -152,6 +152,17 @@
   <view class="modal-content settlement-modal" catchtap="stopBubble">
     <view class="modal-header">结算</view>
     <view class="modal-body">
+      <!-- 项目信息 -->
+      <view class="project-info-section">
+        <view class="info-row">
+          <view class="info-label">项目原价</view>
+          <view class="info-value">¥{{projectOriginalPrice}}</view>
+        </view>
+        <view class="info-row total-row">
+          <view class="info-label">实收总额</view>
+          <view class="info-value total-amount">¥{{totalSettlementAmount}}</view>
+        </view>
+      </view>
       <!-- 支付方式选择 -->
       <view class="form-item">
         <view class="form-label">支付方式</view>
@@ -169,12 +180,11 @@
             <input class="amount-input" type="{{item.key === 'membership' ? 'number' : 'digit'}}" placeholder="{{item.key === 'membership' ? '请输入扣减次数' : '请输入金额'}}" value="{{item.amount}}" bindinput="onPaymentAmountInput" data-index="{{index}}" />
             <view class="amount-unit">{{item.key === 'membership' ? '次' : '元'}}</view>
           </view>
+          <view class="payment-coupon" wx:if="{{item.selected && item.key !== 'free' && item.key !== 'membership'}}">
+            <view class="coupon-label">券码：</view>
+            <input class="coupon-input" type="text" placeholder="选填" value="{{item.couponCode}}" bindinput="onPaymentCouponCodeInput" data-index="{{index}}" />
+          </view>
         </view>
-      </view>
-      <!-- 券码 -->
-      <view class="form-item">
-        <view class="form-label">券码</view>
-        <input class="form-input" type="number" placeholder="选填" value="{{settlementCouponCode}}" bindinput="onCouponCodeInput" />
       </view>
     </view>
     <view class="modal-footer">

@@ -439,3 +439,73 @@ page {
 .confirm-btn:active {
   background-color: rgba(255, 107, 0, 0.1);
 }
+
+/* 结算信息区域 */
+.settlement-info {
+  margin: 8px 0;
+  padding: 10px 12px;
+  background-color: rgba(255, 107, 0, 0.05);
+  border-left: 3px solid @primary-color;
+  border-radius: 4px;
+}
+
+.settlement-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.settlement-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: @primary-color;
+}
+
+.settlement-time {
+  font-size: 11px;
+  color: @text-color-secondary;
+}
+
+.settlement-amount {
+  font-size: 16px;
+  font-weight: 600;
+  color: @primary-color;
+  margin-bottom: 8px;
+}
+
+.payment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payment-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.payment-platform {
+  padding: 2px 8px;
+  background-color: @bg-color;
+  border-radius: 3px;
+  color: @text-color-secondary;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.payment-detail {
+  color: @text-color;
+  font-weight: 500;
+}
+
+.payment-coupon {
+  margin-left: auto;
+  padding: 2px 6px;
+  background-color: rgba(24, 144, 255, 0.1);
+  border-radius: 3px;
+  color: #1890ff;
+  font-size: 11px;
+}

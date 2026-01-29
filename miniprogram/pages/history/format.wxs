@@ -1,0 +1,23 @@
+var formatSettlementTime = function(isoString) {
+  if (!isoString) {
+    return '';
+  }
+  
+  var date = getDate(isoString);
+  var year = date.getFullYear();
+  var month = date.getMonth() + 1;
+  var day = date.getDate();
+  var hour = date.getHours();
+  var minute = date.getMinutes();
+  
+  var monthStr = month < 10 ? '0' + month : month;
+  var dayStr = day < 10 ? '0' + day : day;
+  var hourStr = hour < 10 ? '0' + hour : hour;
+  var minuteStr = minute < 10 ? '0' + minute : minute;
+  
+  return year + '-' + monthStr + '-' + dayStr + ' ' + hourStr + ':' + minuteStr;
+};
+
+module.exports = {
+  formatSettlementTime: formatSettlementTime
+};

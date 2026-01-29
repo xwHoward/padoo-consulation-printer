@@ -19,6 +19,17 @@ Page({
     historyData: [] as DailyGroup[], // 按天分组的历史记录
     platforms: COUPON_PLATFORMS.reduce((acc, p) => ({ ...acc, [p.id]: p.name }), {}),
     genders: GENDERS.reduce((acc, g) => ({ ...acc, [g.id]: g.name }), {}),
+    paymentPlatformLabels: {
+      meituan: '美团',
+      dianping: '大众点评',
+      douyin: '抖音',
+      wechat: '微信',
+      alipay: '支付宝',
+      cash: '现金',
+      gaode: '高德',
+      free: '免单',
+      membership: '划卡'
+    },
     customerPhone: '', // 顾客手机号
     customerId: '', // 顾客ID
     // 数字输入弹窗状态
