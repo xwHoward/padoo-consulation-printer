@@ -1,4 +1,4 @@
-import { cloudDb as cloudDbService, Collections } from '../../utils/cloud-db';
+import { cloudDb, Collections } from '../../utils/cloud-db';
 
 Page({
   data: {
@@ -39,7 +39,7 @@ Page({
 
   async loadTechnicianList() {
     try {
-      const staffList = await cloudDbService.find<StaffInfo>(Collections.STAFF, {
+      const staffList = await cloudDb.find<StaffInfo>(Collections.STAFF, {
         status: 'active'
       });
       this.setData({ technicianList: staffList });
@@ -51,7 +51,7 @@ Page({
   async loadCustomerList() {
     try {
       this.setData({ loading: true });
-      const database = cloudDbService;
+      const database = cloudDb;
 
       const savedCustomers = await database.getAll<CustomerRecord>(Collections.CUSTOMERS);
       const customerMap: Record<string, CustomerRecord> = {};
@@ -132,7 +132,7 @@ Page({
     try {
       this.setData({ loading: true });
       if (editCustomer) {
-        await cloudDbService.updateById<CustomerRecord>(Collections.CUSTOMERS, editCustomer.id, {
+        await cloudDb.updateById<CustomerRecord>(Collections.CUSTOMERS, editCustomer.id, {
           phone: formPhone,
           name: formName,
           gender: formGender,
@@ -141,7 +141,7 @@ Page({
           remarks: formRemarks
         });
       } else {
-        await cloudDbService.insert(Collections.CUSTOMERS, {
+        await cloudDb.insert(Collections.CUSTOMERS, {
           phone: formPhone,
           name: formName,
           gender: formGender,
@@ -209,7 +209,7 @@ Page({
     try {
       this.setData({ loading: true });
       const customer = e.currentTarget.dataset.customer as CustomerRecord;
-      const database = cloudDbService;
+      const database = cloudDb;
       const visitRecords: CustomerVisit[] = [];
 
       if (customer.phone) {
@@ -271,7 +271,7 @@ Page({
   async loadMembershipCards() {
     try {
       this.setData({ loading: true });
-      const cards = await cloudDbService.getAll<MembershipCard>(Collections.MEMBERSHIP);
+      const cards = await cloudDb.getAll<MembershipCard>(Collections.MEMBERSHIP);
       const activeCards = cards.filter(card => card.status === 'active');
       this.setData({ membershipCards: activeCards, loading: false });
     } catch (error) {
@@ -377,7 +377,7 @@ Page({
 
     try {
       this.setData({ loading: true });
-      await cloudDbService.insert(Collections.CUSTOMER_MEMBERSHIP, {
+      await cloudDb.insert(Collections.CUSTOMER_MEMBERSHIP, {
         customerId: selectedCustomerForCard.id,
         customerName: selectedCustomerForCard.name,
         customerPhone: selectedCustomerForCard.phone,

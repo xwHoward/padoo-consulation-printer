@@ -80,6 +80,8 @@ interface ConsultationRecord extends ConsultationInfo {
   startTime: string; // 报钟时间（格式 HH:MM）
   endTime: string; // 结束时间（格式 HH:MM）
   settlement?: SettlementInfo; // 结算信息（选填）
+  amount?: number;
+  date: string; // YYYY-MM-DD
 }
 
 // 员工状态类型

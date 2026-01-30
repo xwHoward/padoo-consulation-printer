@@ -1,6 +1,13 @@
 <!-- history.wxml -->
 <wxs src="./format.wxs" module="format" />
-<navigation-bar title="{{customerPhone ? '顾客咨询单' : '咨询单历史'}}" back="{{true}}" color="black" background="#FFF"></navigation-bar>
+<navigation-bar title="{{customerPhone ? '顾客咨询单' : '咨询单历史'}}" back="{{true}}" color="black" background="#FFF">
+  <view slot="right" class="nav-right">
+    <view class="date-selector-btn" bindtap="showDateSelector" wx:if="{{!customerPhone}}">
+      <text class="date-selector-icon">📅</text>
+      <text class="date-selector-text">{{dateSelector.selectedDate || '选择日期'}}</text>
+    </view>
+  </view>
+</navigation-bar>
 <scroll-view class="scrollarea" scroll-y type="list">
   <view class="container">
     <!-- 历史记录列表 -->
@@ -118,4 +125,22 @@
     <view class="modal-btn cancel-btn" bindtap="onModalCancel">取消</view>
     <view class="modal-btn confirm-btn" bindtap="onModalConfirm">确定</view>
   </view>
+</view>
+<!-- 日期选择器弹窗 -->
+<view class="modal-mask" wx:if="{{dateSelector.show}}" bindtap="hideDateSelector"></view>
+<view class="date-selector-container" wx:if="{{dateSelector.show}}">
+  <view class="date-selector-header">
+    <view class="date-selector-title">选择日期</view>
+    <view class="date-selector-close" bindtap="hideDateSelector">✕</view>
+  </view>
+  <scroll-view class="date-selector-list" scroll-y>
+    <view class="date-item {{dateSelector.selectedDate === item ? 'selected' : ''}}" 
+          wx:for="{{dateSelector.availableDates}}" 
+          wx:key="item" 
+          bindtap="onDateSelect" 
+          data-date="{{item}}">
+      <text class="date-item-text">{{item}}</text>
+      <text class="date-item-check" wx:if="{{dateSelector.selectedDate === item}}">✓</text>
+    </view>
+  </scroll-view>
 </view>

@@ -1,4 +1,4 @@
-import { cloudDb as cloudDbService, Collections } from "../../utils/cloud-db";
+import { cloudDb, Collections } from "../../utils/cloud-db";
 import { calculateOvertimeUnits, calculateProjectEndTime, formatDate, formatTime, parseProjectDuration, SHIFT_END_TIMES } from "../../utils/util";
 import { showValidationError, validateConsultationForPrint } from "../../utils/validators";
 const GBK = require("gbk.js");
@@ -899,7 +899,7 @@ Component({
       try {
         let deletedCount = 0;
         for (const reserveId of currentReservationIds) {
-          const success = await cloudDbService.deleteById(Collections.RESERVATIONS, reserveId);
+          const success = await cloudDb.deleteById(Collections.RESERVATIONS, reserveId);
           if (success) {
             deletedCount++;
           }
@@ -918,7 +918,7 @@ Component({
     async calculateOvertime(technician: string, date: string, startTime: string): Promise<number> {
       try {
         // 获取当日排班
-        const schedule = await cloudDbService.findOne<ScheduleRecord>(Collections.SCHEDULE, {
+        const schedule = await cloudDb.findOne<ScheduleRecord>(Collections.SCHEDULE, {
           date: date
         });
 
@@ -927,7 +927,7 @@ Component({
         }
 
         // 获取技师信息以匹配 staffId
-        const staff = await cloudDbService.findOne<StaffInfo>(Collections.STAFF, {
+        const staff = await cloudDb.findOne<StaffInfo>(Collections.STAFF, {
           name: technician,
           status: 'active'
         });
@@ -961,6 +961,7 @@ Component({
           ...consultation,
           // createdAt: editId ? timestamp : timestamp,
           // updatedAt: timestamp,
+          date: currentDate,
           isVoided: false,
           extraTime: 0,
           overtime: calculatedOvertime,
@@ -968,7 +969,7 @@ Component({
           endTime: endTimeStr,
         };
 
-        const result = await cloudDbService.saveConsultation(recordData, editId);
+        const result = await cloudDb.saveConsultation(recordData, editId);
         this.setData({ loading: false });
 
         if (!result) {
@@ -991,7 +992,7 @@ Component({
     // 加载编辑数据
     async loadEditData(editId: string) {
       try {
-        const foundRecord = await cloudDbService.findById<ConsultationRecord>(Collections.CONSULTATION, editId) as ConsultationRecord | null;
+        const foundRecord = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, editId) as ConsultationRecord | null;
         console.log(foundRecord)
         if (foundRecord) {
           const selectedProject = this.data.projects.find((p) => p.name === foundRecord.project);
@@ -1042,7 +1043,7 @@ Component({
     // 加载预约数据
     async loadReservationData(reserveId: string) {
       try {
-        const record = await cloudDbService.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
+        const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
         if (record) {
           const selectedProject = this.data.projects.find((p) => p.name === record.project);
           const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
@@ -1521,7 +1522,7 @@ ${clockInInfo2}`;
     async getTechnicianDailyCount(technician: string): Promise<number> {
       try {
         const currentDate = formatDate(new Date());
-        const records = await cloudDbService.getConsultationsByDate<ConsultationRecord>(currentDate) as ConsultationRecord[];
+        const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(currentDate) as ConsultationRecord[];
         const count = records.filter(
           (record: ConsultationRecord) => record.technician === technician && !record.isVoided,
         ).length;

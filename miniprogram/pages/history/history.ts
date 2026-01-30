@@ -1,4 +1,4 @@
-import { cloudDb as cloudDbService, Collections } from '../../utils/cloud-db';
+import { cloudDb, Collections } from '../../utils/cloud-db';
 import { COUPON_PLATFORMS, GENDERS, MASSAGE_STRENGTHS } from "../../utils/constants";
 import { calculateOvertimeUnits, calculateProjectEndTime, formatTime, SHIFT_END_TIMES } from "../../utils/util";
 
@@ -43,6 +43,12 @@ Page({
       inputValue: 1,
       record: null as DisplayRecord | null,
       date: ''
+    },
+    // 日期选择器状态
+    dateSelector: {
+      show: false,
+      selectedDate: '',
+      availableDates: [] as string[]
     }
   },
 
@@ -51,7 +57,7 @@ Page({
     if (options.readonly === 'true' && options.customerPhone) {
       this.loadCustomerHistory(options.customerPhone, options.customerId);
     } else {
-      // 页面加载时获取历史数据
+      // 页面加载时获取历史数据，默认只获取当日的记录
       this.loadHistoryData();
     }
   },
@@ -63,6 +69,31 @@ Page({
     }
     // 页面显示时重新加载数据，确保数据最新
     this.loadHistoryData();
+  },
+
+  // 显示日期选择器
+  showDateSelector() {
+    this.setData({
+      'dateSelector.show': true
+    });
+  },
+
+  // 关闭日期选择器
+  hideDateSelector() {
+    this.setData({
+      'dateSelector.show': false
+    });
+  },
+
+  // 选择日期
+  onDateSelect(e: WechatMiniprogram.CustomEvent) {
+    const selectedDate = e.currentTarget.dataset.date;
+    this.setData({
+      'dateSelector.selectedDate': selectedDate,
+      'dateSelector.show': false
+    });
+    // 加载选中日期的记录
+    this.loadHistoryData(selectedDate);
   },
 
   // 处理单日记录（计算计数、补全时间、排序）
@@ -116,10 +147,10 @@ Page({
   async loadCustomerHistory(customerPhone: string, customerId: string) {
     this.setData({ loading: true, loadingText: '加载中...' });
     try {
-      const database = cloudDbService;
+
       const consultationHistory: Record<string, ConsultationRecord[]> = {};
 
-      const allRecords = await database.getConsultationsByCustomer<ConsultationRecord>(customerPhone) as ConsultationRecord[];
+      const allRecords = await cloudDb.getConsultationsByCustomer<ConsultationRecord>(customerPhone) as ConsultationRecord[];
       allRecords.forEach((record: ConsultationRecord) => {
         const date = record.createdAt.substring(0, 10);
         if (!consultationHistory[date]) {
@@ -142,7 +173,7 @@ Page({
           if (customerRecords.length > 0) {
             await this.autoUpdateOvertimeForDate(date);
 
-            const updatedRecords = await database.getConsultationsByDate<ConsultationRecord>(date) as ConsultationRecord[];
+            const updatedRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(date) as ConsultationRecord[];
             const filteredRecords = updatedRecords.filter((record: ConsultationRecord) => {
               const recordKey = record.phone || record.id;
               return recordKey === customerId && !record.isVoided;
@@ -172,33 +203,39 @@ Page({
   },
 
   // 加载历史数据
-  async loadHistoryData() {
+  async loadHistoryData(targetDate?: string) {
     this.setData({ loading: true, loadingText: '加载中...' });
     try {
-      const database = cloudDbService;
-      const consultationHistory: Record<string, ConsultationRecord[]> = await database.getAllConsultations<ConsultationRecord>() as Record<string, ConsultationRecord[]>;
 
+      const consultationHistory: Record<string, ConsultationRecord[]> = await cloudDb.getAllConsultations<ConsultationRecord>() as Record<string, ConsultationRecord[]>;
 
-      const historyData: DailyGroup[] = [];
+      // 获取所有可用日期并排序
+      const allDates = Object.keys(consultationHistory).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
-      for (const date in consultationHistory) {
-        if (consultationHistory.hasOwnProperty(date)) {
-          const records = consultationHistory[date];
-          if (records && records.length > 0) {
-            await this.autoUpdateOvertimeForDate(date);
-            const updatedRecords = await database.getConsultationsByDate<ConsultationRecord>(date) as ConsultationRecord[];
-            historyData.push({
-              date,
-              records: this.processDailyRecords(updatedRecords)
-            });
-
-          }
+      // 设置可用日期列表
+      this.setData({
+        dateSelector: {
+          show: false,
+          selectedDate: targetDate || allDates[0] || '',
+          availableDates: allDates
         }
+      });
+
+      const selectedDate = targetDate || allDates[0] || '';
+
+      if (selectedDate && consultationHistory[selectedDate]) {
+        await this.autoUpdateOvertimeForDate(selectedDate);
+        const updatedRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(selectedDate) as ConsultationRecord[];
+
+        const historyData: DailyGroup[] = [{
+          date: selectedDate,
+          records: this.processDailyRecords(updatedRecords)
+        }];
+
+        this.setData({ historyData });
+      } else {
+        this.setData({ historyData: [] });
       }
-
-      historyData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      this.setData({ historyData });
     } catch (error) {
       console.error('加载历史数据失败:', error);
       wx.showToast({ title: '加载失败', icon: 'error' });
@@ -264,9 +301,9 @@ Page({
         if (res.confirm) {
           this.setData({ loading: true, loadingText: '作废中...' });
           try {
-            const database = cloudDbService;
 
-            const updated = await (database).updateById(
+
+            const updated = await cloudDb.updateById(
               Collections.CONSULTATION,
               record.id,
               { isVoided: true }
@@ -306,47 +343,14 @@ Page({
     return found ? found.name.split(' ')[0] : ''; // 只取中文部分
   },
 
-  // 获取技师在特定日期的报钟数量（用于历史记录显示）
-  getTechnicianDailyCountForRecord(technician: string, recordDate: string, recordId: string): number {
-    try {
-      const cachedData = wx.getStorageSync('consultationHistory') || {};
-
-      // 检查该日期是否有记录
-      if (!cachedData[recordDate]) {
-        return 1;
-      }
-
-      const records = cachedData[recordDate];
-      let count = 0;
-
-      // 遍历该日期的所有记录，计算在当前记录之前的有效报钟数量
-      for (const record of records) {
-        // 只计算未作废的记录，并且是当前记录或在当前记录之前创建的
-        if (record.technician === technician && !record.isVoided) {
-          count++;
-
-          // 如果是当前记录，停止计数
-          if (record.id === recordId) {
-            break;
-          }
-        }
-      }
-
-      return count;
-    } catch (error) {
-      console.error('计算技师报钟数量失败:', error);
-      return 1;
-    }
-  },
-
   // 生成当日总结
   async onGenerateSummary(e: WechatMiniprogram.TouchEvent) {
     const { date } = e.currentTarget.dataset;
 
     this.setData({ loading: true, loadingText: '生成统计中...' });
     try {
-      const database = cloudDbService;
-      const records = await (database).getConsultationsByDate<ConsultationRecord>(date);
+
+      const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(date);
 
 
       if (records.length === 0) {
@@ -512,8 +516,8 @@ Page({
   // 计算加班时长（根据排班和起始时间）
   async calculateOvertime(technician: string, date: string, startTime: string): Promise<number> {
     try {
-      const database = cloudDbService;
-      const schedule = await database.findOne<ScheduleRecord>(Collections.SCHEDULE, {
+
+      const schedule = await cloudDb.findOne<ScheduleRecord>(Collections.SCHEDULE, {
         date: date
       });
 
@@ -522,7 +526,7 @@ Page({
         return 0;
       }
 
-      const staff = await database.findOne<StaffInfo>(Collections.STAFF, {
+      const staff = await cloudDb.findOne<StaffInfo>(Collections.STAFF, {
         name: technician,
         status: 'active'
       });
@@ -543,9 +547,9 @@ Page({
   // 自动计算并更新所有记录的加班
   async autoUpdateOvertimeForDate(date: string) {
     try {
-      const database = cloudDbService;
 
-      const records = await (database).getConsultationsByDate<ConsultationRecord>(date);
+
+      const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(date);
       const overtimeUpdates: Record<string, number> = {};
 
       for (const record of records) {
@@ -559,7 +563,7 @@ Page({
       }
 
       if (Object.keys(overtimeUpdates).length > 0) {
-        await (database).updateOvertimeForDate(date, overtimeUpdates);
+        await cloudDb.updateOvertimeForDate(date, overtimeUpdates);
       }
 
     } catch (error) {
@@ -667,12 +671,12 @@ Page({
   async updateExtraTimeOrOvertime(recordId: string, date: string, field: 'extraTime' | 'overtime', value: number) {
     this.setData({ loading: true, loadingText: field === 'extraTime' ? '更新加钟中...' : '更新加班中...' });
     try {
-      const database = cloudDbService;
+
 
       const updateData: any = { [field]: value };
 
       if (field === 'extraTime') {
-        const record = await database.findById<ConsultationRecord>(Collections.CONSULTATION, recordId) as ConsultationRecord | null;
+        const record = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, recordId) as ConsultationRecord | null;
         if (record) {
           const [hours, minutes] = record.startTime.split(':').map(Number);
           const startDate = new Date();
@@ -683,7 +687,7 @@ Page({
         }
       }
 
-      await database.updateById(Collections.CONSULTATION, recordId, updateData);
+      await cloudDb.updateById(Collections.CONSULTATION, recordId, updateData);
 
 
       await this.loadHistoryData();

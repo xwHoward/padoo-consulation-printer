@@ -1,4 +1,4 @@
-import { cloudDb as cloudDbService, Collections } from '../../utils/cloud-db';
+import { cloudDb, Collections } from '../../utils/cloud-db';
 
 Page({
   data: {
@@ -40,7 +40,7 @@ Page({
   async loadCardList() {
     try {
       this.setData({ loading: true });
-      const cards = await cloudDbService.getAll<MembershipCard>(Collections.MEMBERSHIP);
+      const cards = await cloudDb.getAll<MembershipCard>(Collections.MEMBERSHIP);
       this.setData({ cardList: cards, loading: false });
     } catch (error) {
       console.error('加载会员卡列表失败:', error);
@@ -126,7 +126,7 @@ Page({
     try {
       this.setData({ loading: true });
       if (editCard) {
-        const success = await cloudDbService.updateById<MembershipCard>(Collections.MEMBERSHIP, editCard.id, cardData);
+        const success = await cloudDb.updateById<MembershipCard>(Collections.MEMBERSHIP, editCard.id, cardData);
         if (success) {
           wx.showToast({ title: '更新成功', icon: 'success' });
           await this.loadCardList();
@@ -135,7 +135,7 @@ Page({
           wx.showToast({ title: '更新失败', icon: 'none' });
         }
       } else {
-        const result = await cloudDbService.insert<MembershipCard>(Collections.MEMBERSHIP, cardData);
+        const result = await cloudDb.insert<MembershipCard>(Collections.MEMBERSHIP, cardData);
         if (result) {
           wx.showToast({ title: '添加成功', icon: 'success' });
           await this.loadCardList();
@@ -164,7 +164,7 @@ Page({
         if (res.confirm) {
           try {
             this.setData({ loading: true });
-            const success = await cloudDbService.deleteById(Collections.MEMBERSHIP, card.id);
+            const success = await cloudDb.deleteById(Collections.MEMBERSHIP, card.id);
             if (success) {
               wx.showToast({ title: '删除成功', icon: 'success' });
               this.loadCardList();
