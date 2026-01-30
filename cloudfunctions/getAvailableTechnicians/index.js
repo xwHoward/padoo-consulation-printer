@@ -29,11 +29,25 @@ exports.main = async (event, context) => {
         // 过滤掉当前加载的预约ID（用于冲突检查时排除）
         const filteredReservations = reservations.filter(r => !currentReservationIds || !currentReservationIds.includes(r.id))
 
-        // 获取员工数据
-        const staffRes = await db.collection('staff').where({
-            status: 'active'
+        // 获取当日排班数据
+        const scheduleRes = await db.collection('schedule').where({
+            date: date
         }).get()
-        const activeStaff = staffRes.data || []
+        const schedules = scheduleRes.data || []
+        // 获取排班中的技师ID列表（排除休息状态）
+        const scheduledStaffIds = schedules
+            .filter(s => s.shift !== 'leave' && s.shift !== 'off')
+            .map(s => s.staffId)
+
+        // 获取员工数据
+        let activeStaff = []
+        if (scheduledStaffIds.length > 0) {
+            const staffRes = await db.collection('staff').where({
+                status: 'active',
+                _id: _.in(scheduledStaffIds)
+            }).get()
+            activeStaff = staffRes.data || []
+        }
 
         // 获取当日咨询单数据
         const consultationsRes = await db.collection('consultation_records').where({
@@ -41,7 +55,6 @@ exports.main = async (event, context) => {
             isVoided: false
         }).get()
         const todayRecords = consultationsRes.data || []
-        console.log(date, todayRecords)
         // 检查每个技师的可用性
         const technicians = activeStaff.map(staff => {
             let occupiedReason = ''

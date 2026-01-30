@@ -71,12 +71,12 @@ Component({
 							};
 						} else {
 							// 使用系统默认班次
-							const index = SHIFT_TYPES.indexOf(DEFAULT_SHIFT);
-							scheduleMap[staff.id][d.date] = {
-								label: SHIFT_NAMES[DEFAULT_SHIFT],
-								type: DEFAULT_SHIFT,
-								index: index,
-							};
+							// const index = SHIFT_TYPES.indexOf(DEFAULT_SHIFT);
+							// scheduleMap[staff.id][d.date] = {
+							// 	label: SHIFT_NAMES[DEFAULT_SHIFT],
+							// 	type: DEFAULT_SHIFT,
+							// 	index: index,
+							// };
 						}
 					});
 				});
@@ -123,7 +123,6 @@ Component({
 				const index = parseInt(e.detail.value);
 				const shiftType = SHIFT_TYPES[index];
 				const today = this.data.today;
-				const dates = this.data.dates;
 
 				// 检查是否为今日之前的日期
 				if (date < today) {
@@ -137,7 +136,7 @@ Component({
 
 				wx.showLoading({ title: '更新中...' });
 
-				// 更新当前日期的排班
+				// 更新当前日期的排班（覆盖保存）
 				const existing = await (cloudDb.findOne<ScheduleRecord>(Collections.SCHEDULE, { staffId, date }));
 
 				if (existing) {
@@ -148,34 +147,6 @@ Component({
 						staffId,
 						shift: shiftType,
 					});
-				}
-
-				// 获取所有员工和已有的排班数据
-				const allStaff = await (cloudDb.getAll<StaffInfo>(Collections.STAFF));
-				const allSchedules = await (cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE));
-
-				// 获取今日及之后的所有可见日期
-				const futureDates = dates.filter(d => d.date >= today);
-
-				// 批量准备排班数据
-				const newSchedules: Add<ScheduleRecord>[] = [];
-
-				for (const staff of allStaff) {
-					for (const d of futureDates) {
-						const exists = allSchedules.find(s => s.staffId === staff.id && s.date === d.date);
-						if (!exists) {
-							newSchedules.push({
-								date: d.date,
-								staffId: staff.id,
-								shift: DEFAULT_SHIFT,
-							});
-						}
-					}
-				}
-
-				// 一次性批量插入所有缺失的排班
-				if (newSchedules.length > 0) {
-					await cloudDb.insertMany<ScheduleRecord>(Collections.SCHEDULE, newSchedules);
 				}
 
 				wx.hideLoading();
@@ -192,7 +163,7 @@ Component({
 
 				wx.showToast({
 					title: '已更新',
-					icon: 'none',
+					icon: 'success',
 				});
 			} catch (error) {
 				console.error('排班变更失败:', error);

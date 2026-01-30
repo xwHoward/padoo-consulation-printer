@@ -166,6 +166,8 @@ Component({
     onLoad(options: Record<string, string>) {
       if (options.editId) {
         this.loadEditData(options.editId);
+      } else if (options.reserveIds) {
+        this.loadReservationData(options.reserveIds);
       } else if (options.reserveId) {
         this.loadReservationData(options.reserveId);
       }
@@ -174,19 +176,30 @@ Component({
     // 加载并检查技师可用性
     async loadTechnicianList() {
       try {
-        const now = new Date();
-        const today = formatDate(now);
-        const currentTimeStr = formatTime(now, false);
+        const { editId, consultationInfo } = this.data;
+        
+        // 使用单据日期或当前日期
+        let targetDate: string;
+        let currentTimeStr: string;
+        
+        if (editId && consultationInfo.date) {
+          targetDate = consultationInfo.date;
+          currentTimeStr = consultationInfo.startTime || formatTime(new Date(), false);
+        } else {
+          const now = new Date();
+          targetDate = formatDate(now);
+          currentTimeStr = formatTime(now, false);
+        }
 
         this.setData({ loadingTechnicians: true });
 
         const projectDuration = parseProjectDuration(this.data.consultationInfo.project) || 60;
-        const savedRotation = wx.getStorageSync(`rotation_${today}`) as string[];
+        const savedRotation = wx.getStorageSync(`rotation_${targetDate}`) as string[];
 
         const res = await wx.cloud.callFunction({
           name: 'getAvailableTechnicians',
           data: {
-            date: today,
+            date: targetDate,
             currentTime: currentTimeStr,
             projectDuration: projectDuration,
             currentReservationIds: this.data.currentReservationIds
@@ -881,6 +894,14 @@ Component({
               activeGuest: 1,
               guest1Info: { ...DefaultGuestInfo, selectedParts: {} },
               guest2Info: { ...DefaultGuestInfo, selectedParts: {} },
+              // 重置车牌号相关数据
+              licensePlate: '',
+              isNewEnergyVehicle: false,
+              isNoPlate: false,
+              plateNumber: ['', '', '', '', '', '', '', ''],
+              // 重置顾客匹配相关数据
+              matchedCustomer: null,
+              matchedCustomerApplied: false
             });
             wx.showToast({
               title: "咨询单已重置",
@@ -950,19 +971,36 @@ Component({
     async saveConsultationToCache(consultation: Add<ConsultationInfo>, editId?: string) {
       try {
         this.setData({ loading: true });
-        const now = new Date();
-        const currentDate = formatDate(now);
-        // const timestamp = now.toISOString();
-
-        const startTimeStr = formatTime(now, false);
-        const endTimeDate = calculateProjectEndTime(now, consultation.project);
-        const endTimeStr = formatTime(endTimeDate, false);
+        
+        // 使用传入的consultation中的日期和时间，如果存在的话
+        let currentDate: string;
+        let startTimeStr: string;
+        let endTimeStr: string;
+        
+        if (consultation.date && consultation.startTime && consultation.endTime) {
+          // 使用已存在的日期和时间
+          currentDate = consultation.date;
+          startTimeStr = consultation.startTime;
+          
+          // 计算结束时间
+          const [year, month, day] = currentDate.split('-').map(Number);
+          const [hours, minutes] = startTimeStr.split(':').map(Number);
+          const startTimeDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+          const endTimeDate = calculateProjectEndTime(startTimeDate, consultation.project);
+          endTimeStr = formatTime(endTimeDate, false);
+        } else {
+          // 使用当前时间
+          const now = new Date();
+          currentDate = formatDate(now);
+          startTimeStr = formatTime(now, false);
+          const endTimeDate = calculateProjectEndTime(now, consultation.project);
+          endTimeStr = formatTime(endTimeDate, false);
+        }
+        
         const calculatedOvertime = await this.calculateOvertime(consultation.technician, currentDate, startTimeStr);
 
         const recordData: Add<ConsultationRecord> = {
           ...consultation,
-          // createdAt: editId ? timestamp : timestamp,
-          // updatedAt: timestamp,
           date: currentDate,
           isVoided: false,
           extraTime: 0,
@@ -1043,28 +1081,65 @@ Component({
     },
 
     // 加载预约数据
-    async loadReservationData(reserveId: string) {
+    async loadReservationData(reserveIdOrIds: string) {
       try {
-        const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
-        if (record) {
-          const selectedProject = this.data.projects.find((p) => p.name === record.project);
+        const reserveIds = reserveIdOrIds.includes(',') ? reserveIdOrIds.split(',') : [reserveIdOrIds];
+        const records = await Promise.all(
+          reserveIds.map(id => cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, id))
+        );
+        const validRecords = records.filter(r => r !== null) as ReservationRecord[];
+
+        if (validRecords.length > 0) {
+          const firstRecord = validRecords[0];
+          const selectedProject = this.data.projects.find((p) => p.name === firstRecord.project);
           const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
 
-          this.setData({
-            consultationInfo: {
-              ...DefaultConsultationInfo,
-              surname: record.customerName,
-              gender: record.gender,
-              phone: record.phone,
-              project: record.project,
-              technician: record.technicianName || '',
-            },
-            currentProjectIsEssentialOilOnly: isEssentialOilOnly,
-            currentReservationIds: [reserveId]
-          });
+          if (validRecords.length > 1) {
+            this.setData({
+              isDualMode: true,
+              activeGuest: 1 as 1 | 2,
+              consultationInfo: {
+                ...DefaultConsultationInfo,
+                surname: firstRecord.customerName,
+                gender: firstRecord.gender,
+                phone: firstRecord.phone,
+                project: firstRecord.project,
+                technician: firstRecord.technicianName || '',
+              },
+              guest1Info: {
+                ...DefaultGuestInfo,
+                surname: firstRecord.customerName,
+                gender: firstRecord.gender,
+                project: firstRecord.project,
+                technician: firstRecord.technicianName || '',
+              },
+              guest2Info: {
+                ...DefaultGuestInfo,
+                surname: firstRecord.customerName,
+                gender: firstRecord.gender,
+                project: firstRecord.project,
+                technician: validRecords[1].technicianName || '',
+              },
+              currentProjectIsEssentialOilOnly: isEssentialOilOnly,
+              currentReservationIds: reserveIds
+            });
+          } else {
+            this.setData({
+              consultationInfo: {
+                ...DefaultConsultationInfo,
+                surname: firstRecord.customerName,
+                gender: firstRecord.gender,
+                phone: firstRecord.phone,
+                project: firstRecord.project,
+                technician: firstRecord.technicianName || '',
+              },
+              currentProjectIsEssentialOilOnly: isEssentialOilOnly,
+              currentReservationIds: reserveIds
+            });
+          }
           await this.loadTechnicianList();
         } else {
-          console.error("未找到要加载的预约:", reserveId);
+          console.error("未找到要加载的预约:", reserveIdOrIds);
         }
       } catch (error) {
         console.error("加载预约数据失败:", error);
@@ -1141,8 +1216,16 @@ Component({
       this.setData({ 'timePickerModal.show': false });
 
       const [hours, minutes] = selectedTime.split(':').map(Number);
-      const startTimeDate = new Date();
-      startTimeDate.setHours(hours, minutes, 0, 0);
+      let startTimeDate: Date;
+      
+      if (editId) {
+        const recordDate = consultationInfo.date || formatDate(new Date());
+        const [year, month, day] = recordDate.split('-').map(Number);
+        startTimeDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+      } else {
+        startTimeDate = new Date();
+        startTimeDate.setHours(hours, minutes, 0, 0);
+      }
 
       this.setData({ loading: true, loadingText: '报钟中...' });
       try {
@@ -1442,11 +1525,27 @@ Component({
         upgradeHimalayanSaltStone: guest2Info.upgradeHimalayanSaltStone,
       };
 
-      const actualStartTime = startTimeDate || new Date();
+      let actualStartTime: Date;
+      if (startTimeDate) {
+        actualStartTime = startTimeDate;
+      } else if (editId) {
+        const recordDate = consultationInfo.date || formatDate(new Date());
+        const now = new Date();
+        const [year, month, day] = recordDate.split('-').map(Number);
+        actualStartTime = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), 0, 0);
+      } else {
+        actualStartTime = new Date();
+      }
+      
       const startTime = formatTime(actualStartTime, false);
 
       info1.startTime = startTime;
       info2.startTime = startTime;
+
+      if (editId) {
+        info1.date = consultationInfo.date || formatDate(new Date());
+        info2.date = consultationInfo.date || formatDate(new Date());
+      }
 
       const projectDuration1 = parseProjectDuration(info1.project) || 60;
       const projectDuration2 = parseProjectDuration(info2.project) || 60;
@@ -1463,7 +1562,7 @@ Component({
       // 保存两条记录
       const [success1, success2] = await Promise.all([
         this.saveConsultationToCache(info1, editId),
-        this.saveConsultationToCache(info2)
+        this.saveConsultationToCache(info2, editId)
       ]);
 
       if (success1 && success2) {
@@ -1532,16 +1631,33 @@ ${clockInInfo2}`;
     },
 
     async formatClockInInfo(info: Add<ConsultationInfo>): Promise<string> {
-      const currentTime = new Date();
-      const startTime = formatTime(currentTime, false);
+      let dailyCount = 1;
+      
+      if (info.date && info.startTime) {
+        const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(info.date) as ConsultationRecord[];
+        dailyCount = records.filter(
+          (record: ConsultationRecord) => record.technician === info.technician && !record.isVoided,
+        ).length + 1;
+      }
+
+      const startTime = info.startTime || formatTime(new Date(), false);
       const projectDuration = parseProjectDuration(info.project);
       const totalDuration = projectDuration + 10;
-      const endTime = new Date(
-        currentTime.getTime() + totalDuration * 60 * 1000,
-      );
-      const formattedEndTime = formatTime(endTime, false);
-
-      const dailyCount = await this.getTechnicianDailyCount(info.technician);
+      
+      let endTime: string;
+      if (info.endTime) {
+        endTime = info.endTime;
+      } else if (info.date && info.startTime) {
+        const [year, month, day] = info.date.split('-').map(Number);
+        const [hours, minutes] = startTime.split(':').map(Number);
+        const startDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+        const endDateTime = new Date(startDate.getTime() + totalDuration * 60 * 1000);
+        endTime = formatTime(endDateTime, false);
+      } else {
+        const currentTime = new Date();
+        const endDateTime = new Date(currentTime.getTime() + totalDuration * 60 * 1000);
+        endTime = formatTime(endDateTime, false);
+      }
 
       let formattedInfo = "";
       formattedInfo += `顾客: ${info.surname}${info.gender === "male" ? "先生" : "女士"
@@ -1549,7 +1665,7 @@ ${clockInInfo2}`;
       formattedInfo += `项目: ${info.project}\n`;
       formattedInfo += `技师: ${info.technician}(${dailyCount})${info.isClockIn ? "[点]" : ""}\n`;
       formattedInfo += `房间: ${info.room}\n`;
-      formattedInfo += `时间: ${startTime} - ${formattedEndTime}`;
+      formattedInfo += `时间: ${startTime} - ${endTime}`;
 
       if (info.remarks) {
         formattedInfo += `\n备注: ${info.remarks}`;
@@ -1600,8 +1716,14 @@ ${clockInInfo2}`;
         }咨询单\n`;
       content += "================\n";
       content += `项目: ${info.project}\n`;
-      // 获取技师当日报钟数量
-      const dailyCount = await this.getTechnicianDailyCount(info.technician);
+      // 获取技师当日或单据日期的报钟数量
+      let dailyCount = 1;
+      if (info.date) {
+        const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(info.date) as ConsultationRecord[];
+        dailyCount = records.filter(
+          (record: ConsultationRecord) => record.technician === info.technician && !record.isVoided,
+        ).length + 1;
+      }
       content += `技师: ${info.technician}(${dailyCount})${info.isClockIn ? "[点]" : ""}\n`;
       content += `房间: ${info.room}\n`;
       content += "力度:";
@@ -1638,7 +1760,14 @@ ${clockInInfo2}`;
       }
 
       content += "\n================\n";
-      content += `打印时间: ${formatTime(new Date(), false)}
+      
+      // 使用单据日期或当前日期
+      let printDate = new Date();
+      if (info.date) {
+        const [year, month, day] = info.date.split('-').map(Number);
+        printDate = new Date(year, month - 1, day);
+      }
+      content += `打印时间: ${formatTime(printDate, false)}
       
 `;
 

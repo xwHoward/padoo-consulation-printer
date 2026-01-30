@@ -123,7 +123,6 @@ Component({
 
 	methods: {
 		async loadProjects() {
-			this.setData({ loading: true, loadingText: '加载项目...' });
 			try {
 				const app = getApp<IAppOption>();
 				const allProjects = await app.getProjects();
@@ -131,8 +130,6 @@ Component({
 			} catch (error) {
 				console.error('加载项目失败:', error);
 				this.setData({ projects: [] });
-			} finally {
-				this.setData({ loading: false });
 			}
 		},
 
@@ -201,13 +198,37 @@ Component({
 				const scheduledStaff = allSchedules.map(s => s.staffId);
 				const activeStaff = activeStaffList.filter(s => scheduledStaff.includes(s.id));
 
-
 				const savedRotation = wx.getStorageSync(`rotation_${today}`) as string[];
 
 				this.setData({
 					activeStaffList: activeStaff,
 					staffNames: activeStaff.map(s => s.name)
 				});
+
+				// 调用云函数获取技师可用列表
+				const projectDuration = 60;
+				const currentTimeStr = isToday ? currentTime : '12:00';
+
+				const technicianRes = await wx.cloud.callFunction({
+					name: 'getAvailableTechnicians',
+					data: {
+						date: today,
+						currentTime: currentTimeStr,
+						projectDuration: projectDuration,
+						currentReservationIds: []
+					}
+				});
+
+				let availableTechnicians = [] as StaffAvailability[];
+				if (!technicianRes.result || typeof technicianRes.result !== 'object') {
+					this.setData({ staffAvailability: availableTechnicians });
+					return;
+				}
+				if (technicianRes.result && technicianRes.result.code === 0) {
+					availableTechnicians = technicianRes.result.data as StaffAvailability[];
+				}
+
+				this.setData({ staffAvailability: availableTechnicians });
 
 				// 转换排钟数据
 				const staffTimeline: StaffTimeline[] = [];
@@ -501,7 +522,7 @@ Component({
 							wx.navigateTo({ url: `/pages/index/index?editId=${id}` });
 						}
 					} else if (action === '到店') {
-						wx.navigateTo({ url: `/pages/index/index?reserveId=${id}` });
+						this.handleArrival(id);
 					} else if (action === '取消预约') {
 						this.cancelReservation(id);
 					} else if (action === '结算') {
@@ -509,6 +530,37 @@ Component({
 					}
 				}
 			});
+		},
+
+		// 处理到店操作
+		async handleArrival(reserveId: string) {
+			this.setData({ loading: true, loadingText: '加载中...' });
+			try {
+				const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
+				if (!record) {
+					wx.showToast({ title: '预约不存在', icon: 'none' });
+					return;
+				}
+
+				const reservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, {
+					date: record.date,
+					customerName: record.customerName,
+					startTime: record.startTime,
+					project: record.project
+				});
+
+				if (reservations.length > 1) {
+					const reserveIds = reservations.map(r => r.id).join(',');
+					wx.navigateTo({ url: `/pages/index/index?reserveIds=${reserveIds}` });
+				} else {
+					wx.navigateTo({ url: `/pages/index/index?reserveId=${reserveId}` });
+				}
+			} catch (error) {
+				console.error('加载预约失败:', error);
+				wx.showToast({ title: '加载失败', icon: 'none' });
+			} finally {
+				this.setData({ loading: false });
+			}
 		},
 
 		// 编辑预约
@@ -557,57 +609,45 @@ Component({
 
 				this.setData({ loading: true, loadingText: '检查技师可用性...' });
 
-				const [h, m] = startTime.split(':').map(Number);
-				const startTotal = h * 60 + m;
-				let duration = 60;
-				if (project) {
-					duration = parseProjectDuration(project);
-					if (duration === 0) duration = 60;
-				}
-				const endTotal = startTotal + duration + 10;
-				const endH = Math.floor(endTotal / 60);
-				const endM = endTotal % 60;
-				const endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+				const projectDuration = parseProjectDuration(project) || 60;
 
-				const activeRecords = (await cloudDb.getConsultationsByDate<ConsultationRecord>(date)).filter(r => !r.isVoided);
-
-				const reservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date });
-
-				const allTasks = [...activeRecords, ...reservations];
-
-				const allStaff = await cloudDb.getAll<StaffInfo>(Collections.STAFF);
-				const activeStaff = allStaff.filter(s => s.status === 'active');
-
-				const staffAvailability = activeStaff.map(staff => {
-					let occupiedReason = '';
-					const conflictTask = allTasks.find(r => {
-						const rName = (r as ConsultationRecord).technician || (r as ReservationRecord).technicianName;
-						if (rName !== staff.name) return false;
-						return isTimeOverlapping(startTime, endTimeStr, r.startTime, r.endTime);
-					});
-
-					if (conflictTask) {
-						const isReservation = !(conflictTask as ConsultationRecord).technician;
-						const customerName = (conflictTask as ConsultationRecord).surname || (conflictTask as ReservationRecord).customerName || '顾客';
-						const gender = conflictTask.gender === 'male' ? '先生' : '女士';
-						occupiedReason = `${conflictTask.startTime}-${conflictTask.endTime} ${customerName}${gender}${isReservation ? '(预约)' : ''}`;
+				const res = await wx.cloud.callFunction({
+					name: 'getAvailableTechnicians',
+					data: {
+						date: date,
+						currentTime: startTime,
+						projectDuration: projectDuration,
+						currentReservationIds: []
 					}
-
-					// 检查是否已选中
-					const isSelected = this.data.reserveForm.selectedTechnicians.some(t => t.id === staff.id);
-
-					return {
-						id: staff.id,
-						name: staff.name,
-						isOccupied: !!conflictTask,
-						occupiedReason,
-						isSelected
-					};
 				});
 
-				this.setData({ staffAvailability });
+				if (!res.result || typeof res.result !== 'object') {
+					throw new Error('获取技师列表失败');
+				}
+
+				if (res.result.code === 0) {
+					const list = res.result.data as StaffAvailability[];
+
+					const selectedTechnicianIds = this.data.reserveForm.selectedTechnicians.map(t => t.id);
+
+					const staffAvailability = list.map(staff => ({
+						...staff,
+						isSelected: selectedTechnicianIds.includes(staff.id)
+					}));
+
+					this.setData({ staffAvailability });
+				} else {
+					wx.showToast({
+						title: res.result.message || '获取技师列表失败',
+						icon: 'none'
+					});
+				}
 			} catch (error) {
 				console.error('检查技师可用性失败:', error);
+				wx.showToast({
+					title: '获取技师列表失败',
+					icon: 'none'
+				});
 			} finally {
 				this.setData({ loading: false });
 			}

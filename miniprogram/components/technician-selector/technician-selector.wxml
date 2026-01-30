@@ -9,11 +9,11 @@
     data-occupied="{{item.isOccupied}}"
     data-reason="{{item.occupiedReason}}"
   >
-    <checkbox
+    <!-- <checkbox
       wx:if="{{multi}}"
       value="{{item.name}}"
       checked="{{item.isSelected}}"
-      disabled="{{item.isOccupied}}" />
+      disabled="{{item.isOccupied}}" /> -->
     <view class="tech-info">
       <text class="tech-name">{{item.name}}</text>
       <text class="tech-reason" wx:if="{{item.isOccupied}}">{{item.occupiedReason}}</text>
