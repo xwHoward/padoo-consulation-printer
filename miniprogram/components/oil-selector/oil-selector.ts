@@ -30,8 +30,8 @@ Component({
 	},
 
 	lifetimes: {
-		async attached() {
-			await this.loadOils();
+		attached() {
+			this.loadOils();
 		}
 	}
 });

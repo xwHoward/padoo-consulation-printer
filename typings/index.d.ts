@@ -52,6 +52,9 @@ interface ConsultationInfo extends BaseRecord {
   couponCode: string;
   couponPlatform: "meituan" | "dianping" | "douyin" | "membership" | "";
   upgradeHimalayanSaltStone: boolean;
+  startTime: string; // 报钟时间（格式 HH:MM）
+  endTime: string; // 结束时间（格式 HH:MM）
+  licensePlate?: string; // 车牌号
 }
 
 interface GuestInfo {

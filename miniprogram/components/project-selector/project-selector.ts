@@ -31,8 +31,8 @@ Component({
 	},
 
 	lifetimes: {
-		async attached() {
-			await this.loadProjects();
+		attached() {
+			this.loadProjects();
 		}
 	}
 });

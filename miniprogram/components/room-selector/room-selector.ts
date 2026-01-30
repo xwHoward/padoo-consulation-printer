@@ -37,8 +37,8 @@ Component({
 	},
 
 	lifetimes: {
-		async attached() {
-			await this.loadRooms();
+		attached() {
+			this.loadRooms();
 		}
 	}
 });

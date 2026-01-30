@@ -1,5 +1,5 @@
 // cashier.ts
-import { cloudDb as cloudDbService, Collections } from '../../utils/cloud-db';
+import { cloudDb, Collections } from '../../utils/cloud-db';
 import { DEFAULT_SHIFT } from '../../utils/constants';
 import { formatDate, formatDuration, getMinutesDiff, isTimeOverlapping, parseProjectDuration } from '../../utils/util';
 
@@ -116,16 +116,12 @@ Component({
 	},
 
 	pageLifetimes: {
-		async show() {
-			await this.loadData();
+		show() {
+			this.loadData();
 		}
 	},
 
 	methods: {
-		getDb() {
-			return cloudDbService;
-		},
-
 		async loadProjects() {
 			this.setData({ loading: true, loadingText: '加载项目...' });
 			try {
@@ -149,16 +145,15 @@ Component({
 		async loadData() {
 			this.setData({ loading: true, loadingText: '加载数据...' });
 			try {
-				const database = this.getDb();
 				const app = getApp<IAppOption>();
 				const today = this.data.selectedDate || formatDate(new Date());
 				const allRooms = await app.getRooms();
 				const filteredRooms = allRooms.filter((r: Room) => r.status === 'normal');
 
-				const todayRecords = await (database).getConsultationsByDate<ConsultationRecord>(today);
+				const todayRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
 				const activeRecords = todayRecords.filter(r => !r.isVoided);
 
-				const reservations = await (database).find<ReservationRecord>(Collections.RESERVATIONS, { date: today });
+				const reservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today });
 
 				const now = new Date();
 				const todayStr = formatDate(now);
@@ -200,8 +195,8 @@ Component({
 				});
 
 				// 2. 获取员工轮排与排钟表数据
-				const allSchedules = await (database).getAll<ScheduleRecord>(Collections.SCHEDULE);
-				const allStaff = await (database).getAll<StaffInfo>(Collections.STAFF);
+				const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
+				const allStaff = await cloudDb.getAll<StaffInfo>(Collections.STAFF);
 				const activeStaffList = allStaff.filter(s => s.status === 'active');
 				const scheduledStaff = allSchedules.map(s => s.staffId);
 				const activeStaff = activeStaffList.filter(s => scheduledStaff.includes(s.id));
@@ -520,8 +515,7 @@ Component({
 		async editReservation(id: string) {
 			this.setData({ loading: true, loadingText: '加载中...' });
 			try {
-				const database = this.getDb();
-				const record = await (database).findById<ReservationRecord>(Collections.RESERVATIONS, id);
+				const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, id);
 				if (record) {
 					const selectedTechnicians: Array<{ id: string; name: string; }> = [];
 					if (record.technicianId && record.technicianName) {
@@ -562,7 +556,6 @@ Component({
 				if (!date || !startTime) return;
 
 				this.setData({ loading: true, loadingText: '检查技师可用性...' });
-				const database = this.getDb();
 
 				const [h, m] = startTime.split(':').map(Number);
 				const startTotal = h * 60 + m;
@@ -576,13 +569,13 @@ Component({
 				const endM = endTotal % 60;
 				const endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 
-				const activeRecords = (await (database).getConsultationsByDate<ConsultationRecord>(date)).filter(r => !r.isVoided);
+				const activeRecords = (await cloudDb.getConsultationsByDate<ConsultationRecord>(date)).filter(r => !r.isVoided);
 
-				const reservations = await (database).find<ReservationRecord>(Collections.RESERVATIONS, { date });
+				const reservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date });
 
 				const allTasks = [...activeRecords, ...reservations];
 
-				const allStaff = await (database).getAll<StaffInfo>(Collections.STAFF);
+				const allStaff = await cloudDb.getAll<StaffInfo>(Collections.STAFF);
 				const activeStaff = allStaff.filter(s => s.status === 'active');
 
 				const staffAvailability = activeStaff.map(staff => {
@@ -695,7 +688,6 @@ Component({
 
 		async confirmReserve() {
 			const { reserveForm } = this.data;
-			const database = this.getDb();
 
 			if (!reserveForm.startTime) {
 				wx.showToast({ title: '开始时间必填', icon: 'none' });
@@ -732,7 +724,7 @@ Component({
 						startTime: reserveForm.startTime,
 						endTime: endTime
 					};
-					const success = await (database).updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm.id, record);
+					const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm.id, record);
 					if (success) {
 						wx.showToast({ title: '更新成功', icon: 'success' });
 						this.closeReserveModal();
@@ -759,7 +751,7 @@ Component({
 						startTime: reserveForm.startTime,
 						endTime: endTime
 					};
-					const success = await (database).insert<ReservationRecord>(Collections.RESERVATIONS, record);
+					const success = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
 					if (success) {
 						wx.showToast({ title: '预约成功', icon: 'success' });
 						this.closeReserveModal();
@@ -784,7 +776,7 @@ Component({
 						startTime: reserveForm.startTime,
 						endTime: endTime
 					};
-					const insertResult = await (database).insert<ReservationRecord>(Collections.RESERVATIONS, record);
+					const insertResult = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
 					if (insertResult) {
 						successCount++;
 					}
@@ -817,8 +809,7 @@ Component({
 					if (res.confirm) {
 						this.setData({ loading: true, loadingText: '取消中...' });
 						try {
-							const database = this.getDb();
-							const success = await (database).deleteById(Collections.RESERVATIONS, id);
+							const success = await cloudDb.deleteById(Collections.RESERVATIONS, id);
 							if (success) {
 								wx.showToast({ title: '已取消预约', icon: 'success' });
 								await this.loadData();
@@ -839,9 +830,8 @@ Component({
 		// 打开结算弹窗
 		async openSettlement(id: string) {
 			try {
-				const database = this.getDb();
 				const today = this.data.selectedDate || formatDate(new Date());
-				const records = await (database).getConsultationsByDate<ConsultationRecord>(today);
+				const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
 				const record = records.find(r => r.id === id) || null;
 
 				if (!record) {
@@ -993,7 +983,6 @@ Component({
 		// 确认结算
 		async confirmSettlement() {
 			const { settlementRecordId, paymentMethods, settlementCouponCode } = this.data;
-			const database = this.getDb();
 
 			const selectedPayments = paymentMethods.filter(m => m.selected);
 
@@ -1005,7 +994,7 @@ Component({
 			this.setData({ loading: true, loadingText: '结算中...' });
 			try {
 				const today = this.data.selectedDate || formatDate(new Date());
-				const allRecords = await (database).getConsultationsByDate<ConsultationRecord>(today);
+				const allRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
 				const target = allRecords.find(r => r.id === settlementRecordId);
 
 				if (!target) {
@@ -1044,7 +1033,7 @@ Component({
 
 				const membershipPayment = payments.find(p => p.method === 'membership');
 				if (membershipPayment) {
-					const allMemberships = await (database).getAll<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP);
+					const allMemberships = await cloudDb.getAll<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP);
 					const customerMembership = allMemberships.find(m => {
 						return (m.customerPhone === target.phone || m.customerName === target.surname) &&
 							m.remainingTimes > 0 && m.status === 'active';
@@ -1062,11 +1051,11 @@ Component({
 						return;
 					}
 
-					await (database).updateById<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, customerMembership.id, {
+					await cloudDb.updateById<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, customerMembership.id, {
 						remainingTimes: newRemaining
 					});
 
-					await (database).insert<MembershipUsageRecord>(Collections.MEMBERSHIP_USAGE, {
+					await cloudDb.insert<MembershipUsageRecord>(Collections.MEMBERSHIP_USAGE, {
 						cardId: customerMembership.cardId,
 						cardName: customerMembership.cardName,
 						date: today,
@@ -1078,7 +1067,7 @@ Component({
 					});
 				}
 
-				await (database).updateById(Collections.CONSULTATION, settlementRecordId, {
+				await cloudDb.updateById(Collections.CONSULTATION, settlementRecordId, {
 					settlement: settlement,
 					updatedAt: now.toISOString()
 				});

@@ -85,6 +85,23 @@
         </label>
       </view>
     </view>
+        <!-- 免费停车区域 -->
+    <view class="section">
+      <view class="section-title">免费停车</view>
+      <view class="parking-form">
+        <view class="form-item">
+          <text class="form-label">车牌号</text>
+          <view class="plate-input-container" bindtap="showPlateInputModal">
+            <view class="plate-inputs">
+              <view class="plate-input {{isNoPlate && index === 0 ? 'fixed' : ''}}" wx:for="{{plateNumber}}" wx:key="index">
+                {{item || ''}}
+              </view>
+            </view>
+          </view>
+          <view class="parking-tips">*免费停车2小时，超时需要自付超额部分，1元/小时</view>
+        </view>
+      </view>
+    </view>
     <!-- 上钟信息 -->
     <view class="section">
       <view class="section-title">上钟信息</view>
@@ -93,7 +110,6 @@
         <technician-selector selectedTechnician="{{(isDualMode ? (activeGuest === 1 ? guest1Info.technician : guest2Info.technician) : consultationInfo.technician)}}" technicianList="{{technicianList}}" bind:change="onTechnicianSelect" />
         <view class="checkbox-group">
           <label class="checkbox-item {{(isDualMode ? (activeGuest === 1 ? guest1Info.isClockIn : guest2Info.isClockIn) : consultationInfo.isClockIn) ? 'selected' : ''}}" bindtap="onClockInSelect">
-            <checkbox checked="{{(isDualMode ? (activeGuest === 1 ? guest1Info.isClockIn : guest2Info.isClockIn) : consultationInfo.isClockIn)}}" />
             点
           </label>
         </view>
@@ -163,9 +179,7 @@
     <!-- 编辑模式按钮 -->
     <view class="button-container" wx:if="{{editId}}">
       <button class="primary-button" bindtap="printConsultation">打印</button>
-      <button class="primary-button" bindtap="saveOnly">仅保存</button>
-      <button class="primary-button" bindtap="copyClockInInfo">复制报钟信息</button>
-      <button class="primary-button" bindtap="reClockIn">重新报钟</button>
+      <button class="primary-button" bindtap="onClockIn">报钟</button>
       <button class="primary-button secondary-button" bindtap="cancelEdit">取消</button>
     </view>
   </view>
@@ -174,4 +188,77 @@
 <view class="loading-mask" wx:if="{{loading}}">
   <view class="loading-spinner"></view>
   <view class="loading-text">{{loadingText}}</view>
+</view>
+<!-- 时间选择器弹窗 -->
+<view class="modal-mask" wx:if="{{timePickerModal.show}}" bindtap="onTimePickerCancel"></view>
+<view class="time-picker-modal" wx:if="{{timePickerModal.show}}">
+  <view class="modal-header">
+    <text class="modal-title">选择上钟开始时间</text>
+    <text class="modal-close" bindtap="onTimePickerCancel">✕</text>
+  </view>
+  <view class="modal-body">
+    <picker
+      mode="multiSelector"
+      range="{{[hours, minutes]}}"
+      value="{{[selectedHour, selectedMinute]}}"
+      bindchange="onTimePickerChange"
+      bindcolumnchange="onTimeColumnChange">
+      <view class="time-picker-display">
+        <text class="time-value">{{timePickerModal.currentTime}}</text>
+        <text class="time-hint">点击修改时间</text>
+      </view>
+    </picker>
+  </view>
+  <view class="modal-footer">
+    <button class="modal-btn cancel-btn" bindtap="onTimePickerCancel">取消</button>
+    <button class="modal-btn confirm-btn" bindtap="onTimePickerConfirm">确认</button>
+  </view>
+</view>
+<!-- 车牌号输入弹窗 -->
+<view class="modal-mask" wx:if="{{licensePlateInputVisible}}" bindtap="hidePlateInputModal"></view>
+<view class="plate-modal" wx:if="{{licensePlateInputVisible}}">
+  <view class="modal-header">
+    <text class="modal-title">输入车牌号</text>
+    <text class="modal-close" bindtap="hidePlateInputModal">✕</text>
+  </view>
+
+  <!-- 实时显示已输入车牌号 -->
+  <view class="plate-display">
+    <view class="plate-display-inputs">
+      <view class="plate-display-input {{isNoPlate && index === 0 ? 'fixed' : ''}}" wx:for="{{plateNumber}}" wx:key="index">
+        {{item || ''}}
+      </view>
+          <label class="option-item {{isNewEnergyVehicle ? 'selected' : ''}}" bindtap="toggleNewEnergy">
+      <text>新能源车</text>
+    </label>
+    <label class="option-item {{isNoPlate ? 'selected' : ''}}" bindtap="toggleNoPlate">
+      <text>无牌车</text>
+    </label>
+    </view>
+  </view>
+  
+  <!-- 省份选择 -->
+  <view wx:if="{{currentPlatePosition === 0 && !isNoPlate}}" class="plate-keyboard">
+    <view class="keyboard-row">
+      <block wx:for="{{provinceCodes}}" wx:key="index">
+        <view class="key" bindtap="selectProvince" data-province="{{item}}">{{item}}</view>
+      </block>
+    </view>
+  </view>
+  
+  <!-- 字符选择 -->
+  <view wx:if="{{currentPlatePosition > 0 && currentPlatePosition < (isNewEnergyVehicle ? 8 : 7)}}" class="plate-keyboard">
+    <view class="keyboard-row">
+      <block wx:for="{{plateCharacters}}" wx:key="index">
+        <view class="key" bindtap="selectCharacter" data-char="{{item}}">{{item}}</view>
+      </block>
+    </view>
+  </view>
+  
+  <!-- 删除按钮 -->
+  <view class="modal-footer">
+    <button class="modal-btn delete-btn" bindtap="deletePlateChar">删除</button>
+    <button class="modal-btn cancel-btn" bindtap="resetPlateInput">清空</button>
+    <button class="modal-btn confirm-btn" bindtap="confirmPlateInput">确认</button>
+  </view>
 </view>

@@ -1,5 +1,5 @@
 // staff.ts
-import { cloudDb as cloudDbService, Collections } from '../../utils/cloud-db';
+import { cloudDb, Collections } from '../../utils/cloud-db';
 import { DEFAULT_SHIFT, SHIFT_NAMES, SHIFT_TYPES } from '../../utils/constants';
 import { formatDate } from '../../utils/util';
 
@@ -37,26 +37,21 @@ Component({
 	},
 
 	methods: {
-		// 获取数据库实例
-		getDb() {
-			return cloudDbService;
-		},
 
 		// 初始化排班表
 		async initSchedule() {
 			try {
-				const database = this.getDb();
 				const now = new Date();
 				const todayStr = formatDate(now);
 				const dates = this.generateDateRange(now);
 
 				this.setData({ loading: true });
 
-				const staffList = await (database.find<StaffInfo>(Collections.STAFF, { status: 'active' }));
+				const staffList = await (cloudDb.find<StaffInfo>(Collections.STAFF, { status: 'active' }));
 
 				const startDate = dates[0].date;
 				const endDate = dates[dates.length - 1].date;
-				const allSchedules = await (database.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
+				const allSchedules = await (cloudDb.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
 					return item.date >= startDate && item.date <= endDate;
 				}));
 
@@ -127,7 +122,6 @@ Component({
 				const { staffId, date } = e.currentTarget.dataset;
 				const index = parseInt(e.detail.value);
 				const shiftType = SHIFT_TYPES[index];
-				const database = this.getDb();
 				const today = this.data.today;
 				const dates = this.data.dates;
 
@@ -144,12 +138,12 @@ Component({
 				wx.showLoading({ title: '更新中...' });
 
 				// 更新当前日期的排班
-				const existing = await (database.findOne<ScheduleRecord>(Collections.SCHEDULE, { staffId, date }));
+				const existing = await (cloudDb.findOne<ScheduleRecord>(Collections.SCHEDULE, { staffId, date }));
 
 				if (existing) {
-					await database.updateById<ScheduleRecord>(Collections.SCHEDULE, existing.id, { shift: shiftType });
+					await cloudDb.updateById<ScheduleRecord>(Collections.SCHEDULE, existing.id, { shift: shiftType });
 				} else {
-					await database.insert<ScheduleRecord>(Collections.SCHEDULE, {
+					await cloudDb.insert<ScheduleRecord>(Collections.SCHEDULE, {
 						date,
 						staffId,
 						shift: shiftType,
@@ -157,8 +151,8 @@ Component({
 				}
 
 				// 获取所有员工和已有的排班数据
-				const allStaff = await (database.getAll<StaffInfo>(Collections.STAFF));
-				const allSchedules = await (database.getAll<ScheduleRecord>(Collections.SCHEDULE));
+				const allStaff = await (cloudDb.getAll<StaffInfo>(Collections.STAFF));
+				const allSchedules = await (cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE));
 
 				// 获取今日及之后的所有可见日期
 				const futureDates = dates.filter(d => d.date >= today);
@@ -181,7 +175,7 @@ Component({
 
 				// 一次性批量插入所有缺失的排班
 				if (newSchedules.length > 0) {
-					await database.insertMany<ScheduleRecord>(Collections.SCHEDULE, newSchedules);
+					await cloudDb.insertMany<ScheduleRecord>(Collections.SCHEDULE, newSchedules);
 				}
 
 				wx.hideLoading();
@@ -214,8 +208,7 @@ Component({
 		async loadStaffList() {
 			try {
 				this.setData({ loading: true });
-				const database = this.getDb();
-				const staffList = await (database.getAll<StaffInfo>(Collections.STAFF));
+				const staffList = await (cloudDb.getAll<StaffInfo>(Collections.STAFF));
 
 				// 按创建时间倒序排列，增加兼容性处理
 				staffList.sort((a, b) => {
@@ -249,8 +242,7 @@ Component({
 			try {
 				const id = e.currentTarget.dataset.id as string;
 				this.setData({ loading: true });
-				const database = this.getDb();
-				const staff = await (database.findById<StaffInfo>(Collections.STAFF, id));
+				const staff = await (cloudDb.findById<StaffInfo>(Collections.STAFF, id));
 
 				if (staff) {
 					this.setData({
@@ -278,13 +270,12 @@ Component({
 			try {
 				const id = e.currentTarget.dataset.id as string;
 				this.setData({ loading: true });
-				const database = this.getDb();
-				const staff = await (database.findById<StaffInfo>(Collections.STAFF, id));
+				const staff = await (cloudDb.findById<StaffInfo>(Collections.STAFF, id));
 
 				if (staff) {
 					const newStatus: StaffStatus = staff.status === 'active' ? 'disabled' : 'active';
 
-					await database.updateById<StaffInfo>(Collections.STAFF, id, { status: newStatus });
+					await cloudDb.updateById<StaffInfo>(Collections.STAFF, id, { status: newStatus });
 
 					await this.loadStaffList();
 
@@ -312,8 +303,7 @@ Component({
 			try {
 				const id = e.currentTarget.dataset.id as string;
 				this.setData({ loading: true });
-				const database = this.getDb();
-				const staff = await (database.findById<StaffInfo>(Collections.STAFF, id));
+				const staff = await (cloudDb.findById<StaffInfo>(Collections.STAFF, id));
 
 				if (!staff) {
 					this.setData({ loading: false });
@@ -330,7 +320,7 @@ Component({
 						if (res.confirm) {
 							try {
 								this.setData({ loading: true });
-								await database.deleteById(Collections.STAFF, id);
+								await cloudDb.deleteById(Collections.STAFF, id);
 								await this.loadStaffList();
 								wx.showToast({ title: '已删除', icon: 'success' });
 							} catch (error) {
@@ -383,18 +373,17 @@ Component({
 					return;
 				}
 
-				const database = this.getDb();
 				wx.showLoading({ title: '保存中...' });
 
 				if (editingStaff) {
-					await database.updateById<StaffInfo>(Collections.STAFF, editingStaff.id, {
+					await cloudDb.updateById<StaffInfo>(Collections.STAFF, editingStaff.id, {
 						name,
 						status: inputStatus,
 					});
 
 					wx.showToast({ title: '修改成功', icon: 'success' });
 				} else {
-					const exists = await (database.exists<StaffInfo>(Collections.STAFF, { name }));
+					const exists = await (cloudDb.exists<StaffInfo>(Collections.STAFF, { name }));
 
 					if (exists) {
 						wx.hideLoading();
@@ -402,7 +391,7 @@ Component({
 						return;
 					}
 
-					const inserted = await (database.insert<StaffInfo>(Collections.STAFF, { name, status: 'active' }));
+					const inserted = await (cloudDb.insert<StaffInfo>(Collections.STAFF, { name, status: 'active' }));
 
 					if (inserted) {
 						wx.showToast({ title: '添加成功', icon: 'success' });

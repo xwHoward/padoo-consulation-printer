@@ -24,6 +24,8 @@ const DefaultConsultationInfo: Add<ConsultationInfo> = {
   extraTime: 0,
   couponPlatform: "meituan",
   upgradeHimalayanSaltStone: false,
+  startTime: "",
+  endTime: "",
 };
 
 const DefaultGuestInfo: GuestInfo = {
@@ -59,6 +61,8 @@ function ensureConsultationInfoCompatibility(data: ConsultationInfo, projects: P
     couponCode: data.couponCode || "",
     couponPlatform: data.couponPlatform || "",
     upgradeHimalayanSaltStone: data.upgradeHimalayanSaltStone || false,
+    startTime: data.startTime || "",
+    endTime: data.endTime || "",
   };
 }
 
@@ -120,29 +124,48 @@ Component({
     // 顾客匹配相关
     matchedCustomer: null as CustomerRecord | null, // 匹配到的顾客信息
     matchedCustomerApplied: false, // 是否已应用匹配的顾客信息
+    // 报钟时间选择相关
+    timePickerModal: {
+      show: false,
+      currentTime: '' // 当前选择的时间 HH:mm
+    },
+    hours: Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')),
+    minutes: Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')),
+    selectedHour: 0,
+    selectedMinute: 0,
+    licensePlate: '',
+    isNewEnergyVehicle: false,
+    isNoPlate: false,
+    licensePlateInputVisible: false,
+    currentPlatePosition: 0,
+    plateNumber: ['', '', '', '', '', '', '', ''],
+    // 车牌号省份代码
+    provinceCodes: ['京', '津', '冀', '晋', '蒙', '辽', '吉', '黑', '沪', '苏', '浙', '皖', '闽', '赣', '鲁', '豫', '鄂', '湘', '粤', '桂', '琼', '川', '黔', '滇', '藏', '陕', '甘', '青', '宁', '新', '渝', '使', '临'],
+    // 车牌号字符
+    plateCharacters: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Z', 'X', 'C', 'V', 'B', 'N', 'M']
   },
 
   lifetimes: {
-    async attached() {
-      await this.loadProjects();
-      await this.loadTechnicianList();
+    attached() {
+      this.loadProjects();
+      this.loadTechnicianList();
     }
   },
 
   pageLifetimes: {
-    async show() {
-      await this.loadTechnicianList();
+    show() {
+      this.loadTechnicianList();
     }
   },
 
   methods: {
 
     // 页面加载
-    async onLoad(options: Record<string, string>) {
+    onLoad(options: Record<string, string>) {
       if (options.editId) {
-        await this.loadEditData(options.editId);
+        this.loadEditData(options.editId);
       } else if (options.reserveId) {
-        await this.loadReservationData(options.reserveId);
+        this.loadReservationData(options.reserveId);
       }
     },
 
@@ -969,19 +992,36 @@ Component({
     async loadEditData(editId: string) {
       try {
         const foundRecord = await cloudDbService.findById<ConsultationRecord>(Collections.CONSULTATION, editId) as ConsultationRecord | null;
-
-
+        console.log(foundRecord)
         if (foundRecord) {
           const selectedProject = this.data.projects.find((p) => p.name === foundRecord.project);
           const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
 
-          this.setData({
+          const updateData: any = {
             consultationInfo: ensureConsultationInfoCompatibility(foundRecord, this.data.projects),
             editId: editId,
             currentProjectIsEssentialOilOnly: isEssentialOilOnly,
             matchedCustomer: null,
             matchedCustomerApplied: false
-          });
+          };
+
+          if (foundRecord.licensePlate) {
+            updateData.licensePlate = foundRecord.licensePlate;
+            updateData.isNewEnergyVehicle = foundRecord.licensePlate.length === 8;
+            updateData.isNoPlate = foundRecord.licensePlate.startsWith('临');
+
+            const maxPlateLength = updateData.isNewEnergyVehicle ? 8 : 7;
+            const plateNumber = Array(maxPlateLength).fill('');
+            const plateChars = foundRecord.licensePlate.split('');
+            plateChars.forEach((char, index) => {
+              if (index < maxPlateLength) {
+                plateNumber[index] = char;
+              }
+            });
+            updateData.plateNumber = plateNumber;
+          }
+
+          this.setData(updateData);
           this.loadTechnicianList();
         } else {
           console.error("未找到要编辑的记录:", editId);
@@ -1090,232 +1130,54 @@ Component({
       }
     },
 
-    // 仅保存（编辑模式）
-    async saveOnly() {
-      const { consultationInfo, editId, isDualMode, guest1Info, guest2Info } = this.data;
+    // 时间选择器确认
+    async onTimePickerConfirm() {
+      const { timePickerModal, consultationInfo, editId, isDualMode, licensePlate } = this.data;
+      const { currentTime: selectedTime } = timePickerModal;
 
-      const validationResult = validateConsultationForPrint(consultationInfo, isDualMode, guest1Info, guest2Info);
-      if (!showValidationError(validationResult)) {
-        return;
-      }
+      this.setData({ 'timePickerModal.show': false });
 
-      this.setData({ loading: true, loadingText: '保存中...' });
-      try {
-        const success = await this.saveConsultationToCache(consultationInfo, editId);
-        if (success) {
-          wx.showToast({
-            title: '保存成功',
-            icon: 'success'
-          });
-        } else {
-          wx.showToast({
-            title: '保存失败',
-            icon: 'error'
-          });
-        }
-      } catch (error) {
-        wx.showToast({
-          title: "保存失败",
-          icon: "error",
-        });
-      } finally {
-        this.setData({ loading: false });
-      }
+      const [hours, minutes] = selectedTime.split(':').map(Number);
+      const startTimeDate = new Date();
+      startTimeDate.setHours(hours, minutes, 0, 0);
 
-    },
-
-    // 复制报钟信息（编辑模式）
-    async copyClockInInfo() {
-      const { consultationInfo, isDualMode, guest1Info, guest2Info } = this.data;
-
-      const validationResult = validateConsultationForPrint(consultationInfo, isDualMode, guest1Info, guest2Info);
-      if (!showValidationError(validationResult)) {
-        return;
-      }
-
-      this.setData({ loading: true, loadingText: '生成报钟信息...' });
+      this.setData({ loading: true, loadingText: '报钟中...' });
       try {
         if (isDualMode) {
-          const clockInInfo1 = await this.formatClockInInfo({
-            ...consultationInfo,
-            surname: guest1Info.surname,
-            gender: guest1Info.gender,
-            project: guest1Info.project,
-            selectedParts: guest1Info.selectedParts,
-            massageStrength: guest1Info.massageStrength,
-            essentialOil: guest1Info.essentialOil,
-            remarks: guest1Info.remarks,
-            technician: guest1Info.technician,
-            isClockIn: guest1Info.isClockIn,
-            couponCode: guest1Info.couponCode,
-            couponPlatform: guest1Info.couponPlatform,
-            upgradeHimalayanSaltStone: guest1Info.upgradeHimalayanSaltStone,
-          });
-          const clockInInfo2 = await this.formatClockInInfo({
-            ...consultationInfo,
-            surname: guest2Info.surname,
-            gender: guest2Info.gender,
-            project: guest2Info.project,
-            selectedParts: guest2Info.selectedParts,
-            massageStrength: guest2Info.massageStrength,
-            essentialOil: guest2Info.essentialOil,
-            remarks: guest2Info.remarks,
-            technician: guest2Info.technician,
-            isClockIn: guest2Info.isClockIn,
-            couponCode: guest2Info.couponCode,
-            couponPlatform: guest2Info.couponPlatform,
-            upgradeHimalayanSaltStone: guest2Info.upgradeHimalayanSaltStone,
-          });
-          const combinedInfo = `${clockInInfo1}\n\n${clockInInfo2}`;
-          wx.setClipboardData({
-            data: combinedInfo,
-            success: () => {
-              wx.showToast({ title: '报钟信息已复制', icon: 'success' });
-            },
-            fail: (err) => {
-              wx.showToast({ title: '复制失败', icon: 'none' });
-              console.error('复制到剪贴板失败:', err);
-            },
-          });
+          await this.doDualClockIn(startTimeDate, editId);
         } else {
-          const clockInInfo = await this.formatClockInInfo(consultationInfo);
-          wx.setClipboardData({
-            data: clockInInfo,
-            success: () => {
-              wx.showToast({ title: '报钟信息已复制', icon: 'success' });
-            },
-            fail: (err) => {
-              wx.showToast({ title: '复制失败', icon: 'none' });
-              console.error('复制到剪贴板失败:', err);
-            },
-          });
-        }
-      } catch (error) {
-        console.error('生成报钟信息失败:', error);
-        wx.showToast({ title: '生成报钟信息失败', icon: 'none' });
-      } finally {
-        this.setData({ loading: false });
-      }
-    },
+          const updatedInfo: any = { ...consultationInfo, startTime: selectedTime };
 
-    // 重新计算开始和结束时间
-    recalculateTime(project: string, extraTime: number = 0): { startTime: string; endTime: string } {
-      const now = new Date();
-      const startTime = now;
-      const endTime = calculateProjectEndTime(startTime, project, extraTime);
-
-      const formatTime = (date: Date) => {
-        const hours = date.getHours();
-        const minutes = date.getMinutes();
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-      };
-
-      return {
-        startTime: formatTime(startTime),
-        endTime: formatTime(endTime)
-      };
-    },
-
-    // 重新报钟（编辑模式）
-    async reClockIn() {
-      const { consultationInfo, editId, isDualMode, guest1Info, guest2Info } = this.data;
-
-      const validationResult = validateConsultationForPrint(consultationInfo, isDualMode, guest1Info, guest2Info);
-      if (!showValidationError(validationResult)) {
-        return;
-      }
-
-      this.setData({ loading: true, loadingText: '重新报钟中...' });
-      try {
-        if (isDualMode) {
-          const time1 = this.recalculateTime(guest1Info.project, consultationInfo.extraTime || 0);
-          const time2 = this.recalculateTime(guest2Info.project, consultationInfo.extraTime || 0);
-
-          const info1 = {
-            ...consultationInfo,
-            ...guest1Info,
-            startTime: time1.startTime,
-            endTime: time1.endTime,
-          };
-          const info2 = {
-            ...consultationInfo,
-            ...guest2Info,
-            startTime: time2.startTime,
-            endTime: time2.endTime,
-          };
-
-          const [success1, success2] = await Promise.all([
-            this.saveConsultationToCache(info1, editId),
-            this.saveConsultationToCache(info2)
-          ]);
-
-          if (success1 && success2) {
-            const clockInInfo1 = await this.formatClockInInfo(info1);
-            const clockInInfo2 = await this.formatClockInInfo(info2);
-            const combinedInfo = `${clockInInfo1}\n\n${clockInInfo2}`;
-
-            wx.setClipboardData({
-              data: combinedInfo,
-              success: () => {
-                wx.showToast({
-                  title: '重新报钟成功',
-                  icon: 'success',
-                  success: () => {
-                    setTimeout(() => {
-                      wx.navigateBack();
-                    }, 1000);
-                  }
-                });
-              },
-              fail: (err) => {
-                wx.showToast({ title: '复制失败', icon: 'none' });
-                console.error('复制到剪贴板失败:', err);
-              },
-            });
-          } else {
-            wx.showToast({ title: '保存失败', icon: 'error' });
+          // 添加车牌号信息
+          if (licensePlate) {
+            updatedInfo.licensePlate = licensePlate;
+            updatedInfo.isNewEnergyVehicle = licensePlate.length === 8;
           }
-        } else {
-          const newTime = this.recalculateTime(consultationInfo.project, consultationInfo.extraTime || 0);
-          const updatedInfo = {
-            ...consultationInfo,
-            startTime: newTime.startTime,
-            endTime: newTime.endTime,
-          };
 
+          const projectDuration = parseProjectDuration(consultationInfo.project) || 60;
+          const extraTime = consultationInfo.extraTime || 0;
+          const totalDuration = projectDuration + extraTime + 10;
+          const endTimeDate = new Date(startTimeDate.getTime() + totalDuration * 60 * 1000);
+          const endTime = formatTime(endTimeDate, false);
+          updatedInfo.endTime = endTime;
+
+          const clockInInfo = await this.formatClockInInfo(updatedInfo);
           const success = await this.saveConsultationToCache(updatedInfo, editId);
 
           if (success) {
-            const clockInInfo = await this.formatClockInInfo(updatedInfo);
-
             wx.setClipboardData({
               data: clockInInfo,
               success: () => {
-                wx.showToast({
-                  title: '重新报钟成功',
-                  icon: 'success',
-                  success: () => {
-                    setTimeout(() => {
-                      wx.navigateBack();
-                    }, 1000);
-                  }
-                });
+                wx.showToast({ title: '上钟信息已复制', icon: 'success', duration: 1000 });
+                this.loadTechnicianList();
               },
               fail: (err) => {
                 wx.showToast({ title: '复制失败', icon: 'none' });
                 console.error('复制到剪贴板失败:', err);
               },
             });
-          } else {
-            wx.showToast({
-              title: '保存失败',
-              icon: 'error'
-            });
           }
         }
-      } catch (error) {
-        console.error('重新报钟失败:', error);
-        wx.showToast({ title: '重新报钟失败', icon: 'none' });
       } finally {
         this.setData({ loading: false });
       }
@@ -1412,6 +1274,23 @@ Component({
           updates['consultationInfo.phone'] = matchedCustomer.phone;
         }
 
+        // 应用车牌号信息
+        if (matchedCustomer.licensePlate) {
+          updates['licensePlate'] = matchedCustomer.licensePlate;
+          updates['isNewEnergyVehicle'] = matchedCustomer.licensePlate.length === 8;
+          updates['isNoPlate'] = matchedCustomer.licensePlate.startsWith('临');
+
+          const maxPlateLength = updates['isNewEnergyVehicle'] ? 8 : 7;
+          const plateNumber = Array(maxPlateLength).fill('');
+          const plateChars = matchedCustomer.licensePlate.split('');
+          plateChars.forEach((char, index) => {
+            if (index < maxPlateLength) {
+              plateNumber[index] = char;
+            }
+          });
+          updates['plateNumber'] = plateNumber;
+        }
+
         this.setData({
           ...updates,
           matchedCustomerApplied: true
@@ -1429,6 +1308,23 @@ Component({
 
         if (matchedCustomer.responsibleTechnician) {
           updates['consultationInfo.technician'] = matchedCustomer.responsibleTechnician;
+        }
+
+        // 应用车牌号信息
+        if (matchedCustomer.licensePlate) {
+          updates['licensePlate'] = matchedCustomer.licensePlate;
+          updates['isNewEnergyVehicle'] = matchedCustomer.licensePlate.length === 8;
+          updates['isNoPlate'] = matchedCustomer.licensePlate.startsWith('临');
+
+          const maxPlateLength = updates['isNewEnergyVehicle'] ? 8 : 7;
+          const plateNumber = Array(maxPlateLength).fill('');
+          const plateChars = matchedCustomer.licensePlate.split('');
+          plateChars.forEach((char, index) => {
+            if (index < maxPlateLength) {
+              plateNumber[index] = char;
+            }
+          });
+          updates['plateNumber'] = plateNumber;
         }
 
         this.setData({
@@ -1476,38 +1372,45 @@ Component({
         return;
       }
 
-      this.setData({ loading: true, loadingText: '报钟中...' });
-      try {
-        if (isDualMode) {
-          await this.doDualClockIn();
-        } else {
-          const clockInInfo = await this.formatClockInInfo(consultationInfo);
-          const success = await this.saveConsultationToCache(consultationInfo, editId);
+      const now = new Date();
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-          if (success) {
-            if (!editId && !consultationInfo.isClockIn) {
-              this.updateRotationOrder(consultationInfo.technician);
-            }
-            wx.setClipboardData({
-              data: clockInInfo,
-              success: () => {
-                wx.showToast({ title: '上钟信息已复制', icon: 'success' });
-                this.loadTechnicianList();
-              },
-              fail: (err) => {
-                wx.showToast({ title: '复制失败', icon: 'none' });
-                console.error('复制到剪贴板失败:', err);
-              },
-            });
-          }
-        }
-      } finally {
-        this.setData({ loading: false });
+      this.setData({
+        timePickerModal: {
+          show: true,
+          currentTime: currentTime
+        },
+        selectedHour: now.getHours(),
+        selectedMinute: now.getMinutes()
+      });
+    },
+
+    // 时间选择器取消
+    onTimePickerCancel() {
+      this.setData({ 'timePickerModal.show': false });
+    },
+
+    // 时间选择器变化
+    onTimePickerChange(e: WechatMiniprogram.CustomEvent) {
+      const { value } = e.detail;
+      const now = new Date();
+      now.setHours(value[0], value[1], 0, 0);
+      const currentTime = `${String(value[0]).padStart(2, '0')}:${String(value[1]).padStart(2, '0')}`;
+      this.setData({ 'timePickerModal.currentTime': currentTime });
+    },
+
+    // 时间选择器列变化
+    onTimeColumnChange(e: WechatMiniprogram.CustomEvent) {
+      const { column, value } = e.detail;
+      if (column === 0) {
+        this.setData({ selectedHour: value });
+      } else if (column === 1) {
+        this.setData({ selectedMinute: value });
       }
     },
 
     // 双人模式报钟
-    async doDualClockIn() {
+    async doDualClockIn(startTimeDate?: Date, editId?: string) {
       const { consultationInfo, guest1Info, guest2Info } = this.data;
 
       const info1: Add<ConsultationInfo> = {
@@ -1541,21 +1444,31 @@ Component({
         upgradeHimalayanSaltStone: guest2Info.upgradeHimalayanSaltStone,
       };
 
-      // 保存两条记录（使用相同的开始和结束时间）
+      const actualStartTime = startTimeDate || new Date();
+      const startTime = formatTime(actualStartTime, false);
+
+      info1.startTime = startTime;
+      info2.startTime = startTime;
+
+      const projectDuration1 = parseProjectDuration(info1.project) || 60;
+      const projectDuration2 = parseProjectDuration(info2.project) || 60;
+      const extraTime = consultationInfo.extraTime || 0;
+      const totalDuration1 = projectDuration1 + extraTime + 10;
+      const totalDuration2 = projectDuration2 + extraTime + 10;
+
+      const endTimeDate1 = new Date(actualStartTime.getTime() + totalDuration1 * 60 * 1000);
+      const endTimeDate2 = new Date(actualStartTime.getTime() + totalDuration2 * 60 * 1000);
+
+      info1.endTime = formatTime(endTimeDate1, false);
+      info2.endTime = formatTime(endTimeDate2, false);
+
+      // 保存两条记录
       const [success1, success2] = await Promise.all([
-        this.saveConsultationToCache(info1),
+        this.saveConsultationToCache(info1, editId),
         this.saveConsultationToCache(info2)
       ]);
 
       if (success1 && success2) {
-        // 更新轮排顺序（两位技师都需要更新）
-        if (!guest1Info.isClockIn) {
-          this.updateRotationOrder(guest1Info.technician);
-        }
-        if (!guest2Info.isClockIn && guest2Info.technician !== guest1Info.technician) {
-          this.updateRotationOrder(guest2Info.technician);
-        }
-
         const [clockInInfo1, clockInInfo2] = await Promise.all([
           this.formatClockInInfo(info1),
           this.formatClockInInfo(info2)
@@ -1569,7 +1482,7 @@ ${clockInInfo2}`;
         wx.setClipboardData({
           data: combinedInfo,
           success: async () => {
-            wx.showToast({ title: '双人报钟已复制', icon: 'success' });
+            wx.showToast({ title: '双人报钟已复制', icon: 'success', duration: 1000 });
             await this.loadTechnicianList();
           },
           fail: (err) => {
@@ -1738,6 +1651,171 @@ ${clockInInfo2}`;
     goToHome() {
       wx.navigateTo({
         url: "/pages/store-config/store-config",
+      });
+    },
+
+    // 显示车牌号输入弹窗
+    showPlateInputModal() {
+      const { isNoPlate, isNewEnergyVehicle, licensePlate } = this.data;
+      const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
+      const plateNumber = Array(maxPlateLength).fill('');
+
+      if (isNoPlate) {
+        plateNumber[0] = '临';
+      } else if (licensePlate) {
+        const plateChars = licensePlate.split('');
+        plateChars.forEach((char, index) => {
+          if (index < maxPlateLength) {
+            plateNumber[index] = char;
+          }
+        });
+      }
+
+      const currentPlatePosition = licensePlate ? licensePlate.length : (isNoPlate ? 1 : 0);
+
+      this.setData({
+        licensePlateInputVisible: true,
+        currentPlatePosition: currentPlatePosition,
+        plateNumber: plateNumber
+      });
+    },
+
+    // 隐藏车牌号输入弹窗
+    hidePlateInputModal() {
+      this.setData({ licensePlateInputVisible: false });
+    },
+
+    // 选择省份
+    selectProvince(e: WechatMiniprogram.CustomEvent) {
+      const province = e.currentTarget.dataset.province;
+      this.setData({
+        'plateNumber[0]': province,
+        currentPlatePosition: 1
+      });
+    },
+
+    // 选择字符
+    selectCharacter(e: WechatMiniprogram.CustomEvent) {
+      const char = e.currentTarget.dataset.char;
+      const { isNewEnergyVehicle } = this.data;
+      const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
+
+      if (this.data.currentPlatePosition < maxPlateLength) {
+        const newPlateNumber = [...this.data.plateNumber];
+        newPlateNumber[this.data.currentPlatePosition] = char;
+        this.setData({
+          plateNumber: newPlateNumber,
+          currentPlatePosition: this.data.currentPlatePosition + 1
+        });
+      }
+    },
+
+    // 删除车牌号字符
+    deletePlateChar() {
+      const { isNoPlate, currentPlatePosition } = this.data;
+      if (currentPlatePosition > (isNoPlate ? 1 : 0)) {
+        const newPlateNumber = [...this.data.plateNumber];
+        newPlateNumber[currentPlatePosition - 1] = '';
+        this.setData({
+          plateNumber: newPlateNumber,
+          currentPlatePosition: currentPlatePosition - 1
+        });
+      }
+    },
+
+    // 重置车牌号输入
+    resetPlateInput() {
+      const { isNoPlate, isNewEnergyVehicle } = this.data;
+      const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
+      const plateNumber = Array(maxPlateLength).fill('');
+      if (isNoPlate) {
+        plateNumber[0] = '临';
+      }
+      this.setData({
+        plateNumber: plateNumber,
+        currentPlatePosition: isNoPlate ? 1 : 0
+      });
+    },
+
+    // 确认车牌号输入
+    confirmPlateInput() {
+      const licensePlate = this.data.plateNumber.join('');
+      this.setData({
+        licensePlateInputVisible: false,
+        licensePlate: licensePlate
+      });
+    },
+
+    // 停车类型变更
+    onParkingTypeChange(e: WechatMiniprogram.CustomEvent) {
+      const values = e.detail.value || [];
+      const isNoPlate = values.includes('noPlate');
+      const isNewEnergyVehicle = values.includes('newEnergy');
+
+      const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
+      const plateNumber = Array(maxPlateLength).fill('');
+
+      if (isNoPlate) {
+        plateNumber[0] = '临';
+      }
+
+      this.setData({
+        isNewEnergyVehicle: isNewEnergyVehicle,
+        isNoPlate: isNoPlate,
+        plateNumber: plateNumber,
+        licensePlate: '',
+        currentPlatePosition: isNoPlate ? 1 : 0
+      });
+    },
+
+    // 切换新能源车选项
+    toggleNewEnergy() {
+      const { isNewEnergyVehicle, plateNumber, isNoPlate, currentPlatePosition } = this.data;
+      const newIsNewEnergyVehicle = !isNewEnergyVehicle;
+
+      let newPlateNumber = [...plateNumber];
+      let newPosition = currentPlatePosition;
+
+      if (newIsNewEnergyVehicle) {
+        // 切换到新能源，添加第8位
+        newPlateNumber.push('');
+      } else {
+        // 切换到普通，移除第8位
+        newPlateNumber = newPlateNumber.slice(0, 7);
+      }
+
+      this.setData({
+        isNewEnergyVehicle: newIsNewEnergyVehicle,
+        plateNumber: newPlateNumber,
+        currentPlatePosition: newPosition
+      });
+    },
+
+    // 切换无牌车选项
+    toggleNoPlate() {
+      const { isNoPlate, isNewEnergyVehicle } = this.data;
+      const newIsNoPlate = !isNoPlate;
+
+      const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
+      const plateNumber = Array(maxPlateLength).fill('');
+
+      if (newIsNoPlate) {
+        plateNumber[0] = '临';
+      }
+
+      this.setData({
+        isNoPlate: newIsNoPlate,
+        plateNumber: plateNumber,
+        licensePlate: '',
+        currentPlatePosition: newIsNoPlate ? 1 : 0
+      });
+    },
+
+    // 清空车牌号
+    clearLicensePlate() {
+      this.setData({
+        licensePlate: '',
+        plateNumber: ['', '', '', '', '', '', '', '']
       });
     },
   },

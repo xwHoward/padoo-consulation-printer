@@ -21,34 +21,29 @@ Component({
 	},
 
 	methods: {
-		getDb() {
-			return cloudDb;
-		},
-
 		onTabChange(e: WechatMiniprogram.CustomEvent) {
-			this.setData({activeTab: e.currentTarget.dataset.value});
+			this.setData({ activeTab: e.currentTarget.dataset.value });
 			this.loadData();
 		},
 
 		async loadData() {
 			try {
-				this.setData({loading: true});
-				const database = this.getDb();
+				this.setData({ loading: true });
 				const tab = this.data.activeTab;
 
 				if (tab === 'projects') {
-					const projects = await database.getAll<Project>(Collections.PROJECTS);
-					this.setData({projects, loading: false});
+					const projects = await cloudDb.getAll<Project>(Collections.PROJECTS);
+					this.setData({ projects, loading: false });
 				} else if (tab === 'rooms') {
-					const rooms = await database.getAll<Room>(Collections.ROOMS);
-					this.setData({rooms, loading: false});
+					const rooms = await cloudDb.getAll<Room>(Collections.ROOMS);
+					this.setData({ rooms, loading: false });
 				} else if (tab === 'oils') {
-					const oils = await database.getAll<EssentialOil>(Collections.ESSENTIAL_OILS);
-					this.setData({essentialOils: oils, loading: false});
+					const oils = await cloudDb.getAll<EssentialOil>(Collections.ESSENTIAL_OILS);
+					this.setData({ essentialOils: oils, loading: false });
 				}
 			} catch (error) {
 				console.error('加载数据失败:', error);
-				this.setData({loading: false});
+				this.setData({ loading: false });
 				wx.showToast({
 					title: '加载失败',
 					icon: 'none'
@@ -73,7 +68,7 @@ Component({
 		},
 
 		openEditModal(e: WechatMiniprogram.CustomEvent) {
-			const {type, index} = e.currentTarget.dataset;
+			const { type, index } = e.currentTarget.dataset;
 			const tab = this.data.activeTab;
 			let item: Project | Room | EssentialOil | null = null;
 
@@ -103,48 +98,47 @@ Component({
 		},
 
 		closeModal() {
-			this.setData({showModal: false});
+			this.setData({ showModal: false });
 		},
 
 		onNameInput(e: WechatMiniprogram.CustomEvent) {
-			this.setData({'formData.name': e.detail.value});
+			this.setData({ 'formData.name': e.detail.value });
 		},
 
 		onDurationInput(e: WechatMiniprogram.CustomEvent) {
-			this.setData({'formData.duration': parseInt(e.detail.value) || 60});
+			this.setData({ 'formData.duration': parseInt(e.detail.value) || 60 });
 		},
 
 		onPriceInput(e: WechatMiniprogram.CustomEvent) {
-			this.setData({'formData.price': parseFloat(e.detail.value) || 0});
+			this.setData({ 'formData.price': parseFloat(e.detail.value) || 0 });
 		},
 
 		onEffectInput(e: WechatMiniprogram.CustomEvent) {
-			this.setData({'formData.effect': e.detail.value});
+			this.setData({ 'formData.effect': e.detail.value });
 		},
 
 		onStatusChange(e: WechatMiniprogram.CustomEvent) {
-			this.setData({'formData.status': e.detail.value as ItemStatus});
+			this.setData({ 'formData.status': e.detail.value as ItemStatus });
 		},
 
 		onIsEssentialOilOnlyChange() {
-			this.setData({'formData.isEssentialOilOnly': !this.data.formData.isEssentialOilOnly});
+			this.setData({ 'formData.isEssentialOilOnly': !this.data.formData.isEssentialOilOnly });
 		},
 
 		async handleSave() {
 			try {
-				const database = this.getDb();
-				const {modalType, formData, editingItem, activeTab} = this.data;
+				const { modalType, formData, editingItem, activeTab } = this.data;
 
 				if (!formData.name.trim()) {
-					wx.showToast({title: '名称不能为空', icon: 'none'});
+					wx.showToast({ title: '名称不能为空', icon: 'none' });
 					return;
 				}
 
 				if (modalType === 'oils' && !formData.effect.trim()) {
-					wx.showToast({title: '功效不能为空', icon: 'none'});
+					wx.showToast({ title: '功效不能为空', icon: 'none' });
 					return;
 				}
-				this.setData({loading: true});
+				this.setData({ loading: true });
 				if (activeTab === 'projects') {
 					const projectData: Update<Project> = {
 						name: formData.name,
@@ -155,11 +149,11 @@ Component({
 					};
 
 					if (editingItem) {
-						await database.updateById<Project>(Collections.PROJECTS, editingItem._id, projectData);
-						wx.showToast({title: '更新成功', icon: 'success'});
+						await cloudDb.updateById<Project>(Collections.PROJECTS, editingItem._id, projectData);
+						wx.showToast({ title: '更新成功', icon: 'success' });
 					} else {
-						await database.insert<Project>(Collections.PROJECTS, projectData);
-						wx.showToast({title: '添加成功', icon: 'success'});
+						await cloudDb.insert<Project>(Collections.PROJECTS, projectData);
+						wx.showToast({ title: '添加成功', icon: 'success' });
 					}
 				} else if (activeTab === 'rooms') {
 					const roomData: Update<Room> = {
@@ -168,11 +162,11 @@ Component({
 					};
 
 					if (editingItem) {
-						await database.updateById<Room>(Collections.ROOMS, editingItem._id, roomData);
-						wx.showToast({title: '更新成功', icon: 'success'});
+						await cloudDb.updateById<Room>(Collections.ROOMS, editingItem._id, roomData);
+						wx.showToast({ title: '更新成功', icon: 'success' });
 					} else {
-						await database.insert<Room>(Collections.ROOMS, roomData);
-						wx.showToast({title: '添加成功', icon: 'success'});
+						await cloudDb.insert<Room>(Collections.ROOMS, roomData);
+						wx.showToast({ title: '添加成功', icon: 'success' });
 					}
 				} else if (activeTab === 'oils') {
 					const oilData: Update<EssentialOil> = {
@@ -182,25 +176,25 @@ Component({
 					};
 
 					if (editingItem) {
-						await database.updateById<EssentialOil>(Collections.ESSENTIAL_OILS, editingItem._id, oilData);
-						wx.showToast({title: '更新成功', icon: 'success'});
+						await cloudDb.updateById<EssentialOil>(Collections.ESSENTIAL_OILS, editingItem._id, oilData);
+						wx.showToast({ title: '更新成功', icon: 'success' });
 					} else {
-						await database.insert<EssentialOil>(Collections.ESSENTIAL_OILS, oilData);
-						wx.showToast({title: '添加成功', icon: 'success'});
+						await cloudDb.insert<EssentialOil>(Collections.ESSENTIAL_OILS, oilData);
+						wx.showToast({ title: '添加成功', icon: 'success' });
 					}
 				}
-				this.setData({loading: false});
+				this.setData({ loading: false });
 				this.closeModal();
 				await this.loadData();
 			} catch (error) {
 				console.error('保存失败:', error);
-				wx.showToast({title: '保存失败', icon: 'none'});
+				wx.showToast({ title: '保存失败', icon: 'none' });
 			}
 		},
 
 		async handleDelete(e: WechatMiniprogram.CustomEvent) {
-			const {index} = e.currentTarget.dataset;
-			const {activeTab} = this.data;
+			const { index } = e.currentTarget.dataset;
+			const { activeTab } = this.data;
 			let id = '';
 			let collectionName = '';
 
@@ -224,48 +218,46 @@ Component({
 				confirmColor: '#ff0000',
 				success: async (res) => {
 					if (res.confirm) {
-						this.setData({loading: true});
+						this.setData({ loading: true });
 						try {
-							const database = this.getDb();
-							await database.deleteById(collectionName, id);
-							wx.showToast({title: '删除成功', icon: 'success'});
+							await cloudDb.deleteById(collectionName, id);
+							wx.showToast({ title: '删除成功', icon: 'success' });
 							await this.loadData();
 						} catch (error) {
 							console.error('删除失败:', error);
-							wx.showToast({title: '删除失败', icon: 'none'});
+							wx.showToast({ title: '删除失败', icon: 'none' });
 						}
-						this.setData({loading: false});
+						this.setData({ loading: false });
 					}
 				}
 			});
 		},
 
 		async handleToggleStatus(e: WechatMiniprogram.CustomEvent) {
-			const {index} = e.currentTarget.dataset;
-			const {activeTab} = this.data;
+			const { index } = e.currentTarget.dataset;
+			const { activeTab } = this.data;
 
 			try {
-				const database = this.getDb();
-				this.setData({loading: true});
+				this.setData({ loading: true });
 				if (activeTab === 'projects' && this.data.projects[index]) {
 					const item = this.data.projects[index];
 					const newStatus = item.status === 'normal' ? 'disabled' : 'normal';
-					await database.updateById<Project>(Collections.PROJECTS, item._id, {status: newStatus});
-					this.setData({[`projects[${index}].status`]: newStatus});
+					await cloudDb.updateById<Project>(Collections.PROJECTS, item._id, { status: newStatus });
+					this.setData({ [`projects[${index}].status`]: newStatus });
 				} else if (activeTab === 'rooms' && this.data.rooms[index]) {
 					const item = this.data.rooms[index];
 					const newStatus = item.status === 'normal' ? 'disabled' : 'normal';
-					await database.updateById<Room>(Collections.ROOMS, item._id, {status: newStatus});
-					this.setData({[`rooms[${index}].status`]: newStatus});
+					await cloudDb.updateById<Room>(Collections.ROOMS, item._id, { status: newStatus });
+					this.setData({ [`rooms[${index}].status`]: newStatus });
 				} else if (activeTab === 'oils' && this.data.essentialOils[index]) {
 					const item = this.data.essentialOils[index];
 					const newStatus = item.status === 'normal' ? 'disabled' : 'normal';
-					await database.updateById<EssentialOil>(Collections.ESSENTIAL_OILS, item._id, {status: newStatus});
-					this.setData({[`essentialOils[${index}].status`]: newStatus});
+					await cloudDb.updateById<EssentialOil>(Collections.ESSENTIAL_OILS, item._id, { status: newStatus });
+					this.setData({ [`essentialOils[${index}].status`]: newStatus });
 				}
-				this.setData({loading: false});
+				this.setData({ loading: false });
 			} catch (error) {
-				wx.showToast({title: '更新失败', icon: 'none'});
+				wx.showToast({ title: '更新失败', icon: 'none' });
 			}
 		},
 
