@@ -24,6 +24,7 @@ const DefaultConsultationInfo: Add<ConsultationInfo> = {
   extraTime: 0,
   couponPlatform: "meituan",
   upgradeHimalayanSaltStone: false,
+  date: formatDate(new Date()),
   startTime: "",
   endTime: "",
 };
@@ -61,6 +62,7 @@ function ensureConsultationInfoCompatibility(data: ConsultationInfo, projects: P
     couponCode: data.couponCode || "",
     couponPlatform: data.couponPlatform || "",
     upgradeHimalayanSaltStone: data.upgradeHimalayanSaltStone || false,
+    date: data.date || formatDate(new Date()),
     startTime: data.startTime || "",
     endTime: data.endTime || "",
   };
@@ -1147,21 +1149,16 @@ Component({
         if (isDualMode) {
           await this.doDualClockIn(startTimeDate, editId);
         } else {
-          const updatedInfo: any = { ...consultationInfo, startTime: selectedTime };
-
-          // 添加车牌号信息
-          if (licensePlate) {
-            updatedInfo.licensePlate = licensePlate;
-            updatedInfo.isNewEnergyVehicle = licensePlate.length === 8;
-          }
-
           const projectDuration = parseProjectDuration(consultationInfo.project) || 60;
           const extraTime = consultationInfo.extraTime || 0;
           const totalDuration = projectDuration + extraTime + 10;
           const endTimeDate = new Date(startTimeDate.getTime() + totalDuration * 60 * 1000);
           const endTime = formatTime(endTimeDate, false);
-          updatedInfo.endTime = endTime;
-
+          const updatedInfo = {
+            ...consultationInfo, startTime: selectedTime, licensePlate: licensePlate || '', isNewEnergyVehicle: licensePlate?.length === 8 || false,
+            date: editId ? consultationInfo.date : formatDate(new Date()),
+            endTime,
+          };
           const clockInInfo = await this.formatClockInInfo(updatedInfo);
           const success = await this.saveConsultationToCache(updatedInfo, editId);
 
@@ -1366,7 +1363,7 @@ Component({
 
     // 报钟功能
     async onClockIn() {
-      const { consultationInfo, editId, isDualMode, guest1Info, guest2Info } = this.data;
+      const { consultationInfo, isDualMode, guest1Info, guest2Info } = this.data;
 
       const validationResult = validateConsultationForPrint(consultationInfo, isDualMode, guest1Info, guest2Info);
       if (!showValidationError(validationResult)) {

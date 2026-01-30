@@ -16,7 +16,6 @@ interface BackupOptions {
 	includeCustomers?: boolean;
 	includeSchedule?: boolean;
 	includeReservations?: boolean;
-	includeOrders?: boolean;
 }
 
 interface RestoreOptions {
@@ -343,10 +342,6 @@ class BackupManager {
 		if (options?.includeReservations !== false) {
 			collections.push('reservations');
 		}
-		if (options?.includeOrders !== false) {
-			collections.push('orders');
-		}
-
 		return collections;
 	}
 }

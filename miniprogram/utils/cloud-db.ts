@@ -583,7 +583,6 @@ export const Collections = {
 	MEMBERSHIP: 'membership',
 	CUSTOMER_MEMBERSHIP: 'customer_membership',
 	RESERVATIONS: 'reservations',
-	ORDERS: 'orders',
 	SETTINGS: 'settings',
 	SCHEDULE: 'schedule',
 	ROTATION: 'rotation',
