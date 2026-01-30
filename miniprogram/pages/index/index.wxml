@@ -170,3 +170,8 @@
     </view>
   </view>
 </scroll-view>
+<!-- loading遮罩 -->
+<view class="loading-mask" wx:if="{{loading}}">
+  <view class="loading-spinner"></view>
+  <view class="loading-text">{{loadingText}}</view>
+</view>

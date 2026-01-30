@@ -93,6 +93,11 @@
     </view>
   </view>
 </scroll-view>
+<!-- loading遮罩 -->
+<view class="loading-mask" wx:if="{{loading}}">
+  <view class="loading-spinner"></view>
+  <view class="loading-text">{{loadingText}}</view>
+</view>
 <!-- 数字输入弹窗 -->
 <view class="modal-mask" wx:if="{{numberInputModal.show}}" bindtap="onModalCancel"></view>
 <view class="modal-container" wx:if="{{numberInputModal.show}}">

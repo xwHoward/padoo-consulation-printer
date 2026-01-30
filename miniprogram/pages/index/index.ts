@@ -108,6 +108,8 @@ Component({
     technicianList: [] as { id: string, name: string; isOccupied: boolean }[], // 动态技师列表
     currentReservationIds: [] as string[], // 当前加载的预约ID列表（用于冲突检查时排除）
     loadingTechnicians: false, // 加载技师状态
+    loading: false, // 全局loading状态
+    loadingText: '加载中...', // loading提示文字
     // 专用精油相关
     currentProjectIsEssentialOilOnly: false, // 当前项目是否为专用精油项目
     // 双人模式相关
@@ -134,10 +136,6 @@ Component({
   },
 
   methods: {
-    // 获取数据库实例
-    getDb() {
-      return cloudDbService;
-    },
 
     // 页面加载
     async onLoad(options: Record<string, string>) {
@@ -929,21 +927,17 @@ Component({
         this.setData({ loading: true });
         const now = new Date();
         const currentDate = formatDate(now);
-        const timestamp = now.toISOString();
-
-        const database = cloudDbService;
+        // const timestamp = now.toISOString();
 
         const startTimeStr = formatTime(now, false);
         const endTimeDate = calculateProjectEndTime(now, consultation.project);
         const endTimeStr = formatTime(endTimeDate, false);
         const calculatedOvertime = await this.calculateOvertime(consultation.technician, currentDate, startTimeStr);
 
-        const recordData: ConsultationRecord = {
+        const recordData: Add<ConsultationRecord> = {
           ...consultation,
-          id: editId || '',
-          _id: editId || '',
-          createdAt: editId ? timestamp : timestamp,
-          updatedAt: timestamp,
+          // createdAt: editId ? timestamp : timestamp,
+          // updatedAt: timestamp,
           isVoided: false,
           extraTime: 0,
           overtime: calculatedOvertime,
@@ -951,7 +945,7 @@ Component({
           endTime: endTimeStr,
         };
 
-        const result = await (database).saveConsultation(recordData, editId);
+        const result = await cloudDbService.saveConsultation(recordData, editId);
         this.setData({ loading: false });
 
         if (!result) {
@@ -966,7 +960,6 @@ Component({
         return true;
 
       } catch (error) {
-        console.error("保存咨询单到缓存失败:", error);
         this.setData({ loading: false });
         return false;
       }
@@ -975,8 +968,7 @@ Component({
     // 加载编辑数据
     async loadEditData(editId: string) {
       try {
-        const database = this.getDb();
-        const foundRecord = await database.findById<ConsultationRecord>(Collections.CONSULTATION, editId) as ConsultationRecord | null;
+        const foundRecord = await cloudDbService.findById<ConsultationRecord>(Collections.CONSULTATION, editId) as ConsultationRecord | null;
 
 
         if (foundRecord) {
@@ -1010,8 +1002,7 @@ Component({
     // 加载预约数据
     async loadReservationData(reserveId: string) {
       try {
-        const database = this.getDb();
-        const record = await database.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
+        const record = await cloudDbService.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
         if (record) {
           const selectedProject = this.data.projects.find((p) => p.name === record.project);
           const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
@@ -1108,19 +1099,29 @@ Component({
         return;
       }
 
-      const success = await this.saveConsultationToCache(consultationInfo, editId);
-
-      if (success) {
+      this.setData({ loading: true, loadingText: '保存中...' });
+      try {
+        const success = await this.saveConsultationToCache(consultationInfo, editId);
+        if (success) {
+          wx.showToast({
+            title: '保存成功',
+            icon: 'success'
+          });
+        } else {
+          wx.showToast({
+            title: '保存失败',
+            icon: 'error'
+          });
+        }
+      } catch (error) {
         wx.showToast({
-          title: '保存成功',
-          icon: 'success'
+          title: "保存失败",
+          icon: "error",
         });
-      } else {
-        wx.showToast({
-          title: '保存失败',
-          icon: 'error'
-        });
+      } finally {
+        this.setData({ loading: false });
       }
+
     },
 
     // 复制报钟信息（编辑模式）
@@ -1132,6 +1133,7 @@ Component({
         return;
       }
 
+      this.setData({ loading: true, loadingText: '生成报钟信息...' });
       try {
         if (isDualMode) {
           const clockInInfo1 = await this.formatClockInInfo({
@@ -1191,6 +1193,8 @@ Component({
       } catch (error) {
         console.error('生成报钟信息失败:', error);
         wx.showToast({ title: '生成报钟信息失败', icon: 'none' });
+      } finally {
+        this.setData({ loading: false });
       }
     },
 
@@ -1221,6 +1225,7 @@ Component({
         return;
       }
 
+      this.setData({ loading: true, loadingText: '重新报钟中...' });
       try {
         if (isDualMode) {
           const time1 = this.recalculateTime(guest1Info.project, consultationInfo.extraTime || 0);
@@ -1311,6 +1316,8 @@ Component({
       } catch (error) {
         console.error('重新报钟失败:', error);
         wx.showToast({ title: '重新报钟失败', icon: 'none' });
+      } finally {
+        this.setData({ loading: false });
       }
     },
 
@@ -1469,28 +1476,33 @@ Component({
         return;
       }
 
-      if (isDualMode) {
-        await this.doDualClockIn();
-      } else {
-        const clockInInfo = await this.formatClockInInfo(consultationInfo);
-        const success = await this.saveConsultationToCache(consultationInfo, editId);
+      this.setData({ loading: true, loadingText: '报钟中...' });
+      try {
+        if (isDualMode) {
+          await this.doDualClockIn();
+        } else {
+          const clockInInfo = await this.formatClockInInfo(consultationInfo);
+          const success = await this.saveConsultationToCache(consultationInfo, editId);
 
-        if (success) {
-          if (!editId && !consultationInfo.isClockIn) {
-            this.updateRotationOrder(consultationInfo.technician);
+          if (success) {
+            if (!editId && !consultationInfo.isClockIn) {
+              this.updateRotationOrder(consultationInfo.technician);
+            }
+            wx.setClipboardData({
+              data: clockInInfo,
+              success: () => {
+                wx.showToast({ title: '上钟信息已复制', icon: 'success' });
+                this.loadTechnicianList();
+              },
+              fail: (err) => {
+                wx.showToast({ title: '复制失败', icon: 'none' });
+                console.error('复制到剪贴板失败:', err);
+              },
+            });
           }
-          wx.setClipboardData({
-            data: clockInInfo,
-            success: () => {
-              wx.showToast({ title: '上钟信息已复制', icon: 'success' });
-              this.loadTechnicianList();
-            },
-            fail: (err) => {
-              wx.showToast({ title: '复制失败', icon: 'none' });
-              console.error('复制到剪贴板失败:', err);
-            },
-          });
         }
+      } finally {
+        this.setData({ loading: false });
       }
     },
 
@@ -1596,8 +1608,7 @@ ${clockInInfo2}`;
     async getTechnicianDailyCount(technician: string): Promise<number> {
       try {
         const currentDate = formatDate(new Date());
-        const database = this.getDb();
-        const records = await database.getConsultationsByDate<ConsultationRecord>(currentDate) as ConsultationRecord[];
+        const records = await cloudDbService.getConsultationsByDate<ConsultationRecord>(currentDate) as ConsultationRecord[];
         const count = records.filter(
           (record: ConsultationRecord) => record.technician === technician && !record.isVoided,
         ).length;

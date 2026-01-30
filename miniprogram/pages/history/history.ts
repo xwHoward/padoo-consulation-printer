@@ -32,6 +32,8 @@ Page({
     },
     customerPhone: '', // 顾客手机号
     customerId: '', // 顾客ID
+    loading: false, // 全局loading状态
+    loadingText: '加载中...', // loading提示文字
     // 数字输入弹窗状态
     numberInputModal: {
       show: false,
@@ -112,6 +114,7 @@ Page({
 
   // 加载顾客历史记录
   async loadCustomerHistory(customerPhone: string, customerId: string) {
+    this.setData({ loading: true, loadingText: '加载中...' });
     try {
       const database = cloudDbService;
       const consultationHistory: Record<string, ConsultationRecord[]> = {};
@@ -163,11 +166,14 @@ Page({
     } catch (error) {
       console.error('加载顾客历史失败:', error);
       wx.showToast({ title: '加载失败', icon: 'error' });
+    } finally {
+      this.setData({ loading: false });
     }
   },
 
   // 加载历史数据
   async loadHistoryData() {
+    this.setData({ loading: true, loadingText: '加载中...' });
     try {
       const database = cloudDbService;
       const consultationHistory: Record<string, ConsultationRecord[]> = await database.getAllConsultations<ConsultationRecord>() as Record<string, ConsultationRecord[]>;
@@ -196,6 +202,8 @@ Page({
     } catch (error) {
       console.error('加载历史数据失败:', error);
       wx.showToast({ title: '加载失败', icon: 'error' });
+    } finally {
+      this.setData({ loading: false });
     }
   },
 
@@ -254,6 +262,7 @@ Page({
       content: '确定要作废该咨询单吗？',
       success: async (res) => {
         if (res.confirm) {
+          this.setData({ loading: true, loadingText: '作废中...' });
           try {
             const database = cloudDbService;
 
@@ -283,6 +292,8 @@ Page({
               title: '操作失败',
               icon: 'error'
             });
+          } finally {
+            this.setData({ loading: false });
           }
         }
       }
@@ -332,6 +343,7 @@ Page({
   async onGenerateSummary(e: WechatMiniprogram.TouchEvent) {
     const { date } = e.currentTarget.dataset;
 
+    this.setData({ loading: true, loadingText: '生成统计中...' });
     try {
       const database = cloudDbService;
       const records = await (database).getConsultationsByDate<ConsultationRecord>(date);
@@ -458,6 +470,8 @@ Page({
         title: '生成失败',
         icon: 'error'
       });
+    } finally {
+      this.setData({ loading: false });
     }
   },
 
@@ -651,6 +665,7 @@ Page({
 
   // 更新加钟或加班数据
   async updateExtraTimeOrOvertime(recordId: string, date: string, field: 'extraTime' | 'overtime', value: number) {
+    this.setData({ loading: true, loadingText: field === 'extraTime' ? '更新加钟中...' : '更新加班中...' });
     try {
       const database = cloudDbService;
 
@@ -678,6 +693,8 @@ Page({
         title: '更新失败',
         icon: 'error'
       });
+    } finally {
+      this.setData({ loading: false });
     }
   },
 
