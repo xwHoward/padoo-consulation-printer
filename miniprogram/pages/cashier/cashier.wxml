@@ -130,6 +130,27 @@
         <view class="form-label">手机号</view>
         <input class="form-input" type="number" maxlength="11" placeholder="选填" value="{{reserveForm.phone}}" bindinput="onReserveFieldChange" data-field="phone" />
       </view>
+      <view class="customer-match-result" wx:if="{{matchedCustomer}}">
+        <view class="match-info">
+          <view class="match-label">匹配顾客：</view>
+          <view class="match-name">
+            {{matchedCustomer.name}}{{matchedCustomer.gender === 'male' ? '先生' : '女士'}}
+          </view>
+          <view class="match-phone">{{matchedCustomer.phone || '无手机号'}}</view>
+          <view class="match-tech" wx:if="{{matchedCustomer.responsibleTechnician}}">
+            责任技师：{{matchedCustomer.responsibleTechnician}}
+          </view>
+          <view wx:if="{{matchedCustomer.remark}}" class="match-remark">
+            {{matchedCustomer.remark}}
+          </view>
+          <view class="match-actions">
+            <view wx:if="{{!matchedCustomerApplied}}" class="match-btn apply-btn" bindtap="applyMatchedCustomer">
+              应用
+            </view>
+            <view class="match-btn clear-btn" bindtap="clearMatchedCustomer">清除</view>
+          </view>
+        </view>
+      </view>
       <view class="form-item project-item">
         <view class="form-label">项目</view>
         <project-selector selectedProject="{{reserveForm.project}}" bind:change="selectReserveProject" />

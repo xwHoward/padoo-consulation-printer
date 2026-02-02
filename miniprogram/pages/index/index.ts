@@ -1028,11 +1028,50 @@ Component({
           await this.deleteReservations();
         }
 
+        // 如果顾客有手机号，则自动新增/更新顾客信息
+        if (consultation.phone && consultation.phone.trim()) {
+          await this.saveCustomerInfo(consultation);
+        }
+
         return true;
 
       } catch (error) {
         this.setData({ loading: false });
         return false;
+      }
+    },
+
+    // 保存顾客信息到customers集合
+    async saveCustomerInfo(consultation: Add<ConsultationInfo>) {
+      try {
+        const phone = consultation.phone.trim();
+        if (!phone) return;
+
+        // 检查是否已存在该手机号的顾客
+        const existingCustomers = await cloudDb.find<CustomerRecord>(Collections.CUSTOMERS, { phone });
+        
+        const customerData: Update<CustomerRecord> = {
+          phone: phone,
+          name: consultation.surname + (consultation.gender === 'male' ? '先生' : '女士'),
+          gender: consultation.gender || '',
+          responsibleTechnician: consultation.technician || '',
+          licensePlate: this.data.licensePlate || '',
+          remarks: consultation.remarks || '',
+        };
+
+        if (existingCustomers && existingCustomers.length > 0) {
+          // 更新已有顾客信息
+          const existingCustomer = existingCustomers[0];
+          await cloudDb.updateById<CustomerRecord>(Collections.CUSTOMERS, existingCustomer.id, customerData);
+        } else {
+          // 新增顾客
+          const newCustomer: Add<CustomerRecord> = {
+            ...customerData,
+          };
+          await cloudDb.insert<CustomerRecord>(Collections.CUSTOMERS, newCustomer);
+        }
+      } catch (error) {
+        console.error('保存顾客信息失败:', error);
       }
     },
 

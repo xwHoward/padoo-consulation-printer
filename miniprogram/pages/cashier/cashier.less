@@ -293,7 +293,6 @@ page {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	padding-left: 20px;
 	gap: 2px;
 	width: 100%;
 
@@ -563,6 +562,82 @@ page {
 		.project-item {
 			align-items: flex-start !important;
 			flex-direction: column;
+		}
+
+		/* 顾客匹配结果 */
+		.customer-match-result {
+			background-color: rgba(255, 107, 0, 0.08);
+			border: 1px solid rgba(255, 107, 0, 0.3);
+			border-radius: 6px;
+			padding: 12px 15px;
+			margin-bottom: 12px;
+
+			.match-info {
+				display: flex;
+				align-items: center;
+				gap: 6px;
+
+				.match-label {
+					font-size: 13px;
+					color: @text-color-secondary;
+					font-weight: 500;
+				}
+
+				.match-name {
+					font-size: 14px;
+					color: @text-color;
+					font-weight: 600;
+				}
+
+				.match-phone {
+					font-size: 12px;
+					color: @text-color-secondary;
+				}
+
+				.match-tech {
+					font-size: 12px;
+					color: @primary-color;
+					font-weight: 500;
+				}
+
+				.match-remark {
+					font-size: 12px;
+					color: @text-color-secondary;
+				}
+			}
+
+			.match-actions {
+				display: flex;
+				gap: 10px;
+				margin-left: auto;
+			}
+
+			.match-btn {
+				padding: 4px 12px;
+				border-radius: 4px;
+				font-size: 13px;
+				cursor: pointer;
+				transition: all 0.3s ease;
+
+				&.apply-btn {
+					background-color: @primary-color;
+					color: #fff;
+
+					&:active {
+						opacity: 0.7;
+					}
+				}
+
+				&.clear-btn {
+					background-color: @bg-color-light;
+					color: @text-color-secondary;
+					border: 1px solid @border-color;
+
+					&:active {
+						background-color: @border-color-light;
+					}
+				}
+			}
 		}
 	}
 

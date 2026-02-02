@@ -105,7 +105,10 @@ Component({
 		],
 		// loading状态
 		loading: false,
-		loadingText: '加载中...'
+		loadingText: '加载中...',
+		// 顾客匹配
+		matchedCustomer: null as any,
+		matchedCustomerApplied: false
 	},
 
 	lifetimes: {
@@ -689,6 +692,10 @@ Component({
 				reserveForm[field as keyof ReserveForm] = val;
 				console.log('更新后的 reserveForm:', reserveForm);
 				this.setData({ reserveForm });
+				// 触发顾客匹配
+				if (field === 'customerName' || field === 'phone') {
+					this.searchCustomer();
+				}
 			}
 		},
 
@@ -736,6 +743,107 @@ Component({
 
 		onReserveGenderChange(e: WechatMiniprogram.CustomEvent) {
 			this.setData({ 'reserveForm.gender': e.detail.value });
+			// 触发顾客匹配
+			this.searchCustomer();
+		},
+
+		// 搜索匹配顾客
+		async searchCustomer() {
+			const { reserveForm } = this.data;
+
+			const currentSurname = reserveForm.customerName;
+			const currentGender = reserveForm.gender;
+			const currentPhone = reserveForm.phone;
+
+			// 如果没有输入任何信息，清除匹配
+			if (!currentSurname && !currentPhone) {
+				this.setData({
+					matchedCustomer: null,
+					matchedCustomerApplied: false
+				});
+				return;
+			}
+
+			try {
+				const res = await wx.cloud.callFunction({
+					name: 'matchCustomer',
+					data: {
+						surname: currentSurname,
+						gender: currentGender,
+						phone: currentPhone
+					}
+				});
+				if (!res.result || typeof res.result !== 'object') {
+					throw new Error('匹配顾客失败');
+				}
+				if (res.result.code === 0 && res.result.data) {
+					this.setData({
+						matchedCustomer: res.result.data,
+						matchedCustomerApplied: false
+					});
+				} else {
+					this.setData({
+						matchedCustomer: null,
+						matchedCustomerApplied: false
+					});
+				}
+			} catch (error) {
+				console.error('匹配顾客失败:', error);
+				this.setData({
+					matchedCustomer: null,
+					matchedCustomerApplied: false
+				});
+			}
+		},
+
+		// 应用匹配的顾客信息
+		applyMatchedCustomer() {
+			const { matchedCustomer } = this.data;
+
+			if (!matchedCustomer) return;
+
+			const updates: any = {
+				'reserveForm.customerName': matchedCustomer.name.replace(/先生|女士/g, ''),
+				'reserveForm.gender': matchedCustomer.name.endsWith('女士') ? 'female' : 'male',
+			};
+
+			if (matchedCustomer.phone) {
+				updates['reserveForm.phone'] = matchedCustomer.phone;
+			}
+
+			if (matchedCustomer.responsibleTechnician) {
+				const technicianName = matchedCustomer.responsibleTechnician;
+				const staffAvailability = this.data.staffAvailability;
+				if (staffAvailability && staffAvailability.length > 0) {
+					const matchedStaff = staffAvailability.find(s => s.name === technicianName);
+					if (matchedStaff) {
+						updates['reserveForm.selectedTechnicians'] = [{ id: matchedStaff.id, name: matchedStaff.name }];
+						const updatedStaffAvailability = staffAvailability.map(s => ({
+							...s,
+							isSelected: s.id === matchedStaff.id
+						}));
+						updates['staffAvailability'] = updatedStaffAvailability;
+					}
+				}
+			}
+
+			this.setData({
+				...updates,
+				matchedCustomerApplied: true
+			});
+
+			wx.showToast({
+				title: '已应用顾客信息',
+				icon: 'success'
+			});
+		},
+
+		// 清除匹配的顾客信息
+		clearMatchedCustomer() {
+			this.setData({
+				matchedCustomer: null,
+				matchedCustomerApplied: false
+			});
 		},
 
 		async confirmReserve() {

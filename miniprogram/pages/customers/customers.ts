@@ -148,7 +148,6 @@ Page({
           responsibleTechnician: formResponsibleTechnician,
           licensePlate: formLicensePlate,
           remarks: formRemarks,
-          totalAmount: 0
         });
       }
 

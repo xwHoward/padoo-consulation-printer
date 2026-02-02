@@ -136,7 +136,6 @@ interface CustomerRecord extends BaseRecord {
   responsibleTechnician: string;
   licensePlate: string;
   remarks: string;
-  totalAmount: number;
 }
 
 // 顾客回访记录信息
