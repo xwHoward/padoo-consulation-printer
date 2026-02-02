@@ -14,6 +14,20 @@ interface DailyGroup {
   records: DisplayRecord[];
 }
 
+const BODY_PART_MAP = {
+  'head': '头部',
+  'neck': '颈部',
+  'shoulder': '肩部',
+  'back': '后背',
+  'arm': '手臂',
+  'abdomen': '腹部',
+  'waist': '腰部',
+  'thigh': '大腿',
+  'calf': '小腿'
+};
+const app = getApp<IAppOption>();
+
+
 Page({
   data: {
     historyData: [] as DailyGroup[], // 按天分组的历史记录
@@ -256,7 +270,7 @@ Page({
     detailText += `技师: ${record.technician}${record.dailyCount && !record.isVoided ? `(${record.dailyCount})` : ''}\n`;
     detailText += `房间: ${record.room}\n`;
     detailText += `按摩力度: ${this.getMassageStrengthText(record.massageStrength)}\n`;
-    detailText += `精油选择: ${record.essentialOil || '无'}\n`;
+    detailText += `精油选择: ${this.getEssentialOilText(record.essentialOil) || '无'}\n`;
 
     // 处理升级选项
     if (record.upgradeHimalayanSaltStone) {
@@ -265,7 +279,7 @@ Page({
 
     // 处理加强部位
     const selectedParts = Object.keys(record.selectedParts).filter(part => record.selectedParts[part]);
-    detailText += `加强部位: ${selectedParts.length > 0 ? selectedParts.join(', ') : '无'}\n\n`;
+    detailText += `加强部位: ${selectedParts.length > 0 ? selectedParts.map(part => this.getPartName(part)).join(', ') : '无'}\n\n`;
 
     detailText += `创建时间: ${formatTime(new Date(record.createdAt))}\n`;
     detailText += `更新时间: ${formatTime(new Date(record.updatedAt))}\n`;
@@ -341,6 +355,17 @@ Page({
   getMassageStrengthText(strength: string): string {
     const found = MASSAGE_STRENGTHS.find(s => s.id === strength);
     return found ? found.name.split(' ')[0] : ''; // 只取中文部分
+  },
+
+  // 获取精油选择文本
+  getEssentialOilText(oil: string): string {
+    const found = app.globalData.essentialOils.find(o => o.id === oil);
+    return found ? found.name : '';
+  },
+
+  // 获取加强部位名称
+  getPartName(part: string): string {
+    return BODY_PART_MAP[part as keyof typeof BODY_PART_MAP] || '';
   },
 
   // 生成当日总结

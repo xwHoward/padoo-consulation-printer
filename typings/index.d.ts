@@ -120,9 +120,11 @@ interface ReservationRecord extends BaseRecord {
 // 会员卡数据结构
 interface MembershipCard extends BaseRecord {
   name: string; // 会员卡名称
-  originalPrice: number; // 原价
-  totalTimes: number; // 总次数
-  project: string; // 关联项目
+  type: 'times' | 'value'; // 卡类型：times-次卡，value-储值卡
+  originalPrice?: number; // 原价
+  totalTimes?: number; // 总次数（次卡使用）
+  balance?: number; // 余额（储值卡使用）
+  project?: string; // 关联项目
   status: "active" | "disabled"; // 状态
 }
 

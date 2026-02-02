@@ -10,26 +10,28 @@
     <view wx:for="{{cardList}}" wx:key="id" class="card-item {{item.status === 'disabled' ? 'disabled' : ''}}" data-card="{{item}}">
       <view class="card-header">
         <view class="card-info">
-          <view class="card-name">{{item.name}}</view>
-          <view class="card-meta">
-            <view class="meta-item">
-              <text class="meta-label">项目:</text>
-              <text>{{item.project}}</text>
-            </view>
+          <view class="card-name">
+            {{item.name}}
+            <view class="card-type-tag">{{item.type === 'times' ? '次卡' : '储值卡'}}</view>
           </view>
-        </view>
-        <view class="card-status {{item.status === 'active' ? 'active' : 'disabled'}}">
-          {{item.status === 'active' ? '启用' : '禁用'}}
         </view>
       </view>
       <view class="card-body">
-        <view class="card-row">
+        <view class="card-row" wx:if="{{item.type === 'times'}}">
           <text class="card-label">原价:</text>
           <text class="card-value">¥{{item.originalPrice}}</text>
         </view>
-        <view class="card-row">
+        <view class="card-row" wx:if="{{item.type === 'times'}}">
           <text class="card-label">次数:</text>
           <text class="card-value remaining">{{item.totalTimes}}</text>
+        </view>
+        <view class="card-row" wx:if="{{item.type === 'value'}}">
+          <text class="card-label">储值金额:</text>
+          <text class="card-value remaining">¥{{item.balance}}</text>
+        </view>
+        <view class="card-row" wx:if="{{item.type === 'times'}}">
+          <text class="card-label">项目:</text>
+          <text class="card-value remarks">{{item.project}}</text>
         </view>
       </view>
       <view class="card-actions">
@@ -37,7 +39,7 @@
           {{item.status === 'active' ? '禁用' : '启用'}}
         </view>
         <view class="action-btn edit" catch:tap="showEditCard" data-card="{{item}}">编辑</view>
-        <view class="action-btn delete" catch:tap="deleteCard" data-card="{{item}}">删除</view>
+        <view class="action-btn delete" catch:tap="onDeleteCard" data-card="{{item}}">删除</view>
       </view>
     </view>
   </view>
@@ -46,7 +48,6 @@
     <view class="empty-text">暂无会员卡记录</view>
   </view>
 </view>
-
 <!-- Loading 遮罩 -->
 <view class="loading-mask" wx:if="{{loading}}">
   <view class="loading-content">
@@ -58,20 +59,35 @@
 <view class="modal-container" wx:if="{{showEditModal}}">
   <view class="modal-title">{{modalTitle}}</view>
   <view class="form-group">
-    <text class="form-label">会员卡名称</text>
-    <input class="form-input" type="text" placeholder="请输入会员卡名称" bindinput="onNameInput" value="{{formName}}" />
+    <text class="form-label">会员卡类型</text>
+    <view class="type-selector">
+      <view class="type-option {{formType === 'times' ? 'active' : ''}}" bindtap="onTypeSelect" data-type="times">
+        次卡
+      </view>
+      <view class="type-option {{formType === 'value' ? 'active' : ''}}" bindtap="onTypeSelect" data-type="value">
+        储值卡
+      </view>
+    </view>
   </view>
-  <view class="form-group">
+  <view class="form-group" wx:if="{{formType === 'times'}}">
     <text class="form-label">原价</text>
     <input class="form-input" type="digit" placeholder="请输入原价" bindinput="onOriginalPriceInput" value="{{formOriginalPrice}}" />
   </view>
-  <view class="form-group">
+  <view class="form-group" wx:if="{{formType === 'times'}}">
     <text class="form-label">次数</text>
     <input class="form-input" type="number" placeholder="请输入次数" bindinput="onTotalTimesInput" value="{{formTotalTimes}}" />
   </view>
-  <view class="form-group">
+  <view class="form-group" wx:if="{{formType === 'value'}}">
+    <text class="form-label">储值金额（必填）</text>
+    <input class="form-input" type="digit" placeholder="请输入储值金额" bindinput="onBalanceInput" value="{{formBalance}}" />
+  </view>
+  <view class="form-group" wx:if="{{formType === 'times'}}">
     <text class="form-label">关联项目</text>
     <project-selector selectedProject="{{formProject}}" bind:change="onProjectSelect" />
+  </view>
+  <view class="form-group">
+    <text class="form-label">会员卡名称</text>
+    <input class="form-input" type="text" placeholder="请输入会员卡名称" bindinput="onNameInput" value="{{formName}}" />
   </view>
   <view class="modal-footer">
     <view class="modal-btn cancel-btn" bindtap="onModalCancel">取消</view>

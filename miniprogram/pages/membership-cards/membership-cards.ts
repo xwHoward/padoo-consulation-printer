@@ -8,8 +8,10 @@ Page({
     modalTitle: '',
     editCard: null as MembershipCard | null,
     formName: '',
+    formType: 'times' as 'times' | 'value',
     formOriginalPrice: '',
     formTotalTimes: '',
+    formBalance: '',
     formProject: '',
     projects: [] as Project[]
   },
@@ -59,8 +61,10 @@ Page({
       modalTitle: '新增会员卡',
       editCard: null,
       formName: '',
+      formType: 'times',
       formOriginalPrice: '',
       formTotalTimes: '',
+      formBalance: '',
       formProject: defaultProject
     });
   },
@@ -72,9 +76,11 @@ Page({
       modalTitle: '编辑会员卡',
       editCard: card,
       formName: card.name,
-      formOriginalPrice: card.originalPrice.toString(),
-      formTotalTimes: card.totalTimes.toString(),
-      formProject: card.project
+      formType: card.type,
+      formOriginalPrice: card.originalPrice ? card.originalPrice.toString() : '',
+      formTotalTimes: card.totalTimes ? card.totalTimes.toString() : '',
+      formBalance: card.balance ? card.balance.toString() : '',
+      formProject: card.project || ''
     });
   },
 
@@ -84,44 +90,93 @@ Page({
       showEditModal: false,
       editCard: null,
       formName: '',
+      formType: 'times',
       formOriginalPrice: '',
       formTotalTimes: '',
+      formBalance: '',
       formProject: defaultProject
     });
   },
 
+  onTypeSelect(e: WechatMiniprogram.CustomEvent) {
+    const type = e.currentTarget.dataset.type as 'times' | 'value';
+    this.setData({
+      formType: type,
+      formTotalTimes: '',
+      formBalance: ''
+    });
+  },
+
+  onNameInput(e: WechatMiniprogram.Input) {
+    this.setData({ formName: e.detail.value });
+  },
+
+  onOriginalPriceInput(e: WechatMiniprogram.Input) {
+    this.setData({ formOriginalPrice: e.detail.value });
+  },
+
+  onTotalTimesInput(e: WechatMiniprogram.Input) {
+    const updates: any = { formTotalTimes: e.detail.value };
+    if (this.data.formProject) {
+      updates.formName = `${e.detail.value}次卡·${this.data.formProject}`;
+    }
+    this.setData(updates);
+  },
+
+  onBalanceInput(e: WechatMiniprogram.Input) {
+    this.setData({ formBalance: e.detail.value });
+  },
+
+  onProjectSelect(e: WechatMiniprogram.CustomEvent) {
+    const updates: any = { formProject: e.detail.project };
+    if (this.data.formTotalTimes) {
+      updates.formName = `${this.data.formTotalTimes}次卡·${this.data.formProject}`;
+    }
+    this.setData(updates);
+  },
+
   async onModalConfirm() {
-    const { formName, formOriginalPrice, formTotalTimes, formProject, editCard } = this.data;
+    const { formName, formType, formOriginalPrice, formTotalTimes, formBalance, formProject, editCard } = this.data;
 
     if (!formName.trim()) {
       wx.showToast({ title: '请输入会员卡名称', icon: 'none' });
       return;
     }
 
-    const originalPrice = parseFloat(formOriginalPrice);
-    if (isNaN(originalPrice) || originalPrice <= 0) {
-      wx.showToast({ title: '请输入有效的原价', icon: 'none' });
-      return;
-    }
-
-    const totalTimes = parseInt(formTotalTimes);
-    if (isNaN(totalTimes) || totalTimes <= 0) {
-      wx.showToast({ title: '请输入有效的次数', icon: 'none' });
-      return;
-    }
-
-    if (!formProject.trim()) {
-      wx.showToast({ title: '请选择关联项目', icon: 'none' });
-      return;
-    }
-
-    const cardData: Update<MembershipCard> = {
+    let cardData: Update<MembershipCard> = {
       name: formName,
-      originalPrice,
-      totalTimes,
-      project: formProject,
+      type: formType,
       status: 'active'
     };
+
+    if (formType === 'times') {
+      const originalPrice = parseFloat(formOriginalPrice);
+      if (isNaN(originalPrice) || originalPrice <= 0) {
+        wx.showToast({ title: '请输入有效的原价', icon: 'none' });
+        return;
+      }
+      cardData.originalPrice = originalPrice;
+
+      const totalTimes = parseInt(formTotalTimes);
+      if (isNaN(totalTimes) || totalTimes <= 0) {
+        wx.showToast({ title: '请输入有效的次数', icon: 'none' });
+        return;
+      }
+      cardData.totalTimes = totalTimes;
+
+      if (!formProject.trim()) {
+        wx.showToast({ title: '请选择关联项目', icon: 'none' });
+        return;
+      }
+      cardData.project = formProject;
+    } else {
+      const balance = parseFloat(formBalance);
+      if (isNaN(balance) || balance < 0) {
+        wx.showToast({ title: '请输入有效的储值金额', icon: 'none' });
+        return;
+      }
+      cardData.balance = balance;
+    }
 
     try {
       this.setData({ loading: true });
@@ -149,6 +204,32 @@ Page({
       console.error('保存会员卡失败:', error);
       this.setData({ loading: false });
       wx.showToast({ title: '保存失败', icon: 'none' });
+    }
+  },
+
+  async toggleCardStatus(e: WechatMiniprogram.CustomEvent) {
+    const card = e.currentTarget.dataset.card as MembershipCard;
+    const newStatus = card.status === 'active' ? 'disabled' : 'active';
+
+    try {
+      this.setData({ loading: true });
+      const success = await cloudDb.updateById<MembershipCard>(Collections.MEMBERSHIP, card.id, {
+        status: newStatus
+      });
+      if (success) {
+        wx.showToast({
+          title: newStatus === 'active' ? '已启用' : '已禁用',
+          icon: 'success'
+        });
+        await this.loadCardList();
+      } else {
+        this.setData({ loading: false });
+        wx.showToast({ title: '操作失败', icon: 'none' });
+      }
+    } catch (error) {
+      console.error('切换会员卡状态失败:', error);
+      this.setData({ loading: false });
+      wx.showToast({ title: '操作失败', icon: 'none' });
     }
   },
 
