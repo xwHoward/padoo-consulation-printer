@@ -1,0 +1,37 @@
+<view class="login-container">
+	<view class="login-content">
+		<view class="logo-container">
+			<image class="logo" src="/assets/logo.jpg" mode="aspectFit"></image>
+		</view>
+		<view class="title">趴岛员工助手</view>
+		<view class="subtitle">欢迎使用</view>
+
+		<view wx:if="{{isLoggedIn && userInfo}}" class="user-info">
+			<image class="avatar" src="{{userInfo.avatarUrl || '/assets/default-avatar.jpg'}}" mode="aspectFill"></image>
+			<view class="nickname">{{userInfo.nickName || '用户'}}</view>
+			<view class="role">{{userInfo.role === 'admin' ? '管理员' : userInfo.role === 'cashier' ? '收银员' : userInfo.role === 'technician' ? '技师' : '查看者'}}</view>
+			<view wx:if="{{userInfo.phone}}" class="phone">{{userInfo.phone}}</view>
+		</view>
+
+		<view wx:else class="login-actions">
+			<view 
+				class="btn-login" 
+				bindtap="onLogin" 
+				loading="{{loading}}"
+				disabled="{{loading}}">
+				{{loading ? '登录中...' : '微信登录'}}
+			</view>
+			<view 
+				class="btn-phone" 
+				open-type="getPhoneNumber" 
+				bindgetphonenumber="onGetPhoneNumber"
+				disabled="{{loading}}">
+				授权手机号
+			</view>
+		</view>
+
+		<view wx:if="{{isLoggedIn}}" class="logout-actions">
+			<view class="btn-logout" bindtap="onLogout">退出登录</view>
+		</view>
+	</view>
+</view>

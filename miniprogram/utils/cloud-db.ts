@@ -591,6 +591,7 @@ export const Collections = {
 	ROOMS: 'rooms',
 	ESSENTIAL_OILS: 'essential_oils',
 	CONSULTATION: 'consultation_records',
+	USERS: 'users',
 } as const;
 
 export type CollectionName = typeof Collections[keyof typeof Collections];

@@ -52,9 +52,9 @@ Page({
     }
   },
 
-  onLoad(options: any) {
+  onLoad(options) {
     // 检查是否为顾客只读模式
-    if (options.readonly === 'true' && options.customerPhone) {
+    if (options.readonly === 'true' && options.customerPhone && options.customerId) {
       this.loadCustomerHistory(options.customerPhone, options.customerId);
     } else {
       // 页面加载时获取历史数据，默认只获取当日的记录

@@ -1,7 +1,9 @@
 // cashier.ts
 import { cloudDb, Collections } from '../../utils/cloud-db';
 import { DEFAULT_SHIFT } from '../../utils/constants';
-import { formatDate, formatDuration, getMinutesDiff, isTimeOverlapping, parseProjectDuration } from '../../utils/util';
+import { checkLogin } from '../../utils/auth';
+import { requirePagePermission } from '../../utils/permission';
+import { formatDate, formatDuration, getMinutesDiff, parseProjectDuration } from '../../utils/util';
 
 interface RotationItem {
 	id: string;
@@ -107,7 +109,12 @@ Component({
 	},
 
 	lifetimes: {
-		attached() {
+		async attached() {
+			const isLoggedIn = await checkLogin();
+			if (!isLoggedIn) return;
+
+			if (!requirePagePermission('cashier')) return;
+
 			const today = formatDate(new Date());
 			this.setData({ selectedDate: today });
 			this.loadProjects();
@@ -116,7 +123,12 @@ Component({
 	},
 
 	pageLifetimes: {
-		show() {
+		async show() {
+			const isLoggedIn = await checkLogin();
+			if (!isLoggedIn) return;
+
+			if (!requirePagePermission('cashier')) return;
+
 			this.loadData();
 		}
 	},

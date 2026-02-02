@@ -1,4 +1,6 @@
 import { cloudDb, Collections } from "../../utils/cloud-db";
+import { checkLogin } from "../../utils/auth";
+import { requirePagePermission } from "../../utils/permission";
 import { calculateOvertimeUnits, calculateProjectEndTime, formatDate, formatTime, parseProjectDuration, SHIFT_END_TIMES } from "../../utils/util";
 import { showValidationError, validateConsultationForPrint } from "../../utils/validators";
 const GBK = require("gbk.js");
@@ -163,7 +165,12 @@ Component({
   methods: {
 
     // 页面加载
-    onLoad(options: Record<string, string>) {
+    async onLoad(options: Record<string, string>) {
+      const isLoggedIn = await checkLogin();
+      if (!isLoggedIn) return;
+
+      if (!requirePagePermission('index')) return;
+
       if (options.editId) {
         this.loadEditData(options.editId);
       } else if (options.reserveIds) {
@@ -177,11 +184,11 @@ Component({
     async loadTechnicianList() {
       try {
         const { editId, consultationInfo } = this.data;
-        
+
         // 使用单据日期或当前日期
         let targetDate: string;
         let currentTimeStr: string;
-        
+
         if (editId && consultationInfo.date) {
           targetDate = consultationInfo.date;
           currentTimeStr = consultationInfo.startTime || formatTime(new Date(), false);
@@ -971,17 +978,17 @@ Component({
     async saveConsultationToCache(consultation: Add<ConsultationInfo>, editId?: string) {
       try {
         this.setData({ loading: true });
-        
+
         // 使用传入的consultation中的日期和时间，如果存在的话
         let currentDate: string;
         let startTimeStr: string;
         let endTimeStr: string;
-        
+
         if (consultation.date && consultation.startTime && consultation.endTime) {
           // 使用已存在的日期和时间
           currentDate = consultation.date;
           startTimeStr = consultation.startTime;
-          
+
           // 计算结束时间
           const [year, month, day] = currentDate.split('-').map(Number);
           const [hours, minutes] = startTimeStr.split(':').map(Number);
@@ -996,7 +1003,7 @@ Component({
           const endTimeDate = calculateProjectEndTime(now, consultation.project);
           endTimeStr = formatTime(endTimeDate, false);
         }
-        
+
         const calculatedOvertime = await this.calculateOvertime(consultation.technician, currentDate, startTimeStr);
 
         const recordData: Add<ConsultationRecord> = {
@@ -1217,7 +1224,7 @@ Component({
 
       const [hours, minutes] = selectedTime.split(':').map(Number);
       let startTimeDate: Date;
-      
+
       if (editId) {
         const recordDate = consultationInfo.date || formatDate(new Date());
         const [year, month, day] = recordDate.split('-').map(Number);
@@ -1536,7 +1543,7 @@ Component({
       } else {
         actualStartTime = new Date();
       }
-      
+
       const startTime = formatTime(actualStartTime, false);
 
       info1.startTime = startTime;
@@ -1632,7 +1639,7 @@ ${clockInInfo2}`;
 
     async formatClockInInfo(info: Add<ConsultationInfo>): Promise<string> {
       let dailyCount = 1;
-      
+
       if (info.date && info.startTime) {
         const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(info.date) as ConsultationRecord[];
         dailyCount = records.filter(
@@ -1643,7 +1650,7 @@ ${clockInInfo2}`;
       const startTime = info.startTime || formatTime(new Date(), false);
       const projectDuration = parseProjectDuration(info.project);
       const totalDuration = projectDuration + 10;
-      
+
       let endTime: string;
       if (info.endTime) {
         endTime = info.endTime;
@@ -1760,7 +1767,7 @@ ${clockInInfo2}`;
       }
 
       content += "\n================\n";
-      
+
       // 使用单据日期或当前日期
       let printDate = new Date();
       if (info.date) {

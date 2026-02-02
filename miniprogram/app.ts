@@ -1,3 +1,4 @@
+import { authManager } from './utils/auth';
 import { cloudDb, Collections } from './utils/cloud-db';
 
 App<IAppOption<AppGlobalData>>({
@@ -9,7 +10,31 @@ App<IAppOption<AppGlobalData>>({
 		loadPromise: null as Promise<void> | null
 	},
 	onLaunch() {
+		this.initLogin();
 		this.loadGlobalData();
+	},
+
+	async initLogin() {
+		try {
+			const user = await authManager.silentLogin();
+			this.globalData.currentUser = user;
+			this.globalData.token = authManager.getToken();
+		} catch (error) {
+			console.error('自动登录失败:', error);
+		}
+	},
+
+	onShow() {
+		const pages = getCurrentPages();
+		const currentPage = pages[pages.length - 1];
+		if (currentPage?.route !== 'pages/login/login') {
+			const user = authManager.getCurrentUser();
+			if (!user) {
+				wx.reLaunch({
+					url: '/pages/login/login'
+				});
+			}
+		}
 	},
 
 	async loadGlobalData() {

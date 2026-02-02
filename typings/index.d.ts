@@ -9,11 +9,11 @@ interface BaseRecord {
 /**
  * 新增数据类型，省略 '_id', 'id', 'createdAt', 'updatedAt' 字段
  */
-type Add<T> = T extends BaseRecord ? Omit<T,  '_id'|'id'|'createdAt'|'updatedAt'> : never;
+type Add<T> = T extends BaseRecord ? Omit<T, '_id' | 'id' | 'createdAt' | 'updatedAt'> : never;
 /**
  * 更新数据类型，省略 'id', 'createdAt', 'updatedAt', '_id' 字段
  */
-type Update<T> = T extends BaseRecord ? Omit<T,'id'| 'createdAt' | 'updatedAt' | '_id'> : never;
+type Update<T> = T extends BaseRecord ? Omit<T, 'id' | 'createdAt' | 'updatedAt' | '_id'> : never;
 
 
 // 支付方式类型
@@ -48,7 +48,7 @@ interface ConsultationInfo extends BaseRecord {
   isClockIn: boolean;
   remarks: string;
   phone: string;
-	extraTime: number;
+  extraTime: number;
   couponCode: string;
   couponPlatform: "meituan" | "dianping" | "douyin" | "membership" | "";
   upgradeHimalayanSaltStone: boolean;
@@ -201,31 +201,92 @@ interface EssentialOil extends BaseRecord {
 }
 
 interface AppGlobalData {
-	userInfo?: WechatMiniprogram.UserInfo;
-	projects: Project[];
-	rooms: Room[];
-	essentialOils: EssentialOil[];
-	isDataLoaded: boolean;
-	loadPromise: Promise<void> | null;
+  userInfo?: WechatMiniprogram.UserInfo;
+  currentUser?: UserRecord | null;
+  token?: string | null;
+  projects: Project[];
+  rooms: Room[];
+  essentialOils: EssentialOil[];
+  isDataLoaded: boolean;
+  loadPromise: Promise<void> | null;
+  loginPromise?: Promise<UserRecord>;
 }
 
 interface IAppOption<T extends Record<string, any> = AppGlobalData> {
-	globalData: T;
-	userInfoReadyCallback?: WechatMiniprogram.GetUserInfoSuccessCallback;
-	onLaunch?: () => void | Promise<void>;
-	onShow?: (options: WechatMiniprogram.App.LaunchShowOption) => void;
-	onHide?: () => void;
-	onError?: (error: string) => void;
-	loadGlobalData: () => Promise<void>;
-	getProjects: () => Promise<Project[]>;
-	getRooms: () => Promise<Room[]>;
-	getEssentialOils: () => Promise<EssentialOil[]>;
+  globalData: T;
+  userInfoReadyCallback?: WechatMiniprogram.GetUserInfoSuccessCallback;
+  onLaunch?: () => void | Promise<void>;
+  onShow?: (options: WechatMiniprogram.App.LaunchShowOption) => void;
+  onHide?: () => void;
+  onError?: (error: string) => void;
+  loadGlobalData: () => Promise<void>;
+  getProjects: () => Promise<Project[]>;
+  getRooms: () => Promise<Room[]>;
+  getEssentialOils: () => Promise<EssentialOil[]>;
+  initLogin: () => Promise<void>;
 }
 
 interface StaffAvailability {
-	id: string;
-	name: string;
-	isOccupied: boolean;
-	occupiedReason?: string;
-	isSelected?: boolean;
+  id: string;
+  name: string;
+  isOccupied: boolean;
+  occupiedReason?: string;
+  isSelected?: boolean;
+}
+
+// 用户角色类型
+type UserRole = 'admin' | 'cashier' | 'technician' | 'viewer';
+
+// 数据可见范围
+type DataScope = 'all' | 'own' | 'department';
+
+// 用户权限配置
+interface UserPermissions {
+  // 页面权限
+  canAccessIndex: boolean;
+  canAccessCashier: boolean;
+  canAccessHistory: boolean;
+  canAccessStaff: boolean;
+  canAccessRooms: boolean;
+  canAccessCustomers: boolean;
+  // 按钮权限
+  canVoidConsultation: boolean;
+  canEditConsultation: boolean;
+  canDeleteConsultation: boolean;
+  canEditReservation: boolean;
+  canCancelReservation: boolean;
+  canManageStaff: boolean;
+  canManageSchedule: boolean;
+  canManageRooms: boolean;
+  canSettleConsultation: boolean;
+  canExportData: boolean;
+  // 数据操作权限
+  dataScope: DataScope;
+  canViewAllHistory: boolean;
+  canEditOwnOnly: boolean;
+}
+
+// 用户数据结构
+interface UserRecord extends BaseRecord {
+  openId: string;
+  unionId?: string;
+  nickName?: string;
+  avatarUrl?: string;
+  phone?: string;
+  role: UserRole;
+  status: 'active' | 'disabled';
+  permissions: UserPermissions;
+  staffId?: string;
+  staffName?: string;
+  department?: string;
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt?: string;
+}
+
+// 登录响应数据
+interface LoginResponse {
+  user: UserRecord;
+  token: string;
+  isNewUser: boolean;
 }
