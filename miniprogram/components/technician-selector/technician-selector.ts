@@ -19,8 +19,8 @@ Component({
 	},
 	methods: {
 		onTechnicianTap(e: WechatMiniprogram.CustomEvent) {
-			const {technician, id, occupied, reason} = e.currentTarget.dataset;
-			this.triggerEvent('change', {technician, id, occupied, reason});
+			const { technician, id, occupied, reason } = e.currentTarget.dataset;
+			this.triggerEvent('change', { technician, _id: id, occupied, reason });
 		}
 	}
 });

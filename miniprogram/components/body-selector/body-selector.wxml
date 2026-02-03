@@ -5,10 +5,10 @@
     mode="aspectFit" />
   <view
     wx:for="{{parts}}"
-    wx:key="id"
-    class="body-part {{item.id}} {{selectedParts[item.id] ? 'selected' : ''}}"
+    wx:key="_id"
+    class="body-part {{item._id}} {{selectedParts[item._id] ? 'selected' : ''}}"
     bindtap="onPartTap"
-    data-part="{{item.id}}"
+    data-part="{{item._id}}"
   >
     <text class="part-name">{{item.name}}</text>
   </view>

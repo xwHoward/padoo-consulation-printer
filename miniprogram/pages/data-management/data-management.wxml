@@ -30,7 +30,7 @@
 				<view class="add-btn" bindtap="onAddProject">添加项目</view>
 			</view>
 			<view class="list">
-				<view class="list-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{projects}}" wx:key="id">
+				<view class="list-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{projects}}" wx:key="_id">
 					<view class="item-info">
 						<view class="item-name">{{item.name}}</view>
 						<view class="item-detail">{{item.duration}}分钟</view>
@@ -74,7 +74,7 @@
 				<view class="add-btn" bindtap="onAddRoom">添加房间</view>
 			</view>
 			<view class="list">
-				<view class="list-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{rooms}}" wx:key="id">
+				<view class="list-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{rooms}}" wx:key="_id">
 					<view class="item-info">
 						<view class="item-name">{{item.name}}</view>
 					</view>
@@ -115,7 +115,7 @@
 				<view class="add-btn" bindtap="onAddOil">添加精油</view>
 			</view>
 			<view class="list">
-				<view class="list-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{essentialOils}}" wx:key="id">
+				<view class="list-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{essentialOils}}" wx:key="_id">
 					<view class="item-info">
 						<view class="item-name">{{item.name}}</view>
 						<view class="item-detail">{{item.effect}}</view>

@@ -87,7 +87,6 @@ export class AuthManager {
 	}
 
 	async silentLogin(): Promise<UserRecord | null> {
-		console.log('silentLogin')
 		if (this.isLoggedIn()) {
 			return this.currentUser;
 		}

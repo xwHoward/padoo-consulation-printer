@@ -1,10 +1,10 @@
 <view class="gender-selector">
   <label
-    class="gender-option {{selectedGender === item.id ? 'selected' : ''}}"
+    class="gender-option {{selectedGender === item._id ? 'selected' : ''}}"
     wx:for="{{genders}}"
-    wx:key="id"
+    wx:key="_id"
     bindtap="onSelect"
-    data-id="{{item.id}}"
+    data-id="{{item._id}}"
   >
     {{item.name}}
   </label>

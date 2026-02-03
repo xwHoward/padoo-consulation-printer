@@ -51,20 +51,25 @@ Component({
 
 				const startDate = dates[0].date;
 				const endDate = dates[dates.length - 1].date;
+
+				console.log('初始化排班表，日期范围:', { startDate, endDate });
+
 				const allSchedules = await (cloudDb.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
 					return item.date >= startDate && item.date <= endDate;
 				}));
 
+				console.log('查询到的排班记录数量:', allSchedules.length);
+
 				// 构造渲染用的 Map
 				const scheduleMap: Record<string, Record<string, { label: string; type: ShiftType; index: number }>> = {};
 				staffList.forEach((staff) => {
-					scheduleMap[staff.id] = {};
+					scheduleMap[staff._id] = {};
 					dates.forEach((d) => {
 						// 查找是否存在排班
-						const record = allSchedules.find((s) => s.staffId === staff.id && s.date === d.date);
+						const record = allSchedules.find((s) => s.staffId === staff._id && s.date === d.date);
 						if (record) {
 							const index = SHIFT_TYPES.indexOf(record.shift);
-							scheduleMap[staff.id][d.date] = {
+							scheduleMap[staff._id][d.date] = {
 								label: SHIFT_NAMES[record.shift],
 								type: record.shift,
 								index: index,
@@ -72,7 +77,7 @@ Component({
 						} else {
 							// 使用系统默认班次
 							// const index = SHIFT_TYPES.indexOf(DEFAULT_SHIFT);
-							// scheduleMap[staff.id][d.date] = {
+							// scheduleMap[staff._id][d.date] = {
 							// 	label: SHIFT_NAMES[DEFAULT_SHIFT],
 							// 	type: DEFAULT_SHIFT,
 							// 	index: index,
@@ -124,6 +129,8 @@ Component({
 				const shiftType = SHIFT_TYPES[index];
 				const today = this.data.today;
 
+				console.log('排班变更参数:', { staffId, date, shiftType, index });
+
 				// 检查是否为今日之前的日期
 				if (date < today) {
 					wx.showToast({
@@ -138,15 +145,20 @@ Component({
 
 				// 更新当前日期的排班（覆盖保存）
 				const existing = await (cloudDb.findOne<ScheduleRecord>(Collections.SCHEDULE, { staffId, date }));
+				console.log('查询到的现有排班:', existing);
 
 				if (existing) {
-					await cloudDb.updateById<ScheduleRecord>(Collections.SCHEDULE, existing.id, { shift: shiftType });
+					console.log('更新现有排班:', existing._id, { shift: shiftType });
+					const updateResult = await cloudDb.updateById<ScheduleRecord>(Collections.SCHEDULE, existing._id, { shift: shiftType });
+					console.log('更新结果:', updateResult);
 				} else {
-					await cloudDb.insert<ScheduleRecord>(Collections.SCHEDULE, {
+					console.log('新增排班:', { date, staffId, shift: shiftType });
+					const insertResult = await cloudDb.insert<ScheduleRecord>(Collections.SCHEDULE, {
 						date,
 						staffId,
 						shift: shiftType,
 					});
+					console.log('新增结果:', insertResult);
 				}
 
 				wx.hideLoading();
@@ -211,9 +223,9 @@ Component({
 		// 编辑员工
 		async onEditStaff(e: WechatMiniprogram.TouchEvent) {
 			try {
-				const id = e.currentTarget.dataset.id as string;
+				const _id = e.currentTarget.dataset.id as string;
 				this.setData({ loading: true });
-				const staff = await (cloudDb.findById<StaffInfo>(Collections.STAFF, id));
+				const staff = await (cloudDb.findById<StaffInfo>(Collections.STAFF, _id));
 
 				if (staff) {
 					this.setData({
@@ -239,14 +251,14 @@ Component({
 		// 切换员工状态
 		async onToggleStatus(e: WechatMiniprogram.TouchEvent) {
 			try {
-				const id = e.currentTarget.dataset.id as string;
+				const _id = e.currentTarget.dataset.id as string;
 				this.setData({ loading: true });
-				const staff = await (cloudDb.findById<StaffInfo>(Collections.STAFF, id));
+				const staff = await (cloudDb.findById<StaffInfo>(Collections.STAFF, _id));
 
 				if (staff) {
 					const newStatus: StaffStatus = staff.status === 'active' ? 'disabled' : 'active';
 
-					await cloudDb.updateById<StaffInfo>(Collections.STAFF, id, { status: newStatus });
+					await cloudDb.updateById<StaffInfo>(Collections.STAFF, _id, { status: newStatus });
 
 					await this.loadStaffList();
 
@@ -272,9 +284,9 @@ Component({
 		// 删除员工
 		async onDeleteStaff(e: WechatMiniprogram.TouchEvent) {
 			try {
-				const id = e.currentTarget.dataset.id as string;
+				const _id = e.currentTarget.dataset.id as string;
 				this.setData({ loading: true });
-				const staff = await (cloudDb.findById<StaffInfo>(Collections.STAFF, id));
+				const staff = await (cloudDb.findById<StaffInfo>(Collections.STAFF, _id));
 
 				if (!staff) {
 					this.setData({ loading: false });
@@ -291,7 +303,7 @@ Component({
 						if (res.confirm) {
 							try {
 								this.setData({ loading: true });
-								await cloudDb.deleteById(Collections.STAFF, id);
+								await cloudDb.deleteById(Collections.STAFF, _id);
 								await this.loadStaffList();
 								wx.showToast({ title: '已删除', icon: 'success' });
 							} catch (error) {
@@ -347,7 +359,7 @@ Component({
 				wx.showLoading({ title: '保存中...' });
 
 				if (editingStaff) {
-					await cloudDb.updateById<StaffInfo>(Collections.STAFF, editingStaff.id, {
+					await cloudDb.updateById<StaffInfo>(Collections.STAFF, editingStaff._id, {
 						name,
 						status: inputStatus,
 					});

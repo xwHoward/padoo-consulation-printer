@@ -23,11 +23,18 @@
         "miniprogram": {
             "list": [
                 {
-                    "name": "单据",
-                    "pathName": "pages/history/history",
+                    "name": "login",
+                    "pathName": "pages/login/login",
                     "query": "",
                     "scene": null,
                     "launchMode": "default"
+                },
+                {
+                    "name": "单据",
+                    "pathName": "pages/history/history",
+                    "query": "",
+                    "launchMode": "default",
+                    "scene": null
                 },
                 {
                     "name": "cashier",

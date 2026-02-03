@@ -1,10 +1,10 @@
 <view class="checkbox-group">
   <label
     wx:for="{{strengths}}"
-    wx:key="id"
-    class="checkbox-item {{selectedStrength === item.id ? 'selected' : ''}}"
+    wx:key="_id"
+    class="checkbox-item {{selectedStrength === item._id ? 'selected' : ''}}"
     bindtap="onStrengthTap"
-    data-strength="{{item.id}}"
+    data-strength="{{item._id}}"
   >
     <view class="strength-checkbox"></view>
     {{item.name}}

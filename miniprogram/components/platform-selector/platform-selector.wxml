@@ -1,10 +1,10 @@
 <view class="platform-selector">
   <label
-    class="platform-option {{selectedPlatform === item.id ? 'selected' : ''}}"
+    class="platform-option {{selectedPlatform === item._id ? 'selected' : ''}}"
     wx:for="{{platforms}}"
-    wx:key="id"
+    wx:key="_id"
     bindtap="onSelect"
-    data-id="{{item.id}}"
+    data-id="{{item._id}}"
   >
     {{item.name}}
   </label>

@@ -1,19 +1,18 @@
 // 基础数据记录接口
 interface BaseRecord {
-  id: string;
   _id: string;
   createdAt: string;
   updatedAt: string;
 }
 
 /**
- * 新增数据类型，省略 '_id', 'id', 'createdAt', 'updatedAt' 字段
+ * 新增数据类型，省略 '_id', 'createdAt', 'updatedAt' 字段
  */
-type Add<T> = T extends BaseRecord ? Omit<T, '_id' | 'id' | 'createdAt' | 'updatedAt'> : never;
+type Add<T> = T extends BaseRecord ? Omit<T, '_id' | 'createdAt' | 'updatedAt'> : never;
 /**
- * 更新数据类型，省略 'id', 'createdAt', 'updatedAt', '_id' 字段
+ * 更新数据类型，省略 'createdAt', 'updatedAt', '_id' 字段
  */
-type Update<T> = T extends BaseRecord ? Omit<T, 'id' | 'createdAt' | 'updatedAt' | '_id'> : never;
+type Update<T> = T extends BaseRecord ? Omit<T, '_id' | 'createdAt' | 'updatedAt'> : never;
 
 
 // 支付方式类型
@@ -140,7 +139,7 @@ interface CustomerRecord extends BaseRecord {
 
 // 顾客回访记录信息
 interface CustomerVisit {
-  id: string;
+  _id: string;
   date: string;
   project: string;
   technician: string;
@@ -178,7 +177,6 @@ interface MembershipUsageRecord extends BaseRecord {
 }
 
 interface Project extends BaseRecord {
-  id: string;
   name: string;
   duration: number;
   price?: number;
@@ -187,7 +185,6 @@ interface Project extends BaseRecord {
 }
 
 interface Room extends BaseRecord {
-  id: string;
   name: string;
   status: ItemStatus;
 }
@@ -195,7 +192,6 @@ interface Room extends BaseRecord {
 type ItemStatus = 'normal' | 'disabled';
 
 interface EssentialOil extends BaseRecord {
-  id: string;
   name: string;
   effect: string;
   status: ItemStatus;
@@ -228,7 +224,7 @@ interface IAppOption<T extends Record<string, any> = AppGlobalData> {
 }
 
 interface StaffAvailability {
-  id: string;
+  _id: string;
   name: string;
   isOccupied: boolean;
   occupiedReason?: string;

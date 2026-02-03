@@ -1,24 +1,24 @@
 export const MASSAGE_STRENGTHS = [
-	{ id: 'standard', name: '标准 STANDARD' },
-	{ id: 'soft', name: '轻柔 SOFT' },
-	{ id: 'gravity', name: '重力 STRONG' }
+	{ _id: 'standard', name: '标准 STANDARD' },
+	{ _id: 'soft', name: '轻柔 SOFT' },
+	{ _id: 'gravity', name: '重力 STRONG' }
 ];
 
 export const GENDERS = [
-	{ id: 'male', name: '先生' },
-	{ id: 'female', name: '女士' }
+	{ _id: 'male', name: '先生' },
+	{ _id: 'female', name: '女士' }
 ];
 
 export const COUPON_PLATFORMS = [
-	{ id: 'meituan', name: '美', },
-	{ id: 'dianping', name: '大', },
-	{ id: 'douyin', name: '抖', },
-	{ id: 'wechat', name: '微', },
-	{ id: 'alipay', name: '支', },
-	{ id: 'cash', name: '现', },
-	{ id: 'gaode', name: '高', },
-	{ id: 'free', name: '免', },
-	{ id: 'membership', name: '卡', },
+	{ _id: 'meituan', name: '美', },
+	{ _id: 'dianping', name: '大', },
+	{ _id: 'douyin', name: '抖', },
+	{ _id: 'wechat', name: '微', },
+	{ _id: 'alipay', name: '支', },
+	{ _id: 'cash', name: '现', },
+	{ _id: 'gaode', name: '高', },
+	{ _id: 'free', name: '免', },
+	{ _id: 'membership', name: '卡', },
 ];
 
 export const SHIFT_TYPES = ['morning', 'evening', 'off', 'leave'] as const;
@@ -29,6 +29,20 @@ export const SHIFT_NAMES: Record<ShiftType, string> = {
 	evening: '晚班',
 	off: '休息',
 	leave: '请假'
+};
+
+export const SHIFT_START_TIME: Record<ShiftType, string> = {
+	morning: '12:00',
+	evening: '13:00',
+	off: '',
+	leave: ''
+};
+
+export const SHIFT_END_TIME: Record<ShiftType, string> = {
+	morning: '22:00',
+	evening: '23:00',
+	off: '',
+	leave: ''
 };
 
 export const DEFAULT_SHIFT: ShiftType = 'evening';

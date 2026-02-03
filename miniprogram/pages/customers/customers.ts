@@ -13,7 +13,7 @@ Page({
     formResponsibleTechnician: '',
     formLicensePlate: '',
     formRemarks: '',
-    technicianList: [] as { id: string; name: string; }[],
+    technicianList: [] as StaffInfo[],
     selectedCustomer: null as CustomerRecord | null,
     visitRecords: [] as CustomerVisit[],
     showDetailModal: false,
@@ -57,7 +57,7 @@ Page({
       const customerMap: Record<string, CustomerRecord> = {};
 
       savedCustomers.forEach(c => {
-        const key = c.phone || c.id;
+        const key = c.phone || c._id;
         customerMap[key] = c;
       });
 
@@ -132,7 +132,7 @@ Page({
     try {
       this.setData({ loading: true });
       if (editCustomer) {
-        await cloudDb.updateById<CustomerRecord>(Collections.CUSTOMERS, editCustomer.id, {
+        await cloudDb.updateById<CustomerRecord>(Collections.CUSTOMERS, editCustomer._id, {
           phone: formPhone,
           name: formName,
           gender: formGender,
@@ -208,45 +208,55 @@ Page({
     try {
       this.setData({ loading: true });
       const customer = e.currentTarget.dataset.customer as CustomerRecord;
-      const database = cloudDb;
       const visitRecords: CustomerVisit[] = [];
+      let customerMemberships: CustomerMembership[] = [];
 
       if (customer.phone) {
-        const allRecords = await database.getConsultationsByCustomer(customer.phone);
-        allRecords.forEach((record) => {
-          if (record.isVoided) {
-            return;
+        const res = await wx.cloud.callFunction({
+          name: 'getCustomerHistory',
+          data: {
+            phone: customer.phone
           }
-
-          const date = record.createdAt.substring(0, 10);
-          visitRecords.push({
-            id: record.id,
-            date,
-            project: record.project,
-            technician: record.technician,
-            room: record.room,
-            amount: record.amount,
-            isClockIn: record.isClockIn,
-          });
         });
+
+        if (!res.result || typeof res.result !== 'object') {
+          throw new Error('获取顾客历史失败');
+        }
+
+        const { code, data, message } = res.result as any;
+
+        if (code === 0 && data) {
+          data.visitRecords.forEach((record: any) => {
+            if (!record.isVoided) {
+              visitRecords.push({
+                _id: record._id,
+                date: record.date,
+                project: record.project,
+                technician: record.technician,
+                room: record.room,
+                amount: record.amount,
+                isClockIn: record.isClockIn
+              });
+            }
+          });
+
+          visitRecords.sort((a, b) => {
+            return new Date(b.date).getTime() - new Date(a.date).getTime();
+          });
+
+          customerMemberships = data.customerMemberships || [];
+        }
       }
 
-      visitRecords.sort((a, b) => {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      });
-
-      const memberships = await database.find<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, {
-        customerId: customer.id
-      });
       this.setData({
         selectedCustomer: customer,
         visitRecords,
-        customerMemberships: memberships,
+        customerMemberships,
         showDetailModal: true,
         loading: false
       });
     } catch (error) {
-      console.error('加载顾客会员卡失败:', error);
+      console.error('加载顾客历史失败:', error);
       this.setData({ loading: false });
     }
   },
@@ -263,7 +273,7 @@ Page({
   goToConsultationDetail() {
     const selectedCustomer = this.data.selectedCustomer!;
     wx.navigateTo({
-      url: `/pages/history/history?customerPhone=${selectedCustomer.phone}&customerId=${selectedCustomer.phone || selectedCustomer.id}&readonly=true`
+      url: `/pages/history/history?customerPhone=${selectedCustomer.phone}&customerId=${selectedCustomer.phone || selectedCustomer._id}&readonly=true`
     });
   },
 
@@ -312,7 +322,7 @@ Page({
   onCardSelect(e: WechatMiniprogram.CustomEvent) {
     const card = e.currentTarget.dataset.card as MembershipCard;
     this.setData({
-      selectedCardId: card.id,
+      selectedCardId: card._id,
       selectedCardInfo: card
     });
   },
@@ -377,10 +387,10 @@ Page({
     try {
       this.setData({ loading: true });
       await cloudDb.insert(Collections.CUSTOMER_MEMBERSHIP, {
-        customerId: selectedCustomerForCard.id,
+        customerId: selectedCustomerForCard._id,
         customerName: selectedCustomerForCard.name,
         customerPhone: selectedCustomerForCard.phone,
-        cardId: selectedCardInfo.id,
+        cardId: selectedCardInfo._id,
         cardName: selectedCardInfo.name,
         originalPrice: selectedCardInfo.originalPrice,
         paidAmount,

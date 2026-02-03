@@ -48,7 +48,7 @@
             class="table-row"
             wx:for="{{staffList}}"
             wx:for-item="staff"
-            wx:key="id"
+            wx:key="_id"
           >
             <view class="table-cell sticky-col staff-cell">{{staff.name}}</view>
             <view
@@ -59,12 +59,12 @@
             >
               <picker
                 bindchange="onShiftChange"
-                data-staff-id="{{staff.id}}"
+                data-staff-id="{{staff._id}}"
                 data-date="{{dateObj.date}}"
-                value="{{scheduleMap[staff.id][dateObj.date].index}}"
+                value="{{scheduleMap[staff._id][dateObj.date].index}}"
                 range="{{shiftNames}}"
               >
-                <view class="shift-tag {{scheduleMap[staff.id][dateObj.date].type}}">{{scheduleMap[staff.id][dateObj.date].label}}</view>
+                <view class="shift-tag {{scheduleMap[staff._id][dateObj.date].type}}">{{scheduleMap[staff._id][dateObj.date].label}}</view>
               </picker>
             </view>
           </view>
@@ -99,7 +99,7 @@
       <view
         class="staff-item {{item.status === 'disabled' ? 'disabled' : ''}}"
         wx:for="{{staffList}}"
-        wx:key="id"
+        wx:key="_id"
       >
         <view
           class="staff-info"

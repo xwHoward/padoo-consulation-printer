@@ -1,10 +1,10 @@
 <view class="technician-selector">
   <label
     wx:for="{{technicianList}}"
-    wx:key="id"
+    wx:key="_id"
     class="technician-option {{(!multi ? selectedTechnician === item.name : item.isSelected) ? 'selected' : ''}} {{item.isOccupied ? 'occupied' : ''}}"
     bindtap="onTechnicianTap"
-    data-id="{{item.id}}"
+    data-id="{{item._id}}"
     data-technician="{{item.name}}"
     data-occupied="{{item.isOccupied}}"
     data-reason="{{item.occupiedReason}}"

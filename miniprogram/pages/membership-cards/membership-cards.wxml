@@ -7,7 +7,7 @@
 </navigation-bar>
 <view class="cards-page">
   <view class="card-list">
-    <view wx:for="{{cardList}}" wx:key="id" class="card-item {{item.status === 'disabled' ? 'disabled' : ''}}" data-card="{{item}}">
+    <view wx:for="{{cardList}}" wx:key="_id" class="card-item {{item.status === 'disabled' ? 'disabled' : ''}}" data-card="{{item}}">
       <view class="card-header">
         <view class="card-info">
           <view class="card-name">

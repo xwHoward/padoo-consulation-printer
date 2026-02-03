@@ -23,7 +23,7 @@
           </view>
           <!-- 当日咨询单列表 -->
           <view class="consultation-list">
-            <view wx:for="{{group.records}}" wx:for-item="record" wx:for-index="recordIndex" wx:key="id" class="consultation-item {{record.isVoided ? 'voided' : ''}} {{record.collapsed ? 'collapsed' : ''}}">
+            <view wx:for="{{group.records}}" wx:for-item="record" wx:for-index="recordIndex" wx:key="_id" class="consultation-item {{record.isVoided ? 'voided' : ''}} {{record.collapsed ? 'collapsed' : ''}}">
               <!-- 咨询单头部（始终显示） -->
               <view class="consultation-header" bindtap="toggleCollapse" data-group-index="{{index}}" data-record-index="{{recordIndex}}">
                 <view class="consultation-basic">

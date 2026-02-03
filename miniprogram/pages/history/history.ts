@@ -31,8 +31,8 @@ const app = getApp<IAppOption>();
 Page({
   data: {
     historyData: [] as DailyGroup[], // 按天分组的历史记录
-    platforms: COUPON_PLATFORMS.reduce((acc, p) => ({ ...acc, [p.id]: p.name }), {}),
-    genders: GENDERS.reduce((acc, g) => ({ ...acc, [g.id]: g.name }), {}),
+    platforms: COUPON_PLATFORMS.reduce((acc, p) => ({ ...acc, [p._id]: p.name }), {}),
+    genders: GENDERS.reduce((acc, g) => ({ ...acc, [g._id]: g.name }), {}),
     paymentPlatformLabels: {
       meituan: '美团',
       dianping: '大众点评',
@@ -180,7 +180,7 @@ Page({
         const records = consultationHistory[date];
         if (records && records.length > 0) {
           const customerRecords = records.filter(record => {
-            const recordKey = record.phone || record.id;
+            const recordKey = record.phone || record._id;
             return recordKey === customerId && !record.isVoided;
           });
 
@@ -189,7 +189,7 @@ Page({
 
             const updatedRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(date) as ConsultationRecord[];
             const filteredRecords = updatedRecords.filter((record: ConsultationRecord) => {
-              const recordKey = record.phone || record.id;
+              const recordKey = record.phone || record._id;
               return recordKey === customerId && !record.isVoided;
             });
 
@@ -263,7 +263,7 @@ Page({
     const { record } = e.currentTarget.dataset;
 
     // 格式化咨询单详情文本
-    const genderObj = GENDERS.find(g => g.id === record.gender);
+    const genderObj = GENDERS.find(g => g._id === record.gender);
     const genderText = genderObj ? genderObj.name : '';
     let detailText = `客户姓名: ${record.surname} ${genderText}\n`;
     detailText += `项目: ${record.project}\n`;
@@ -300,7 +300,7 @@ Page({
 
     // 跳转到主页面，并传递要编辑的记录ID
     wx.navigateTo({
-      url: `/pages/index/index?editId=${record.id}`
+      url: `/pages/index/index?editId=${record._id}`
     });
   },
 
@@ -319,7 +319,7 @@ Page({
 
             const updated = await cloudDb.updateById(
               Collections.CONSULTATION,
-              record.id,
+              record._id,
               { isVoided: true }
             );
 
@@ -330,7 +330,7 @@ Page({
               });
               await this.loadHistoryData();
             } else {
-              console.error('未找到要作废的记录:', record.id);
+              console.error('未找到要作废的记录:', record._id);
               wx.showToast({
                 title: '记录不存在',
                 icon: 'error'
@@ -353,13 +353,13 @@ Page({
 
   // 获取按摩力度文本
   getMassageStrengthText(strength: string): string {
-    const found = MASSAGE_STRENGTHS.find(s => s.id === strength);
+    const found = MASSAGE_STRENGTHS.find(s => s._id === strength);
     return found ? found.name.split(' ')[0] : ''; // 只取中文部分
   },
 
   // 获取精油选择文本
   getEssentialOilText(oil: string): string {
-    const found = app.globalData.essentialOils.find(o => o.id === oil);
+    const found = app.globalData.essentialOils.find(o => o._id === oil);
     return found ? found.name : '';
   },
 
@@ -556,8 +556,7 @@ Page({
         status: 'active'
       });
 
-
-      if (!staff || schedule.staffId !== staff.id) {
+      if (!staff || schedule.staffId !== staff._id) {
         return 0;
       }
 
@@ -582,7 +581,7 @@ Page({
           const calculatedOvertime = await this.calculateOvertime(record.technician, date, record.startTime);
 
           if (record.overtime !== calculatedOvertime) {
-            overtimeUpdates[record.id] = calculatedOvertime;
+            overtimeUpdates[record._id] = calculatedOvertime;
           }
         }
       }
@@ -647,7 +646,7 @@ Page({
       return;
     }
 
-    await this.updateExtraTimeOrOvertime(record.id, date, type, inputValue);
+    await this.updateExtraTimeOrOvertime(record._id, date, type, inputValue);
 
     this.setData({
       'numberInputModal.show': false
@@ -667,7 +666,7 @@ Page({
       const startTimeStr = formatTime(currentTime, false);
       const endTimeStr = formatTime(endTime, false);
 
-      const genderObj = GENDERS.find(g => g.id === record.gender);
+      const genderObj = GENDERS.find(g => g._id === record.gender);
       const genderText = genderObj ? genderObj.name : '';
       const clockInfo = `顾客：${record.surname}${genderText}
 项目：${typeText}(${inputValue})

@@ -51,13 +51,6 @@ class CloudDatabase {
 	}
 
 	/**
-	 * 生成唯一ID
-	 */
-	private generateId(): string {
-		return `${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-	}
-
-	/**
 	 * 获取当前时间戳字符串
 	 */
 	private getTimestamp(): string {
@@ -104,15 +97,15 @@ class CloudDatabase {
 	/**
 	 * 根据ID查找单条记录
 	 */
-	async findById<T extends BaseRecord>(collection: string, id: string): Promise<T | null> {
+	async findById<T extends BaseRecord>(collection: string, _id: string): Promise<T | null> {
 		try {
-			const res = await this.getCollection(collection).doc(id).get();
+			const res = await this.getCollection(collection).doc(_id).get();
 			return res.data || null;
 		} catch (error) {
 			if ((error as any).errMsg?.includes('document not found')) {
 				return null;
 			}
-			console.error(`[CloudDB] 查找记录 ${id} 失败:`, error);
+			console.error(`[CloudDB] 查找记录 ${_id} 失败:`, error);
 			return null;
 		}
 	}
@@ -129,8 +122,10 @@ class CloudDatabase {
 				return allData.filter(condition);
 			}
 
+			console.log(`[CloudDB] 查询集合 ${collection}，条件:`, condition);
 			const query = collectionRef.where(condition);
 			const res = await query.get();
+			console.log(`[CloudDB] 查询结果数量:`, res.data?.length || 0);
 			return res.data || [];
 		} catch (error) {
 			console.error(`[CloudDB] 查询集合 ${collection} 失败:`, error);
@@ -142,35 +137,47 @@ class CloudDatabase {
 	 * 查找单条记录
 	 */
 	async findOne<T extends BaseRecord>(collection: string, condition: QueryCondition<T>): Promise<T | null> {
+		console.log(`[CloudDB] findOne - 集合: ${collection}，条件:`, condition);
 		const results = await this.find<T>(collection, condition);
+		console.log(`[CloudDB] findOne - 查询结果数量:`, results.length);
+		if (results.length > 0) {
+			console.log(`[CloudDB] findOne - 第一条记录:`, results[0]);
+		}
 		return results.length > 0 ? results[0] : null;
 	}
 
 	/**
 	 * 插入单条记录
 	 */
-	async insert<T extends BaseRecord>(collection: string, record: Omit<T, 'id' | 'createdAt' | 'updatedAt' | '_id'>): Promise<T | null> {
+	async insert<T extends BaseRecord>(collection: string, record: Omit<T, '_id' | 'createdAt' | 'updatedAt'>): Promise<T | null> {
 		try {
 			const now = this.getTimestamp();
-			const generatedId = this.generateId();
 
-			const newRecord = {
+			const dataToInsert = {
 				...record,
-				id: generatedId,
-				_id: generatedId,
 				createdAt: now,
 				updatedAt: now,
-			} as unknown as T;
+			};
+
+			console.log(`[CloudDB] 插入记录到 ${collection}:`, dataToInsert);
 
 			const res = await this.getCollection(collection).add({
-				data: newRecord
+				data: dataToInsert
 			});
 
-			if (res._id && res._id !== generatedId) {
-				(newRecord).id = res._id;
-				(newRecord)._id = res._id;
+			console.log(`[CloudDB] 插入结果:`, res);
+
+			if (!res._id) {
+				console.error(`[CloudDB] 插入失败，未返回 _id`);
+				return null;
 			}
 
+			const newRecord = {
+				...dataToInsert,
+				_id: res._id,
+			} as unknown as T;
+
+			console.log(`[CloudDB] 插入记录成功，_id:`, newRecord._id);
 			return newRecord;
 		} catch (error) {
 			console.error(`[CloudDB] 插入记录到 ${collection} 失败:`, error);
@@ -181,31 +188,32 @@ class CloudDatabase {
 	/**
 	 * 批量插入记录
 	 */
-	async insertMany<T extends BaseRecord>(collection: string, records: Add<T>[]): Promise<T[]> {
+	async insertMany<T extends BaseRecord>(collection: string, records: Add<T>[]): Promise<(T | null)[]> {
 		try {
 			const now = this.getTimestamp();
 
-			const newRecords = records.map(record => {
-				const generatedId = this.generateId();
+			const dataToInsertList = records.map(record => {
 				return {
 					...record,
-					id: generatedId,
-					_id: generatedId,
 					createdAt: now,
 					updatedAt: now,
-				} as unknown as T;
+				};
 			});
 
-			const insertResults = await Promise.all(newRecords.map(record =>
+			const insertResults = await Promise.all(dataToInsertList.map(record =>
 				this.getCollection(collection).add({ data: record })
 			));
 
-			insertResults.forEach((res: any, index) => {
-				if (res._id && res._id !== (newRecords[index]).id) {
-					(newRecords[index]).id = res._id;
-					(newRecords[index])._id = res._id;
+			const newRecords = insertResults.map((res: T, index) => {
+				if (!res._id) {
+					console.error(`[CloudDB] 批量插入失败，第${index}条记录未返回 _id`);
+					return null;
 				}
-			});
+				return {
+					...dataToInsertList[index],
+					_id: res._id,
+				} as unknown as T;
+			}).filter(Boolean);
 
 			return newRecords;
 		} catch (error) {
@@ -217,24 +225,26 @@ class CloudDatabase {
 	/**
 	 * 根据ID更新记录
 	 */
-	async updateById<T extends BaseRecord>(collection: string, id: string, updates: Partial<Update<T>>): Promise<boolean> {
+	async updateById<T extends BaseRecord>(collection: string, _id: string, updates: Partial<Update<T>>): Promise<boolean> {
 		try {
 			const updateData = {
 				...updates,
 				updatedAt: this.getTimestamp()
 			};
 
-			await this.getCollection(collection).doc(id).update({
+			console.log(`[CloudDB] 更新记录 ${_id}，数据:`, updateData);
+
+			const res = await this.getCollection(collection).doc(_id).update({
 				data: updateData
 			});
-
-			return true;
+			console.log(`[CloudDB] 更新记录 ${_id} 结果:`, res);
+			return res.stats?.updated || 0 > 0;
 		} catch (error) {
 			if ((error as any).errMsg?.includes('document not found')) {
-				console.warn(`[CloudDB] 未找到ID为 ${id} 的记录`);
+				console.warn(`[CloudDB] 未找到ID为 ${_id} 的记录`);
 				return false;
 			}
-			console.error(`[CloudDB] 更新记录 ${id} 失败:`, error);
+			console.error(`[CloudDB] 更新记录 ${_id} 失败:`, error);
 			return false;
 		}
 	}
@@ -255,7 +265,7 @@ class CloudDatabase {
 				const matchedRecords = allData.filter(condition);
 
 				await Promise.all(matchedRecords.map(record =>
-					this.updateById(collection, record.id, updates)
+					this.updateById(collection, record._id, updates)
 				));
 
 				return matchedRecords.length;
@@ -275,16 +285,16 @@ class CloudDatabase {
 	/**
 	 * 根据ID删除记录
 	 */
-	async deleteById(collection: string, id: string): Promise<boolean> {
+	async deleteById(collection: string, _id: string): Promise<boolean> {
 		try {
-			await this.getCollection(collection).doc(id).remove();
+			await this.getCollection(collection).doc(_id).remove();
 			return true;
 		} catch (error) {
 			if ((error as any).errMsg?.includes('document not found')) {
-				console.warn(`[CloudDB] 未找到ID为 ${id} 的记录`);
+				console.warn(`[CloudDB] 未找到ID为 ${_id} 的记录`);
 				return false;
 			}
-			console.error(`[CloudDB] 删除记录 ${id} 失败:`, error);
+			console.error(`[CloudDB] 删除记录 ${_id} 失败:`, error);
 			return false;
 		}
 	}
@@ -301,7 +311,7 @@ class CloudDatabase {
 				const matchedRecords = allData.filter(condition);
 
 				await Promise.all(matchedRecords.map(record =>
-					this.deleteById(collection, record.id)
+					this.deleteById(collection, record._id)
 				));
 
 				return matchedRecords.length;
@@ -327,7 +337,7 @@ class CloudDatabase {
 			}
 
 			await Promise.all(allData.map(record =>
-				this.deleteById(collection, record.id)
+				this.deleteById(collection, record._id)
 			));
 
 			return true;
@@ -532,12 +542,12 @@ class CloudDatabase {
 
 			await Promise.all(
 				records
-					.filter(record => overtimeUpdates[record.id] !== undefined)
+					.filter(record => overtimeUpdates[record._id] !== undefined)
 					.map(record =>
 						this.updateById(
 							Collections.CONSULTATION,
-							record.id,
-							{ overtime: overtimeUpdates[record.id] }
+							record._id,
+							{ overtime: overtimeUpdates[record._id] }
 						)
 					)
 			);
@@ -564,7 +574,7 @@ class CloudDatabase {
 			);
 
 			await Promise.all(oldRecords.map(record =>
-				this.deleteById(Collections.CONSULTATION, record.id)
+				this.deleteById(Collections.CONSULTATION, record._id)
 			));
 
 			return oldRecords.length;

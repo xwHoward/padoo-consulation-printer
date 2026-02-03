@@ -5,11 +5,6 @@ import { calculateOvertimeUnits, calculateProjectEndTime, formatDate, formatTime
 import { showValidationError, validateConsultationForPrint } from "../../utils/validators";
 const GBK = require("gbk.js");
 
-// 定义每日咨询单集合
-type DailyConsultations = {
-  [date: string]: ConsultationRecord[];
-};
-
 const DefaultConsultationInfo: Add<ConsultationInfo> = {
   surname: "",
   gender: "male",
@@ -113,7 +108,7 @@ Component({
     printerServiceId: "",
     printerCharacteristicId: "",
     editId: "", // 正在编辑的记录ID
-    technicianList: [] as { id: string, name: string; isOccupied: boolean }[], // 动态技师列表
+    technicianList: [] as StaffAvailability[], // 动态技师列表
     currentReservationIds: [] as string[], // 当前加载的预约ID列表（用于冲突检查时排除）
     loadingTechnicians: false, // 加载技师状态
     loading: false, // 全局loading状态
@@ -220,8 +215,8 @@ Component({
 
           if (savedRotation && savedRotation.length > 0) {
             list.sort((a, b) => {
-              const idxA = savedRotation.indexOf(a.id);
-              const idxB = savedRotation.indexOf(b.id);
+              const idxA = savedRotation.indexOf(a._id);
+              const idxB = savedRotation.indexOf(b._id);
               if (idxA === -1) return 1;
               if (idxB === -1) return -1;
               return idxA - idxB;
@@ -962,7 +957,7 @@ Component({
           status: 'active'
         });
 
-        if (!staff || schedule.staffId !== staff.id) {
+        if (!staff || schedule.staffId !== staff._id) {
           return 0; // 未找到技师或排班不匹配
         }
 
@@ -974,8 +969,8 @@ Component({
       }
     },
 
-    // 保存咨询单到缓存（支持新建和更新）
-    async saveConsultationToCache(consultation: Add<ConsultationInfo>, editId?: string) {
+    // 保存咨询单（支持新建和更新）
+    async saveConsultation(consultation: Add<ConsultationInfo>, editId?: string) {
       try {
         this.setData({ loading: true });
 
@@ -1062,7 +1057,7 @@ Component({
         if (existingCustomers && existingCustomers.length > 0) {
           // 更新已有顾客信息
           const existingCustomer = existingCustomers[0];
-          await cloudDb.updateById<CustomerRecord>(Collections.CUSTOMERS, existingCustomer.id, customerData);
+          await cloudDb.updateById<CustomerRecord>(Collections.CUSTOMERS, existingCustomer._id, customerData);
         } else {
           // 新增顾客
           const newCustomer: Add<CustomerRecord> = {
@@ -1131,7 +1126,7 @@ Component({
       try {
         const reserveIds = reserveIdOrIds.includes(',') ? reserveIdOrIds.split(',') : [reserveIdOrIds];
         const records = await Promise.all(
-          reserveIds.map(id => cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, id))
+          reserveIds.map(_id => cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, _id))
         );
         const validRecords = records.filter(r => r !== null) as ReservationRecord[];
 
@@ -1233,7 +1228,7 @@ Component({
         return;
       }
 
-      const success = await this.saveConsultationToCache(consultationInfo, editId);
+      const success = await this.saveConsultation(consultationInfo, editId);
 
       if (success) {
         wx.showToast({
@@ -1289,7 +1284,7 @@ Component({
             endTime,
           };
           const clockInInfo = await this.formatClockInInfo(updatedInfo);
-          const success = await this.saveConsultationToCache(updatedInfo, editId);
+          const success = await this.saveConsultation(updatedInfo, editId);
 
           if (success) {
             wx.setClipboardData({
@@ -1474,22 +1469,6 @@ Component({
       });
     },
 
-    // 清理超过30天的历史数据
-    cleanupOldData(data: DailyConsultations) {
-      const today = new Date();
-      const thirtyDaysAgo = new Date(
-        today.getTime() - 30 * 24 * 60 * 60 * 1000,
-      );
-      const cutoffDate = formatDate(thirtyDaysAgo);
-
-      // 删除超过30天的日期键
-      for (const date in data) {
-        if (date < cutoffDate) {
-          delete data[date];
-        }
-      }
-    },
-
     // 报钟功能
     async onClockIn() {
       const { consultationInfo, isDualMode, guest1Info, guest2Info } = this.data;
@@ -1607,8 +1586,8 @@ Component({
 
       // 保存两条记录
       const [success1, success2] = await Promise.all([
-        this.saveConsultationToCache(info1, editId),
-        this.saveConsultationToCache(info2, editId)
+        this.saveConsultation(info1, editId),
+        this.saveConsultation(info2, editId)
       ]);
 
       if (success1 && success2) {
@@ -1635,44 +1614,6 @@ ${clockInInfo2}`;
         });
       } else {
         wx.showToast({ title: '保存失败', icon: 'error' });
-      }
-    },
-
-    // 更新轮排顺序：将技师移到末尾
-    updateRotationOrder(technicianName: string) {
-      const now = new Date();
-      const today = formatDate(now);
-      const storageKey = `rotation_${today}`;
-
-      let rotation = wx.getStorageSync(storageKey) as string[];
-      if (!rotation || rotation.length === 0) return;
-
-      // 查找技师ID
-      const staff = this.data.technicianList.find(t => t.name === technicianName);
-      if (!staff) return;
-
-      const index = rotation.indexOf(staff.id);
-      if (index !== -1) {
-        // 移除并加到末尾
-        rotation.splice(index, 1);
-        rotation.push(staff.id);
-        wx.setStorageSync(storageKey, rotation);
-      }
-    },
-
-    // 计算技师当日的报钟数量
-    async getTechnicianDailyCount(technician: string): Promise<number> {
-      try {
-        const currentDate = formatDate(new Date());
-        const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(currentDate) as ConsultationRecord[];
-        const count = records.filter(
-          (record: ConsultationRecord) => record.technician === technician && !record.isVoided,
-        ).length;
-        return count + 1;
-
-      } catch (error) {
-        console.error("计算技师报钟数量失败:", error);
-        return 1;
       }
     },
 
@@ -1814,7 +1755,11 @@ ${clockInInfo2}`;
         printDate = new Date(year, month - 1, day);
       }
       content += `打印时间: ${formatTime(printDate, false)}
+
       
+
+
+
 `;
 
       return content;
@@ -1943,7 +1888,7 @@ ${clockInInfo2}`;
 
     // 切换新能源车选项
     toggleNewEnergy() {
-      const { isNewEnergyVehicle, plateNumber, isNoPlate, currentPlatePosition } = this.data;
+      const { isNewEnergyVehicle, plateNumber, currentPlatePosition } = this.data;
       const newIsNewEnergyVehicle = !isNewEnergyVehicle;
 
       let newPlateNumber = [...plateNumber];

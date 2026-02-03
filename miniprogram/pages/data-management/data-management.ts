@@ -195,21 +195,21 @@ Component({
 		async handleDelete(e: WechatMiniprogram.CustomEvent) {
 			const { index } = e.currentTarget.dataset;
 			const { activeTab } = this.data;
-			let id = '';
+			let _id = '';
 			let collectionName = '';
 
 			if (activeTab === 'projects' && this.data.projects[index]) {
-				id = this.data.projects[index]._id;
+				_id = this.data.projects[index]._id;
 				collectionName = Collections.PROJECTS;
 			} else if (activeTab === 'rooms' && this.data.rooms[index]) {
-				id = this.data.rooms[index]._id;
+				_id = this.data.rooms[index]._id;
 				collectionName = Collections.ROOMS;
 			} else if (activeTab === 'oils' && this.data.essentialOils[index]) {
-				id = this.data.essentialOils[index]._id;
+				_id = this.data.essentialOils[index]._id;
 				collectionName = Collections.ESSENTIAL_OILS;
 			}
 
-			if (!id) return;
+			if (!_id) return;
 
 			wx.showModal({
 				title: '确认删除',
@@ -220,7 +220,7 @@ Component({
 					if (res.confirm) {
 						this.setData({ loading: true });
 						try {
-							await cloudDb.deleteById(collectionName, id);
+							await cloudDb.deleteById(collectionName, _id);
 							wx.showToast({ title: '删除成功', icon: 'success' });
 							await this.loadData();
 						} catch (error) {

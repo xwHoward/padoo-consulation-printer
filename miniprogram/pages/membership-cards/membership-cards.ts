@@ -181,7 +181,7 @@ Page({
     try {
       this.setData({ loading: true });
       if (editCard) {
-        const success = await cloudDb.updateById<MembershipCard>(Collections.MEMBERSHIP, editCard.id, cardData);
+        const success = await cloudDb.updateById<MembershipCard>(Collections.MEMBERSHIP, editCard._id, cardData);
         if (success) {
           wx.showToast({ title: '更新成功', icon: 'success' });
           await this.loadCardList();
@@ -213,7 +213,7 @@ Page({
 
     try {
       this.setData({ loading: true });
-      const success = await cloudDb.updateById<MembershipCard>(Collections.MEMBERSHIP, card.id, {
+      const success = await cloudDb.updateById<MembershipCard>(Collections.MEMBERSHIP, card._id, {
         status: newStatus
       });
       if (success) {
@@ -245,7 +245,7 @@ Page({
         if (res.confirm) {
           try {
             this.setData({ loading: true });
-            const success = await cloudDb.deleteById(Collections.MEMBERSHIP, card.id);
+            const success = await cloudDb.deleteById(Collections.MEMBERSHIP, card._id);
             if (success) {
               wx.showToast({ title: '删除成功', icon: 'success' });
               this.loadCardList();

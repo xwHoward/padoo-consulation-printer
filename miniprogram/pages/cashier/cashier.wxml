@@ -30,7 +30,7 @@
             <view class="time-mark" wx:for="{{timeLabels}}" wx:key="*this">{{item}}</view>
           </view>
           <!-- 员工行 -->
-          <view class="staff-timeline-row" wx:for="{{staffTimeline}}" wx:key="id">
+          <view class="staff-timeline-row" wx:for="{{staffTimeline}}" wx:key="_id">
             <view class="staff-name-col">
               <view>{{item.name}}</view>
               <view class="shift-mini-tag {{item.shift}}">
@@ -43,7 +43,7 @@
               <!-- 当前时间线 -->
               <view class="current-time-line" wx:if="{{showCurrentTimeLine}}" style="left: {{currentTimePosition}};"></view>
               <!-- 占用块 -->
-              <view class="time-block {{block.isReservation ? 'reservation' : ''}}" wx:for="{{item.blocks}}" wx:for-item="block" wx:key="startTime" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block.id}}" data-reservation="{{block.isReservation}}">
+              <view class="time-block {{block.isReservation ? 'reservation' : ''}}" wx:for="{{item.blocks}}" wx:for-item="block" wx:key="startTime" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block._id}}" data-reservation="{{block.isReservation}}">
                 <view class="block-content">
                   <view class="block-customer">{{block.customerName}} | {{block.room}}</view>
                   <view class="block-time">{{block.startTime}}-{{block.endTime}}</view>
@@ -75,7 +75,7 @@
     <view class="section">
       <view class="section-title">今日轮牌</view>
       <view class="rotation-list" wx:if="{{rotationList.length > 0}}">
-        <view class="rotation-item" wx:for="{{rotationList}}" wx:key="id">
+        <view class="rotation-item" wx:for="{{rotationList}}" wx:key="_id">
           <view class="rank-num">{{index + 1}}</view>
           <view class="staff-info">
             <view class="staff-name-row">
@@ -104,7 +104,7 @@
 <!-- 预约弹窗 -->
 <view class="modal-mask" wx:if="{{showReserveModal}}" bindtap="closeReserveModal">
   <view class="modal-content" catchtap="stopBubble">
-    <view class="modal-header">{{reserveForm.id ? '编辑预约' : '新增预约'}}</view>
+    <view class="modal-header">{{reserveForm._id ? '编辑预约' : '新增预约'}}</view>
     <view class="modal-body">
       <view class="form-item">
         <view class="form-label">日期</view>

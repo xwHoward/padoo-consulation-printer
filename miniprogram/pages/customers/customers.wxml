@@ -69,7 +69,7 @@
   <view class="form-group">
     <text class="form-label">责任技师</text>
     <view class="technician-selector">
-      <label wx:for="{{technicianList}}" wx:key="id" wx:for-item="tech" class="technician-option {{formResponsibleTechnician === tech.name ? 'selected' : ''}}" bindtap="onTechnicianSelect" data-technician="{{tech.name}}">
+      <label wx:for="{{technicianList}}" wx:key="_id" wx:for-item="tech" class="technician-option {{formResponsibleTechnician === tech.name ? 'selected' : ''}}" bindtap="onTechnicianSelect" data-technician="{{tech.name}}">
         <text>{{tech.name}}</text>
       </label>
     </view>
@@ -103,7 +103,7 @@
   <view class="form-group">
     <text class="form-label">选择会员卡</text>
     <view class="membership-card-selector">
-      <label wx:for="{{membershipCards}}" wx:key="id" wx:for-item="card" class="card-option {{selectedCardId === card.id ? 'selected' : ''}}" bindtap="onCardSelect" data-card="{{card}}">
+      <label wx:for="{{membershipCards}}" wx:key="_id" wx:for-item="card" class="card-option {{selectedCardId === card._id ? 'selected' : ''}}" bindtap="onCardSelect" data-card="{{card}}">
         <view class="card-option-content">
           <view class="card-option-name">{{card.name}}</view>
           <view class="card-option-meta">
@@ -140,7 +140,7 @@
   <view class="form-group">
     <text class="form-label">销售员工</text>
     <view class="technician-selector">
-      <label wx:for="{{technicianList}}" wx:key="id" wx:for-item="tech" class="technician-option {{formSalesStaff === tech.name ? 'selected' : ''}}" bindtap="onSalesStaffSelect" data-staff="{{tech.name}}">
+      <label wx:for="{{technicianList}}" wx:key="_id" wx:for-item="tech" class="technician-option {{formSalesStaff === tech.name ? 'selected' : ''}}" bindtap="onSalesStaffSelect" data-staff="{{tech.name}}">
         <text>{{tech.name}}</text>
       </label>
     </view>
@@ -189,7 +189,7 @@
       <view class="history-title">会员卡</view>
       <view wx:if="{{customerMemberships.length === 0}}" class="empty-history">暂无会员卡</view>
       <view wx:else class="membership-cards-list">
-        <view wx:for="{{customerMemberships}}" wx:key="id" class="membership-card-item {{item.status === 'disabled' ? 'disabled' : ''}}">
+        <view wx:for="{{customerMemberships}}" wx:key="_id" class="membership-card-item {{item.status === 'disabled' ? 'disabled' : ''}}">
           <view class="card-header">
             <view class="card-name">{{item.cardName}}</view>
             <view class="card-status {{item.status === 'active' ? 'active' : 'disabled'}}">
@@ -229,7 +229,7 @@
       <view class="history-title">消费记录</view>
       <view wx:if="{{visitRecords.length === 0}}" class="empty-history">暂无消费记录</view>
       <view wx:else class="history-list">
-        <view wx:for="{{visitRecords}}" wx:key="id" wx:for-index="visitIndex" class="history-item">
+        <view wx:for="{{visitRecords}}" wx:key="_id" wx:for-index="visitIndex" class="history-item">
           <view class="history-header">
             <view class="history-date">{{item.date}}</view>
           </view>

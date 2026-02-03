@@ -71,8 +71,6 @@ Page({
 		const userInfo = authManager.getCurrentUser();
 		const hasIndexPermission = userInfo?.permissions?.canAccessIndex;
 		const hasCashierPermission = userInfo?.permissions?.canAccessCashier;
-		console.log(hasIndexPermission, hasCashierPermission);
-		
 		if (pages.length > 1) {
 			wx.navigateBack();
 		} else if (hasIndexPermission) {

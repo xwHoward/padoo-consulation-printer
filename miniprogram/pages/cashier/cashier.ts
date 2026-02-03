@@ -1,12 +1,12 @@
 // cashier.ts
 import { cloudDb, Collections } from '../../utils/cloud-db';
-import { DEFAULT_SHIFT } from '../../utils/constants';
+import { DEFAULT_SHIFT, ShiftType, SHIFT_START_TIME, SHIFT_END_TIME } from '../../utils/constants';
 import { checkLogin } from '../../utils/auth';
 import { requirePagePermission } from '../../utils/permission';
 import { formatDate, formatDuration, getMinutesDiff, parseProjectDuration } from '../../utils/util';
 
 interface RotationItem {
-	id: string;
+	_id: string;
 	name: string;
 	shift: ShiftType;
 	shiftLabel: string;
@@ -14,7 +14,7 @@ interface RotationItem {
 }
 
 interface TimelineBlock {
-	id: string;
+	_id: string;
 	customerName: string;
 	startTime: string;
 	endTime: string;
@@ -26,7 +26,7 @@ interface TimelineBlock {
 }
 
 interface StaffTimeline {
-	id: string;
+	_id: string;
 	name: string;
 	shift: ShiftType;
 	blocks: TimelineBlock[];
@@ -39,10 +39,10 @@ interface ReserveForm {
 	project: string;
 	phone: string;
 	// 支持多位技师
-	selectedTechnicians: Array<{ id: string; name: string; }>;
+	selectedTechnicians: Array<{ _id: string; name: string; }>;
 	startTime: string;
 	// 编辑时用
-	id?: string;
+	_id?: string;
 	technicianId?: string;
 	technicianName?: string;
 }
@@ -74,13 +74,13 @@ Component({
 		activeStaffList: [] as StaffInfo[],
 		staffAvailability: [] as StaffAvailability[],
 		reserveForm: {
-			id: '', // 新增
+			_id: '', // 新增
 			date: '',
 			customerName: '',
 			gender: 'male' as 'male' | 'female',
 			project: '',
 			phone: '',
-			selectedTechnicians: [] as Array<{ id: string; name: string; }>,
+			selectedTechnicians: [] as Array<{ _id: string; name: string; }>,
 			startTime: '',
 			// 兼容编辑模式
 			technicianId: '',
@@ -211,7 +211,7 @@ Component({
 				const allStaff = await cloudDb.getAll<StaffInfo>(Collections.STAFF);
 				const activeStaffList = allStaff.filter(s => s.status === 'active');
 				const scheduledStaff = allSchedules.map(s => s.staffId);
-				const activeStaff = activeStaffList.filter(s => scheduledStaff.includes(s.id));
+				const activeStaff = activeStaffList.filter(s => scheduledStaff.includes(s._id));
 
 				const savedRotation = wx.getStorageSync(`rotation_${today}`) as string[];
 
@@ -248,20 +248,20 @@ Component({
 				// 转换排钟数据
 				const staffTimeline: StaffTimeline[] = [];
 				const rotationList: RotationItem[] = activeStaff.map(staff => {
-					const schedule = allSchedules.find(s => s.date === today && s.staffId === staff.id);
+					const schedule = allSchedules.find(s => s.date === today && s.staffId === staff._id);
 					const shift = schedule ? schedule.shift : DEFAULT_SHIFT;
 
 					// 过滤出上钟员工
 					if (shift === 'morning' || shift === 'evening') {
 						// 处理排钟表数据 (合并实际报钟和预约)
 						const staffRecords = activeRecords.filter(r => r.technician === staff.name);
-						const staffReservations = reservations.filter(r => r.technicianName === staff.name || r.technicianId === staff.id);
+						const staffReservations = reservations.filter(r => r.technicianName === staff.name || r.technicianId === staff._id);
 
 						// 合并并处理块
 						const blocks: TimelineBlock[] = [
 							...staffRecords.map(r => ({ ...r, isReservation: false })),
 							...staffReservations.map(r => ({
-								id: r.id,
+								_id: r._id,
 								surname: r.customerName,
 								gender: r.gender,
 								project: r.project,
@@ -278,7 +278,7 @@ Component({
 							const duration = (endH - startH) * 60 + (endM - startM);
 
 							return {
-								id: r.id,
+								_id: r._id,
 								customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
 								startTime: r.startTime,
 								endTime: r.endTime,
@@ -291,7 +291,7 @@ Component({
 						});
 
 						staffTimeline.push({
-							id: staff.id,
+							_id: staff._id,
 							name: staff.name,
 							shift: shift as ShiftType,
 							blocks
@@ -299,10 +299,10 @@ Component({
 					}
 
 					// 计算可约时段
-					const availableSlots = this.calculateAvailableSlots(staff.name, activeRecords, reservations, today);
+					const availableSlots = this.calculateAvailableSlots(staff.name, activeRecords, reservations, today, shift);
 
 					return {
-						id: staff.id,
+						_id: staff._id,
 						name: staff.name,
 						shift: shift as ShiftType,
 						shiftLabel: shift === 'morning' ? '早班' : '晚班',
@@ -313,8 +313,8 @@ Component({
 				// 按保存的顺序排序
 				if (savedRotation && savedRotation.length > 0) {
 					const sortFn = (a: any, b: any) => {
-						const idxA = savedRotation.indexOf(a.id);
-						const idxB = savedRotation.indexOf(b.id);
+						const idxA = savedRotation.indexOf(a._id);
+						const idxB = savedRotation.indexOf(b._id);
 						if (idxA === -1) return 1;
 						if (idxB === -1) return -1;
 						return idxA - idxB;
@@ -343,88 +343,85 @@ Component({
 			staffName: string,
 			activeRecords: ConsultationRecord[],
 			reservations: ReservationRecord[],
-			selectedDate: string
+			selectedDate: string,
+			shift: ShiftType
 		): string {
 			const now = new Date();
 			const todayStr = formatDate(now);
 			const isToday = selectedDate === todayStr;
 
-			// 获取该技师的所有占用时段
+			const shiftStart = SHIFT_START_TIME[shift];
+			const shiftEnd = SHIFT_END_TIME[shift];
+
+			if (!shiftStart || !shiftEnd) {
+				return '未排班';
+			}
+
+			const nowHour = now.getHours();
+			const nowMinute = now.getMinutes();
+
+			if (isToday) {
+				const shiftEndHour = parseInt(shiftEnd.substring(0, 2));
+				if (nowHour >= shiftEndHour) {
+					return '已下班';
+				}
+			}
+
 			const staffRecords = activeRecords.filter(r => r.technician === staffName);
 			const staffReservations = reservations.filter(r => r.technicianName === staffName);
 
-			// 合并所有占用时段并排序
 			const occupiedSlots = [...staffRecords, ...staffReservations]
 				.map(r => ({
 					startTime: r.startTime,
 					endTime: r.endTime
 				}))
+				.filter(slot => slot.startTime < shiftEnd && slot.endTime > shiftStart)
 				.sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-			// 如果没有任何占用，返回全天可约
-			if (occupiedSlots.length === 0) {
-				if (isToday) {
-					const currentHour = now.getHours();
-					const currentMinute = now.getMinutes();
-					if (currentHour >= 23) {
-						return '已下班';
-					}
-					if (currentHour < 12) {
-						const duration = getMinutesDiff('12:00', '23:00');
-						return `12:00-23:00(${formatDuration(duration)})`;
-					}
-					// 从下一个半点或整点开始
-					const nextMinute = currentMinute < 30 ? 30 : 0;
-					const nextHour = nextMinute === 0 ? currentHour + 1 : currentHour;
-					const startTimeStr = `${String(nextHour).padStart(2, '0')}:${String(nextMinute).padStart(2, '0')}`;
-					const duration = getMinutesDiff(startTimeStr, '23:00');
-					return `${startTimeStr}-23:00(${formatDuration(duration)})`;
-				}
-				const duration = getMinutesDiff('12:00', '23:00');
-				return `12:00-23:00(${formatDuration(duration)})`;
-			}
-
-			// 查找空闲时段（至少60分钟以上）
 			const availableSlots: string[] = [];
 
-			// 检查第一个占用之前的时间
-			const firstOccupied = occupiedSlots[0];
-			let firstAvailableTime = '12:00';
-
+			let startTime = shiftStart;
 			if (isToday) {
-				const currentHour = now.getHours();
-				const currentMinute = now.getMinutes();
-				if (currentHour >= 23) {
-					return '已下班';
-				}
-				if (currentHour >= 12) {
-					const nextMinute = currentMinute < 30 ? 30 : 0;
-					const nextHour = nextMinute === 0 ? currentHour + 1 : currentHour;
-					firstAvailableTime = `${String(nextHour).padStart(2, '0')}:${String(nextMinute).padStart(2, '0')}`;
+				const shiftStartHour = parseInt(shiftStart.substring(0, 2));
+				const shiftStartMinute = parseInt(shiftStart.substring(3));
+				if (nowHour > shiftStartHour || (nowHour === shiftStartHour && nowMinute >= shiftStartMinute)) {
+					const nextMinute = nowMinute < 30 ? 30 : 60;
+					const nextHour = nextMinute === 60 ? nowHour + 1 : nowHour;
+					if (nextMinute === 60) {
+						startTime = `${String(nextHour).padStart(2, '0')}:00`;
+					} else {
+						startTime = `${String(nextHour).padStart(2, '0')}:${String(nextMinute).padStart(2, '0')}`;
+					}
 				}
 			}
 
-			// 计算第一个空闲时段
-			const gapMinutes = getMinutesDiff(firstAvailableTime, firstOccupied.startTime);
-			if (gapMinutes >= 60) {
-				availableSlots.push(`${firstAvailableTime}-${firstOccupied.startTime}(${formatDuration(gapMinutes)})`);
+			if (occupiedSlots.length === 0) {
+				if (startTime >= shiftEnd) {
+					return '已满';
+				}
+				const duration = getMinutesDiff(startTime, shiftEnd);
+				return `${startTime}-${shiftEnd}(${formatDuration(duration)})`;
 			}
 
-			// 检查占用时段之间的空闲时间
-			for (let i = 0; i < occupiedSlots.length - 1; i++) {
-				const current = occupiedSlots[i];
-				const next = occupiedSlots[i + 1];
-				const gap = getMinutesDiff(current.endTime, next.startTime);
+			for (let i = 0; i <= occupiedSlots.length; i++) {
+				const slotEnd = i === 0 ? startTime : occupiedSlots[i - 1].endTime;
+				const slotStart = i === occupiedSlots.length ? shiftEnd : occupiedSlots[i].startTime;
+
+				if (slotEnd >= shiftEnd) {
+					break;
+				}
+
+				const actualStart = slotEnd < startTime ? startTime : slotEnd;
+				const actualEnd = slotStart > shiftEnd ? shiftEnd : slotStart;
+
+				if (actualStart >= actualEnd) {
+					continue;
+				}
+
+				const gap = getMinutesDiff(actualStart, actualEnd);
 				if (gap >= 60) {
-					availableSlots.push(`${current.endTime}-${next.startTime}(${formatDuration(gap)})`);
+					availableSlots.push(`${actualStart}-${actualEnd}(${formatDuration(gap)})`);
 				}
-			}
-
-			// 检查最后一个占用之后的时间
-			const lastOccupied = occupiedSlots[occupiedSlots.length - 1];
-			const lastGap = getMinutesDiff(lastOccupied.endTime, '23:00');
-			if (lastGap >= 60) {
-				availableSlots.push(`${lastOccupied.endTime}-23:00(${formatDuration(lastGap)})`);
 			}
 
 			if (availableSlots.length === 0) {
@@ -484,7 +481,7 @@ Component({
 
 			// 持久化顺序
 			const today = this.data.selectedDate || formatDate(new Date());
-			wx.setStorageSync(`rotation_${today}`, list.map(item => item.id));
+			wx.setStorageSync(`rotation_${today}`, list.map(item => item._id));
 		},
 
 		// 预约相关
@@ -506,7 +503,7 @@ Component({
 			this.setData({
 				showReserveModal: true,
 				reserveForm: {
-					id: '', // 重置 ID
+					_id: '', // 重置 ID
 					date: this.data.selectedDate || formatDate(new Date()),
 					customerName: '',
 					gender: 'male',
@@ -523,7 +520,7 @@ Component({
 
 		// 点击排钟项目操作
 		onBlockClick(e: WechatMiniprogram.CustomEvent) {
-			const { id, reservation } = e.currentTarget.dataset;
+			const { id: _id, reservation } = e.currentTarget.dataset;
 			const itemList = reservation ? ['编辑', '到店', '取消预约'] : ['编辑', '结算'];
 
 			wx.showActionSheet({
@@ -532,16 +529,16 @@ Component({
 					const action = itemList[res.tapIndex];
 					if (action === '编辑') {
 						if (reservation) {
-							this.editReservation(id);
+							this.editReservation(_id);
 						} else {
-							wx.navigateTo({ url: `/pages/index/index?editId=${id}` });
+							wx.navigateTo({ url: `/pages/index/index?editId=${_id}` });
 						}
 					} else if (action === '到店') {
-						this.handleArrival(id);
+						this.handleArrival(_id);
 					} else if (action === '取消预约') {
-						this.cancelReservation(id);
+						this.cancelReservation(_id);
 					} else if (action === '结算') {
-						this.openSettlement(id);
+						this.openSettlement(_id);
 					}
 				}
 			});
@@ -565,7 +562,7 @@ Component({
 				});
 
 				if (reservations.length > 1) {
-					const reserveIds = reservations.map(r => r.id).join(',');
+					const reserveIds = reservations.map(r => r._id).join(',');
 					wx.navigateTo({ url: `/pages/index/index?reserveIds=${reserveIds}` });
 				} else {
 					wx.navigateTo({ url: `/pages/index/index?reserveId=${reserveId}` });
@@ -579,19 +576,19 @@ Component({
 		},
 
 		// 编辑预约
-		async editReservation(id: string) {
+		async editReservation(_id: string) {
 			this.setData({ loading: true, loadingText: '加载中...' });
 			try {
-				const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, id);
+				const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, _id);
 				if (record) {
-					const selectedTechnicians: Array<{ id: string; name: string; }> = [];
+					const selectedTechnicians: Array<{ _id: string; name: string; }> = [];
 					if (record.technicianId && record.technicianName) {
-						selectedTechnicians.push({ id: record.technicianId, name: record.technicianName });
+						selectedTechnicians.push({ _id: record.technicianId, name: record.technicianName });
 					}
 					this.setData({
 						showReserveModal: true,
 						reserveForm: {
-							id: record.id,
+							_id: record._id,
 							date: record.date,
 							customerName: record.customerName,
 							gender: record.gender,
@@ -643,11 +640,11 @@ Component({
 				if (res.result.code === 0) {
 					const list = res.result.data as StaffAvailability[];
 
-					const selectedTechnicianIds = this.data.reserveForm.selectedTechnicians.map(t => t.id);
+					const selectedTechnicianIds = this.data.reserveForm.selectedTechnicians.map(t => t._id);
 
 					const staffAvailability = list.map(staff => ({
 						...staff,
-						isSelected: selectedTechnicianIds.includes(staff.id)
+						isSelected: selectedTechnicianIds.includes(staff._id)
 					}));
 
 					this.setData({ staffAvailability });
@@ -700,7 +697,7 @@ Component({
 		},
 
 		selectReserveTechnician(e: WechatMiniprogram.CustomEvent) {
-			const { id, technician: name, occupied, reason } = e.detail;
+			const { _id, technician: name, occupied, reason } = e.detail;
 			if (occupied) {
 				wx.showToast({ title: reason || '该技师在此时段已有安排', icon: 'none', duration: 2500 });
 				return;
@@ -708,20 +705,20 @@ Component({
 
 			// 多选逻辑：切换选中状态
 			const selectedTechnicians = [...this.data.reserveForm.selectedTechnicians];
-			const existingIndex = selectedTechnicians.findIndex(t => t.id === id);
+			const existingIndex = selectedTechnicians.findIndex(t => t._id === _id);
 
 			if (existingIndex !== -1) {
 				// 已选中，取消选择
 				selectedTechnicians.splice(existingIndex, 1);
 			} else {
 				// 未选中，添加
-				selectedTechnicians.push({ id, name });
+				selectedTechnicians.push({ _id, name });
 			}
 
 			// 更新 staffAvailability 的 isSelected 状态
 			const staffAvailability = this.data.staffAvailability.map(staff => ({
 				...staff,
-				isSelected: selectedTechnicians.some(t => t.id === staff.id)
+				isSelected: selectedTechnicians.some(t => t._id === staff._id)
 			}));
 
 			this.setData({
@@ -817,10 +814,10 @@ Component({
 				if (staffAvailability && staffAvailability.length > 0) {
 					const matchedStaff = staffAvailability.find(s => s.name === technicianName);
 					if (matchedStaff) {
-						updates['reserveForm.selectedTechnicians'] = [{ id: matchedStaff.id, name: matchedStaff.name }];
+						updates['reserveForm.selectedTechnicians'] = [{ _id: matchedStaff._id, name: matchedStaff.name }];
 						const updatedStaffAvailability = staffAvailability.map(s => ({
 							...s,
-							isSelected: s.id === matchedStaff.id
+							isSelected: s._id === matchedStaff._id
 						}));
 						updates['staffAvailability'] = updatedStaffAvailability;
 					}
@@ -871,20 +868,20 @@ Component({
 				const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 
 				// 如果是编辑模式，只更新第一个技师
-				if (reserveForm.id) {
+				if (reserveForm._id) {
 					const firstTech = reserveForm.selectedTechnicians[0];
-					const record: Omit<ReservationRecord, 'id' | 'createdAt' | 'updatedAt' | '_id'> = {
+					const record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'> = {
 						date: reserveForm.date,
 						customerName: reserveForm.customerName || '',
 						gender: reserveForm.gender,
 						phone: reserveForm.phone,
 						project: reserveForm.project || '待定',
-						technicianId: firstTech?.id || '',
+						technicianId: firstTech?._id || '',
 						technicianName: firstTech?.name || '',
 						startTime: reserveForm.startTime,
 						endTime: endTime
 					};
-					const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm.id, record);
+					const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
 					if (success) {
 						wx.showToast({ title: '更新成功', icon: 'success' });
 						this.closeReserveModal();
@@ -900,7 +897,7 @@ Component({
 
 				// 如果没有选择技师，也允许创建一条预约（技师待定）
 				if (technicians.length === 0) {
-					const record: Omit<ReservationRecord, 'id' | 'createdAt' | 'updatedAt' | '_id'> = {
+					const record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'> = {
 						date: reserveForm.date,
 						customerName: reserveForm.customerName || '',
 						gender: reserveForm.gender,
@@ -925,13 +922,13 @@ Component({
 				// 为每位技师创建预约
 				let successCount = 0;
 				for (const tech of technicians) {
-					const record: Omit<ReservationRecord, 'id' | 'createdAt' | 'updatedAt' | '_id'> = {
+					const record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'> = {
 						date: reserveForm.date,
 						customerName: reserveForm.customerName || '',
 						gender: reserveForm.gender,
 						phone: reserveForm.phone,
 						project: reserveForm.project || '待定',
-						technicianId: tech.id,
+						technicianId: tech._id,
 						technicianName: tech.name,
 						startTime: reserveForm.startTime,
 						endTime: endTime
@@ -959,7 +956,7 @@ Component({
 		},
 
 		// 取消预约
-		async cancelReservation(id: string) {
+		async cancelReservation(_id: string) {
 			wx.showModal({
 				title: '确认取消',
 				content: '确定要取消此预约吗？',
@@ -969,7 +966,7 @@ Component({
 					if (res.confirm) {
 						this.setData({ loading: true, loadingText: '取消中...' });
 						try {
-							const success = await cloudDb.deleteById(Collections.RESERVATIONS, id);
+							const success = await cloudDb.deleteById(Collections.RESERVATIONS, _id);
 							if (success) {
 								wx.showToast({ title: '已取消预约', icon: 'success' });
 								await this.loadData();
@@ -988,11 +985,11 @@ Component({
 		},
 
 		// 打开结算弹窗
-		async openSettlement(id: string) {
+		async openSettlement(_id: string) {
 			try {
 				const today = this.data.selectedDate || formatDate(new Date());
 				const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
-				const record = records.find(r => r.id === id) || null;
+				const record = records.find(r => r._id === _id) || null;
 
 				if (!record) {
 					wx.showToast({ title: '未找到该单据', icon: 'none' });
@@ -1005,12 +1002,12 @@ Component({
 						content: '该单据已经结算，是否重新结算？',
 						success: (res) => {
 							if (res.confirm) {
-								this.loadSettlement(id, record);
+								this.loadSettlement(_id, record);
 							}
 						}
 					});
 				} else {
-					this.loadSettlement(id, record);
+					this.loadSettlement(_id, record);
 				}
 			} catch (error) {
 				console.error('打开结算失败:', error);
@@ -1019,7 +1016,7 @@ Component({
 		},
 
 		// 加载结算信息
-		loadSettlement(id: string, record: ConsultationRecord) {
+		loadSettlement(_id: string, record: ConsultationRecord) {
 			const app = getApp<IAppOption>();
 			const projects = app.globalData.projects || [];
 			const currentProject = projects.find((p: Project) => p.name === record.project);
@@ -1057,7 +1054,7 @@ Component({
 
 			this.setData({
 				showSettlementModal: true,
-				settlementRecordId: id,
+				settlementRecordId: _id,
 				settlementCouponCode: record.settlement?.couponCode || record.couponCode || '',
 				projectOriginalPrice: originalPrice,
 				paymentMethods
@@ -1155,7 +1152,7 @@ Component({
 			try {
 				const today = this.data.selectedDate || formatDate(new Date());
 				const allRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
-				const target = allRecords.find(r => r.id === settlementRecordId);
+				const target = allRecords.find(r => r._id === settlementRecordId);
 
 				if (!target) {
 					wx.showToast({ title: '未找到该单据', icon: 'none' });
@@ -1211,7 +1208,7 @@ Component({
 						return;
 					}
 
-					await cloudDb.updateById<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, customerMembership.id, {
+					await cloudDb.updateById<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, customerMembership._id, {
 						remainingTimes: newRemaining
 					});
 
@@ -1223,7 +1220,7 @@ Component({
 						project: target.project,
 						technician: target.technician,
 						room: target.room,
-						consultationId: target.id
+						consultationId: target._id
 					});
 				}
 
