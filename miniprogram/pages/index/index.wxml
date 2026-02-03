@@ -89,7 +89,7 @@
     <view class="section">
       <view class="section-title">免费停车</view>
       <view class="parking-form">
-        <view class="form-item">
+        <view class="form-item" style="flex-wrap: wrap;">
           <text class="form-label">车牌号</text>
           <view class="plate-input-container" bindtap="showPlateInputModal">
             <view class="plate-inputs">
@@ -215,50 +215,10 @@
   </view>
 </view>
 <!-- 车牌号输入弹窗 -->
-<view class="modal-mask" wx:if="{{licensePlateInputVisible}}" bindtap="hidePlateInputModal"></view>
-<view class="plate-modal" wx:if="{{licensePlateInputVisible}}">
-  <view class="modal-header">
-    <text class="modal-title">输入车牌号</text>
-    <text class="modal-close" bindtap="hidePlateInputModal">✕</text>
-  </view>
-
-  <!-- 实时显示已输入车牌号 -->
-  <view class="plate-display">
-    <view class="plate-display-inputs">
-      <view class="plate-display-input {{isNoPlate && index === 0 ? 'fixed' : ''}}" wx:for="{{plateNumber}}" wx:key="index">
-        {{item || ''}}
-      </view>
-          <label class="option-item {{isNewEnergyVehicle ? 'selected' : ''}}" bindtap="toggleNewEnergy">
-      <text>新能源车</text>
-    </label>
-    <label class="option-item {{isNoPlate ? 'selected' : ''}}" bindtap="toggleNoPlate">
-      <text>无牌车</text>
-    </label>
-    </view>
-  </view>
-  
-  <!-- 省份选择 -->
-  <view wx:if="{{currentPlatePosition === 0 && !isNoPlate}}" class="plate-keyboard">
-    <view class="keyboard-row">
-      <block wx:for="{{provinceCodes}}" wx:key="index">
-        <view class="key" bindtap="selectProvince" data-province="{{item}}">{{item}}</view>
-      </block>
-    </view>
-  </view>
-  
-  <!-- 字符选择 -->
-  <view wx:if="{{currentPlatePosition > 0 && currentPlatePosition < (isNewEnergyVehicle ? 8 : 7)}}" class="plate-keyboard">
-    <view class="keyboard-row">
-      <block wx:for="{{plateCharacters}}" wx:key="index">
-        <view class="key" bindtap="selectCharacter" data-char="{{item}}">{{item}}</view>
-      </block>
-    </view>
-  </view>
-  
-  <!-- 删除按钮 -->
-  <view class="modal-footer">
-    <button class="modal-btn delete-btn" bindtap="deletePlateChar">删除</button>
-    <button class="modal-btn cancel-btn" bindtap="resetPlateInput">清空</button>
-    <button class="modal-btn confirm-btn" bindtap="confirmPlateInput">确认</button>
-  </view>
-</view>
+<license-plate-input
+  visible="{{licensePlateInputVisible}}"
+  value="{{licensePlate}}"
+  bind:cancel="hidePlateInputModal"
+  bind:confirm="onPlateConfirm"
+  bind:change="onPlateTypeChange"
+/>

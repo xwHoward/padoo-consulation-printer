@@ -1,0 +1,45 @@
+<view class="modal-mask" wx:if="{{visible}}" bindtap="onMaskTap"></view>
+<view class="plate-modal" wx:if="{{visible}}">
+  <view class="modal-header">
+    <text class="modal-title">输入车牌号</text>
+    <text class="modal-close" bindtap="onMaskTap">✕</text>
+  </view>
+
+  <view class="plate-display">
+    <view class="plate-display-inputs">
+      <view class="plate-display-input {{isNoPlate && index === 0 ? 'fixed' : ''}}" wx:for="{{plateNumber}}" wx:key="index">
+        {{item || ''}}
+      </view>
+    </view>
+    <view class="plate-options">
+      <label class="option-item {{isNewEnergyVehicle ? 'selected' : ''}}" bindtap="toggleNewEnergy">
+        <text>新能源车</text>
+      </label>
+      <label class="option-item {{isNoPlate ? 'selected' : ''}}" bindtap="toggleNoPlate">
+        <text>无牌车</text>
+      </label>
+    </view>
+  </view>
+  
+  <view wx:if="{{currentPlatePosition === 0 && !isNoPlate}}" class="plate-keyboard">
+    <view class="keyboard-row">
+      <block wx:for="{{provinceCodes}}" wx:key="index">
+        <view class="key" bindtap="selectProvince" data-province="{{item}}">{{item}}</view>
+      </block>
+    </view>
+  </view>
+  
+  <view wx:if="{{currentPlatePosition > 0 && currentPlatePosition < (isNewEnergyVehicle ? 8 : 7)}}" class="plate-keyboard">
+    <view class="keyboard-row">
+      <block wx:for="{{plateCharacters}}" wx:key="index">
+        <view class="key" bindtap="selectCharacter" data-char="{{item}}">{{item}}</view>
+      </block>
+    </view>
+  </view>
+  
+  <view class="modal-footer">
+    <button class="modal-btn delete-btn" bindtap="deletePlateChar">删除</button>
+    <button class="modal-btn cancel-btn" bindtap="resetPlateInput">清空</button>
+    <button class="modal-btn confirm-btn" bindtap="confirmPlateInput">确认</button>
+  </view>
+</view>

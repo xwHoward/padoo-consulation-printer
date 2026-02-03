@@ -3,7 +3,8 @@ import { checkLogin } from "../../utils/auth";
 import { requirePagePermission } from "../../utils/permission";
 import { calculateOvertimeUnits, calculateProjectEndTime, formatDate, formatTime, parseProjectDuration, SHIFT_END_TIMES } from "../../utils/util";
 import { showValidationError, validateConsultationForPrint } from "../../utils/validators";
-const GBK = require("gbk.js");
+import { printerService } from "../../services/printer-service";
+import { printContentBuilder } from "../../services/print-content-builder";
 
 const DefaultConsultationInfo: Add<ConsultationInfo> = {
   surname: "",
@@ -103,10 +104,6 @@ Component({
   data: {
     projects: [] as Project[],
     consultationInfo: { ...DefaultConsultationInfo, selectedParts: {} },
-    isPrinterConnected: false,
-    printerDeviceId: "",
-    printerServiceId: "",
-    printerCharacteristicId: "",
     editId: "", // 正在编辑的记录ID
     technicianList: [] as StaffAvailability[], // 动态技师列表
     currentReservationIds: [] as string[], // 当前加载的预约ID列表（用于冲突检查时排除）
@@ -133,15 +130,8 @@ Component({
     selectedHour: 0,
     selectedMinute: 0,
     licensePlate: '',
-    isNewEnergyVehicle: false,
-    isNoPlate: false,
     licensePlateInputVisible: false,
-    currentPlatePosition: 0,
-    plateNumber: ['', '', '', '', '', '', '', ''],
-    // 车牌号省份代码
-    provinceCodes: ['京', '津', '冀', '晋', '蒙', '辽', '吉', '黑', '沪', '苏', '浙', '皖', '闽', '赣', '鲁', '豫', '鄂', '湘', '粤', '桂', '琼', '川', '黔', '滇', '藏', '陕', '甘', '青', '宁', '新', '渝', '使', '临'],
-    // 车牌号字符
-    plateCharacters: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Z', 'X', 'C', 'V', 'B', 'N', 'M']
+    plateNumber: ['', '', '', '', '', '', '', '']
   },
 
   lifetimes: {
@@ -500,381 +490,69 @@ Component({
       }
     },
 
-    // 连接蓝牙打印机
-    connectBluetooth() {
-      wx.showLoading({
-        title: "正在搜索打印机...",
-      });
+    // 打印咨询单
+    async printConsultation() {
+      const { isDualMode, consultationInfo, guest1Info, guest2Info, projects } = this.data;
 
-      // 初始化蓝牙适配器
-      wx.openBluetoothAdapter({
-        success: () => {
-          // 开始搜索蓝牙设备
-          wx.startBluetoothDevicesDiscovery({
-            services: [],
-            success: () => {
-              // 监听发现蓝牙设备
-              wx.onBluetoothDeviceFound((res) => {
-                const devices = res.devices;
-                devices.forEach((device) => {
-                  // 这里可以根据设备名称筛选打印机
-                  if (
-                    device.name &&
-                    (device.name.includes("Printer") ||
-                      device.name.includes("打印机"))
-                  ) {
-                    // 停止搜索
-                    wx.stopBluetoothDevicesDiscovery();
-
-                    // 连接设备
-                    this.connectToDevice(device.deviceId);
-                  }
-                });
-              });
-            },
-            fail: (err) => {
-              wx.hideLoading();
-              wx.showToast({
-                title: "搜索蓝牙设备失败",
-                icon: "none",
-              });
-              console.error("搜索蓝牙设备失败:", err);
-            },
-          });
-        },
-        fail: (err) => {
-          wx.hideLoading();
-          wx.showToast({
-            title: "蓝牙初始化失败",
-            icon: "none",
-          });
-          console.error("蓝牙初始化失败:", err);
-        },
-      });
-    },
-
-    // 连接到蓝牙设备
-    connectToDevice(deviceId: string) {
-      wx.createBLEConnection({
-        deviceId,
-        success: () => {
-          this.setData({
-            isPrinterConnected: true,
-            printerDeviceId: deviceId,
-          });
-
-          // 获取设备服务
-          this.getDeviceServices(deviceId);
-        },
-        fail: (err) => {
-          wx.hideLoading();
-          wx.showToast({
-            title: "连接打印机失败",
-            icon: "none",
-          });
-          console.error("连接打印机失败:", err);
-        },
-      });
-    },
-
-    // 获取设备服务
-    getDeviceServices(deviceId: string) {
-      wx.getBLEDeviceServices({
-        deviceId,
-        success: (res) => {
-          const serviceId = res.services[0].uuid;
-          this.setData({
-            printerServiceId: serviceId,
-          });
-
-          // 获取服务特征
-          this.getDeviceCharacteristics(deviceId, serviceId);
-        },
-        fail: (err) => {
-          wx.hideLoading();
-          console.error("获取设备服务失败:", err);
-        },
-      });
-    },
-
-    // 获取服务特征
-    getDeviceCharacteristics(deviceId: string, serviceId: string) {
-      wx.getBLEDeviceCharacteristics({
-        deviceId,
-        serviceId,
-        success: (res) => {
-          res.characteristics.forEach((char) => {
-            if (char.properties.write) {
-              this.setData({
-                printerCharacteristicId: char.uuid,
-              });
-
-              wx.hideLoading();
-              wx.showToast({
-                title: "打印机连接成功",
-                icon: "success",
-              });
-            }
-          });
-        },
-        fail: (err) => {
-          wx.hideLoading();
-          console.error("获取服务特征失败:", err);
-        },
-      });
-    },
-
-    // 打印咨询单（自动连接打印机）
-    printConsultation() {
-      const { isDualMode, consultationInfo, guest1Info, guest2Info } = this.data;
-
-      const validationResult = validateConsultationForPrint(consultationInfo, isDualMode, guest1Info, guest2Info);
+      const validationResult = validateConsultationForPrint(consultationInfo, this.data.currentProjectIsEssentialOilOnly, isDualMode, guest1Info, guest2Info);
       if (!showValidationError(validationResult)) {
         return;
       }
 
-      const { printerDeviceId, printerServiceId, printerCharacteristicId } = this.data;
+      try {
+        const printContents: string[] = [];
 
-      // 检查是否已连接打印机
-      if (!printerDeviceId || !printerServiceId || !printerCharacteristicId) {
-        // 未连接，自动连接打印机
-        this.connectAndPrint();
-      } else {
-        // 已连接，直接打印
-        this.doPrint();
-      }
-    },
+        if (isDualMode) {
+          const guest1Project = projects.find((p) => p.name === guest1Info.project);
+          const guest1IsEssentialOilOnly = guest1Project?.isEssentialOilOnly || false;
 
-    // 自动连接打印机并打印
-    connectAndPrint() {
-      wx.showLoading({
-        title: "正在连接打印机...",
-      });
+          const guest2Project = projects.find((p) => p.name === guest2Info.project);
+          const guest2IsEssentialOilOnly = guest2Project?.isEssentialOilOnly || false;
 
-      // 初始化蓝牙适配器
-      wx.openBluetoothAdapter({
-        success: () => {
-          // 开始搜索蓝牙设备
-          wx.startBluetoothDevicesDiscovery({
-            services: [],
-            success: () => {
-              // 监听发现蓝牙设备
-              wx.onBluetoothDeviceFound((res) => {
-                const devices = res.devices;
-                devices.forEach((device) => {
-                  // 这里可以根据设备名称筛选打印机
-                  if (
-                    device.name &&
-                    (device.name.includes("Printer") ||
-                      device.name.includes("打印机"))
-                  ) {
-                    // 停止搜索
-                    wx.stopBluetoothDevicesDiscovery();
-                    // 移除监听器
-                    wx.offBluetoothDeviceFound();
+          const info1: Add<ConsultationInfo> = {
+            ...consultationInfo,
+            surname: guest1Info.surname,
+            gender: guest1Info.gender,
+            project: guest1Info.project,
+            selectedParts: guest1Info.selectedParts,
+            massageStrength: guest1Info.massageStrength,
+            essentialOil: guest1Info.essentialOil,
+            remarks: guest1Info.remarks,
+            technician: guest1Info.technician,
+            isClockIn: guest1Info.isClockIn,
+            couponCode: guest1Info.couponCode,
+            couponPlatform: guest1Info.couponPlatform,
+          };
+          printContents.push(await printContentBuilder.buildContent({ info: info1, isEssentialOilOnly: guest1IsEssentialOilOnly }));
 
-                    // 连接设备
-                    this.connectToDeviceWithPrint(device.deviceId);
-                  }
-                });
-              });
-            },
-            fail: (err) => {
-              wx.hideLoading();
-              wx.showToast({
-                title: "搜索蓝牙设备失败",
-                icon: "none",
-              });
-              console.error("搜索蓝牙设备失败:", err);
-            },
-          });
-        },
-        fail: (err) => {
-          wx.hideLoading();
-          wx.showToast({
-            title: "蓝牙初始化失败",
-            icon: "none",
-          });
-          console.error("蓝牙初始化失败:", err);
-        },
-      });
-    },
-
-    // 连接设备并打印
-    connectToDeviceWithPrint(deviceId: string) {
-      wx.createBLEConnection({
-        deviceId,
-        success: () => {
-          this.setData({
-            isPrinterConnected: true,
-            printerDeviceId: deviceId,
-          });
-
-          // 获取设备服务
-          this.getDeviceServicesForPrint(deviceId);
-        },
-        fail: (err) => {
-          wx.hideLoading();
-          wx.showToast({
-            title: "连接打印机失败",
-            icon: "none",
-          });
-          console.error("连接打印机失败:", err);
-        },
-      });
-    },
-
-    // 获取设备服务并打印
-    getDeviceServicesForPrint(deviceId: string) {
-      wx.getBLEDeviceServices({
-        deviceId,
-        success: (res) => {
-          const serviceId = res.services[0].uuid;
-          this.setData({
-            printerServiceId: serviceId,
-          });
-
-          // 获取服务特征
-          this.getDeviceCharacteristicsForPrint(deviceId, serviceId);
-        },
-        fail: (err) => {
-          wx.hideLoading();
-          console.error("获取设备服务失败:", err);
-          wx.showToast({
-            title: "获取服务失败",
-            icon: "none",
-          });
-        },
-      });
-    },
-
-    // 获取服务特征并打印
-    getDeviceCharacteristicsForPrint(deviceId: string, serviceId: string) {
-      wx.getBLEDeviceCharacteristics({
-        deviceId,
-        serviceId,
-        success: (res) => {
-          res.characteristics.forEach((char) => {
-            if (char.properties.write) {
-              this.setData({
-                printerCharacteristicId: char.uuid,
-              });
-
-              wx.hideLoading();
-              // 连接成功，执行打印
-              this.doPrint();
-            }
-          });
-        },
-        fail: (err) => {
-          wx.hideLoading();
-          console.error("获取服务特征失败:", err);
-          wx.showToast({
-            title: "获取特征失败",
-            icon: "none",
-          });
-        },
-      });
-    },
-
-    // 执行实际的打印操作
-    async doPrint() {
-      const { isDualMode, guest1Info, guest2Info, consultationInfo, printerDeviceId, printerServiceId, printerCharacteristicId, projects, currentProjectIsEssentialOilOnly } = this.data;
-
-      // 双人模式下构建两份打印内容
-      let printContents: string[] = [];
-      if (isDualMode) {
-        // 获取顾客1项目是否为专用精油
-        const guest1Project = projects.find((p) => p.name === guest1Info.project);
-        const guest1IsEssentialOilOnly = guest1Project?.isEssentialOilOnly || false;
-
-        // 获取顾客2项目是否为专用精油
-        const guest2Project = projects.find((p) => p.name === guest2Info.project);
-        const guest2IsEssentialOilOnly = guest2Project?.isEssentialOilOnly || false;
-
-        // 顾客1打印内容（使用顾客1的项目、技师、点钟、券码）
-        const info1: Add<ConsultationInfo> = {
-          ...consultationInfo,
-          surname: guest1Info.surname,
-          gender: guest1Info.gender,
-          project: guest1Info.project,
-          selectedParts: guest1Info.selectedParts,
-          massageStrength: guest1Info.massageStrength,
-          essentialOil: guest1Info.essentialOil,
-          remarks: guest1Info.remarks,
-          technician: guest1Info.technician,
-          isClockIn: guest1Info.isClockIn,
-          couponCode: guest1Info.couponCode,
-          couponPlatform: guest1Info.couponPlatform,
-        };
-        printContents.push(await this.buildPrintContent(info1, guest1IsEssentialOilOnly));
-
-        // 顾客2打印内容（使用顾客2的项目、技师、点钟、券码）
-        const info2: Add<ConsultationInfo> = {
-          ...consultationInfo,
-          surname: guest2Info.surname,
-          gender: guest2Info.gender,
-          project: guest2Info.project,
-          selectedParts: guest2Info.selectedParts,
-          massageStrength: guest2Info.massageStrength,
-          essentialOil: guest2Info.essentialOil,
-          remarks: guest2Info.remarks,
-          technician: guest2Info.technician,
-          isClockIn: guest2Info.isClockIn,
-          couponCode: guest2Info.couponCode,
-          couponPlatform: guest2Info.couponPlatform,
-        };
-        printContents.push(await this.buildPrintContent(info2, guest2IsEssentialOilOnly));
-      } else {
-        printContents.push(await this.buildPrintContent(consultationInfo, currentProjectIsEssentialOilOnly));
-      }
-
-      // 顺序打印所有内容
-      this.printMultiple(printContents, printerDeviceId, printerServiceId, printerCharacteristicId);
-    },
-
-    // 顺序打印多份内容
-    printMultiple(contents: string[], deviceId: string, serviceId: string, characteristicId: string, index: number = 0) {
-      if (index >= contents.length) {
-        const msg = contents.length > 1 ? `已打印${contents.length}张单据` : '打印成功';
-        wx.showToast({ title: msg, icon: 'success' });
-        return;
-      }
-
-      const printContent = contents[index];
-      const uint8Array = new Uint8Array(GBK.encode(printContent));
-      const chunkSize = 20;
-      let offset = 0;
-
-      const writeNextChunk = () => {
-        if (offset >= uint8Array.length) {
-          // 当前单据打印完成，打印下一份
-          setTimeout(() => {
-            this.printMultiple(contents, deviceId, serviceId, characteristicId, index + 1);
-          }, 500); // 两张单据间隔500ms
-          return;
+          const info2: Add<ConsultationInfo> = {
+            ...consultationInfo,
+            surname: guest2Info.surname,
+            gender: guest2Info.gender,
+            project: guest2Info.project,
+            selectedParts: guest2Info.selectedParts,
+            massageStrength: guest2Info.massageStrength,
+            essentialOil: guest2Info.essentialOil,
+            remarks: guest2Info.remarks,
+            technician: guest2Info.technician,
+            isClockIn: guest2Info.isClockIn,
+            couponCode: guest2Info.couponCode,
+            couponPlatform: guest2Info.couponPlatform,
+          };
+          printContents.push(await printContentBuilder.buildContent({ info: info2, isEssentialOilOnly: guest2IsEssentialOilOnly }));
+        } else {
+          const { currentProjectIsEssentialOilOnly } = this.data;
+          printContents.push(await printContentBuilder.buildContent({ info: consultationInfo, isEssentialOilOnly: currentProjectIsEssentialOilOnly }));
         }
 
-        const end = Math.min(offset + chunkSize, uint8Array.length);
-        const chunk = uint8Array.slice(offset, end).buffer;
-
-        wx.writeBLECharacteristicValue({
-          deviceId,
-          serviceId,
-          characteristicId,
-          value: chunk,
-          success: () => {
-            offset += chunkSize;
-            setTimeout(writeNextChunk, 20);
-          },
-          fail: (err) => {
-            wx.showToast({ title: '打印失败', icon: 'none' });
-            console.error('分片打印失败:', err);
-          },
+        await printerService.printMultiple(printContents);
+      } catch (error) {
+        wx.showToast({
+          title: "打印失败",
+          icon: "none",
         });
-      };
-
-      writeNextChunk();
+        console.error("打印失败:", error);
+      }
     },
 
     // 刷新表单内容
@@ -898,8 +576,6 @@ Component({
               guest2Info: { ...DefaultGuestInfo, selectedParts: {} },
               // 重置车牌号相关数据
               licensePlate: '',
-              isNewEnergyVehicle: false,
-              isNoPlate: false,
               plateNumber: ['', '', '', '', '', '', '', ''],
               // 重置顾客匹配相关数据
               matchedCustomer: null,
@@ -1044,7 +720,7 @@ Component({
 
         // 检查是否已存在该手机号的顾客
         const existingCustomers = await cloudDb.find<CustomerRecord>(Collections.CUSTOMERS, { phone });
-        
+
         const customerData: Update<CustomerRecord> = {
           phone: phone,
           name: consultation.surname + (consultation.gender === 'male' ? '先生' : '女士'),
@@ -1089,10 +765,9 @@ Component({
 
           if (foundRecord.licensePlate) {
             updateData.licensePlate = foundRecord.licensePlate;
-            updateData.isNewEnergyVehicle = foundRecord.licensePlate.length === 8;
-            updateData.isNoPlate = foundRecord.licensePlate.startsWith('临');
 
-            const maxPlateLength = updateData.isNewEnergyVehicle ? 8 : 7;
+            const isNewEnergyVehicle = foundRecord.licensePlate.length === 8;
+            const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
             const plateNumber = Array(maxPlateLength).fill('');
             const plateChars = foundRecord.licensePlate.split('');
             plateChars.forEach((char, index) => {
@@ -1399,10 +1074,9 @@ Component({
         // 应用车牌号信息
         if (matchedCustomer.licensePlate) {
           updates['licensePlate'] = matchedCustomer.licensePlate;
-          updates['isNewEnergyVehicle'] = matchedCustomer.licensePlate.length === 8;
-          updates['isNoPlate'] = matchedCustomer.licensePlate.startsWith('临');
 
-          const maxPlateLength = updates['isNewEnergyVehicle'] ? 8 : 7;
+          const isNewEnergyVehicle = matchedCustomer.licensePlate.length === 8;
+          const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
           const plateNumber = Array(maxPlateLength).fill('');
           const plateChars = matchedCustomer.licensePlate.split('');
           plateChars.forEach((char, index) => {
@@ -1435,10 +1109,9 @@ Component({
         // 应用车牌号信息
         if (matchedCustomer.licensePlate) {
           updates['licensePlate'] = matchedCustomer.licensePlate;
-          updates['isNewEnergyVehicle'] = matchedCustomer.licensePlate.length === 8;
-          updates['isNoPlate'] = matchedCustomer.licensePlate.startsWith('临');
 
-          const maxPlateLength = updates['isNewEnergyVehicle'] ? 8 : 7;
+          const isNewEnergyVehicle = matchedCustomer.licensePlate.length === 8;
+          const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
           const plateNumber = Array(maxPlateLength).fill('');
           const plateChars = matchedCustomer.licensePlate.split('');
           plateChars.forEach((char, index) => {
@@ -1473,7 +1146,7 @@ Component({
     async onClockIn() {
       const { consultationInfo, isDualMode, guest1Info, guest2Info } = this.data;
 
-      const validationResult = validateConsultationForPrint(consultationInfo, isDualMode, guest1Info, guest2Info);
+      const validationResult = validateConsultationForPrint(consultationInfo, this.data.currentProjectIsEssentialOilOnly, isDualMode, guest1Info, guest2Info);
       if (!showValidationError(validationResult)) {
         return;
       }
@@ -1661,110 +1334,6 @@ ${clockInInfo2}`;
       return formattedInfo;
     },
 
-    // 构建打印内容
-    async buildPrintContent(info: Add<ConsultationInfo>, isEssentialOilOnly: boolean = false) {
-      const strengthMap: Record<string, string> = {
-        standard: "标准",
-        soft: "轻柔",
-        gravity: "重力",
-      };
-
-      const oilMap: Record<string, string> = {
-        lavender: "薰衣草",
-        grapefruit: "葡萄柚",
-        atractylodes: "白术",
-        rosemary: "迷迭香",
-        rosewood: "花梨木",
-        seasonal: "季节特调",
-      };
-
-      const partMap: Record<string, string> = {
-        head: "头部",
-        neck: "颈部",
-        shoulder: "肩部",
-        back: "后背",
-        arm: "手臂",
-        abdomen: "腹部",
-        waist: "腰部",
-        thigh: "大腿",
-        calf: "小腿",
-      };
-
-      // 添加ESC/POS命令设置大号字体
-      // ESC ! 0x10 (16) - 设置双倍高度
-      // ESC ! 0x20 (32) - 设置双倍宽度
-      // ESC ! 0x30 (48) - 设置双倍高度和宽度
-      const ESC = String.fromCharCode(0x1b);
-      const setLargeFont = ESC + "!" + String.fromCharCode(0x30); // 设置双倍高度和宽度
-
-      // 将整个打印内容都设置为大号字体
-      let content = setLargeFont + "\n\n\n\n趴岛 SPA&MASSAGE\n";
-      content += `${info.surname}${info.gender === "male" ? "先生" : "女士"
-        }咨询单\n`;
-      content += "================\n";
-      content += `项目: ${info.project}\n`;
-      // 获取技师当日或单据日期的报钟数量
-      let dailyCount = 1;
-      if (info.date) {
-        const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(info.date) as ConsultationRecord[];
-        dailyCount = records.filter(
-          (record: ConsultationRecord) => record.technician === info.technician && !record.isVoided,
-        ).length + 1;
-      }
-      content += `技师: ${info.technician}(${dailyCount})${info.isClockIn ? "[点]" : ""}\n`;
-      content += `房间: ${info.room}\n`;
-      content += "力度:";
-      content += `${strengthMap[info.massageStrength] || "未选择"}\n`;
-
-      // 根据是否为专用精油项目显示不同内容
-      if (isEssentialOilOnly) {
-        content += "精油: 专属精油\n";
-      } else if (info.project !== "60min指压") {
-        content += "精油:";
-        content += `${oilMap[info.essentialOil] || "未选择"}\n`;
-      }
-
-      content += "加强部位:";
-      const selectedPartsArray = Object.keys(info.selectedParts).filter(
-        (key) => info.selectedParts[key],
-      );
-      if (selectedPartsArray.length > 0) {
-        selectedPartsArray.forEach((part) => {
-          content += `${partMap[part]}  `;
-        });
-      } else {
-        content += "无";
-      }
-
-      // 添加升级选项（仅当勾选时显示）
-      if (info.upgradeHimalayanSaltStone) {
-        content += `\n升级: 冬季喜马拉雅热油盐石`;
-      }
-
-      // 添加备注信息（仅当有内容时显示）
-      if (info.remarks) {
-        content += `\n备注: ${info.remarks}`;
-      }
-
-      content += "\n================\n";
-
-      // 使用单据日期或当前日期
-      let printDate = new Date();
-      if (info.date) {
-        const [year, month, day] = info.date.split('-').map(Number);
-        printDate = new Date(year, month - 1, day);
-      }
-      content += `打印时间: ${formatTime(printDate, false)}
-
-      
-
-
-
-`;
-
-      return content;
-    },
-
     // 跳转到主页
     goToHome() {
       wx.navigateTo({
@@ -1774,28 +1343,7 @@ ${clockInInfo2}`;
 
     // 显示车牌号输入弹窗
     showPlateInputModal() {
-      const { isNoPlate, isNewEnergyVehicle, licensePlate } = this.data;
-      const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
-      const plateNumber = Array(maxPlateLength).fill('');
-
-      if (isNoPlate) {
-        plateNumber[0] = '临';
-      } else if (licensePlate) {
-        const plateChars = licensePlate.split('');
-        plateChars.forEach((char, index) => {
-          if (index < maxPlateLength) {
-            plateNumber[index] = char;
-          }
-        });
-      }
-
-      const currentPlatePosition = licensePlate ? licensePlate.length : (isNoPlate ? 1 : 0);
-
-      this.setData({
-        licensePlateInputVisible: true,
-        currentPlatePosition: currentPlatePosition,
-        plateNumber: plateNumber
-      });
+      this.setData({ licensePlateInputVisible: true });
     },
 
     // 隐藏车牌号输入弹窗
@@ -1803,138 +1351,30 @@ ${clockInInfo2}`;
       this.setData({ licensePlateInputVisible: false });
     },
 
-    // 选择省份
-    selectProvince(e: WechatMiniprogram.CustomEvent) {
-      const province = e.currentTarget.dataset.province;
-      this.setData({
-        'plateNumber[0]': province,
-        currentPlatePosition: 1
-      });
-    },
-
-    // 选择字符
-    selectCharacter(e: WechatMiniprogram.CustomEvent) {
-      const char = e.currentTarget.dataset.char;
-      const { isNewEnergyVehicle } = this.data;
-      const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
-
-      if (this.data.currentPlatePosition < maxPlateLength) {
-        const newPlateNumber = [...this.data.plateNumber];
-        newPlateNumber[this.data.currentPlatePosition] = char;
-        this.setData({
-          plateNumber: newPlateNumber,
-          currentPlatePosition: this.data.currentPlatePosition + 1
-        });
-      }
-    },
-
-    // 删除车牌号字符
-    deletePlateChar() {
-      const { isNoPlate, currentPlatePosition } = this.data;
-      if (currentPlatePosition > (isNoPlate ? 1 : 0)) {
-        const newPlateNumber = [...this.data.plateNumber];
-        newPlateNumber[currentPlatePosition - 1] = '';
-        this.setData({
-          plateNumber: newPlateNumber,
-          currentPlatePosition: currentPlatePosition - 1
-        });
-      }
-    },
-
-    // 重置车牌号输入
-    resetPlateInput() {
-      const { isNoPlate, isNewEnergyVehicle } = this.data;
+    // 车牌号确认
+    onPlateConfirm(e: WechatMiniprogram.CustomEvent) {
+      const { value } = e.detail;
+      const isNewEnergyVehicle = value.length === 8;
       const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
       const plateNumber = Array(maxPlateLength).fill('');
-      if (isNoPlate) {
-        plateNumber[0] = '临';
+      if (value) {
+        const plateChars: string[] = value.split('');
+        plateChars.forEach((char, index) => {
+          if (index < maxPlateLength) {
+            plateNumber[index] = char;
+          }
+        });
       }
-      this.setData({
-        plateNumber: plateNumber,
-        currentPlatePosition: isNoPlate ? 1 : 0
-      });
-    },
-
-    // 确认车牌号输入
-    confirmPlateInput() {
-      const licensePlate = this.data.plateNumber.join('');
       this.setData({
         licensePlateInputVisible: false,
-        licensePlate: licensePlate
+        licensePlate: value,
+        plateNumber: plateNumber
       });
     },
 
-    // 停车类型变更
-    onParkingTypeChange(e: WechatMiniprogram.CustomEvent) {
-      const values = e.detail.value || [];
-      const isNoPlate = values.includes('noPlate');
-      const isNewEnergyVehicle = values.includes('newEnergy');
-
-      const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
-      const plateNumber = Array(maxPlateLength).fill('');
-
-      if (isNoPlate) {
-        plateNumber[0] = '临';
-      }
-
-      this.setData({
-        isNewEnergyVehicle: isNewEnergyVehicle,
-        isNoPlate: isNoPlate,
-        plateNumber: plateNumber,
-        licensePlate: '',
-        currentPlatePosition: isNoPlate ? 1 : 0
-      });
-    },
-
-    // 切换新能源车选项
-    toggleNewEnergy() {
-      const { isNewEnergyVehicle, plateNumber, currentPlatePosition } = this.data;
-      const newIsNewEnergyVehicle = !isNewEnergyVehicle;
-
-      let newPlateNumber = [...plateNumber];
-      let newPosition = currentPlatePosition;
-
-      if (newIsNewEnergyVehicle) {
-        // 切换到新能源，添加第8位
-        newPlateNumber.push('');
-      } else {
-        // 切换到普通，移除第8位
-        newPlateNumber = newPlateNumber.slice(0, 7);
-      }
-
-      this.setData({
-        isNewEnergyVehicle: newIsNewEnergyVehicle,
-        plateNumber: newPlateNumber,
-        currentPlatePosition: newPosition
-      });
-    },
-
-    // 切换无牌车选项
-    toggleNoPlate() {
-      const { isNoPlate, isNewEnergyVehicle } = this.data;
-      const newIsNoPlate = !isNoPlate;
-
-      const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
-      const plateNumber = Array(maxPlateLength).fill('');
-
-      if (newIsNoPlate) {
-        plateNumber[0] = '临';
-      }
-
-      this.setData({
-        isNoPlate: newIsNoPlate,
-        plateNumber: plateNumber,
-        licensePlate: '',
-        currentPlatePosition: newIsNoPlate ? 1 : 0
-      });
-    },
-
-    // 清空车牌号
-    clearLicensePlate() {
-      this.setData({
-        licensePlate: '',
-        plateNumber: ['', '', '', '', '', '', '', '']
-      });
+    // 车牌类型变更
+    onPlateTypeChange(e: WechatMiniprogram.CustomEvent) {
+      // 组件内部已处理，无需额外操作
     },
   },
 });
