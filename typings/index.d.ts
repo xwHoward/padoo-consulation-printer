@@ -86,11 +86,14 @@ interface ConsultationRecord extends ConsultationInfo {
 
 // 员工状态类型
 type StaffStatus = "active" | "disabled";
+type StaffGender = "male" | "female";
 
 // 员工数据结构
 interface StaffInfo extends BaseRecord {
   name: string;
   status: StaffStatus;
+  gender: StaffGender;
+  avatar: string;
 }
 
 // 班次类型

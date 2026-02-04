@@ -1,0 +1,44 @@
+<view class="screensaver-container">
+  <view class="content-wrapper">
+    <view class="title">您好！当前门店所有技师都在忙~</view>
+    <view class="tech-grid" wx:if="{{ techList.length > 0 }}">
+      <view class="tech-card {{item.status}}" wx:for="{{ techList }}" wx:key="_id">
+        <view class="tech-avatar">
+          <image class="avatar-img" src="{{ item.avatar || '/assets/default-avatar.png' }}" mode="aspectFill" />
+          <view class="status-badge {{item.status}}">
+            {{ item.status === 'available' ? '空闲' : '服务中' }}
+          </view>
+        </view>
+        <view class="tech-info">
+          <view class="tech-name">{{ item.name }} {{ item.gender === 'male' ? '♂' : '♀' }}</view>
+        </view>
+        <view class="appointment-info" wx:if="{{ item.latestAppointment }}">
+          <view class="info-label">
+            最近预约结束
+            <text class="info-time">{{ item.latestAppointment }}</text>
+          </view>
+        </view>
+        <view class="available-info">
+          <view class="info-label" wx:if="{{ item.status === 'available' }}">当前可预约</view>
+          <view class="info-label" wx:if="{{ item.status === 'busy' }}">
+            预计等待<text class="info-time" wx:if="{{ item.availableMinutes }}">{{ item.availableMinutes }} 分钟</text>
+            <text class="info-time now" wx:if="{{ item.status === 'available' && !item.availableMinutes }}">
+              现在
+            </text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="empty-state" wx:if="{{ techList.length === 0 && !loading }}">
+      <text>当前没有在班技师</text>
+    </view>
+    <view class="contact-info">
+      <view class="contact-label">有任何问题请拨打电话咨询：18512806950 肖先生</view>
+    </view>
+  </view>
+  <!-- loading遮罩 -->
+  <view class="loading-mask" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <view class="loading-text">更新中...</view>
+  </view>
+</view>

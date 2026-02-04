@@ -250,6 +250,17 @@ page {
 	background-color: @bg-color-light;
 }
 
+/* 员工头像 */
+.staff-avatar {
+	margin-right: 10px;
+}
+
+.avatar-img {
+	width: 50px;
+	height: 50px;
+	border: 1px solid @primary-color;
+}
+
 /* 员工信息 */
 .staff-info {
 	flex: 1;
@@ -262,6 +273,14 @@ page {
 	font-size: 16px;
 	font-weight: 500;
 	color: @text-color;
+}
+
+.staff-gender {
+	font-size: 13px;
+	color: @text-color-secondary;
+	padding: 2px 6px;
+	border-radius: 4px;
+	background-color: @bg-color-light;
 }
 
 .staff-status {
@@ -409,6 +428,74 @@ page {
 
 .status-option:active {
 	background-color: @bg-color-light;
+}
+
+/* 性别选择器 */
+.gender-selector {
+	display: flex;
+	gap: 10px;
+}
+
+.gender-option {
+	flex: 1;
+	text-align: center;
+	padding: 10px;
+	border-radius: 8px;
+	border: 1px solid @border-color;
+	font-size: 14px;
+	color: @text-color;
+	transition: all 0.3s ease;
+}
+
+.gender-option.selected {
+	border-color: @primary-color;
+	background-color: rgba(255, 107, 0, 0.05);
+	color: @primary-color;
+}
+
+.gender-option:active {
+	background-color: @bg-color-light;
+}
+
+/* 头像上传器 */
+.avatar-uploader {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	padding: 10px;
+	border: 1px dashed @border-color;
+	border-radius: 8px;
+	background-color: @bg-color-light;
+}
+
+.avatar-preview {
+	width: 100px;
+	height: 100px;
+	border: 1px solid @primary-color;
+}
+
+.avatar-placeholder {
+	width: 100px;
+	height: 100px;
+	border-radius: 50%;
+	border: 2px dashed @border-color;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	background-color: @bg-color;
+}
+
+.placeholder-icon {
+	font-size: 32px;
+	color: @text-color-secondary;
+}
+
+.placeholder-text {
+	font-size: 12px;
+	color: @text-color-secondary;
+	margin-top: 4px;
 }
 
 /* 弹窗底部按钮 */

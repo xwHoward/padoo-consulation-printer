@@ -1,0 +1,173 @@
+@import "../../app.less";
+
+.screensaver-container {
+  width: 100vw;
+  height: 100vh;
+  padding-top: constant(safe-area-inset-top);
+  background: linear-gradient(180deg, yellow 0%, @primary-color 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.content-wrapper {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  color: #fff;
+  padding: 20px 15px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.title {
+  padding-top: 20px;
+  font-size: 30px;
+  // text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+  color: @primary-color;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+/* 技师网格布局 */
+.tech-grid {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 技师卡片 */
+.tech-card {
+  flex: auto;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10rpx);
+  border-radius: 8px;
+  padding: 12px 8px;
+  box-shadow: 0 2px 11px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+  }
+}
+
+/* 技师头像 */
+.tech-avatar {
+  position: relative;
+  margin: 0 auto 10px;
+  width: 140px;
+  height: 140px;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 状态徽章 */
+.status-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  padding: 2px 10rpx;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: 0 1px 6rpx rgba(0, 0, 0, 0.2);
+}
+
+.status-badge.available {
+  background: #64dd17;
+}
+
+.status-badge.busy {
+  background: @primary-color;
+}
+
+/* 技师信息 */
+.tech-info {
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.tech-name {
+  line-height: 1.2;
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+/* 预约信息 */
+.appointment-info,
+.available-info {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  padding: 4px;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.info-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1px;
+}
+
+.info-time {
+  font-size: 14px;
+  font-weight: bold;
+  color: @primary-color;
+}
+
+.info-time.now {
+  color: #64dd17;
+  font-size: 14px;
+}
+
+/* 空状态 */
+.empty-state {
+  padding: 15px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state text {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 联系信息 */
+.contact-info {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  border-radius: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.contact-label {
+  font-size: 26px;
+  color: #fff;
+}

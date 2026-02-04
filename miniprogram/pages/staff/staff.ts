@@ -14,6 +14,8 @@ Component({
 		showModal: false,
 		editingStaff: null as StaffInfo | null,
 		inputName: '',
+		inputGender: 'male' as StaffGender,
+		inputAvatar: '',
 		inputStatus: 'active' as StaffStatus,
 		// 排班相关
 		today: '',
@@ -216,6 +218,8 @@ Component({
 				showModal: true,
 				editingStaff: null,
 				inputName: '',
+				inputGender: 'male',
+				inputAvatar: '',
 				inputStatus: 'active',
 			});
 		},
@@ -232,6 +236,8 @@ Component({
 						showModal: true,
 						editingStaff: staff,
 						inputName: staff.name,
+						inputGender: staff.gender || 'male',
+						inputAvatar: staff.avatar || '',
 						inputStatus: staff.status,
 						loading: false
 					});
@@ -329,6 +335,56 @@ Component({
 			this.setData({ inputName: e.detail.value });
 		},
 
+		// 性别选择
+		onGenderSelect(e: WechatMiniprogram.TouchEvent) {
+			const gender = e.currentTarget.dataset.gender as StaffGender;
+			this.setData({ inputGender: gender });
+		},
+
+		// 选择照片
+		onChooseAvatar() {
+			const that = this;
+			wx.chooseMedia({
+				count: 1,
+				mediaType: ['image'],
+				sourceType: ['album', 'camera'],
+				success: (res) => {
+					const tempFilePath = res.tempFiles[0].tempFilePath;
+					that.uploadAvatar(tempFilePath);
+				}
+			});
+		},
+
+		// 上传照片到云端
+		async uploadAvatar(filePath: string) {
+			console.log('上传照片到云端:', filePath);
+			try {
+				wx.showLoading({ title: '上传中...' });
+
+				const cloudPath = `staff-avatar/${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+				const uploadRes = await wx.cloud.uploadFile({
+					cloudPath,
+					filePath
+				});
+				console.log('上传照片到云端成功:', uploadRes);
+				const fileID = uploadRes.fileID;
+				this.setData({ inputAvatar: fileID });
+				wx.hideLoading();
+				wx.showToast({
+					title: '上传成功',
+					icon: 'success'
+				});
+			} catch (error) {
+				console.error('上传照片失败:', error);
+				wx.hideLoading();
+				wx.showToast({
+					title: '上传失败',
+					icon: 'none'
+				});
+			}
+		},
+
 		// 状态选择
 		onStatusSelect(e: WechatMiniprogram.TouchEvent) {
 			const status = e.currentTarget.dataset.status as StaffStatus;
@@ -341,6 +397,8 @@ Component({
 				showModal: false,
 				editingStaff: null,
 				inputName: '',
+				inputGender: 'male',
+				inputAvatar: '',
 				inputStatus: 'active',
 			});
 		},
@@ -348,7 +406,7 @@ Component({
 		// 确认弹窗
 		async onConfirmModal() {
 			try {
-				const { inputName, inputStatus, editingStaff } = this.data;
+				const { inputName, inputGender, inputAvatar, inputStatus, editingStaff } = this.data;
 				const name = inputName.trim();
 
 				if (!name) {
@@ -361,6 +419,8 @@ Component({
 				if (editingStaff) {
 					await cloudDb.updateById<StaffInfo>(Collections.STAFF, editingStaff._id, {
 						name,
+						gender: inputGender,
+						avatar: inputAvatar,
 						status: inputStatus,
 					});
 
@@ -374,7 +434,12 @@ Component({
 						return;
 					}
 
-					const inserted = await (cloudDb.insert<StaffInfo>(Collections.STAFF, { name, status: 'active' }));
+					const inserted = await (cloudDb.insert<StaffInfo>(Collections.STAFF, {
+						name,
+						gender: inputGender,
+						avatar: inputAvatar,
+						status: 'active'
+					}));
 
 					if (inserted) {
 						wx.showToast({ title: '添加成功', icon: 'success' });

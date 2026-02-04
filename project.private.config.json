@@ -23,11 +23,18 @@
         "miniprogram": {
             "list": [
                 {
-                    "name": "login",
-                    "pathName": "pages/login/login",
+                    "name": "screensaver",
+                    "pathName": "pages/screensaver/screensaver",
                     "query": "",
                     "scene": null,
                     "launchMode": "default"
+                },
+                {
+                    "name": "login",
+                    "pathName": "pages/login/login",
+                    "query": "",
+                    "launchMode": "default",
+                    "scene": null
                 },
                 {
                     "name": "单据",

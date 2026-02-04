@@ -101,12 +101,20 @@
         wx:for="{{staffList}}"
         wx:key="_id"
       >
+        <view class="staff-avatar">
+          <image
+            class="avatar-img"
+            src="{{item.avatar || '/assets/default-avatar.jpg'}}"
+            mode="aspectFill"
+          />
+        </view>
         <view
           class="staff-info"
           bindtap="onEditStaff"
           data-id="{{item._id}}"
         >
           <text class="staff-name">{{item.name}}</text>
+          <text class="staff-gender">{{item.gender === 'male' ? '先生' : '女士'}}</text>
           <text class="staff-status {{item.status}}">{{item.status === 'active' ? '正常' : '禁用'}}</text>
         </view>
         <view class="staff-actions">
@@ -161,6 +169,43 @@
         bindinput="onNameInput"
         focus="{{showModal}}" />
     </view>
+
+    <view class="form-item">
+      <text class="form-label">性别</text>
+      <view class="gender-selector">
+        <view
+          class="gender-option {{inputGender === 'male' ? 'selected' : ''}}"
+          bindtap="onGenderSelect"
+          data-gender="male"
+        >
+          <text>先生</text>
+        </view>
+        <view
+          class="gender-option {{inputGender === 'female' ? 'selected' : ''}}"
+          bindtap="onGenderSelect"
+          data-gender="female"
+        >
+          <text>女士</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">照片</text>
+      <view class="avatar-uploader" bindtap="onChooseAvatar">
+        <image
+          class="avatar-preview"
+          src="{{inputAvatar || '/assets/default-avatar.pn'}}"
+          mode="aspectFill"
+          wx:if="{{inputAvatar}}"
+        />
+        <view class="avatar-placeholder" wx:if="{{!inputAvatar}}">
+          <text class="placeholder-icon">+</text>
+          <text class="placeholder-text">上传照片</text>
+        </view>
+      </view>
+    </view>
+
     <view class="form-item" wx:if="{{editingStaff}}">
       <text class="form-label">状态</text>
       <view class="status-selector">

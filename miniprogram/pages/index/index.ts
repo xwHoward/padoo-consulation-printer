@@ -1340,6 +1340,11 @@ ${clockInInfo2}`;
         url: "/pages/store-config/store-config",
       });
     },
+    onScreensaver() {
+      wx.navigateTo({
+        url: "/pages/screensaver/screensaver",
+      });
+    },
 
     // 显示车牌号输入弹窗
     showPlateInputModal() {

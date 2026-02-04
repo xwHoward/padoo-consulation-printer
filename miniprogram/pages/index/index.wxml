@@ -6,6 +6,9 @@
     <view bindtap="onRefresh" class="nav-btn" aria-role="button" aria-label="刷新">
       <text class="nav-btn-text">刷新</text>
     </view>
+    <view bindtap="onScreensaver" class="nav-btn" aria-role="button" aria-label="无人值守">
+      <text class="nav-btn-text">无人值守</text>
+    </view>
   </view>
   <view slot="right" class="nav-btns">
     <view bindtap="goToCashier" class="nav-btn" aria-role="button" aria-label="场控收银">
