@@ -7,7 +7,11 @@ const db = cloud.database()
 const _ = db.command
 
 exports.main = async (event, context) => {
-    const { date, currentTime, projectDuration, currentReservationIds } = event
+    const { date, currentTime, projectDuration, currentReservationIds, mode } = event
+
+    if (mode === 'availability') {
+        return await getTechnicianAvailability(date)
+    }
 
     if (!date || !currentTime || !projectDuration) {
         return {
@@ -114,4 +118,88 @@ exports.main = async (event, context) => {
 function parseTimeToMinutes(timeStr) {
     const [hours, minutes] = timeStr.split(':').map(Number)
     return hours * 60 + minutes
+}
+
+async function getTechnicianAvailability(date) {
+    try {
+        const now = new Date()
+        const currentMinutes = now.getHours() * 60 + now.getMinutes()
+
+        const scheduleRes = await db.collection('schedule').where({
+            date: date
+        }).get()
+        const schedules = scheduleRes.data || []
+
+        const onDutyStaffIds = schedules
+            .filter(s => s.shift !== 'leave' && s.shift !== 'off')
+            .map(s => s.staffId)
+
+        if (onDutyStaffIds.length === 0) {
+            return {
+                code: 0,
+                message: '获取成功',
+                data: []
+            }
+        }
+
+        const staffRes = await db.collection('staff').where({
+            status: 'active',
+            _id: _.in(onDutyStaffIds)
+        }).get()
+        const onDutyStaff = staffRes.data || []
+
+        const consultationsRes = await db.collection('consultation_records').where({
+            date: date,
+            isVoided: false
+        }).get()
+        const consultations = consultationsRes.data || []
+
+        const techList = onDutyStaff.map(staff => {
+            const staffConsultations = consultations.filter(c => c.technician === staff.name)
+
+            let latestAppointment
+            let availableMinutes
+            let status = 'available'
+
+            if (staffConsultations.length > 0) {
+                const nowMinutes = currentMinutes
+
+                const activeConsultation = staffConsultations.find(consultation => {
+                    const startTimeMinutes = parseTimeToMinutes(consultation.startTime)
+                    const endTimeMinutes = parseTimeToMinutes(consultation.endTime)
+                    return startTimeMinutes <= nowMinutes && nowMinutes < endTimeMinutes
+                })
+
+                if (activeConsultation) {
+                    latestAppointment = activeConsultation.endTime
+                    const endTimeMinutes = parseTimeToMinutes(activeConsultation.endTime)
+                    availableMinutes = endTimeMinutes - nowMinutes
+                    status = 'busy'
+                }
+            }
+
+            return {
+                _id: staff._id,
+                name: staff.name,
+                avatar: staff.avatar,
+                gender: staff.gender,
+                latestAppointment,
+                availableMinutes,
+                status
+            }
+        })
+
+        return {
+            code: 0,
+            message: '获取成功',
+            data: techList
+        }
+    } catch (error) {
+        console.error('获取技师可用性失败:', error)
+        return {
+            code: -1,
+            message: '获取失败: ' + error.message,
+            data: []
+        }
+    }
 }

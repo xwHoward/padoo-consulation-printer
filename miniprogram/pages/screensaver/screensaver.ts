@@ -20,12 +20,22 @@ Page({
   onLoad() {
     this.loadAvailableTechnicians();
     this.startAutoRefresh();
+    this.setKeepScreenOn();
   },
 
   onUnload() {
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer);
     }
+    this.setKeepScreenOff();
+  },
+
+  onShow() {
+    this.setKeepScreenOn();
+  },
+
+  onHide() {
+    this.setKeepScreenOff();
   },
 
   refreshTimer: null as number | null,
@@ -38,92 +48,48 @@ Page({
       const now = new Date();
       const today = formatDate(now);
 
-      const scheduleResult = await cloudDb.find<ScheduleRecord>(Collections.SCHEDULE, {
-        date: today
+      const result = await wx.cloud.callFunction({
+        name: 'getAvailableTechnicians',
+        data: {
+          date: today,
+          mode: 'availability'
+        }
       });
 
-      const schedules = scheduleResult;
-      const onDutyStaffIds = schedules
-        .filter(s => s.shift !== 'off' && s.shift !== 'leave')
-        .map(s => s.staffId);
-
-      if (onDutyStaffIds.length === 0) {
-        this.setData({ techList: [], loading: false });
-        return;
+      if (!result.result || typeof result.result !== 'object') {
+        throw new Error('获取技师信息失败');
       }
 
-      const staffResult = await cloudDb.find<StaffInfo>(Collections.STAFF, {
-        status: 'active'
-      });
-
-      const allStaff = staffResult;
-      const onDutyStaff = allStaff.filter(s => onDutyStaffIds.includes(s._id));
-
-      const consultationsResult = await cloudDb.find<ConsultationRecord>(Collections.CONSULTATION, {
-        date: today,
-        isVoided: false
-      });
-
-      const consultations = consultationsResult;
-
-      const techList: TechCard[] = onDutyStaff.map(staff => {
-        const staffConsultations = consultations.filter(c => c.technician === staff.name);
-
-        let latestAppointment: string | undefined;
-        let availableMinutes: number | undefined;
-        let status: 'available' | 'busy' = 'available';
-
-        if (staffConsultations.length > 0) {
-          const sortedConsultations = staffConsultations.sort((a, b) => {
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          });
-
-          const latest = sortedConsultations[0];
-          if (latest.endTime) {
-            latestAppointment = latest.endTime;
-
-            const endTime = this.parseTime(latest.endTime);
-            const currentTime = now.getHours() * 60 + now.getMinutes();
-            const endTimeMinutes = endTime.hours * 60 + endTime.minutes;
-
-            if (endTimeMinutes > currentTime) {
-              availableMinutes = endTimeMinutes - currentTime;
-              status = 'busy';
-            } else {
-              status = 'available';
-            }
-          }
-        }
-
-        return {
-          _id: staff._id,
-          name: staff.name,
-          avatar: staff.avatar,
-          gender: staff.gender,
-          latestAppointment,
-          availableMinutes,
-          status
-        };
-      });
-
-      this.setData({
-        techList,
-        loading: false
-      });
+      if (result.result.code === 0) {
+        this.setData({
+          techList: result.result.data,
+          loading: false
+        });
+      } else {
+        console.error('获取技师信息失败:', result.result.message);
+        this.setData({ loading: false });
+      }
     } catch (error) {
       console.error('加载技师信息失败:', error);
       this.setData({ loading: false });
     }
   },
 
-  parseTime(timeStr: string): { hours: number; minutes: number } {
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    return { hours, minutes };
-  },
-
   startAutoRefresh() {
     this.refreshTimer = setInterval(() => {
       this.loadAvailableTechnicians();
     }, 60000);
+  },
+
+  setKeepScreenOn() {
+    wx.setKeepScreenOn({
+      keepScreenOn: true
+    });
+  },
+
+  setKeepScreenOff() {
+    wx.setKeepScreenOn({
+      keepScreenOn: false
+    });
   },
 });

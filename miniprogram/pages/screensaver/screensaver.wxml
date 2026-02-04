@@ -33,7 +33,7 @@
       <text>当前没有在班技师</text>
     </view>
     <view class="contact-info">
-      <view class="contact-label">有任何问题请拨打电话咨询：18512806950 肖先生</view>
+      <view class="contact-label">有问题请拨打电话咨询：185 1280 6950 肖先生</view>
     </view>
   </view>
   <!-- loading遮罩 -->
