@@ -1354,27 +1354,11 @@ ${clockInInfo2}`;
     // 车牌号确认
     onPlateConfirm(e: WechatMiniprogram.CustomEvent) {
       const { value } = e.detail;
-      const isNewEnergyVehicle = value.length === 8;
-      const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
-      const plateNumber = Array(maxPlateLength).fill('');
-      if (value) {
-        const plateChars: string[] = value.split('');
-        plateChars.forEach((char, index) => {
-          if (index < maxPlateLength) {
-            plateNumber[index] = char;
-          }
-        });
-      }
       this.setData({
         licensePlateInputVisible: false,
         licensePlate: value,
-        plateNumber: plateNumber
+        plateNumber: value.split('')
       });
-    },
-
-    // 车牌类型变更
-    onPlateTypeChange(e: WechatMiniprogram.CustomEvent) {
-      // 组件内部已处理，无需额外操作
-    },
+    }
   },
 });

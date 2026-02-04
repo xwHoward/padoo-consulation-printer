@@ -85,7 +85,7 @@
         </label>
       </view>
     </view>
-        <!-- 免费停车区域 -->
+    <!-- 免费停车区域 -->
     <view class="section">
       <view class="section-title">免费停车</view>
       <view class="parking-form">
@@ -197,12 +197,7 @@
     <text class="modal-close" bindtap="onTimePickerCancel">✕</text>
   </view>
   <view class="modal-body">
-    <picker
-      mode="multiSelector"
-      range="{{[hours, minutes]}}"
-      value="{{[selectedHour, selectedMinute]}}"
-      bindchange="onTimePickerChange"
-      bindcolumnchange="onTimeColumnChange">
+    <picker mode="multiSelector" range="{{[hours, minutes]}}" value="{{[selectedHour, selectedMinute]}}" bindchange="onTimePickerChange" bindcolumnchange="onTimeColumnChange">
       <view class="time-picker-display">
         <text class="time-value">{{timePickerModal.currentTime}}</text>
         <text class="time-hint">点击修改时间</text>
@@ -215,10 +210,4 @@
   </view>
 </view>
 <!-- 车牌号输入弹窗 -->
-<license-plate-input
-  visible="{{licensePlateInputVisible}}"
-  value="{{licensePlate}}"
-  bind:cancel="hidePlateInputModal"
-  bind:confirm="onPlateConfirm"
-  bind:change="onPlateTypeChange"
-/>
+<license-plate-input visible="{{licensePlateInputVisible}}" value="{{licensePlate}}" bind:cancel="hidePlateInputModal" bind:confirm="onPlateConfirm" />

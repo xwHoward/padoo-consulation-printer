@@ -233,7 +233,8 @@ class CloudDatabase {
 			};
 
 			console.log(`[CloudDB] 更新记录 ${_id}，数据:`, updateData);
-
+			const doc = await this.getCollection(collection).doc(_id).get();
+			console.log(`[CloudDB] 更新记录 ${_id} 前数据:`, doc.data);
 			const res = await this.getCollection(collection).doc(_id).update({
 				data: updateData
 			});
