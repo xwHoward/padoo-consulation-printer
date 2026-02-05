@@ -123,7 +123,16 @@ function parseTimeToMinutes(timeStr) {
 async function getTechnicianAvailability(date) {
     try {
         const now = new Date()
-        const currentMinutes = now.getHours() * 60 + now.getMinutes()
+        
+        const utcNow = new Date(now.getTime() + (8 * 60 * 60 * 1000))
+        const currentMinutes = utcNow.getHours() * 60 + utcNow.getMinutes()
+        // const currentTimeStr = `${String(utcNow.getHours()).padStart(2, '0')}:${String(utcNow.getMinutes()).padStart(2, '0')}`
+        
+        // console.log('========== 技师可用性计算开始 ==========')
+        // console.log('查询日期:', date)
+        // console.log('服务器UTC时间:', now.toISOString(), '(小时:', now.getUTCHours(), ')')
+        // console.log('转换后中国时间:', currentTimeStr, '(分钟数:', currentMinutes, ')')
+        // console.log('时区偏移量(分钟):', now.getTimezoneOffset())
 
         const scheduleRes = await db.collection('schedule').where({
             date: date
@@ -157,13 +166,12 @@ async function getTechnicianAvailability(date) {
         const techList = onDutyStaff.map(staff => {
             const staffConsultations = consultations.filter(c => c.technician === staff.name)
 
-            let latestAppointment
-            let availableMinutes
+            let latestAppointment = null
+            let availableMinutes = null
             let status = 'available'
+            const nowMinutes = currentMinutes
 
             if (staffConsultations.length > 0) {
-                const nowMinutes = currentMinutes
-
                 const activeConsultation = staffConsultations.find(consultation => {
                     const startTimeMinutes = parseTimeToMinutes(consultation.startTime)
                     const endTimeMinutes = parseTimeToMinutes(consultation.endTime)
@@ -175,6 +183,24 @@ async function getTechnicianAvailability(date) {
                     const endTimeMinutes = parseTimeToMinutes(activeConsultation.endTime)
                     availableMinutes = endTimeMinutes - nowMinutes
                     status = 'busy'
+                } else {
+                    const upcomingConsultations = staffConsultations
+                        .filter(consultation => {
+                            const startTimeMinutes = parseTimeToMinutes(consultation.startTime)
+                            return startTimeMinutes > nowMinutes
+                        })
+                        .sort((a, b) => {
+                            const aStart = parseTimeToMinutes(a.startTime)
+                            const bStart = parseTimeToMinutes(b.startTime)
+                            return aStart - bStart
+                        })
+
+                    if (upcomingConsultations.length > 0) {
+                        const nextConsultation = upcomingConsultations[0]
+                        const nextStartMinutes = parseTimeToMinutes(nextConsultation.startTime)
+                        availableMinutes = nextStartMinutes - nowMinutes
+                        status = 'available'
+                    }
                 }
             }
 

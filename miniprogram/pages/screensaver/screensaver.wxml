@@ -13,21 +13,22 @@
           </view>
         </view>
         <view class="tech-info">
-          <view class="tech-name">{{ item.name }} {{ item.gender === 'male' ? '♂' : '♀' }}</view>
-        </view>
-        <view class="appointment-info" wx:if="{{ item.latestAppointment }}">
-          <view class="info-label">
-            最近预约结束
-            <text class="info-time">{{ item.latestAppointment }}</text>
+          <view class="tech-name">
+            {{ item.name }}
+            <text wx:if="{{ item.gender === 'male'}}" class="gender-icon male">♂</text>
+            <text wx:if="{{ item.gender === 'female'}}" class="gender-icon female">♀</text>
           </view>
         </view>
         <view class="available-info">
-          <view class="info-label" wx:if="{{ item.status === 'available' }}">当前可预约</view>
+          <view class="info-label available" wx:if="{{ item.status === 'available' }}">当前可预约</view>
           <view class="info-label" wx:if="{{ item.status === 'busy' }}">
-            预计等待<text class="info-time" wx:if="{{ item.availableMinutes }}">{{ item.availableMinutes }} 分钟</text>
-            <text class="info-time now" wx:if="{{ item.status === 'available' && !item.availableMinutes }}">
+            预计等待
+            <view class="info-time" wx:if="{{ item.availableMinutes }}">
+              {{ item.availableMinutes }} 分钟
+            </view>
+            <view class="info-time now" wx:if="{{ item.status === 'available' && !item.availableMinutes }}">
               现在
-            </text>
+            </view>
           </view>
         </view>
       </view>

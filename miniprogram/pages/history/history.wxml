@@ -1,6 +1,6 @@
 <!-- history.wxml -->
 <wxs src="./format.wxs" module="format" />
-<navigation-bar title="{{customerPhone ? '顾客咨询单' : '咨询单历史'}}" back="{{true}}" color="black" background="#FFF">
+<navigation-bar title="{{customerPhone ? '顾客咨询单' : '咨询单纪录'}}" back="{{true}}" color="black" background="#FFF">
   <view slot="right" class="nav-right">
     <view class="date-selector-btn" bindtap="showDateSelector" wx:if="{{!customerPhone}}">
       <text class="date-selector-icon">📅</text>

@@ -63,7 +63,7 @@ Component({
 		rooms: [] as Room[],
 		rotationList: [] as RotationItem[],
 		staffTimeline: [] as StaffTimeline[],
-		timeLabels: ['12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'],
+		timeLabels: ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'],
 		// 当前时间线位置（百分比）
 		currentTimePosition: '0%',
 		showCurrentTimeLine: false,

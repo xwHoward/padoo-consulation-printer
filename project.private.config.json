@@ -1,5 +1,5 @@
 {
-    "libVersion": "2.32.3",
+    "libVersion": "3.14.1",
     "projectname": "padoo-consulation-printer",
     "setting": {
         "urlCheck": true,
@@ -23,11 +23,18 @@
         "miniprogram": {
             "list": [
                 {
-                    "name": "screensaver",
-                    "pathName": "pages/screensaver/screensaver",
+                    "name": "analysis",
+                    "pathName": "pages/analytics/analytics",
                     "query": "",
                     "scene": null,
                     "launchMode": "default"
+                },
+                {
+                    "name": "screensaver",
+                    "pathName": "pages/screensaver/screensaver",
+                    "query": "",
+                    "launchMode": "default",
+                    "scene": null
                 },
                 {
                     "name": "login",

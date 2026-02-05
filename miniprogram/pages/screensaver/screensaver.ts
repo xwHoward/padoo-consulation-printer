@@ -69,7 +69,7 @@ Page({
       if (!result.result || typeof result.result !== 'object') {
         throw new Error('获取技师信息失败');
       }
-
+      console.log('获取到的技师信息:', result.result.data);
       if (result.result.code === 0) {
         this.setData({
           techList: result.result.data,

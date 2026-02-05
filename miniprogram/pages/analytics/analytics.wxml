@@ -1,0 +1,153 @@
+<navigation-bar title="报表分析" back="{{true}}" color="black" background="#FFF">
+  <view slot="right" class="nav-btns">
+    <view bindtap="onRefresh" class="nav-btn" aria-role="button" aria-label="刷新">
+      <text class="nav-btn-text">刷新</text>
+    </view>
+  </view>
+</navigation-bar>
+
+<scroll-view class="scrollarea" scroll-y type="list">
+  <view class="container">
+    <!-- 时间选择器 -->
+    <view class="section">
+      <view class="time-range-selector">
+        <view class="time-range-options">
+          <view 
+            wx:for="{{dateOptions}}" 
+            wx:key="value"
+            class="time-range-option {{timeRangeType === item.value ? 'active' : ''}}"
+            bindtap="onTimeRangeChange"
+            data-value="{{item.value}}"
+          >
+            <text class="option-text">{{item.label}}</text>
+          </view>
+        </view>
+        
+        <view wx:if="{{timeRangeType === 'custom'}}" class="custom-date-picker">
+          <view class="date-picker-item" bindtap="onStartDateTap">
+            <text class="date-label">开始日期</text>
+            <text class="date-value {{customStartDate ? '' : 'placeholder'}}">
+              {{customStartDate || '请选择'}}
+            </text>
+          </view>
+          <view class="date-separator">至</view>
+          <view class="date-picker-item" bindtap="onEndDateTap">
+            <text class="date-label">结束日期</text>
+            <text class="date-value {{customEndDate ? '' : 'placeholder'}}">
+              {{customEndDate || '请选择'}}
+            </text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 加载状态 -->
+    <view wx:if="{{loading}}" class="loading-container">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">加载中...</text>
+    </view>
+
+    <!-- 数据展示 -->
+    <block wx:if="{{analyticsData && !loading}}">
+      <!-- 指标卡片 -->
+      <view class="section metrics-section">
+        <view class="section-title">关键指标</view>
+        <view class="metrics-grid">
+          <view class="metric-card">
+            <text class="metric-value">¥{{analyticsData.totalRevenue}}</text>
+            <text class="metric-label">总营业额</text>
+          </view>
+          <view class="metric-card">
+            <text class="metric-value">{{analyticsData.totalOrders}}</text>
+            <text class="metric-label">订单数</text>
+          </view>
+          <view class="metric-card">
+            <text class="metric-value">¥{{analyticsData.averageOrderValue}}</text>
+            <text class="metric-label">客单价</text>
+          </view>
+          <view class="metric-card">
+            <text class="metric-value">¥{{analyticsData.membershipCardAmount}}</text>
+            <text class="metric-label">开卡金额</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 营业额趋势图 -->
+      <view class="section chart-section">
+        <view class="section-title">营业额趋势</view>
+        <view class="chart-container">
+          <canvas id="revenueTrendChart" type="2d" class="chart-canvas"></canvas>
+        </view>
+      </view>
+
+      <!-- 项目消费排行 -->
+      <view class="section chart-section">
+        <view class="section-title">项目消费排行</view>
+        <view class="chart-container">
+          <canvas id="projectRankingChart" type="2d" class="chart-canvas"></canvas>
+        </view>
+      </view>
+
+      <!-- 项目消费对比 -->
+      <view class="section chart-section">
+        <view class="section-title">项目消费对比</view>
+        <view class="chart-container">
+          <canvas id="projectComparisonChart" type="2d" class="chart-canvas"></canvas>
+        </view>
+      </view>
+
+      <!-- 平台消费排行 -->
+      <view class="section chart-section">
+        <view class="section-title">平台消费排行</view>
+        <view class="chart-container">
+          <canvas id="platformRankingChart" type="2d" class="chart-canvas"></canvas>
+        </view>
+      </view>
+
+      <!-- 性别分布 -->
+      <view class="section chart-section">
+        <view class="section-title">性别分布</view>
+        <view class="chart-container">
+          <canvas id="genderDistributionChart" type="2d" class="chart-canvas"></canvas>
+        </view>
+      </view>
+
+      <!-- 车辆分布 -->
+      <view class="section chart-section">
+        <view class="section-title">车辆分布</view>
+        <view class="chart-container">
+          <canvas id="vehicleDistributionChart" type="2d" class="chart-canvas"></canvas>
+        </view>
+      </view>
+    </block>
+
+    <!-- 空状态 -->
+    <view wx:if="{{!analyticsData && !loading}}" class="empty-state">
+      <text class="empty-text">暂无数据</text>
+    </view>
+  </view>
+</scroll-view>
+
+<!-- 开始日期选择器 -->
+<picker
+  wx:if="{{showStartDatePicker}}"
+  mode="date"
+  value="{{customStartDate}}"
+  bindchange="onStartDateConfirm"
+  bindcancel="onStartDatePickerCancel"
+  class="date-picker-modal"
+>
+  <view class="date-picker-trigger"></view>
+</picker>
+
+<!-- 结束日期选择器 -->
+<picker
+  wx:if="{{showEndDatePicker}}"
+  mode="date"
+  value="{{customEndDate}}"
+  bindchange="onEndDateConfirm"
+  bindcancel="onEndDatePickerCancel"
+  class="date-picker-modal"
+>
+  <view class="date-picker-trigger"></view>
+</picker>
