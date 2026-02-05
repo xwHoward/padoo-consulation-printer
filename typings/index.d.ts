@@ -185,6 +185,7 @@ interface Project extends BaseRecord {
   price?: number;
   isEssentialOilOnly?: boolean;
   status: ItemStatus;
+  needEssentialOil?: boolean;
 }
 
 interface Room extends BaseRecord {

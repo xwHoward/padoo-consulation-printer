@@ -1,4 +1,7 @@
 <view class="screensaver-container">
+  <view class="back-btn" bindtap="goBack">
+    <text class="back-icon">✕</text>
+  </view>
   <view class="content-wrapper">
     <view class="title">您好！当前门店所有技师都在忙~</view>
     <view class="tech-grid" wx:if="{{ techList.length > 0 }}">

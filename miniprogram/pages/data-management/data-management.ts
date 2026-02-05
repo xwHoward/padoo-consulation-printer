@@ -16,7 +16,8 @@ Component({
 			price: 0,
 			effect: '',
 			status: 'normal' as ItemStatus,
-			isEssentialOilOnly: false
+			isEssentialOilOnly: false,
+			needEssentialOil: false
 		}
 	},
 
@@ -62,7 +63,8 @@ Component({
 					price: 0,
 					effect: '',
 					status: 'normal',
-					isEssentialOilOnly: false
+					isEssentialOilOnly: false,
+					needEssentialOil: false
 				}
 			});
 		},
@@ -91,7 +93,8 @@ Component({
 						price: (item as Project).price || 0,
 						effect: (item as EssentialOil).effect || '',
 						status: item.status || 'normal',
-						isEssentialOilOnly: (item as Project).isEssentialOilOnly || false
+						isEssentialOilOnly: (item as Project).isEssentialOilOnly || false,
+						needEssentialOil: (item as Project).needEssentialOil || false
 					}
 				});
 			}
@@ -125,6 +128,10 @@ Component({
 			this.setData({ 'formData.isEssentialOilOnly': !this.data.formData.isEssentialOilOnly });
 		},
 
+		onNeedEssentialOilChange() {
+			this.setData({ 'formData.needEssentialOil': !this.data.formData.needEssentialOil });
+		},
+
 		async handleSave() {
 			try {
 				const { modalType, formData, editingItem, activeTab } = this.data;
@@ -145,7 +152,8 @@ Component({
 						duration: formData.duration,
 						price: formData.price,
 						status: formData.status,
-						isEssentialOilOnly: formData.isEssentialOilOnly
+						isEssentialOilOnly: formData.isEssentialOilOnly,
+						needEssentialOil: formData.needEssentialOil
 					};
 
 					if (editingItem) {

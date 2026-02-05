@@ -66,12 +66,12 @@
       <strength-selector selectedStrength="{{(isDualMode ? (activeGuest === 1 ? guest1Info.massageStrength : guest2Info.massageStrength) : consultationInfo.massageStrength)}}" bind:change="onMassageStrengthSelect" />
     </view>
     <!-- 精油选择 -->
-    <view class="section" wx:if="{{!currentProjectIsEssentialOilOnly}}">
+    <view class="section" wx:if="{{!currentProjectIsEssentialOilOnly && currentProjectNeedEssentialOil}}">
       <view class="section-title">精油选择</view>
       <oil-selector selectedOil="{{isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil}}" bind:change="onEssentialOilSelect" />
     </view>
     <!-- 专属精油显示 -->
-    <view class="section" wx:if="{{currentProjectIsEssentialOilOnly}}">
+    <view class="section" wx:if="{{currentProjectIsEssentialOilOnly && currentProjectNeedEssentialOil}}">
       <view class="section-title">专属精油</view>
       <image class="exclusive-oil-image" src="/assets/essential-oil.jpg" mode="aspectFill" />
     </view>

@@ -1,237 +1,171 @@
 <view class="data-management">
-	<view class="tabs">
-		<view 
-			class="tab-item {{activeTab === 'projects' ? 'active' : ''}}" 
-			data-value="projects"
-			bindtap="onTabChange"
-		>
-			项目管理
-		</view>
-		<view 
-			class="tab-item {{activeTab === 'rooms' ? 'active' : ''}}" 
-			data-value="rooms"
-			bindtap="onTabChange"
-		>
-			房间管理
-		</view>
-		<view 
-			class="tab-item {{activeTab === 'oils' ? 'active' : ''}}" 
-			data-value="oils"
-			bindtap="onTabChange"
-		>
-			精油管理
-		</view>
-	</view>
-
-	<view class="content">
-		<view wx:if="{{activeTab === 'projects'}}" class="section">
-			<view class="section-header">
-				<view class="section-title">项目列表</view>
-				<view class="add-btn" bindtap="onAddProject">添加项目</view>
-			</view>
-			<view class="list">
-				<view class="list-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{projects}}" wx:key="_id">
-					<view class="item-info">
-						<view class="item-name">{{item.name}}</view>
-						<view class="item-detail">{{item.duration}}分钟</view>
-						<view class="item-detail" wx:if="{{item.price}}">¥{{item.price}}</view>
-						<view class="item-tag" wx:if="{{item.isEssentialOilOnly}}">专用精油</view>
-					</view>
-					<view class="item-actions">
-						<view 
-							class="action-btn status-btn {{item.status === 'normal' ? 'status-normal' : 'status-disabled'}}" 
-							data-index="{{index}}"
-							bindtap="handleToggleStatus"
-						>
-							{{item.status === 'normal' ? '禁用' : item.status === 'disabled' ? '启用' : '未知状态'}}
-						</view>
-						<view 
-							class="action-btn edit-btn" 
-							data-type="project" 
-							data-index="{{index}}"
-							bindtap="openEditModal"
-						>
-							编辑
-						</view>
-						<view 
-							class="action-btn delete-btn" 
-							data-index="{{index}}"
-							bindtap="handleDelete"
-						>
-							删除
-						</view>
-					</view>
-				</view>
-				<view class="empty" wx:if="{{projects.length === 0}}">
-					<view>暂无项目数据</view>
-				</view>
-			</view>
-		</view>
-
-		<view wx:if="{{activeTab === 'rooms'}}" class="section">
-			<view class="section-header">
-				<view class="section-title">房间列表</view>
-				<view class="add-btn" bindtap="onAddRoom">添加房间</view>
-			</view>
-			<view class="list">
-				<view class="list-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{rooms}}" wx:key="_id">
-					<view class="item-info">
-						<view class="item-name">{{item.name}}</view>
-					</view>
-					<view class="item-actions">
-						<view 
-							class="action-btn status-btn {{item.status === 'normal' ? 'status-normal' : 'status-disabled'}}" 
-							data-index="{{index}}"
-							bindtap="handleToggleStatus"
-						>
-							{{item.status === 'normal' ? '禁用' : item.status === 'disabled' ? '启用' : '未知状态'}}
-						</view>
-						<view 
-							class="action-btn edit-btn" 
-							data-type="room" 
-							data-index="{{index}}"
-							bindtap="openEditModal"
-						>
-							编辑
-						</view>
-						<view 
-							class="action-btn delete-btn" 
-							data-index="{{index}}"
-							bindtap="handleDelete"
-						>
-							删除
-						</view>
-					</view>
-				</view>
-				<view class="empty" wx:if="{{rooms.length === 0}}">
-					<view>暂无房间数据</view>
-				</view>
-			</view>
-		</view>
-
-		<view wx:if="{{activeTab === 'oils'}}" class="section">
-			<view class="section-header">
-				<view class="section-title">精油列表</view>
-				<view class="add-btn" bindtap="onAddOil">添加精油</view>
-			</view>
-			<view class="list">
-				<view class="list-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{essentialOils}}" wx:key="_id">
-					<view class="item-info">
-						<view class="item-name">{{item.name}}</view>
-						<view class="item-detail">{{item.effect}}</view>
-					</view>
-					<view class="item-actions">
-						<view 
-							class="action-btn status-btn {{item.status === 'normal' ? 'status-normal' : 'status-disabled'}}" 
-							data-index="{{index}}"
-							bindtap="handleToggleStatus"
-						>
-							{{item.status === 'normal' ? '禁用' : item.status === 'disabled' ? '启用' : '未知状态'}}
-						</view>
-						<view 
-							class="action-btn edit-btn" 
-							data-type="oil" 
-							data-index="{{index}}"
-							bindtap="openEditModal"
-						>
-							编辑
-						</view>
-						<view 
-							class="action-btn delete-btn" 
-							data-index="{{index}}"
-							bindtap="handleDelete"
-						>
-							删除
-						</view>
-					</view>
-				</view>
-				<view class="empty" wx:if="{{essentialOils.length === 0}}">
-					<view>暂无精油数据</view>
-				</view>
-			</view>
-		</view>
-	</view>
-
-	<!-- Loading 遮罩 -->
-	<view class="loading-mask" wx:if="{{loading}}">
-		<view class="loading-content">
-			<view class="loading-spinner"></view>
-			<view class="loading-text">加载中...</view>
-		</view>
-	</view>
-
-	<view class="modal" wx:if="{{showModal}}" bindtap="closeModal">
-		<view class="modal-content" catchtap>
-			<view class="modal-header">
-				<view class="modal-title">{{editingItem ? '编辑' : '添加'}}</view>
-				<view class="modal-close" bindtap="closeModal">×</view>
-			</view>
-			<view class="modal-body">
-				<view class="form-item">
-					<view class="form-label">名称 <view class="required">*</view></view>
-					<input 
-						class="form-input" 
-						value="{{formData.name}}" 
-						bindinput="onNameInput"
-						placeholder="请输入名称"
-					/>
-				</view>
-				<view class="form-item" wx:if="{{activeTab === 'projects'}}">
-					<view class="form-label">时长（分钟） <view class="required">*</view></view>
-					<input 
-						class="form-input" 
-						type="number"
-						value="{{formData.duration}}" 
-						bindinput="onDurationInput"
-						placeholder="请输入时长"
-					/>
-				</view>
-				<view class="form-item" wx:if="{{activeTab === 'projects'}}">
-					<view class="form-label">价格（元）</view>
-					<input 
-						class="form-input" 
-						type="digit"
-						value="{{formData.price}}" 
-						bindinput="onPriceInput"
-						placeholder="请输入价格"
-					/>
-				</view>
-				<view class="form-item" wx:if="{{activeTab === 'projects'}}">
-					<view class="form-label">是否专用精油</view>
-					<view class="checkbox-wrapper" catch:tap="onIsEssentialOilOnlyChange">
-						<checkbox
-							class="form-checkbox"
-							checked="{{formData.isEssentialOilOnly}}"
-						/>
-						<view class="checkbox-label">专用精油</view>
-					</view>
-				</view>
-				<view class="form-item" wx:if="{{activeTab === 'oils'}}">
-					<view class="form-label">功效 <view class="required">*</view></view>
-					<input 
-						class="form-input" 
-						value="{{formData.effect}}" 
-						bindinput="onEffectInput"
-						placeholder="请输入功效"
-						maxlength="200"
-					/>
-				</view>
-				<view class="form-item" wx:if="{{activeTab !== 'projects'}}">
-					<view class="form-label">状态</view>
-					<view class="radio-group">
-						<view class="radio-option {{formData.status === 'normal' ? 'selected' : ''}}" bindtap="onStatusChange" data-value="normal">
-							<view>启用</view>
-						</view>
-						<view class="radio-option {{formData.status === 'disabled' ? 'selected' : ''}}" bindtap="onStatusChange" data-value="disabled">
-							<view>禁用</view>
-						</view>
-					</view>
-				</view>
-			</view>
-			<view class="modal-footer">
-				<view class="modal-btn cancel-btn" bindtap="closeModal">取消</view>
-				<view class="modal-btn confirm-btn" bindtap="handleSave">确定</view>
-			</view>
-		</view>
-	</view>
+  <view class="tabs">
+    <view class="tab-item {{activeTab === 'projects' ? 'active' : ''}}" data-value="projects" bindtap="onTabChange">
+      项目管理
+    </view>
+    <view class="tab-item {{activeTab === 'rooms' ? 'active' : ''}}" data-value="rooms" bindtap="onTabChange">
+      房间管理
+    </view>
+    <view class="tab-item {{activeTab === 'oils' ? 'active' : ''}}" data-value="oils" bindtap="onTabChange">
+      精油管理
+    </view>
+  </view>
+  <view class="content">
+    <view wx:if="{{activeTab === 'projects'}}" class="section">
+      <view class="section-header">
+        <view class="section-title">项目列表</view>
+        <view class="add-btn" bindtap="onAddProject">添加项目</view>
+      </view>
+      <view class="list">
+        <view class="list-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{projects}}" wx:key="_id">
+          <view class="item-info">
+            <view class="item-name">{{item.name}}</view>
+            <view class="item-detail">{{item.duration}}分钟</view>
+            <view class="item-detail" wx:if="{{item.price}}">¥{{item.price}}</view>
+            <view class="item-tag" wx:if="{{item.isEssentialOilOnly}}">专用精油</view>
+          </view>
+          <view class="item-actions">
+            <view class="action-btn status-btn {{item.status === 'normal' ? 'status-normal' : 'status-disabled'}}" data-index="{{index}}" bindtap="handleToggleStatus">
+              {{item.status === 'normal' ? '禁用' : item.status === 'disabled' ? '启用' : '未知状态'}}
+            </view>
+            <view class="action-btn edit-btn" data-type="project" data-index="{{index}}" bindtap="openEditModal">
+              编辑
+            </view>
+            <view class="action-btn delete-btn" data-index="{{index}}" bindtap="handleDelete">
+              删除
+            </view>
+          </view>
+        </view>
+        <view class="empty" wx:if="{{projects.length === 0}}">
+          <view>暂无项目数据</view>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{activeTab === 'rooms'}}" class="section">
+      <view class="section-header">
+        <view class="section-title">房间列表</view>
+        <view class="add-btn" bindtap="onAddRoom">添加房间</view>
+      </view>
+      <view class="list">
+        <view class="list-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{rooms}}" wx:key="_id">
+          <view class="item-info">
+            <view class="item-name">{{item.name}}</view>
+          </view>
+          <view class="item-actions">
+            <view class="action-btn status-btn {{item.status === 'normal' ? 'status-normal' : 'status-disabled'}}" data-index="{{index}}" bindtap="handleToggleStatus">
+              {{item.status === 'normal' ? '禁用' : item.status === 'disabled' ? '启用' : '未知状态'}}
+            </view>
+            <view class="action-btn edit-btn" data-type="room" data-index="{{index}}" bindtap="openEditModal">
+              编辑
+            </view>
+            <view class="action-btn delete-btn" data-index="{{index}}" bindtap="handleDelete">
+              删除
+            </view>
+          </view>
+        </view>
+        <view class="empty" wx:if="{{rooms.length === 0}}">
+          <view>暂无房间数据</view>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{activeTab === 'oils'}}" class="section">
+      <view class="section-header">
+        <view class="section-title">精油列表</view>
+        <view class="add-btn" bindtap="onAddOil">添加精油</view>
+      </view>
+      <view class="list">
+        <view class="list-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{essentialOils}}" wx:key="_id">
+          <view class="item-info">
+            <view class="item-name">{{item.name}}</view>
+            <view class="item-detail">{{item.effect}}</view>
+          </view>
+          <view class="item-actions">
+            <view class="action-btn status-btn {{item.status === 'normal' ? 'status-normal' : 'status-disabled'}}" data-index="{{index}}" bindtap="handleToggleStatus">
+              {{item.status === 'normal' ? '禁用' : item.status === 'disabled' ? '启用' : '未知状态'}}
+            </view>
+            <view class="action-btn edit-btn" data-type="oil" data-index="{{index}}" bindtap="openEditModal">
+              编辑
+            </view>
+            <view class="action-btn delete-btn" data-index="{{index}}" bindtap="handleDelete">
+              删除
+            </view>
+          </view>
+        </view>
+        <view class="empty" wx:if="{{essentialOils.length === 0}}">
+          <view>暂无精油数据</view>
+        </view>
+      </view>
+    </view>
+  </view>
+  <!-- Loading 遮罩 -->
+  <view class="loading-mask" wx:if="{{loading}}">
+    <view class="loading-content">
+      <view class="loading-spinner"></view>
+      <view class="loading-text">加载中...</view>
+    </view>
+  </view>
+  <view class="modal" wx:if="{{showModal}}" bindtap="closeModal">
+    <view class="modal-content" catchtap>
+      <view class="modal-header">
+        <view class="modal-title">{{editingItem ? '编辑' : '添加'}}</view>
+        <view class="modal-close" bindtap="closeModal">×</view>
+      </view>
+      <view class="modal-body">
+        <view class="form-item">
+          <view class="form-label">
+            名称
+            <view class="required">*</view>
+          </view>
+          <input class="form-input" value="{{formData.name}}" bindinput="onNameInput" placeholder="请输入名称" />
+        </view>
+        <view class="form-item" wx:if="{{activeTab === 'projects'}}">
+          <view class="form-label">
+            时长（分钟）
+            <view class="required">*</view>
+          </view>
+          <input class="form-input" type="number" value="{{formData.duration}}" bindinput="onDurationInput" placeholder="请输入时长" />
+        </view>
+        <view class="form-item" wx:if="{{activeTab === 'projects'}}">
+          <view class="form-label">价格（元）</view>
+          <input class="form-input" type="digit" value="{{formData.price}}" bindinput="onPriceInput" placeholder="请输入价格" />
+        </view>
+        <view class="form-item" wx:if="{{activeTab === 'projects'}}">
+          <view class="form-label">是否专用精油</view>
+          <view class="checkbox-wrapper" catch:tap="onIsEssentialOilOnlyChange">
+            <checkbox class="form-checkbox" checked="{{formData.isEssentialOilOnly}}" />
+            <view class="checkbox-label">专用精油</view>
+          </view>
+        </view>
+        <view class="form-item" wx:if="{{activeTab === 'projects'}}">
+          <view class="form-label">是否需要精油</view>
+          <view class="checkbox-wrapper" catch:tap="onNeedEssentialOilChange">
+            <checkbox class="form-checkbox" checked="{{formData.needEssentialOil}}" />
+            <view class="checkbox-label">需要</view>
+          </view>
+        </view>
+        <view class="form-item" wx:if="{{activeTab === 'oils'}}">
+          <view class="form-label">
+            功效
+            <view class="required">*</view>
+          </view>
+          <input class="form-input" value="{{formData.effect}}" bindinput="onEffectInput" placeholder="请输入功效" maxlength="200" />
+        </view>
+        <view class="form-item">
+          <view class="form-label">状态</view>
+          <view class="radio-group">
+            <view class="radio-option {{formData.status === 'normal' ? 'selected' : ''}}" bindtap="onStatusChange" data-value="normal">
+              <view>启用</view>
+            </view>
+            <view class="radio-option {{formData.status === 'disabled' ? 'selected' : ''}}" bindtap="onStatusChange" data-value="disabled">
+              <view>禁用</view>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="modal-footer">
+        <view class="modal-btn cancel-btn" bindtap="closeModal">取消</view>
+        <view class="modal-btn confirm-btn" bindtap="handleSave">确定</view>
+      </view>
+    </view>
+  </view>
 </view>

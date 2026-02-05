@@ -4,22 +4,14 @@ import { formatTime } from "../utils/util";
 interface PrintContentOptions {
   info: Add<ConsultationInfo>;
   isEssentialOilOnly?: boolean;
+  needEssentialOil?: boolean;
 }
 
-class PrintContentBuilder {
+export class PrintContentBuilder {
   private readonly strengthMap: Record<string, string> = {
     standard: "标准",
     soft: "轻柔",
     gravity: "重力",
-  };
-
-  private readonly oilMap: Record<string, string> = {
-    lavender: "薰衣草",
-    grapefruit: "葡萄柚",
-    atractylodes: "白术",
-    rosemary: "迷迭香",
-    rosewood: "花梨木",
-    seasonal: "季节特调",
   };
 
   private readonly partMap: Record<string, string> = {
@@ -34,8 +26,10 @@ class PrintContentBuilder {
     calf: "小腿",
   };
 
+  constructor(private readonly oils: EssentialOil[]) { }
+
   async buildContent(options: PrintContentOptions): Promise<string> {
-    const { info, isEssentialOilOnly = false } = options;
+    const { info, isEssentialOilOnly = false, needEssentialOil = true } = options;
     const ESC = String.fromCharCode(0x1b);
     const setLargeFont = ESC + "!" + String.fromCharCode(0x30);
 
@@ -51,8 +45,8 @@ class PrintContentBuilder {
 
     if (isEssentialOilOnly) {
       content += "精油: 项目专属精油\n";
-    } else if (info.project !== "60min指压") {
-      content += `精油:${this.oilMap[info.essentialOil] || "未选择"}\n`;
+    } else if (needEssentialOil) {
+      content += `精油:${this.oils.find((oil) => oil._id === info.essentialOil)?.name || "未选择"}\n`;
     }
 
     content += "加强部位:";
@@ -122,15 +116,6 @@ class PrintContentBuilder {
       gravity: "重力",
     };
 
-    const oilMap: Record<string, string> = {
-      lavender: "薰衣草",
-      grapefruit: "葡萄柚",
-      atractylodes: "白术",
-      rosemary: "迷迭香",
-      rosewood: "花梨木",
-      seasonal: "季节特调",
-    };
-
     const partMap: Record<string, string> = {
       head: "头部",
       neck: "颈部",
@@ -149,7 +134,7 @@ class PrintContentBuilder {
     formattedInfo += `技师: ${info.technician}${info.isClockIn ? "[点钟]" : ""}\n`;
     formattedInfo += `房间: ${info.room}\n`;
     formattedInfo += `力度: ${strengthMap[info.massageStrength] || "未选择"}\n`;
-    formattedInfo += `精油: ${oilMap[info.essentialOil] || "未选择"}\n`;
+    formattedInfo += `精油: ${this.oils.find((oil) => oil._id === info.essentialOil)?.name || "未选择"}\n`;
 
     formattedInfo += "加强部位:";
     const selectedPartsArray = Object.keys(info.selectedParts).filter(
@@ -175,4 +160,3 @@ class PrintContentBuilder {
   }
 }
 
-export const printContentBuilder = new PrintContentBuilder();

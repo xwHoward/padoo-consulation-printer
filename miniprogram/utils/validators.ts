@@ -3,7 +3,7 @@ export interface ValidationResult {
   message?: string;
 }
 
-export function validateConsultationInfo(info: Add<ConsultationInfo>, isEssentialOilOnly: boolean): ValidationResult {
+export function validateConsultationInfo(info: Add<ConsultationInfo>, isEssentialOilOnly: boolean, needEssentialOil: boolean): ValidationResult {
   if (!info.gender) {
     return { isValid: false, message: '请选择称呼' };
   }
@@ -16,7 +16,7 @@ export function validateConsultationInfo(info: Add<ConsultationInfo>, isEssentia
   if (!info.room) {
     return { isValid: false, message: '请选择房间' };
   }
-  if (!info.essentialOil && !isEssentialOilOnly) {
+  if (!info.essentialOil && !isEssentialOilOnly && needEssentialOil) {
     return { isValid: false, message: '请选择精油' };
   }
 
@@ -48,7 +48,7 @@ export function validateDualModeInfo(guest1: GuestInfo, guest2: GuestInfo): Vali
   return { isValid: true };
 }
 
-export function validateConsultationForPrint(consultationInfo: Add<ConsultationInfo>, isEssentialOilOnly: boolean, isDualMode: boolean, guest1Info?: GuestInfo, guest2Info?: GuestInfo): ValidationResult {
+export function validateConsultationForPrint(consultationInfo: Add<ConsultationInfo>, isEssentialOilOnly: boolean, needEssentialOil: boolean, isDualMode: boolean, guest1Info?: GuestInfo, guest2Info?: GuestInfo): ValidationResult {
   if (isDualMode) {
     if (!guest1Info || !guest2Info) {
       return { isValid: false, message: '双人模式信息不完整' };
@@ -58,7 +58,7 @@ export function validateConsultationForPrint(consultationInfo: Add<ConsultationI
       return dualResult;
     }
   } else {
-    const singleResult = validateConsultationInfo(consultationInfo, isEssentialOilOnly);
+    const singleResult = validateConsultationInfo(consultationInfo, isEssentialOilOnly, needEssentialOil);
     if (!singleResult.isValid) {
       return singleResult;
     }

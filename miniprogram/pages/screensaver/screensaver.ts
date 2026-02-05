@@ -40,6 +40,16 @@ Page({
 
   refreshTimer: null as number | null,
 
+  goBack() {
+    wx.navigateBack({
+      fail: () => {
+        wx.reLaunch({
+          url: '/pages/index/index'
+        });
+      }
+    });
+  },
+
 
   async loadAvailableTechnicians() {
     this.setData({ loading: true });

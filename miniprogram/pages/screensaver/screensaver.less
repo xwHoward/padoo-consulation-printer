@@ -12,6 +12,35 @@
   overflow: hidden;
 }
 
+.back-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 44px;
+  height: 44px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(6px);
+
+  &:active {
+    transform: scale(0.9);
+    background: rgba(0, 0, 0, 0.7);
+  }
+}
+
+.back-icon {
+  font-size: 24px;
+  color: #fff;
+  font-weight: 300;
+  line-height: 1;
+}
+
 .content-wrapper {
   position: relative;
   z-index: 1;
