@@ -63,6 +63,12 @@ Page({
       show: false,
       selectedDate: '',
       availableDates: [] as string[]
+    },
+    // 每日总结推送弹窗状态
+    summaryModal: {
+      show: false,
+      content: '',
+      loading: false
     }
   },
 
@@ -336,11 +342,11 @@ Page({
         return;
       }
 
-      let summaryText = `=== ${date} 每日总结 ===\n\n`;
+      let summaryText = `# ${date} 每日总结\n\n`;
 
       Object.keys(technicianStats).forEach(technician => {
         const stats = technicianStats[technician];
-        summaryText += `技师: ${technician}\n`;
+        summaryText += `技师: **${technician}**\n`;
         summaryText += `总单数: ${stats.totalCount}\n`;
         summaryText += `点钟数: ${stats.clockInCount}\n`;
 
@@ -356,7 +362,7 @@ Page({
         summaryText += `项目统计:\n`;
 
         Object.keys(stats.projects).forEach(project => {
-          summaryText += `  ${project}: ${stats.projects[project]}\n`;
+          summaryText += `-  ${project}: ${stats.projects[project]}\n`;
         });
 
         summaryText += `\n`;
@@ -367,39 +373,20 @@ Page({
       const totalExtraTime = Object.values(technicianStats).reduce((sum: number, stats: any) => sum + stats.extraTimeTotal, 0);
       const totalOvertime = Object.values(technicianStats).reduce((sum: number, stats: any) => sum + stats.overtimeTotal, 0);
 
-      summaryText += `=== 总计 ===\n`;
-      summaryText += `总单数: ${totalRecords}\n`;
-      summaryText += `总点钟数: ${totalClockIn}\n`;
+      summaryText += `# 总计\n`;
+      summaryText += `总单数: **${totalRecords}**\n`;
+      summaryText += `总点钟数: **${totalClockIn}**\n`;
 
       if (totalExtraTime > 0) {
-        summaryText += `总加钟: ${(totalExtraTime)}\n`;
+        summaryText += `总加钟: **${(totalExtraTime)}\n`;
       }
       if (totalOvertime > 0) {
-        summaryText += `总加班: ${(totalOvertime)}\n`;
+        summaryText += `总加班: **${(totalOvertime)}\n`;
       }
 
-      wx.setClipboardData({
-        data: summaryText,
-        success: () => {
-          wx.showToast({
-            title: '统计已复制到剪贴板',
-            icon: 'success'
-          });
-        },
-        fail: (err) => {
-          console.error('复制到剪贴板失败:', err);
-          wx.showToast({
-            title: '复制失败',
-            icon: 'error'
-          });
-        }
-      });
-
-      wx.showModal({
-        title: `${date} 统计报告`,
-        content: summaryText,
-        showCancel: false,
-        confirmText: '确定'
+      this.setData({
+        'summaryModal.show': true,
+        'summaryModal.content': summaryText
       });
 
     } catch (error) {
@@ -575,6 +562,63 @@ Page({
       });
     } finally {
       this.setData({ loading: false });
+    }
+  },
+
+  // 每日总结弹窗 - 关闭
+  onSummaryModalCancel() {
+    this.setData({
+      'summaryModal.show': false,
+      'summaryModal.content': ''
+    });
+  },
+
+  // 每日总结弹窗 - 内容修改
+  onSummaryContentInput(e: WechatMiniprogram.CustomEvent) {
+    const value = e.detail.value;
+    this.setData({
+      'summaryModal.content': value
+    });
+  },
+
+  // 每日总结弹窗 - 确认推送到企业微信
+  async onSummaryModalConfirm() {
+    const { content } = this.data.summaryModal;
+    
+    if (!content || content.trim() === '') {
+      wx.showToast({ title: '总结内容不能为空', icon: 'none' });
+      return;
+    }
+
+    this.setData({ 'summaryModal.loading': true });
+
+    try {
+      
+      const res = await wx.cloud.callFunction({
+        name: 'sendWechatMessage',
+        data: {
+          content: content
+        }
+      });
+
+      if (res.result && typeof res.result === 'object') {
+        const result = res.result as { code: number; message?: string };
+        if (result.code === 0) {
+          wx.showToast({ title: '推送成功', icon: 'success', duration: 2000 });
+          setTimeout(() => {
+            this.onSummaryModalCancel();
+          }, 1500);
+        } else {
+          wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+        }
+      } else {
+        wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+      }
+    } catch (error) {
+      console.error('推送到企业微信失败:', error);
+      wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+    } finally {
+      this.setData({ 'summaryModal.loading': false });
     }
   },
 

@@ -214,3 +214,30 @@
 </view>
 <!-- 车牌号输入弹窗 -->
 <license-plate-input visible="{{licensePlateInputVisible}}" value="{{licensePlate}}" bind:cancel="hidePlateInputModal" bind:confirm="onPlateConfirm" />
+
+<!-- 报钟推送确认弹窗 -->
+<view class="modal-mask" wx:if="{{clockInModal.show}}" bindtap="onClockInModalCancel"></view>
+<view class="clockin-modal" wx:if="{{clockInModal.show}}">
+  <view class="modal-header">
+    <text class="modal-title">确认报钟信息</text>
+    <text class="modal-close" bindtap="onClockInModalCancel">✕</text>
+  </view>
+  <view class="modal-body">
+    <textarea 
+      class="clockin-textarea" 
+      value="{{clockInModal.content}}" 
+      bindinput="onClockInContentInput"
+      placeholder="请输入报钟内容"
+      maxlength="1000"
+      auto-height
+      show-confirm-bar="{{false}}"
+    />
+    <text class="char-count">{{clockInModal.content.length}}/1000</text>
+  </view>
+  <view class="modal-footer">
+    <button class="modal-btn cancel-btn" bindtap="onClockInModalCancel">取消</button>
+    <button class="modal-btn confirm-btn" bindtap="onClockInModalConfirm" disabled="{{clockInModal.loading}}">
+      {{clockInModal.loading ? '推送中...' : '确认推送'}}
+    </button>
+  </view>
+</view>

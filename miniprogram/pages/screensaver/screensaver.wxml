@@ -20,6 +20,9 @@
           </view>
         </view>
         <view class="available-info">
+          <view class="info-label available" wx:if="{{ item.lastAppointmentTime }}">
+            最近可预约时间：{{ item.lastAppointmentTime }}
+          </view>
           <view class="info-label available" wx:if="{{ item.status === 'available' }}">当前可预约</view>
           <view class="info-label" wx:if="{{ item.status === 'busy' }}">
             预计等待

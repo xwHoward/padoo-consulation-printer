@@ -730,3 +730,112 @@ page {
   font-size: 14px;
   color: #FF4D4F;
 }
+
+/* 报钟推送弹窗 */
+.clockin-modal {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: @bg-color;
+  border-radius: 16px 16px 0 0;
+  z-index: 1000;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+.clockin-modal .modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid @border-color-light;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.clockin-modal .modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: @text-color;
+}
+
+.clockin-modal .modal-close {
+  font-size: 24px;
+  color: @text-color-secondary;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.clockin-modal .modal-body {
+  padding: 20px;
+  position: relative;
+}
+
+.clockin-textarea {
+  width: 100%;
+  min-height: 200px;
+  max-height: 400px;
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: @text-color;
+  background-color: @bg-color-light;
+  border: 1px solid @border-color;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.clockin-textarea::placeholder {
+  color: @text-color-secondary;
+}
+
+.char-count {
+  position: absolute;
+  bottom: 10px;
+  right: 20px;
+  font-size: 11px;
+  color: @text-color-secondary;
+}
+
+.clockin-modal .modal-footer {
+  display: flex;
+  border-top: 1px solid @border-color-light;
+}
+
+.clockin-modal .modal-btn {
+  flex: 1;
+  padding: 16px 0;
+  font-size: 16px;
+  border: none;
+  background: none;
+  border-radius: 0;
+  line-height: 1;
+  min-height: 0;
+}
+
+.clockin-modal .modal-btn.cancel-btn {
+  color: @text-color-secondary;
+  border-right: 1px solid @border-color-light;
+}
+
+.clockin-modal .modal-btn.cancel-btn:active {
+  background-color: @bg-color-light;
+}
+
+.clockin-modal .modal-btn.confirm-btn {
+  color: @primary-color;
+  font-weight: 500;
+}
+
+.clockin-modal .modal-btn.confirm-btn:active {
+  background-color: rgba(255, 107, 0, 0.1);
+}
+
+.clockin-modal .modal-btn[disabled] {
+  color: #ccc;
+  background-color: @bg-color;
+  cursor: not-allowed;
+}

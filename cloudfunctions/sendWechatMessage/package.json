@@ -1,0 +1,11 @@
+{
+  "name": "sendWechatMessage",
+  "version": "1.0.0",
+  "description": "发送消息到企业微信群聊机器人",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.6"
+  }
+}

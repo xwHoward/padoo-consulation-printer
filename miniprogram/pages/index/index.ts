@@ -133,7 +133,13 @@ Page({
     selectedMinute: 0,
     licensePlate: '',
     licensePlateInputVisible: false,
-    plateNumber: ['', '', '', '', '', '', '', '']
+    plateNumber: ['', '', '', '', '', '', '', ''],
+    // 报钟推送弹窗
+    clockInModal: {
+      show: false,
+      content: '',
+      loading: false
+    }
   },
   printContentBuilder: null as PrintContentBuilder | null,
 
@@ -962,17 +968,11 @@ Page({
         const success = await this.saveConsultation(updatedInfo, editId);
 
         if (success) {
-          wx.setClipboardData({
-            data: clockInInfo,
-            success: () => {
-              wx.showToast({ title: '上钟信息已复制', icon: 'success', duration: 1000 });
-              this.loadTechnicianList();
-            },
-            fail: (err) => {
-              wx.showToast({ title: '复制失败', icon: 'none' });
-              console.error('复制到剪贴板失败:', err);
-            },
+          this.setData({
+            'clockInModal.show': true,
+            'clockInModal.content': clockInInfo
           });
+          this.loadTechnicianList();
         }
       }
     } finally {
@@ -1274,17 +1274,11 @@ ${clockInInfo1}
 【顾客2】
 ${clockInInfo2}`;
 
-      wx.setClipboardData({
-        data: combinedInfo,
-        success: async () => {
-          wx.showToast({ title: '双人报钟已复制', icon: 'success', duration: 1000 });
-          await this.loadTechnicianList();
-        },
-        fail: (err) => {
-          wx.showToast({ title: '复制失败', icon: 'none' });
-          console.error('复制到剪贴板失败:', err);
-        },
+      this.setData({
+        'clockInModal.show': true,
+        'clockInModal.content': combinedInfo
       });
+      await this.loadTechnicianList();
     } else {
       wx.showToast({ title: '保存失败', icon: 'error' });
     }
@@ -1320,15 +1314,15 @@ ${clockInInfo2}`;
     }
 
     let formattedInfo = "";
-    formattedInfo += `顾客: ${info.surname}${info.gender === "male" ? "先生" : "女士"
+    formattedInfo += `**顾客**: ${info.surname}${info.gender === "male" ? "先生" : "女士"
       }\n`;
-    formattedInfo += `项目: ${info.project}\n`;
-    formattedInfo += `技师: ${info.technician}(${dailyCount})${info.isClockIn ? "[点]" : ""}\n`;
-    formattedInfo += `房间: ${info.room}\n`;
-    formattedInfo += `时间: ${startTime} - ${endTime}`;
+    formattedInfo += `**项目**: ${info.project}\n`;
+    formattedInfo += `**技师**: ${info.technician}(${dailyCount})${info.isClockIn ? "[点]" : ""}\n`;
+    formattedInfo += `**房间**: ${info.room}\n`;
+    formattedInfo += `**时间**: ${startTime} - ${endTime}`;
 
     if (info.remarks) {
-      formattedInfo += `\n备注: ${info.remarks}`;
+      formattedInfo += `\n**备注**: ${info.remarks}`;
     }
 
     return formattedInfo;
@@ -1364,5 +1358,74 @@ ${clockInInfo2}`;
       licensePlate: value,
       plateNumber: value.split('')
     });
+  },
+
+  // 报钟弹窗 - 关闭
+  onClockInModalCancel() {
+    this.setData({
+      'clockInModal.show': false,
+      'clockInModal.content': ''
+    });
+  },
+
+  // 报钟弹窗 - 内容修改
+  onClockInContentInput(e: WechatMiniprogram.CustomEvent) {
+    const value = e.detail.value;
+    this.setData({
+      'clockInModal.content': value
+    });
+  },
+
+  // 报钟弹窗 - 确认推送到企业微信
+  async onClockInModalConfirm() {
+    const { content } = this.data.clockInModal;
+    
+    if (!content || content.trim() === '') {
+      wx.showToast({ title: '报钟内容不能为空', icon: 'none' });
+      return;
+    }
+
+    this.setData({ 'clockInModal.loading': true });
+
+    try {
+      const result = await this.sendToWechatWebhook(content);
+      
+      if (result) {
+        wx.showToast({ title: '推送成功', icon: 'success', duration: 2000 });
+        setTimeout(() => {
+          this.onClockInModalCancel();
+        }, 1500);
+      } else {
+        wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+      }
+    } catch (error) {
+      console.error('推送到企业微信失败:', error);
+      wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+    } finally {
+      this.setData({ 'clockInModal.loading': false });
+    }
+  },
+
+  // 发送到企业微信机器人
+  async sendToWechatWebhook(content: string): Promise<boolean> {
+    
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'sendWechatMessage',
+        data: {
+          content: content
+        }
+      });
+
+      if (res.result && typeof res.result === 'object') {
+        const result = res.result as { code: number; message?: string };
+        return result.code === 0;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('调用云函数失败:', error);
+      return false;
+    }
   }
 });

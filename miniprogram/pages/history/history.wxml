@@ -144,3 +144,30 @@
   <view class="loading-spinner"></view>
   <view class="loading-text">{{loadingText}}</view>
 </view>
+
+<!-- 每日总结推送确认弹窗 -->
+<view class="modal-mask" wx:if="{{summaryModal.show}}" bindtap="onSummaryModalCancel"></view>
+<view class="summary-modal" wx:if="{{summaryModal.show}}">
+  <view class="modal-header">
+    <text class="modal-title">确认每日总结</text>
+    <text class="modal-close" bindtap="onSummaryModalCancel">✕</text>
+  </view>
+  <view class="modal-body">
+    <textarea 
+      class="summary-textarea" 
+      value="{{summaryModal.content}}" 
+      bindinput="onSummaryContentInput"
+      placeholder="请输入每日总结内容"
+      maxlength="2000"
+      auto-height
+      show-confirm-bar="{{false}}"
+    />
+    <text class="char-count">{{summaryModal.content.length}}/2000</text>
+  </view>
+  <view class="modal-footer">
+    <button class="modal-btn cancel-btn" bindtap="onSummaryModalCancel">取消</button>
+    <button class="modal-btn confirm-btn" bindtap="onSummaryModalConfirm" disabled="{{summaryModal.loading}}">
+      {{summaryModal.loading ? '推送中...' : '确认推送'}}
+    </button>
+  </view>
+</view>
