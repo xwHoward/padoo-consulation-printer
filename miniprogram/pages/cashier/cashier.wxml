@@ -22,12 +22,14 @@
         </view>
         <view class="reserve-btn" bindtap="openReserveModal">新增预约</view>
       </view>
-      <scroll-view class="timeline-scroll" scroll-x>
-        <view class="timeline-container">
+      <scroll-view class="timeline-scroll" scroll-x scroll-left="{{timelineScrollLeft}}" scroll-into-view="timeline" id="timelineScrollView">
+        <view class="timeline-container" style="width: {{timeLabels.length*80}}px;">
           <!-- 时间轴刻度 -->
           <view class="time-axis">
             <view class="time-axis-spacer"></view>
-            <view class="time-mark" wx:for="{{timeLabels}}" wx:key="*this">{{item}}</view>
+            <view class="time-mark" wx:for="{{timeLabels}}" wx:key="*this">
+              <text style="margin-left: -6px;">{{item}}</text>
+            </view>
           </view>
           <!-- 员工行 -->
           <view class="staff-timeline-row" wx:for="{{staffTimeline}}" wx:key="_id">
@@ -43,7 +45,7 @@
               <!-- 当前时间线 -->
               <view class="current-time-line" wx:if="{{showCurrentTimeLine}}" style="left: {{currentTimePosition}};"></view>
               <!-- 占用块 -->
-              <view class="time-block {{block.isReservation ? 'reservation' : ''}}" wx:for="{{item.blocks}}" wx:for-item="block" wx:key="startTime" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block._id}}" data-reservation="{{block.isReservation}}">
+              <view class="time-block {{block.isReservation ? 'reservation' : ''}} {{block.isSettled ? 'settled' : ''}}" wx:for="{{item.blocks}}" wx:for-item="block" wx:key="startTime" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block._id}}" data-reservation="{{block.isReservation}}" data-settled="{{block.isSettled}}">
                 <view class="block-content">
                   <view class="block-customer">{{block.customerName}} | {{block.room}}</view>
                   <view class="block-time">{{block.startTime}}-{{block.endTime}}</view>
@@ -214,7 +216,6 @@
     </view>
   </view>
 </view>
-
 <!-- 预约推送确认弹窗 -->
 <view class="modal-mask" wx:if="{{pushModal.show}}" bindtap="onPushModalCancel">
   <view class="modal-content push-modal" catchtap="stopBubble">
@@ -224,7 +225,9 @@
         <view class="preview-header">{{pushModal.type === 'cancel' ? '【预约取消提醒】' : '【新预约提醒】'}}</view>
         <view class="preview-row">
           <text class="preview-label">顾客：</text>
-          <text class="preview-value">{{pushModal.reservationData.customerName}}{{pushModal.reservationData.gender === 'male' ? '先生' : '女士'}}</text>
+          <text class="preview-value">
+            {{pushModal.reservationData.customerName}}{{pushModal.reservationData.gender === 'male' ? '先生' : '女士'}}
+          </text>
         </view>
         <view class="preview-row">
           <text class="preview-label">日期：</text>
@@ -232,7 +235,9 @@
         </view>
         <view class="preview-row">
           <text class="preview-label">时间：</text>
-          <text class="preview-value">{{pushModal.reservationData.startTime}} - {{pushModal.reservationData.endTime}}</text>
+          <text class="preview-value">
+            {{pushModal.reservationData.startTime}} - {{pushModal.reservationData.endTime}}
+          </text>
         </view>
         <view class="preview-row">
           <text class="preview-label">项目：</text>

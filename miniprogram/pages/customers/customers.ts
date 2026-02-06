@@ -25,7 +25,12 @@ Page({
     formPaidAmount: '',
     formSalesStaff: '',
     formCardRemarks: '',
-    customerMemberships: [] as CustomerMembership[]
+    customerMemberships: [] as CustomerMembership[],
+    searchKeyword: '',
+    currentPage: 1,
+    pageSize: 20,
+    total: 0,
+    hasMore: true
   },
 
   onLoad() {
@@ -48,24 +53,44 @@ Page({
     }
   },
 
-  async loadCustomerList() {
+  async loadCustomerList(resetPage: boolean = true) {
     try {
-      this.setData({ loading: true });
-      const database = cloudDb;
+      if (resetPage) {
+        this.setData({ 
+          loading: true, 
+          currentPage: 1,
+          customerList: [] 
+        });
+      } else {
+        this.setData({ loading: true });
+      }
 
-      const savedCustomers = await database.getAll<CustomerRecord>(Collections.CUSTOMERS);
-      const customerMap: Record<string, CustomerRecord> = {};
+      const { searchKeyword, currentPage, pageSize } = this.data;
 
-      savedCustomers.forEach(c => {
-        const key = c.phone || c._id;
-        customerMap[key] = c;
+      const result = await cloudDb.findWithPage<CustomerRecord>(
+        Collections.CUSTOMERS,
+        (customer) => {
+          if (!searchKeyword) return true;
+          
+          const keyword = searchKeyword.toLowerCase();
+          const nameMatch = customer.name ? customer.name.toLowerCase().includes(keyword) : false;
+          const phoneMatch = customer.phone ? customer.phone.includes(keyword) : false;
+          
+          return nameMatch || phoneMatch;
+        },
+        currentPage,
+        pageSize,
+        { field: 'createdAt', direction: 'desc' }
+      );
+
+      const newList = resetPage ? result.data : [...this.data.customerList, ...result.data];
+
+      this.setData({ 
+        customerList: newList,
+        total: result.total,
+        hasMore: result.hasMore,
+        loading: false 
       });
-
-      const customerList = Object.values(customerMap).sort((a, b) => {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
-
-      this.setData({ customerList, loading: false });
     } catch (error) {
       console.error('加载顾客列表失败:', error);
       this.setData({ loading: false });
@@ -426,4 +451,27 @@ Page({
     }
   },
 
+  onSearchInput(e: WechatMiniprogram.CustomEvent) {
+    this.setData({ searchKeyword: e.detail.value });
+  },
+
+  onSearchConfirm() {
+    this.loadCustomerList(true);
+  },
+
+  onClearSearch() {
+    this.setData({ searchKeyword: '' });
+    this.loadCustomerList(true);
+  },
+
+  onLoadMore() {
+    const { hasMore, loading } = this.data;
+    if (!hasMore || loading) {
+      return;
+    }
+
+    const nextPage = this.data.currentPage + 1;
+    this.setData({ currentPage: nextPage });
+    this.loadCustomerList(false);
+  },
 });

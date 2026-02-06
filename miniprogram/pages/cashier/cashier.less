@@ -83,10 +83,6 @@ page {
 	width: 100%;
 }
 
-.timeline-container {
-	min-width: 800px; // 保证横向滚动有足够宽度
-}
-
 .time-axis {
 	display: flex;
 	border-bottom: 1px solid @border-color-light;
@@ -119,7 +115,7 @@ page {
 
 .staff-timeline-row {
 	display: flex;
-	height: 60px;
+	height: 70px;
 	border-bottom: 1px dashed @border-color-light;
 	align-items: center;
 }
@@ -135,6 +131,7 @@ page {
 	font-size: 14px;
 	font-weight: 500;
 	color: @text-color;
+	z-index: 10;
 
 	.shift-mini-tag {
 		font-size: 10px;
@@ -169,6 +166,7 @@ page {
 }
 
 .time-block {
+	box-sizing: border-box;
 	position: absolute;
 	top: 5px;
 	bottom: 5px;
@@ -184,25 +182,32 @@ page {
 		opacity: 0.9;
 	}
 
+	&.settled {
+		background: #52c41a; // 已结算使用绿色
+		box-shadow: 0 2px 4px rgba(82, 196, 26, 0.2);
+		opacity: 1;
+	}
+
 	.block-content {
-		padding: 4px;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
+		box-sizing: border-box;
+		padding-left: 4px;
 		color: #fff;
 		white-space: nowrap;
-
+		
 		.block-customer {
+			line-height: 24px;
 			font-size: 12px;
 			font-weight: bold;
 		}
 
 		.block-time {
 			font-size: 10px;
+			line-height: 18px;
 		}
 
 		.block-info {
 			font-size: 10px;
+			line-height: 18px;
 		}
 	}
 }
@@ -849,6 +854,7 @@ page {
 			padding: 10px 12px;
 			background-color: rgba(24, 144, 255, 0.08);
 			border-radius: 4px;
+
 			.tips-text {
 				flex: 1;
 				font-size: 12px;

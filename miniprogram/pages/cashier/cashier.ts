@@ -23,6 +23,7 @@ interface TimelineBlock {
 	left: string; // 距离左侧百分比
 	width: string; // 宽度百分比
 	isReservation?: boolean;
+	isSettled?: boolean; // 是否已结算
 }
 
 interface StaffTimeline {
@@ -63,10 +64,11 @@ Component({
 		rooms: [] as Room[],
 		rotationList: [] as RotationItem[],
 		staffTimeline: [] as StaffTimeline[],
-		timeLabels: ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'],
+		timeLabels: ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '00', '01', '02'],
 		// 当前时间线位置（百分比）
 		currentTimePosition: '0%',
 		showCurrentTimeLine: false,
+		timelineScrollLeft: 0,
 		// 预约弹窗相关
 		showReserveModal: false,
 		projects: [] as Project[],
@@ -287,8 +289,11 @@ Component({
 							const [startH, startM] = r.startTime.split(':').map(Number);
 							const [endH, endM] = r.endTime.split(':').map(Number);
 
-							const startMinutes = (startH - 12) * 60 + startM;
+							const startMinutes = (startH - parseInt(this.data.timeLabels[0])) * 60 + startM;
 							const duration = (endH - startH) * 60 + (endM - startM);
+							const timelineWidth = (this.data.timeLabels.length) * 60;
+							// 检查是否已结算
+							const isSettled = !r.isReservation && (r as ConsultationRecord).settlement && Object.keys((r as ConsultationRecord).settlement!).length > 0;
 
 							return {
 								_id: r._id,
@@ -297,9 +302,10 @@ Component({
 								endTime: r.endTime,
 								project: r.project,
 								room: r.room,
-								left: (startMinutes / 660 * 100) + '%',
-								width: (duration / 660 * 100) + '%',
-								isReservation: (r).isReservation
+								left: (startMinutes / timelineWidth * 100) + '%',
+								width: (duration / timelineWidth * 100) + '%',
+								isReservation: (r).isReservation,
+								isSettled
 							};
 						});
 
@@ -467,13 +473,20 @@ Component({
 
 			// 计算相对于12:00的分钟数
 			const currentMinutes = (hours - 12) * 60 + minutes;
-			// 总时间范围：12:00-23:00 = 11小时 = 660分钟
-			const totalMinutes = 660;
+			const totalMinutes = (this.data.timeLabels.length - 2) * 60;
 			const position = (currentMinutes / totalMinutes * 100).toFixed(2) + '%';
+
+			// 计算滚动位置：假设每个时间标签占据80px
+			// 将当前时间位置转换为滚动距离，使当前时间显示在左侧约20%的位置
+			const timeLabelWidth = 80;
+			const startHour = parseInt(this.data.timeLabels[0]);
+			const currentHourLabelIndex = hours - startHour;
+			const scrollLeft = Math.max(0, (currentHourLabelIndex * timeLabelWidth) - (timeLabelWidth * 0.5));
 
 			this.setData({
 				showCurrentTimeLine: true,
-				currentTimePosition: position
+				currentTimePosition: position,
+				timelineScrollLeft: scrollLeft
 			});
 		},
 
@@ -533,8 +546,16 @@ Component({
 
 		// 点击排钟项目操作
 		onBlockClick(e: WechatMiniprogram.CustomEvent) {
-			const { id: _id, reservation } = e.currentTarget.dataset;
-			const itemList = reservation ? ['编辑', '到店', '取消预约'] : ['编辑', '结算'];
+			const { id: _id, reservation, settled } = e.currentTarget.dataset;
+
+			let itemList: string[];
+
+			if (reservation) {
+				itemList = ['编辑', '到店', '取消预约'];
+			} else {
+				// 已结算的单据显示"修改结算"，未结算显示"结算"
+				itemList = settled ? ['编辑', '修改结算'] : ['编辑', '结算'];
+			}
 
 			wx.showActionSheet({
 				itemList,
@@ -550,7 +571,7 @@ Component({
 						this.handleArrival(_id);
 					} else if (action === '取消预约') {
 						this.cancelReservation(_id);
-					} else if (action === '结算') {
+					} else if (action === '结算' || action === '修改结算') {
 						this.openSettlement(_id);
 					}
 				}

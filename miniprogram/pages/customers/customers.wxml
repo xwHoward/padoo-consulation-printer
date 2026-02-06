@@ -6,6 +6,23 @@
   </view>
 </navigation-bar>
 <view class="customers-page">
+  <view class="search-bar">
+    <view class="search-input-wrapper">
+      <input 
+        class="search-input" 
+        type="text" 
+        placeholder="搜索顾客姓名或手机号" 
+        value="{{searchKeyword}}"
+        bindinput="onSearchInput"
+        bindconfirm="onSearchConfirm"
+      />
+      <view wx:if="{{searchKeyword}}" class="clear-icon" bindtap="onClearSearch">✕</view>
+    </view>
+    <view class="search-btn" bindtap="onSearchConfirm">搜索</view>
+  </view>
+  <view wx:if="{{total > 0}}" class="search-result-info">
+    <text>共 {{total}} 条记录</text>
+  </view>
   <view class="customer-list">
     <view wx:for="{{customerList}}" wx:key="phone" class="customer-card">
       <view class="customer-header">
@@ -41,9 +58,14 @@
       </view>
     </view>
   </view>
-  <view wx:if="{{customerList.length === 0}}" class="empty-state">
+  
+  <view wx:if="{{hasMore}}" class="load-more-btn" bindtap="onLoadMore">
+    <text>{{loading ? '加载中...' : '加载更多'}}</text>
+  </view>
+  
+  <view wx:if="{{customerList.length === 0 && !loading}}" class="empty-state">
     <view class="empty-icon">📋</view>
-    <view class="empty-text">暂无顾客记录</view>
+    <view class="empty-text">{{searchKeyword ? '未找到匹配的顾客' : '暂无顾客记录'}}</view>
   </view>
 </view>
 <view class="modal-mask" wx:if="{{showEditModal}}" bindtap="onModalCancel"></view>
