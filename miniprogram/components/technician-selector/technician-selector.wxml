@@ -8,6 +8,7 @@
     data-technician="{{item.name}}"
     data-occupied="{{item.isOccupied}}"
     data-reason="{{item.occupiedReason}}"
+    data-phone="{{item.phone}}"
   >
     <!-- <checkbox
       wx:if="{{multi}}"

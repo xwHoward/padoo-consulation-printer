@@ -94,6 +94,7 @@ interface StaffInfo extends BaseRecord {
   status: StaffStatus;
   gender: StaffGender;
   avatar: string;
+  phone: string;
 }
 
 // 班次类型
@@ -230,6 +231,7 @@ interface IAppOption<T extends Record<string, any> = AppGlobalData> {
 interface StaffAvailability {
   _id: string;
   name: string;
+  phone: string;
   isOccupied: boolean;
   occupiedReason?: string;
   isSelected?: boolean;

@@ -1,6 +1,6 @@
 // staff.ts
 import { cloudDb, Collections } from '../../utils/cloud-db';
-import { DEFAULT_SHIFT, SHIFT_NAMES, SHIFT_TYPES } from '../../utils/constants';
+import { SHIFT_NAMES, SHIFT_TYPES } from '../../utils/constants';
 import { formatDate } from '../../utils/util';
 
 interface DateInfo {
@@ -16,6 +16,7 @@ Component({
 		inputName: '',
 		inputGender: 'male' as StaffGender,
 		inputAvatar: '',
+		inputPhone: '',
 		inputStatus: 'active' as StaffStatus,
 		// 排班相关
 		today: '',
@@ -238,6 +239,7 @@ Component({
 						inputName: staff.name,
 						inputGender: staff.gender || 'male',
 						inputAvatar: staff.avatar || '',
+						inputPhone: staff.phone || '',
 						inputStatus: staff.status,
 						loading: false
 					});
@@ -335,6 +337,11 @@ Component({
 			this.setData({ inputName: e.detail.value });
 		},
 
+		// 手机号输入
+		onPhoneInput(e: WechatMiniprogram.Input) {
+			this.setData({ inputPhone: e.detail.value });
+		},
+
 		// 性别选择
 		onGenderSelect(e: WechatMiniprogram.TouchEvent) {
 			const gender = e.currentTarget.dataset.gender as StaffGender;
@@ -399,6 +406,7 @@ Component({
 				inputName: '',
 				inputGender: 'male',
 				inputAvatar: '',
+				inputPhone: '',
 				inputStatus: 'active',
 			});
 		},
@@ -406,11 +414,23 @@ Component({
 		// 确认弹窗
 		async onConfirmModal() {
 			try {
-				const { inputName, inputGender, inputAvatar, inputStatus, editingStaff } = this.data;
+				const { inputName, inputGender, inputAvatar, inputPhone, inputStatus, editingStaff } = this.data;
 				const name = inputName.trim();
+				const phone = inputPhone.trim();
 
 				if (!name) {
 					wx.showToast({ title: '请输入员工姓名', icon: 'none' });
+					return;
+				}
+
+				if (!phone) {
+					wx.showToast({ title: '请输入手机号', icon: 'none' });
+					return;
+				}
+
+				const phoneRegex = /^1[3-9]\d{9}$/;
+				if (!phoneRegex.test(phone)) {
+					wx.showToast({ title: '手机号格式不正确', icon: 'none' });
 					return;
 				}
 
@@ -421,6 +441,7 @@ Component({
 						name,
 						gender: inputGender,
 						avatar: inputAvatar,
+						phone,
 						status: inputStatus,
 					});
 
@@ -438,6 +459,7 @@ Component({
 						name,
 						gender: inputGender,
 						avatar: inputAvatar,
+						phone,
 						status: 'active'
 					}));
 

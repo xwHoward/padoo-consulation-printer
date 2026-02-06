@@ -214,3 +214,48 @@
     </view>
   </view>
 </view>
+
+<!-- 预约推送确认弹窗 -->
+<view class="modal-mask" wx:if="{{pushModal.show}}" bindtap="onPushModalCancel">
+  <view class="modal-content push-modal" catchtap="stopBubble">
+    <view class="modal-header">{{pushModal.type === 'cancel' ? '推送取消提醒' : '推送预约提醒'}}</view>
+    <view class="modal-body">
+      <view class="push-preview">
+        <view class="preview-header">{{pushModal.type === 'cancel' ? '【预约取消提醒】' : '【新预约提醒】'}}</view>
+        <view class="preview-row">
+          <text class="preview-label">顾客：</text>
+          <text class="preview-value">{{pushModal.reservationData.customerName}}{{pushModal.reservationData.gender === 'male' ? '先生' : '女士'}}</text>
+        </view>
+        <view class="preview-row">
+          <text class="preview-label">日期：</text>
+          <text class="preview-value">{{pushModal.reservationData.date}}</text>
+        </view>
+        <view class="preview-row">
+          <text class="preview-label">时间：</text>
+          <text class="preview-value">{{pushModal.reservationData.startTime}} - {{pushModal.reservationData.endTime}}</text>
+        </view>
+        <view class="preview-row">
+          <text class="preview-label">项目：</text>
+          <text class="preview-value">{{pushModal.reservationData.project}}</text>
+        </view>
+        <view class="preview-row">
+          <text class="preview-label">技师：</text>
+          <text class="preview-value">
+            <block wx:for="{{pushModal.reservationData.technicians}}" wx:key="_id" wx:for-item="tech">
+              {{tech.name}}{{item.phone ? '<@' + item.phone + '>' : ''}}
+            </block>
+          </text>
+        </view>
+      </view>
+      <view class="push-tips">
+        <text class="tips-text">ℹ️确认后将推送到企业微信群聊并@对应技师</text>
+      </view>
+    </view>
+    <view class="modal-footer">
+      <view class="btn btn-cancel" bindtap="onPushModalCancel">取消</view>
+      <view class="btn btn-confirm" bindtap="onPushModalConfirm" disabled="{{pushModal.loading}}">
+        {{pushModal.loading ? '推送中...' : '确认推送'}}
+      </view>
+    </view>
+  </view>
+</view>

@@ -70,7 +70,6 @@ Component({
 		// 预约弹窗相关
 		showReserveModal: false,
 		projects: [] as Project[],
-		staffNames: [] as string[],
 		activeStaffList: [] as StaffInfo[],
 		staffAvailability: [] as StaffAvailability[],
 		reserveForm: {
@@ -80,7 +79,7 @@ Component({
 			gender: 'male' as 'male' | 'female',
 			project: '',
 			phone: '',
-			selectedTechnicians: [] as Array<{ _id: string; name: string; }>,
+			selectedTechnicians: [] as Array<{ _id: string; name: string; phone: string; }>,
 			startTime: '',
 			// 兼容编辑模式
 			technicianId: '',
@@ -108,7 +107,22 @@ Component({
 		loadingText: '加载中...',
 		// 顾客匹配
 		matchedCustomer: null as any,
-		matchedCustomerApplied: false
+		matchedCustomerApplied: false,
+		// 预约推送确认弹窗
+		pushModal: {
+			show: false,
+			loading: false,
+			type: 'create' as 'create' | 'cancel',
+			reservationData: null as {
+				customerName: string;
+				gender: 'male' | 'female';
+				date: string;
+				startTime: string;
+				endTime: string;
+				project: string;
+				technicians: Array<{ _id: string; name: string; phone: string; }>;
+			} | null
+		}
 	},
 
 	lifetimes: {
@@ -217,7 +231,6 @@ Component({
 
 				this.setData({
 					activeStaffList: activeStaff,
-					staffNames: activeStaff.map(s => s.name)
 				});
 
 				// 调用云函数获取技师可用列表
@@ -581,9 +594,12 @@ Component({
 			try {
 				const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, _id);
 				if (record) {
-					const selectedTechnicians: Array<{ _id: string; name: string; }> = [];
+					const selectedTechnicians: Array<{ _id: string; name: string; phone: string; }> = [];
 					if (record.technicianId && record.technicianName) {
-						selectedTechnicians.push({ _id: record.technicianId, name: record.technicianName });
+						const staff = this.data.staffAvailability.find(s => s._id === record.technicianId);
+						if (staff) {
+							selectedTechnicians.push({ ...staff });
+						}
 					}
 					this.setData({
 						showReserveModal: true,
@@ -687,7 +703,6 @@ Component({
 				this.checkStaffAvailability();
 			} else {
 				reserveForm[field as keyof ReserveForm] = val;
-				console.log('更新后的 reserveForm:', reserveForm);
 				this.setData({ reserveForm });
 				// 触发顾客匹配
 				if (field === 'customerName' || field === 'phone') {
@@ -697,7 +712,7 @@ Component({
 		},
 
 		selectReserveTechnician(e: WechatMiniprogram.CustomEvent) {
-			const { _id, technician: name, occupied, reason } = e.detail;
+			const { _id, technician: name, occupied, reason, phone } = e.detail;
 			if (occupied) {
 				wx.showToast({ title: reason || '该技师在此时段已有安排', icon: 'none', duration: 2500 });
 				return;
@@ -712,7 +727,7 @@ Component({
 				selectedTechnicians.splice(existingIndex, 1);
 			} else {
 				// 未选中，添加
-				selectedTechnicians.push({ _id, name });
+				selectedTechnicians.push({ _id, name, phone });
 			}
 
 			// 更新 staffAvailability 的 isSelected 状态
@@ -894,7 +909,6 @@ Component({
 
 				// 新增模式：为每位选中的技师创建一条预约
 				const technicians = reserveForm.selectedTechnicians;
-
 				// 如果没有选择技师，也允许创建一条预约（技师待定）
 				if (technicians.length === 0) {
 					const record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'> = {
@@ -940,8 +954,34 @@ Component({
 				}
 
 				if (successCount === technicians.length) {
-					const msg = technicians.length > 1 ? `已创建${technicians.length}条预约` : '预约成功';
-					wx.showToast({ title: msg, icon: 'success' });
+					// 查询技师手机号信息
+					const staffList = await cloudDb.find<StaffInfo>(Collections.STAFF, {
+						status: 'active'
+					});
+					const staffMap = new Map(staffList.map(s => [s._id, s]));
+
+					// 构建技师信息（包含手机号）
+					const techniciansWithPhone = technicians.map(t => ({
+						_id: t._id,
+						name: t.name,
+						phone: staffMap.get(t._id)?.phone || ''
+					}));
+
+					// 显示推送确认弹窗
+					this.setData({
+						'pushModal.show': true,
+						'pushModal.type': 'create',
+						'pushModal.reservationData': {
+							customerName: reserveForm.customerName || '',
+							gender: reserveForm.gender,
+							date: reserveForm.date,
+							startTime: reserveForm.startTime,
+							endTime: endTime,
+							project: reserveForm.project || '待定',
+							technicians: techniciansWithPhone
+						}
+					});
+
 					this.closeReserveModal();
 					await this.loadData();
 				} else {
@@ -966,12 +1006,47 @@ Component({
 					if (res.confirm) {
 						this.setData({ loading: true, loadingText: '取消中...' });
 						try {
-							const success = await cloudDb.deleteById(Collections.RESERVATIONS, _id);
-							if (success) {
-								wx.showToast({ title: '已取消预约', icon: 'success' });
-								await this.loadData();
+							const reservation = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, _id);
+
+							if (reservation) {
+								const success = await cloudDb.deleteById(Collections.RESERVATIONS, _id);
+
+								if (success) {
+									await this.loadData();
+
+									if (reservation.technicianId) {
+										const staff = await cloudDb.findById<StaffInfo>(Collections.STAFF, reservation.technicianId);
+
+										if (staff && staff.phone) {
+											this.setData({
+												'pushModal.show': true,
+												'pushModal.type': 'cancel',
+												'pushModal.reservationData': {
+													customerName: reservation.customerName,
+													gender: reservation.gender,
+													date: reservation.date,
+													startTime: reservation.startTime,
+													endTime: reservation.endTime,
+													project: reservation.project,
+													technicians: [{
+														_id: reservation.technicianId,
+														name: reservation.technicianName,
+														phone: staff.phone
+													}]
+												},
+												loading: false
+											});
+
+											return;
+										}
+									}
+
+									wx.showToast({ title: '已取消预约', icon: 'success' });
+								} else {
+									wx.showToast({ title: '取消失败', icon: 'none' });
+								}
 							} else {
-								wx.showToast({ title: '取消失败', icon: 'none' });
+								wx.showToast({ title: '预约不存在', icon: 'none' });
 							}
 						} catch (error) {
 							console.error('取消预约失败:', error);
@@ -1237,6 +1312,88 @@ Component({
 				wx.showToast({ title: '结算失败', icon: 'none' });
 			} finally {
 				this.setData({ loading: false });
+			}
+		},
+
+		// 推送弹窗 - 取消
+		onPushModalCancel() {
+			this.setData({
+				'pushModal.show': false,
+				'pushModal.reservationData': null
+			});
+		},
+
+		// 推送弹窗 - 确认推送
+		async onPushModalConfirm() {
+			const { pushModal } = this.data;
+			const { reservationData, type } = pushModal;
+
+			if (!reservationData) {
+				return;
+			}
+
+			this.setData({ 'pushModal.loading': true });
+
+			try {
+				const genderLabel = reservationData.gender === 'male' ? '先生' : '女士';
+				const customerInfo = `${reservationData.customerName}${genderLabel}`;
+				const technicianMentions = reservationData.technicians
+					.map(t => t.phone ? `<@${t.phone}>` : t.name)
+					.join(' ');
+				const technicianNames = reservationData.technicians
+					.map(t => t.name)
+					.join('、');
+
+				let message: string;
+
+				if (type === 'cancel') {
+					message = `【🚫 预约**取消**提醒】
+
+顾客：${customerInfo}
+日期：${reservationData.date}
+时间：${reservationData.startTime} - ${reservationData.endTime}
+项目：${reservationData.project}
+技师：${technicianNames}
+
+${technicianMentions}`;
+				} else {
+					message = `【⏰ 新预约提醒】
+
+顾客：${customerInfo}
+日期：${reservationData.date}
+时间：**${reservationData.startTime} - ${reservationData.endTime}**
+项目：${reservationData.project}
+技师：**${technicianNames}**
+
+${technicianMentions}`;
+				}
+
+
+				const res = await wx.cloud.callFunction({
+					name: 'sendWechatMessage',
+					data: {
+						content: message
+					}
+				});
+
+				if (res.result && typeof res.result === 'object') {
+					const result = res.result as { code: number; message?: string };
+					if (result.code === 0) {
+						wx.showToast({ title: '推送成功', icon: 'success', duration: 2000 });
+						setTimeout(() => {
+							this.onPushModalCancel();
+						}, 1500);
+					} else {
+						wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+					}
+				} else {
+					wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+				}
+			} catch (error) {
+				console.error('推送到企业微信失败:', error);
+				wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+			} finally {
+				this.setData({ 'pushModal.loading': false });
 			}
 		}
 	}

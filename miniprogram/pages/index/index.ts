@@ -753,7 +753,6 @@ Page({
   async loadEditData(editId: string) {
     try {
       const foundRecord = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, editId) as ConsultationRecord | null;
-      console.log(foundRecord)
       if (foundRecord) {
         const selectedProject = this.data.projects.find((p) => p.name === foundRecord.project);
         const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
@@ -1291,7 +1290,7 @@ ${clockInInfo2}`;
       const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(info.date) as ConsultationRecord[];
       dailyCount = records.filter(
         (record: ConsultationRecord) => record.technician === info.technician && !record.isVoided,
-      ).length + 1;
+      ).length + (this.data.editId ? 0 : 1);
     }
 
     const startTime = info.startTime || formatTime(new Date(), false);
@@ -1379,7 +1378,7 @@ ${clockInInfo2}`;
   // 报钟弹窗 - 确认推送到企业微信
   async onClockInModalConfirm() {
     const { content } = this.data.clockInModal;
-    
+
     if (!content || content.trim() === '') {
       wx.showToast({ title: '报钟内容不能为空', icon: 'none' });
       return;
@@ -1389,7 +1388,7 @@ ${clockInInfo2}`;
 
     try {
       const result = await this.sendToWechatWebhook(content);
-      
+
       if (result) {
         wx.showToast({ title: '推送成功', icon: 'success', duration: 2000 });
         setTimeout(() => {
@@ -1408,7 +1407,7 @@ ${clockInInfo2}`;
 
   // 发送到企业微信机器人
   async sendToWechatWebhook(content: string): Promise<boolean> {
-    
+
     try {
       const res = await wx.cloud.callFunction({
         name: 'sendWechatMessage',
@@ -1421,7 +1420,7 @@ ${clockInInfo2}`;
         const result = res.result as { code: number; message?: string };
         return result.code === 0;
       }
-      
+
       return false;
     } catch (error) {
       console.error('调用云函数失败:', error);

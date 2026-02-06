@@ -31,7 +31,7 @@ exports.main = async (event, context) => {
         const reservations = reservationsRes.data || []
 
         // 过滤掉当前加载的预约ID（用于冲突检查时排除）
-        const filteredReservations = reservations.filter(r => !currentReservationIds || !currentReservationIds.includes(r.id))
+        const filteredReservations = reservations.filter(r => !currentReservationIds || !currentReservationIds.includes(r._id))
 
         // 获取当日排班数据
         const scheduleRes = await db.collection('schedule').where({
@@ -94,8 +94,9 @@ exports.main = async (event, context) => {
             }
 
             return {
-                id: staff.id,
+                _id: staff._id,
                 name: staff.name,
+                phone: staff.phone || '',
                 isOccupied: hasConflict,
                 occupiedReason
             }
@@ -209,6 +210,7 @@ async function getTechnicianAvailability(date) {
                 name: staff.name,
                 avatar: staff.avatar,
                 gender: staff.gender,
+                phone: staff.phone,
                 latestAppointment,
                 availableMinutes,
                 status

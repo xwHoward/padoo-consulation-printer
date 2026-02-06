@@ -797,4 +797,69 @@ page {
 			}
 		}
 	}
+
+	// 预约推送弹窗
+	.push-modal {
+		max-width: 500px;
+
+		.push-preview {
+			background-color: @bg-color-light;
+			border: 1px solid @border-color-light;
+			border-radius: 8px;
+			padding: 16px;
+			margin-bottom: 12px;
+
+			.preview-header {
+				font-size: 15px;
+				font-weight: 600;
+				color: @text-color;
+				margin-bottom: 12px;
+				padding-bottom: 8px;
+				border-bottom: 1px solid @border-color-light;
+			}
+
+			.preview-row {
+				display: flex;
+				margin-bottom: 8px;
+				font-size: 14px;
+				line-height: 1.5;
+
+				&:last-child {
+					margin-bottom: 0;
+				}
+
+				.preview-label {
+					min-width: 60px;
+					color: @text-color-secondary;
+					flex-shrink: 0;
+				}
+
+				.preview-value {
+					flex: 1;
+					color: @text-color;
+					word-break: break-all;
+				}
+			}
+		}
+
+		.push-tips {
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			padding: 10px 12px;
+			background-color: rgba(24, 144, 255, 0.08);
+			border-radius: 4px;
+			.tips-text {
+				flex: 1;
+				font-size: 12px;
+				color: #1890ff;
+				line-height: 1.4;
+			}
+		}
+
+		.modal-footer .btn[disabled] {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
+	}
 }

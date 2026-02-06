@@ -31,7 +31,7 @@ exports.main = async (event, context) => {
 
     const visitRecords = consultationRecords.map(record => {
       return {
-        id: record._id,
+        _id: record._id,
         date: record.createdAt.substring(0, 10),
         project: record.project,
         technician: record.technician,
