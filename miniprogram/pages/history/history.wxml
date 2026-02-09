@@ -89,6 +89,9 @@
                   <button class="action-btn void-btn" bindtap="voidConsultation" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
                     作废
                   </button>
+                  <button class="action-btn delete-btn" bindtap="deleteConsultation" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{canDelete}}">
+                    删除
+                  </button>
                 </view>
               </view>
             </view>

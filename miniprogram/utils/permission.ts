@@ -49,6 +49,7 @@ export const hasButtonPermission = (permission: ButtonPermission): boolean => {
 	const user = authManager.getCurrentUser();
 	if (!user) return false;
 	const permissionKey = BUTTON_PERMISSION_MAP[permission];
+	console.log('permissionKey', permissionKey,user.permissions[permissionKey]);
 	return user.permissions[permissionKey] === true;
 };
 
@@ -120,119 +121,4 @@ export const canAccessPage = (pagePath: string): boolean => {
 	const pageKey = pageMap[pagePath];
 	if (!pageKey) return true;
 	return hasPagePermission(pageKey);
-};
-
-export const getDefaultPermissionsByRole = (role: UserRecord['role']): UserRecord['permissions'] => {
-	switch (role) {
-		case 'admin':
-			return {
-				canAccessIndex: true,
-				canAccessCashier: true,
-				canAccessHistory: true,
-				canAccessStaff: true,
-				canAccessRooms: true,
-				canAccessCustomers: true,
-				canVoidConsultation: true,
-				canEditConsultation: true,
-				canDeleteConsultation: true,
-				canEditReservation: true,
-				canCancelReservation: true,
-				canManageStaff: true,
-				canManageSchedule: true,
-				canManageRooms: true,
-				canSettleConsultation: true,
-				canExportData: true,
-				dataScope: 'all',
-				canViewAllHistory: true,
-				canEditOwnOnly: false
-			};
-		case 'cashier':
-			return {
-				canAccessIndex: true,
-				canAccessCashier: true,
-				canAccessHistory: true,
-				canAccessStaff: false,
-				canAccessRooms: false,
-				canAccessCustomers: true,
-				canVoidConsultation: true,
-				canEditConsultation: true,
-				canDeleteConsultation: false,
-				canEditReservation: true,
-				canCancelReservation: true,
-				canManageStaff: false,
-				canManageSchedule: false,
-				canManageRooms: false,
-				canSettleConsultation: true,
-				canExportData: false,
-				dataScope: 'all',
-				canViewAllHistory: true,
-				canEditOwnOnly: false
-			};
-		case 'technician':
-			return {
-				canAccessIndex: true,
-				canAccessCashier: false,
-				canAccessHistory: true,
-				canAccessStaff: false,
-				canAccessRooms: false,
-				canAccessCustomers: true,
-				canVoidConsultation: false,
-				canEditConsultation: true,
-				canDeleteConsultation: false,
-				canEditReservation: false,
-				canCancelReservation: false,
-				canManageStaff: false,
-				canManageSchedule: false,
-				canManageRooms: false,
-				canSettleConsultation: false,
-				canExportData: false,
-				dataScope: 'own',
-				canViewAllHistory: false,
-				canEditOwnOnly: true
-			};
-		case 'viewer':
-			return {
-				canAccessIndex: false,
-				canAccessCashier: false,
-				canAccessHistory: true,
-				canAccessStaff: false,
-				canAccessRooms: false,
-				canAccessCustomers: true,
-				canVoidConsultation: false,
-				canEditConsultation: false,
-				canDeleteConsultation: false,
-				canEditReservation: false,
-				canCancelReservation: false,
-				canManageStaff: false,
-				canManageSchedule: false,
-				canManageRooms: false,
-				canSettleConsultation: false,
-				canExportData: false,
-				dataScope: 'all',
-				canViewAllHistory: true,
-				canEditOwnOnly: false
-			};
-		default:
-			return {
-				canAccessIndex: false,
-				canAccessCashier: false,
-				canAccessHistory: false,
-				canAccessStaff: false,
-				canAccessRooms: false,
-				canAccessCustomers: false,
-				canVoidConsultation: false,
-				canEditConsultation: false,
-				canDeleteConsultation: false,
-				canEditReservation: false,
-				canCancelReservation: false,
-				canManageStaff: false,
-				canManageSchedule: false,
-				canManageRooms: false,
-				canSettleConsultation: false,
-				canExportData: false,
-				dataScope: 'own',
-				canViewAllHistory: false,
-				canEditOwnOnly: true
-			};
-	}
 };

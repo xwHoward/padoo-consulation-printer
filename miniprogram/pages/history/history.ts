@@ -1,6 +1,7 @@
 import { Collections, cloudDb } from '../../utils/cloud-db';
 import { COUPON_PLATFORMS, GENDERS, MASSAGE_STRENGTHS } from "../../utils/constants";
 import { calculateProjectEndTime, formatTime } from "../../utils/util";
+import { hasButtonPermission } from '../../utils/permission';
 
 // 扩展记录类型，添加折叠状态
 interface DisplayRecord extends ConsultationRecord {
@@ -68,10 +69,16 @@ Page({
       show: false,
       content: '',
       loading: false
-    }
+    },
+    canDelete: false // 是否有删除权限
   },
 
   onLoad(options) {
+    // 检查删除权限
+    this.setData({
+      canDelete: hasButtonPermission('deleteConsultation')
+    });
+    
     // 检查是否为顾客只读模式
     if (options.readonly === 'true' && options.customerPhone && options.customerId) {
       this.loadCustomerHistory(options.customerPhone, options.customerId);
@@ -276,6 +283,52 @@ Page({
             console.error('作废咨询单失败:', error);
             wx.showToast({
               title: '操作失败',
+              icon: 'error'
+            });
+          } finally {
+            this.setData({ loading: false });
+          }
+        }
+      }
+    });
+  },
+
+  // 删除咨询单
+  deleteConsultation(e: WechatMiniprogram.TouchEvent) {
+    if (!hasButtonPermission('deleteConsultation')) {
+      return;
+    }
+    
+    const { record } = e.currentTarget.dataset;
+
+    wx.showModal({
+      title: '确认删除',
+      content: '确定要删除该咨询单吗？删除后无法恢复！',
+      confirmText: '确认删除',
+      confirmColor: '#ff4d4f',
+      success: async (res) => {
+        if (res.confirm) {
+          this.setData({ loading: true, loadingText: '删除中...' });
+          try {
+            const success = await cloudDb.deleteById(Collections.CONSULTATION, record._id);
+
+            if (success) {
+              wx.showToast({
+                title: '删除成功',
+                icon: 'success'
+              });
+              await this.loadHistoryData();
+            } else {
+              console.error('未找到要删除的记录:', record._id);
+              wx.showToast({
+                title: '记录不存在',
+                icon: 'error'
+              });
+            }
+          } catch (error) {
+            console.error('删除咨询单失败:', error);
+            wx.showToast({
+              title: '删除失败',
               icon: 'error'
             });
           } finally {
