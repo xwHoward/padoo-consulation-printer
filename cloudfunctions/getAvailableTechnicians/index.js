@@ -7,7 +7,7 @@ const db = cloud.database()
 const _ = db.command
 
 exports.main = async (event, context) => {
-    const { date, currentTime, projectDuration, currentReservationIds, mode } = event
+    const { date, currentTime, projectDuration, currentReservationIds, currentConsultationId, mode } = event
 
     if (mode === 'availability') {
         return await getTechnicianAvailability(date)
@@ -59,11 +59,15 @@ exports.main = async (event, context) => {
             isVoided: false
         }).get()
         const todayRecords = consultationsRes.data || []
+
+        // 过滤掉当前正在编辑的报钟单ID（用于编辑时排除当前单据）
+        const filteredRecords = todayRecords.filter(r => !currentConsultationId || r._id !== currentConsultationId)
+
         // 检查每个技师的可用性
         const technicians = activeStaff.map(staff => {
             let occupiedReason = ''
             // 检查是否有时间冲突
-            const hasConflict = [...todayRecords, ...filteredReservations].some(r => {
+            const hasConflict = [...filteredRecords, ...filteredReservations].some(r => {
                 const rName = r.technician || r.technicianName
                 if (rName !== staff.name) return false
                 const rStartMinutes = parseTimeToMinutes(r.startTime)
@@ -75,7 +79,7 @@ exports.main = async (event, context) => {
 
             if (hasConflict) {
                 // 找到冲突的任务用于显示原因
-                const conflictTask = [...todayRecords, ...filteredReservations].find(r => {
+                const conflictTask = [...filteredRecords, ...filteredReservations].find(r => {
                     const rName = r.technician || r.technicianName
                     if (rName !== staff.name) return false
 

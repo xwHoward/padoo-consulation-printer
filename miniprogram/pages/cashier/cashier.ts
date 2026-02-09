@@ -124,6 +124,11 @@ Component({
 				project: string;
 				technicians: Array<{ _id: string; name: string; phone: string; }>;
 			} | null
+		},
+		// 轮牌推送确认弹窗
+		rotationPushModal: {
+			show: false,
+			loading: false
 		}
 	},
 
@@ -222,7 +227,7 @@ Component({
 					};
 				});
 
-				// 2. 获取员工轮排与排钟表数据
+				// 2. 获取员工轮牌与排钟表数据
 				const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
 				const allStaff = await cloudDb.getAll<StaffInfo>(Collections.STAFF);
 				const activeStaffList = allStaff.filter(s => s.status === 'active');
@@ -291,7 +296,7 @@ Component({
 
 							const startMinutes = (startH - parseInt(this.data.timeLabels[0])) * 60 + startM;
 							const duration = (endH - startH) * 60 + (endM - startM);
-							const timelineWidth = (this.data.timeLabels.length) * 60;
+							const timelineWidth = this.data.timeLabels.length * 60; // min
 							// 检查是否已结算
 							const isSettled = !r.isReservation && (r as ConsultationRecord).settlement && Object.keys((r as ConsultationRecord).settlement!).length > 0;
 
@@ -465,15 +470,15 @@ Component({
 			const hours = now.getHours();
 			const minutes = now.getMinutes();
 
-			// 只在12:00-23:00之间显示时间线
-			if (hours < 12 || hours >= 23) {
+			// 只在排班时间范围内显示时间线
+			if (hours >= parseInt(this.data.timeLabels[this.data.timeLabels.length - 1]) && hours < parseInt(this.data.timeLabels[0])) {
 				this.setData({ showCurrentTimeLine: false });
 				return;
 			}
 
-			// 计算相对于12:00的分钟数
-			const currentMinutes = (hours - 12) * 60 + minutes;
-			const totalMinutes = (this.data.timeLabels.length - 2) * 60;
+			// 计算相对于排班开始时间的分钟数
+			const currentMinutes = (hours - parseInt(this.data.timeLabels[0])) * 60 + minutes;
+			const totalMinutes = (this.data.timeLabels.length) * 60;
 			const position = (currentMinutes / totalMinutes * 100).toFixed(2) + '%';
 
 			// 计算滚动位置：假设每个时间标签占据80px
@@ -490,7 +495,7 @@ Component({
 			});
 		},
 
-		// 调整轮排顺序
+		// 调整轮牌顺序
 		moveRotation(e: WechatMiniprogram.TouchEvent) {
 			const { index, direction } = e.currentTarget.dataset;
 			const list = [...this.data.rotationList];
@@ -653,12 +658,15 @@ Component({
 		// 检查技师在预约时段的可用性
 		async checkStaffAvailability() {
 			try {
-				const { date, startTime, project } = this.data.reserveForm;
+				const { date, startTime, project, _id: editingReservationId } = this.data.reserveForm;
 				if (!date || !startTime) return;
 
 				this.setData({ loading: true, loadingText: '检查技师可用性...' });
 
 				const projectDuration = parseProjectDuration(project) || 60;
+
+				// 编辑模式下，排除当前正在编辑的预约ID，使其原技师可选
+				const currentReservationIds = editingReservationId ? [editingReservationId] : [];
 
 				const res = await wx.cloud.callFunction({
 					name: 'getAvailableTechnicians',
@@ -666,7 +674,7 @@ Component({
 						date: date,
 						currentTime: startTime,
 						projectDuration: projectDuration,
-						currentReservationIds: []
+						currentReservationIds
 					}
 				});
 
@@ -704,6 +712,7 @@ Component({
 
 		closeReserveModal() {
 			this.setData({ showReserveModal: false });
+			this.loadData();
 		},
 
 		stopBubble() { },
@@ -1029,46 +1038,44 @@ Component({
 						try {
 							const reservation = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, _id);
 
-							if (reservation) {
-								const success = await cloudDb.deleteById(Collections.RESERVATIONS, _id);
-
-								if (success) {
-									await this.loadData();
-
-									if (reservation.technicianId) {
-										const staff = await cloudDb.findById<StaffInfo>(Collections.STAFF, reservation.technicianId);
-
-										if (staff && staff.phone) {
-											this.setData({
-												'pushModal.show': true,
-												'pushModal.type': 'cancel',
-												'pushModal.reservationData': {
-													customerName: reservation.customerName,
-													gender: reservation.gender,
-													date: reservation.date,
-													startTime: reservation.startTime,
-													endTime: reservation.endTime,
-													project: reservation.project,
-													technicians: [{
-														_id: reservation.technicianId,
-														name: reservation.technicianName,
-														phone: staff.phone
-													}]
-												},
-												loading: false
-											});
-
-											return;
-										}
-									}
-
-									wx.showToast({ title: '已取消预约', icon: 'success' });
-								} else {
-									wx.showToast({ title: '取消失败', icon: 'none' });
-								}
-							} else {
+							if (!reservation) {
 								wx.showToast({ title: '预约不存在', icon: 'none' });
+								return;
 							}
+							const success = await cloudDb.deleteById(Collections.RESERVATIONS, _id);
+
+							if (!success) {
+								wx.showToast({ title: '取消失败', icon: 'none' });
+								return;
+							}
+							await this.loadData();
+
+							if (reservation.technicianId) {
+								const staff = await cloudDb.findById<StaffInfo>(Collections.STAFF, reservation.technicianId);
+
+								if (staff && staff.phone) {
+									this.setData({
+										'pushModal.show': true,
+										'pushModal.type': 'cancel',
+										'pushModal.reservationData': {
+											customerName: reservation.customerName,
+											gender: reservation.gender,
+											date: reservation.date,
+											startTime: reservation.startTime,
+											endTime: reservation.endTime,
+											project: reservation.project,
+											technicians: [{
+												_id: reservation.technicianId,
+												name: reservation.technicianName,
+												phone: staff.phone
+											}]
+										}
+									});
+									return;
+								}
+							}
+
+							wx.showToast({ title: '已取消预约', icon: 'success' });
 						} catch (error) {
 							console.error('取消预约失败:', error);
 							wx.showToast({ title: '取消失败', icon: 'none' });
@@ -1415,6 +1422,68 @@ ${technicianMentions}`;
 				wx.showToast({ title: '推送失败，请重试', icon: 'none' });
 			} finally {
 				this.setData({ 'pushModal.loading': false });
+			}
+		},
+
+		// 打开轮牌推送弹窗
+		openRotationPushModal() {
+			this.setData({ 'rotationPushModal.show': true });
+		},
+
+		// 轮牌推送弹窗 - 取消
+		onRotationPushModalCancel() {
+			this.setData({ 'rotationPushModal.show': false });
+		},
+
+		// 轮牌推送弹窗 - 确认推送
+		async onRotationPushModalConfirm() {
+			const { rotationList, selectedDate } = this.data;
+
+			if (rotationList.length === 0) {
+				wx.showToast({ title: '暂无轮牌数据', icon: 'none' });
+				return;
+			}
+
+			this.setData({ 'rotationPushModal.loading': true });
+
+			try {
+				const rotationLines = rotationList.map((staff, index) => 
+					`${index + 1}. ${staff.name} (${staff.shiftLabel})`
+				).join('\n');
+
+				const message = `【📋 今日轮牌】
+
+日期：${selectedDate}
+
+${rotationLines}
+
+请各位同事确认今日轮牌顺序，有问题与店长沟通！`;
+
+				const res = await wx.cloud.callFunction({
+					name: 'sendWechatMessage',
+					data: {
+						content: message
+					}
+				});
+
+				if (res.result && typeof res.result === 'object') {
+					const result = res.result as { code: number; message?: string };
+					if (result.code === 0) {
+						wx.showToast({ title: '推送成功', icon: 'success', duration: 2000 });
+						setTimeout(() => {
+							this.onRotationPushModalCancel();
+						}, 1500);
+					} else {
+						wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+					}
+				} else {
+					wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+				}
+			} catch (error) {
+				console.error('推送轮牌到企业微信失败:', error);
+				wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+			} finally {
+				this.setData({ 'rotationPushModal.loading': false });
 			}
 		}
 	}

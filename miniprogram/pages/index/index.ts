@@ -1,7 +1,7 @@
 import { cloudDb, Collections } from "../../utils/cloud-db";
 import { checkLogin } from "../../utils/auth";
 import { requirePagePermission } from "../../utils/permission";
-import { calculateOvertimeUnits, calculateProjectEndTime, formatDate, formatTime, parseProjectDuration, SHIFT_END_TIMES } from "../../utils/util";
+import { calculateOvertimeUnits, calculateProjectEndTime, formatDate, formatTime, parseProjectDuration, SHIFT_END_TIMES, SHIFT_START_TIMES } from "../../utils/util";
 import { showValidationError, validateConsultationForPrint } from "../../utils/validators";
 import { printerService } from "../../services/printer-service";
 import { PrintContentBuilder } from "../../services/print-content-builder";
@@ -196,7 +196,8 @@ Page({
           date: targetDate,
           currentTime: currentTimeStr,
           projectDuration: projectDuration,
-          currentReservationIds: this.data.currentReservationIds
+          currentReservationIds: this.data.currentReservationIds,
+          currentConsultationId: this.data.editId || undefined
         }
       });
       if (!res.result || typeof res.result !== 'object') {
@@ -619,29 +620,64 @@ Page({
   },
 
   // 计算加班时长（根据排班和起始时间）
-  async calculateOvertime(technician: string, date: string, startTime: string): Promise<number> {
+  async calculateOvertime(record: Add<ConsultationRecord>): Promise<number> {
+    console.log('calculateOvertime', record.startTime, record.endTime);
     try {
-      // 获取当日排班
-      const schedule = await cloudDb.findOne<ScheduleRecord>(Collections.SCHEDULE, {
-        date: date
-      });
-
-      if (!schedule) {
-        return 0; // 没有排班，不计算加班
-      }
-
       // 获取技师信息以匹配 staffId
       const staff = await cloudDb.findOne<StaffInfo>(Collections.STAFF, {
-        name: technician,
+        name: record.technician,
         status: 'active'
       });
 
-      if (!staff || schedule.staffId !== staff._id) {
+      if (!staff) {
+        console.log('未找到技师');
         return 0; // 未找到技师或排班不匹配
       }
+      // 获取当日排班
+      const schedules = await cloudDb.find<ScheduleRecord>(Collections.SCHEDULE, {
+        date: record.date,
+      });
+      const schedule = schedules.find(s => s.staffId === staff._id);
+      if (!schedule) {
+        console.log('未找到排班');
+        return 0; // 没有排班，不计算加班
+      }
+      console.log('排班:', schedule.shift);
 
-      const endTime = SHIFT_END_TIMES[schedule.shift];
-      return calculateOvertimeUnits(startTime, endTime);
+
+      const { startTime, endTime } = record;
+      const shiftStartTime = SHIFT_START_TIMES[schedule.shift], shiftEndTime = SHIFT_END_TIMES[schedule.shift];
+      if (!startTime || !endTime || !shiftStartTime || !shiftEndTime) return 0;
+      const [startHour, startMin] = startTime.split(":").map(Number);
+      const [endHour, endMin] = endTime.split(":").map(Number);
+      const [shiftStartHour] = shiftStartTime.split(":").map(Number);
+      const [shiftEndHour] = shiftEndTime.split(":").map(Number);
+      let totalOvertimeMins = 0;
+      if (startHour <= endHour) {
+        console.log('当天内加班');
+        if (endHour < 6) {
+          // 凌晨加班，使用结束时间计算加班
+          console.log('凌晨加班');
+          totalOvertimeMins += endHour * 60 + endMin;
+        } else if (startHour < shiftStartHour) {
+          // 上班前加班，使用开始时间计算加班
+          console.log('上班前加班');
+          totalOvertimeMins += (shiftStartHour - startHour) * 60 - startMin;
+        } else if (endHour >= shiftEndHour) {
+          // 下班后加班，使用结束时间计算加班
+          console.log('下班后加班');
+          totalOvertimeMins += (endHour - shiftEndHour) * 60 + endMin;
+        } else {
+          console.log('正常上班');
+        }
+      } else {
+        // 跨天加班，使用结束时间计算加班
+        console.log('跨天加班');
+        totalOvertimeMins += (24 - shiftEndHour + endHour) * 60 + endMin;
+      }
+      // 加班时长必须是30分钟的倍数
+      console.log('加班分钟数:', totalOvertimeMins);
+      return Math.floor(totalOvertimeMins / 30);
     } catch (error) {
       console.error('计算加班时长失败:', error);
       return 0;
@@ -678,17 +714,17 @@ Page({
         endTimeStr = formatTime(endTimeDate, false);
       }
 
-      const calculatedOvertime = await this.calculateOvertime(consultation.technician, currentDate, startTimeStr);
-
       const recordData: Add<ConsultationRecord> = {
         ...consultation,
         date: currentDate,
         isVoided: false,
         extraTime: 0,
-        overtime: calculatedOvertime,
+        overtime: 0,
         startTime: startTimeStr,
         endTime: endTimeStr,
       };
+      const calculatedOvertime = await this.calculateOvertime(recordData);
+      recordData.overtime = calculatedOvertime;
 
       const result = await cloudDb.saveConsultation(recordData, editId);
       this.setData({ loading: false });
@@ -1286,11 +1322,36 @@ ${clockInInfo2}`;
   async formatClockInInfo(info: Add<ConsultationInfo>): Promise<string> {
     let dailyCount = 1;
 
-    if (info.date && info.startTime) {
-      const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(info.date) as ConsultationRecord[];
-      dailyCount = records.filter(
-        (record: ConsultationRecord) => record.technician === info.technician && !record.isVoided,
-      ).length + (this.data.editId ? 0 : 1);
+    if (info.date && info.startTime && info.technician) {
+      const { editId } = this.data;
+
+      if (editId) {
+        const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(info.date) as ConsultationRecord[];
+
+        // 获取当前正在编辑的单据的创建时间
+        const currentRecord = records.find(r => r._id === editId);
+
+        if (currentRecord) {
+          // 在编辑模式下，计算该技师在此单据之前的记录数量 + 1
+          dailyCount = records.filter(
+            (record: ConsultationRecord) =>
+              record.technician === info.technician &&
+              !record.isVoided &&
+              new Date(record.createdAt) < new Date(currentRecord.createdAt)
+          ).length + 1;
+        } else {
+          // 如果找不到原单据，按正常逻辑计算
+          dailyCount = records.filter(
+            (record: ConsultationRecord) => record.technician === info.technician && !record.isVoided
+          ).length;
+        }
+      } else {
+        // 新增模式，计算当前记录数 + 1
+        const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(info.date) as ConsultationRecord[];
+        dailyCount = records.filter(
+          (record: ConsultationRecord) => record.technician === info.technician && !record.isVoided
+        ).length + 1;
+      }
     }
 
     const startTime = info.startTime || formatTime(new Date(), false);

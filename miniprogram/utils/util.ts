@@ -48,10 +48,16 @@ export function formatDuration(minutes: number): string {
   }
 }
 
+export const SHIFT_START_TIMES: Record<string, string> = {
+  morning: "12:00",
+  evening: "13:00",
+};
+
 export const SHIFT_END_TIMES: Record<string, string> = {
   morning: "22:00",
   evening: "23:00",
 };
+
 
 /**
  * 计算加班单位（每30分钟为一个单位）

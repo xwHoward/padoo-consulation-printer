@@ -60,67 +60,6 @@ function formatTime(date) {
   return `${year}-${month}-${day} ${hour}:${minute}`;
 }
 
-async function batchUpdateOvertime(records, date) {
-  const overtimeUpdates = {};
-
-  const scheduleResult = await db.collection('schedule').where({
-    date: date
-  }).get();
-
-  const schedules = scheduleResult.data;
-
-  const staffResult = await db.collection('staff').where({
-    status: 'active'
-  }).get();
-
-  const staffMap = {};
-  staffResult.data.forEach(staff => {
-    staffMap[staff._id] = staff;
-  });
-
-    for (const record of records) {
-      if (!record.isVoided && record.technician) {
-        const staff = Object.values(staffMap).find(s => s.name === record.technician);
-  
-        if (staff) {
-          const schedule = schedules.find(s => s.staffId === staff._id);
-  
-          if (schedule && schedule.shift !== 'off' && schedule.shift !== 'leave') {
-            const shiftTimes = SHIFT_TIMES[schedule.shift];
-  
-            if (shiftTimes && record.startTime && record.endTime) {
-              const calculatedOvertime = calculateOvertimeUnits(
-                record.startTime,
-                record.endTime,
-                shiftTimes.start,
-                shiftTimes.end
-              );
-              console.log('计算加班时间:', record.technician, calculatedOvertime);
-  
-              if (record.overtime !== calculatedOvertime) {
-                overtimeUpdates[record._id] = calculatedOvertime;
-              }
-            }
-          }
-        }
-      }
-    }
-    
-
-  if (Object.keys(overtimeUpdates).length > 0) {
-    const batchPromises = Object.entries(overtimeUpdates).map(([recordId, overtime]) => {
-      return db.collection('consultation_records').doc(recordId).update({
-        data: {
-          overtime: overtime
-        }
-      });
-    });
-    await Promise.all(batchPromises);
-  }
-
-  return overtimeUpdates;
-}
-
 async function getDailyRecordsWithCount(date) {
   const recordsResult = await db.collection('consultation_records').where({
     date: date
@@ -166,7 +105,7 @@ async function getDailyRecordsWithCount(date) {
 }
 
 exports.main = async (event) => {
-  const { action, targetDate, customerPhone, customerId, updateOvertime } = event;
+  const { action, targetDate, customerPhone, customerId } = event;
 
   try {
     if (action === 'loadAllDates') {
@@ -184,17 +123,6 @@ exports.main = async (event) => {
       });
 
       const allDates = Object.keys(dateMap).sort((a, b) => new Date(b) - new Date(a));
-
-      if (updateOvertime && allDates.length > 0) {
-        const selectedDate = targetDate || allDates[0];
-        if (selectedDate) {
-          const records = await db.collection('consultation_records').where({
-            date: selectedDate
-          }).get();
-            await batchUpdateOvertime(records.data, selectedDate);
-
-        }
-      }
 
       const selectedDate = targetDate || allDates[0];
       let historyData = [];
@@ -248,9 +176,6 @@ exports.main = async (event) => {
         });
 
         if (customerRecords.length > 0) {
-          if (updateOvertime) {
-            await batchUpdateOvertime(records, date);
-          }
 
           const updatedRecordsResult = await db.collection('consultation_records').where({
             date: date,
@@ -318,34 +243,6 @@ exports.main = async (event) => {
         code: 0,
         data: {
           historyData
-        }
-      };
-
-    } else if (action === 'loadSingleDate') {
-      if (!targetDate) {
-        return {
-          code: -1,
-          message: '缺少日期参数'
-        };
-      }
-
-      if (updateOvertime) {
-        const recordsResult = await db.collection('consultation_records').where({
-          date: targetDate
-        }).get();
-
-        await batchUpdateOvertime(recordsResult.data, targetDate);
-      }
-
-      const records = await getDailyRecordsWithCount(targetDate);
-
-      return {
-        code: 0,
-        data: {
-          historyData: [{
-            date: targetDate,
-            records: records
-          }]
         }
       };
 

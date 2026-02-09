@@ -122,10 +122,8 @@ class CloudDatabase {
 				return allData.filter(condition);
 			}
 
-			console.log(`[CloudDB] 查询集合 ${collection}，条件:`, condition);
 			const query = collectionRef.where(condition);
 			const res = await query.get();
-			console.log(`[CloudDB] 查询结果数量:`, res.data?.length || 0);
 			return res.data || [];
 		} catch (error) {
 			console.error(`[CloudDB] 查询集合 ${collection} 失败:`, error);
@@ -137,12 +135,7 @@ class CloudDatabase {
 	 * 查找单条记录
 	 */
 	async findOne<T extends BaseRecord>(collection: string, condition: QueryCondition<T>): Promise<T | null> {
-		console.log(`[CloudDB] findOne - 集合: ${collection}，条件:`, condition);
 		const results = await this.find<T>(collection, condition);
-		console.log(`[CloudDB] findOne - 查询结果数量:`, results.length);
-		if (results.length > 0) {
-			console.log(`[CloudDB] findOne - 第一条记录:`, results[0]);
-		}
 		return results.length > 0 ? results[0] : null;
 	}
 
@@ -159,13 +152,11 @@ class CloudDatabase {
 				updatedAt: now,
 			};
 
-			console.log(`[CloudDB] 插入记录到 ${collection}:`, dataToInsert);
 
 			const res = await this.getCollection(collection).add({
 				data: dataToInsert
 			});
 
-			console.log(`[CloudDB] 插入结果:`, res);
 
 			if (!res._id) {
 				console.error(`[CloudDB] 插入失败，未返回 _id`);
@@ -177,7 +168,6 @@ class CloudDatabase {
 				_id: res._id,
 			} as unknown as T;
 
-			console.log(`[CloudDB] 插入记录成功，_id:`, newRecord._id);
 			return newRecord;
 		} catch (error) {
 			console.error(`[CloudDB] 插入记录到 ${collection} 失败:`, error);
@@ -531,32 +521,6 @@ class CloudDatabase {
 		} catch (error) {
 			console.error('[CloudDB] 获取技师咨询单失败:', error);
 			return [];
-		}
-	}
-
-	/**
-	 * 批量更新指定日期的咨询单加班数据
-	 */
-	async updateOvertimeForDate(date: string, overtimeUpdates: Record<string, number>): Promise<boolean> {
-		try {
-			const records = await this.getConsultationsByDate<ConsultationRecord>(date);
-
-			await Promise.all(
-				records
-					.filter(record => overtimeUpdates[record._id] !== undefined)
-					.map(record =>
-						this.updateById(
-							Collections.CONSULTATION,
-							record._id,
-							{ overtime: overtimeUpdates[record._id] }
-						)
-					)
-			);
-
-			return true;
-		} catch (error) {
-			console.error('[CloudDB] 批量更新加班数据失败:', error);
-			return false;
 		}
 	}
 

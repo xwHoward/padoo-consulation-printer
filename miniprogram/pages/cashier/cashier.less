@@ -49,36 +49,6 @@ page {
 	}
 }
 
-/* 进度表样式 */
-.timeline-section {
-	padding: 15px 0;
-
-	.section-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 15px;
-
-		.section-title {
-			margin: 0;
-		}
-
-		.reserve-btn {
-			font-size: 14px;
-			color: @primary-color;
-			border: 1px solid @primary-color;
-			padding: 4px 12px;
-			border-radius: 4px;
-			white-space: nowrap;
-			margin-left: 8px;
-
-			&:active {
-				opacity: 0.7;
-			}
-		}
-	}
-}
-
 .timeline-scroll {
 	width: 100%;
 }
@@ -193,7 +163,7 @@ page {
 		padding-left: 4px;
 		color: #fff;
 		white-space: nowrap;
-		
+
 		.block-customer {
 			line-height: 24px;
 			font-size: 12px;
@@ -241,6 +211,33 @@ page {
 	padding: 15px;
 	margin-bottom: 15px;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+	/* 进度表样式 */
+	.section-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 15px;
+
+		.section-title {
+			margin: 0;
+		}
+
+		.reserve-btn,
+		.push-rotation-btn {
+			font-size: 14px;
+			color: @primary-color;
+			border: 1px solid @primary-color;
+			padding: 4px 12px;
+			border-radius: 4px;
+			white-space: nowrap;
+			margin-left: 8px;
+
+			&:active {
+				opacity: 0.7;
+			}
+		}
+	}
 }
 
 .section-title {
@@ -335,7 +332,7 @@ page {
 	color: @text-color-secondary;
 }
 
-/* 轮排列表 */
+/* 轮牌列表 */
 .rotation-list {
 	display: flex;
 	flex-direction: column;
@@ -803,69 +800,70 @@ page {
 		}
 	}
 
-	// 预约推送弹窗
-	.push-modal {
-		max-width: 500px;
+}
+// 预约推送弹窗
+.push-modal {
+	max-width: 500px;
 
-		.push-preview {
-			background-color: @bg-color-light;
-			border: 1px solid @border-color-light;
-			border-radius: 8px;
-			padding: 16px;
+	.push-preview {
+		background-color: @bg-color-light;
+		border: 1px solid @border-color-light;
+		border-radius: 8px;
+		padding: 16px;
+		margin-bottom: 12px;
+
+		.preview-header {
+			font-size: 15px;
+			font-weight: 600;
+			color: @text-color;
 			margin-bottom: 12px;
-
-			.preview-header {
-				font-size: 15px;
-				font-weight: 600;
-				color: @text-color;
-				margin-bottom: 12px;
-				padding-bottom: 8px;
-				border-bottom: 1px solid @border-color-light;
-			}
-
-			.preview-row {
-				display: flex;
-				margin-bottom: 8px;
-				font-size: 14px;
-				line-height: 1.5;
-
-				&:last-child {
-					margin-bottom: 0;
-				}
-
-				.preview-label {
-					min-width: 60px;
-					color: @text-color-secondary;
-					flex-shrink: 0;
-				}
-
-				.preview-value {
-					flex: 1;
-					color: @text-color;
-					word-break: break-all;
-				}
-			}
+			padding-bottom: 8px;
+			border-bottom: 1px solid @border-color-light;
 		}
 
-		.push-tips {
+		.preview-row {
 			display: flex;
-			align-items: center;
-			gap: 6px;
-			padding: 10px 12px;
-			background-color: rgba(24, 144, 255, 0.08);
-			border-radius: 4px;
+			margin-bottom: 8px;
+			font-size: 14px;
+			line-height: 1.5;
 
-			.tips-text {
+			&:last-child {
+				margin-bottom: 0;
+			}
+
+			.preview-label {
+				min-width: 60px;
+				color: @text-color-secondary;
+				flex-shrink: 0;
+			}
+
+			.preview-value {
 				flex: 1;
-				font-size: 12px;
-				color: #1890ff;
-				line-height: 1.4;
+				color: @text-color;
+				word-break: break-all;
 			}
 		}
+	}
 
-		.modal-footer .btn[disabled] {
-			opacity: 0.5;
-			cursor: not-allowed;
+
+	.modal-footer .btn[disabled] {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.push-tips {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 10px 12px;
+		background-color: rgba(24, 144, 255, 0.08);
+		border-radius: 4px;
+
+		.tips-text {
+			flex: 1;
+			font-size: 12px;
+			color: #1890ff;
+			line-height: 1.4;
 		}
 	}
 }

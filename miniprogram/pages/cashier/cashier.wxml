@@ -75,7 +75,12 @@
     </view>
     <!-- 员工轮牌 -->
     <view class="section">
-      <view class="section-title">今日轮牌</view>
+      <view class="section-header">
+        <view class="section-title">今日轮牌</view>
+        <view class="push-rotation-btn" bindtap="openRotationPushModal" wx:if="{{rotationList.length > 0}}">
+          推送轮牌
+        </view>
+      </view>
       <view class="rotation-list" wx:if="{{rotationList.length > 0}}">
         <view class="rotation-item" wx:for="{{rotationList}}" wx:key="_id">
           <view class="rank-num">{{index + 1}}</view>
@@ -260,6 +265,38 @@
       <view class="btn btn-cancel" bindtap="onPushModalCancel">取消</view>
       <view class="btn btn-confirm" bindtap="onPushModalConfirm" disabled="{{pushModal.loading}}">
         {{pushModal.loading ? '推送中...' : '确认推送'}}
+      </view>
+    </view>
+  </view>
+</view>
+<!-- 轮牌推送确认弹窗 -->
+<view class="modal-mask" wx:if="{{rotationPushModal.show}}" bindtap="onRotationPushModalCancel">
+  <view class="modal-content push-modal" catchtap="stopBubble">
+    <view class="modal-header">推送今日轮牌</view>
+    <view class="modal-body">
+      <view class="push-preview">
+        <view class="preview-header">【今日轮牌】</view>
+        <view class="preview-row">
+          <text class="preview-label">日期：</text>
+          <text class="preview-value">{{selectedDate}}</text>
+        </view>
+        <view class="preview-row">
+          <text class="preview-label">轮牌顺序：</text>
+        </view>
+        <block wx:for="{{rotationList}}" wx:key="_id" wx:for-index="idx">
+          <view class="preview-row">
+            <text class="preview-value">{{idx + 1}}. {{item.name}} ({{item.shiftLabel}})</text>
+          </view>
+        </block>
+      </view>
+    </view>
+    <view class="push-tips">
+      <text class="tips-text">ℹ️确认后将推送到企业微信群聊</text>
+    </view>
+    <view class="modal-footer">
+      <view class="btn btn-cancel" bindtap="onRotationPushModalCancel">取消</view>
+      <view class="btn btn-confirm" bindtap="onRotationPushModalConfirm" disabled="{{rotationPushModal.loading}}">
+        {{rotationPushModal.loading ? '推送中...' : '确认推送'}}
       </view>
     </view>
   </view>

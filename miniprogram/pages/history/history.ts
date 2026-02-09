@@ -52,7 +52,6 @@ Page({
     numberInputModal: {
       show: false,
       title: '',
-      type: '' as 'extraTime' | 'overtime',
       currentValue: 0,
       inputValue: 1,
       record: null as DisplayRecord | null,
@@ -126,7 +125,6 @@ Page({
           action: 'loadCustomerHistory',
           customerPhone: customerPhone,
           customerId: customerId,
-          updateOvertime: true
         }
       });
       if (!res.result || typeof res.result !== 'object') {
@@ -164,7 +162,6 @@ Page({
         data: {
           action: 'loadAllDates',
           targetDate: targetDate,
-          updateOvertime: true
         }
       });
       if (!res.result || typeof res.result !== 'object') {
@@ -425,7 +422,6 @@ Page({
       numberInputModal: {
         show: true,
         title: '加钟',
-        type: 'extraTime',
         currentValue: currentValue,
         inputValue: currentValue, // 默认显示当前值
         record: record,
@@ -475,7 +471,7 @@ Page({
 
   // 弹窗确认
   async onModalConfirm() {
-    const { type, inputValue, record, date } = this.data.numberInputModal;
+    const { inputValue, record, date } = this.data.numberInputModal;
 
     if (!record || inputValue < 0) {
       wx.showToast({
@@ -485,18 +481,14 @@ Page({
       return;
     }
 
-    await this.updateExtraTimeOrOvertime(record._id, date, type, inputValue);
+    await this.updateExtraTimeOrOvertime(record._id, date, inputValue);
 
     this.setData({
       'numberInputModal.show': false
     });
 
-    if (type === 'overtime') {
-      return;
-    }
-
     if (inputValue > 0) {
-      const typeText = type === 'extraTime' ? '加钟' : '加班';
+      const typeText = '加钟';
 
       const currentTime = new Date();
       const durationMinutes = inputValue * 30;
@@ -513,6 +505,7 @@ Page({
 房间：${record.room}
 时间：${startTimeStr} - ${endTimeStr}`;
 
+      // TODO: 改为推送
       wx.setClipboardData({
         data: clockInfo,
         success: () => {
@@ -531,14 +524,14 @@ Page({
   },
 
   // 更新加钟或加班数据
-  async updateExtraTimeOrOvertime(recordId: string, date: string, field: 'extraTime' | 'overtime', value: number) {
-    this.setData({ loading: true, loadingText: field === 'extraTime' ? '更新加钟中...' : '更新加班中...' });
+  async updateExtraTimeOrOvertime(recordId: string, date: string, value: number) {
+    this.setData({ loading: true, loadingText: '更新中...' });
     try {
 
 
-      const updateData: any = { [field]: value };
+      const updateData: any = { extraTime: value };
 
-      if (field === 'extraTime') {
+      if (value > 0) {
         const record = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, recordId) as ConsultationRecord | null;
         if (record) {
           const [hours, minutes] = record.startTime.split(':').map(Number);
@@ -584,7 +577,7 @@ Page({
   // 每日总结弹窗 - 确认推送到企业微信
   async onSummaryModalConfirm() {
     const { content } = this.data.summaryModal;
-    
+
     if (!content || content.trim() === '') {
       wx.showToast({ title: '总结内容不能为空', icon: 'none' });
       return;
@@ -593,7 +586,7 @@ Page({
     this.setData({ 'summaryModal.loading': true });
 
     try {
-      
+
       const res = await wx.cloud.callFunction({
         name: 'sendWechatMessage',
         data: {
