@@ -1,7 +1,7 @@
+<navigation-bar title="计算结果" back="{{true}}" color="black" background="#FFF"></navigation-bar>
 <view class="container">
     <!-- 计算结果区域 -->
     <view class="result-section">
-        <view class="result-title">计算结果</view>
         <!-- 财务指标 -->
         <view class="result-card">
             <view class="result-item">

@@ -1,17 +1,17 @@
 import { authManager } from './auth';
 
-export type PagePermission = 'index' | 'cashier' | 'history' | 'staff' | 'rooms' | 'customers';
+export type PagePermission = 'index' | 'history' | 'store-config' | 'staff' | 'cashier' | 'customers' | 'membership-cards' | 'data-management' | 'screensaver' | 'analytics' | 'calculator';
 
-export type ButtonPermission = 
-	'voidConsultation' | 
-	'editConsultation' | 
-	'deleteConsultation' | 
-	'editReservation' | 
-	'cancelReservation' | 
-	'manageStaff' | 
-	'manageSchedule' | 
-	'manageRooms' | 
-	'settleConsultation' | 
+export type ButtonPermission =
+	'voidConsultation' |
+	'editConsultation' |
+	'deleteConsultation' |
+	'editReservation' |
+	'cancelReservation' |
+	'manageStaff' |
+	'manageSchedule' |
+	'manageRooms' |
+	'settleConsultation' |
 	'exportData';
 
 export type DataPermission = 'viewAllHistory' | 'editOwnOnly' | 'dataScope';
@@ -21,8 +21,13 @@ const PAGE_PERMISSION_MAP: Record<PagePermission, keyof UserRecord['permissions'
 	cashier: 'canAccessCashier',
 	history: 'canAccessHistory',
 	staff: 'canAccessStaff',
-	rooms: 'canAccessRooms',
-	customers: 'canAccessCustomers'
+	customers: 'canAccessCustomers',
+	'membership-cards': 'canAccessMembershipCards',
+	'data-management': 'canAccessDataManagement',
+	screensaver: 'canAccessScreensaver',
+	analytics: 'canAccessAnalytics',
+	'store-config': 'canAccessStoreConfig',
+	calculator: 'canAccessCalculator'
 };
 
 const BUTTON_PERMISSION_MAP: Record<ButtonPermission, keyof UserRecord['permissions']> = {
@@ -49,7 +54,7 @@ export const hasButtonPermission = (permission: ButtonPermission): boolean => {
 	const user = authManager.getCurrentUser();
 	if (!user) return false;
 	const permissionKey = BUTTON_PERMISSION_MAP[permission];
-	console.log('permissionKey', permissionKey,user.permissions[permissionKey]);
+	console.log('permissionKey', permissionKey, user.permissions[permissionKey]);
 	return user.permissions[permissionKey] === true;
 };
 
@@ -114,8 +119,13 @@ export const canAccessPage = (pagePath: string): boolean => {
 		'/pages/cashier/cashier': 'cashier',
 		'/pages/history/history': 'history',
 		'/pages/staff/staff': 'staff',
-		'/pages/rooms/rooms': 'rooms',
-		'/pages/customers/customers': 'customers'
+		'/pages/customers/customers': 'customers',
+		'/pages/membership-cards/membership-cards': 'membership-cards',
+		'/pages/data-management/data-management': 'data-management',
+		'/pages/screensaver/screensaver': 'screensaver',
+		'/pages/analytics/analytics': 'analytics',
+		'/pages/store-config/store-config': 'store-config',
+		'/pages/calculator/calculator': 'calculator'
 	};
 
 	const pageKey = pageMap[pagePath];

@@ -1,4 +1,5 @@
 import { authManager } from '../../utils/auth';
+import { hasPagePermission } from '../../utils/permission';
 
 Page({
 	data: {
@@ -68,9 +69,8 @@ Page({
 
 	navigateAfterLogin() {
 		const pages = getCurrentPages();
-		const userInfo = authManager.getCurrentUser();
-		const hasIndexPermission = userInfo?.permissions?.canAccessIndex;
-		const hasCashierPermission = userInfo?.permissions?.canAccessCashier;
+		const hasIndexPermission = hasPagePermission('index');
+		const hasCashierPermission = hasPagePermission('cashier');
 		if (pages.length > 1) {
 			wx.navigateBack();
 		} else if (hasIndexPermission) {

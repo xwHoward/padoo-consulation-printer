@@ -4,56 +4,56 @@
   <view class="container">
     <view class="grid-container">
       <!-- 员工管理 -->
-      <view class="grid-item" bindtap="onModuleTap" data-module="staff">
+      <view wx:if="{{hasStaffAuth}}" class="grid-item" bindtap="onModuleTap" data-module="staff">
         <view class="grid-icon staff-icon">
           <text class="icon-text">👥</text>
         </view>
         <text class="grid-label">员工管理</text>
       </view>
       <!-- 场控收银 -->
-      <view class="grid-item" bindtap="onModuleTap" data-module="cashier">
+      <view wx:if="{{hasCashierAuth}}" class="grid-item" bindtap="onModuleTap" data-module="cashier">
         <view class="grid-icon cashier-icon">
           <text class="icon-text">💰</text>
         </view>
         <text class="grid-label">场控收银</text>
       </view>
       <!-- 顾客管理 -->
-      <view class="grid-item" bindtap="onModuleTap" data-module="customer">
+      <view wx:if="{{hasCustomerAuth}}" class="grid-item" bindtap="onModuleTap" data-module="customer">
         <view class="grid-icon customer-icon">
           <text class="icon-text">👤</text>
         </view>
         <text class="grid-label">顾客管理</text>
       </view>
       <!-- 会员卡 -->
-      <view class="grid-item" bindtap="onModuleTap" data-module="membership">
+      <view wx:if="{{hasMembershipAuth}}" class="grid-item" bindtap="onModuleTap" data-module="membership">
         <view class="grid-icon membership-icon">
           <text class="icon-text">💳</text>
         </view>
         <text class="grid-label">会员卡/次卡</text>
       </view>
       <!-- 单据管理 -->
-      <view class="grid-item" bindtap="onModuleTap" data-module="orders">
+      <view wx:if="{{hasOrdersAuth}}" class="grid-item" bindtap="onModuleTap" data-module="orders">
         <view class="grid-icon orders-icon">
           <text class="icon-text">📋</text>
         </view>
         <text class="grid-label">单据管理</text>
       </view>
       <!-- 报表分析 -->
-      <view class="grid-item" bindtap="onModuleTap" data-module="reports">
+      <view wx:if="{{hasReportsAuth}}" class="grid-item" bindtap="onModuleTap" data-module="reports">
         <view class="grid-icon reports-icon">
           <text class="icon-text">📊</text>
         </view>
         <text class="grid-label">报表分析</text>
       </view>
       <!-- 数据管理 -->
-      <view class="grid-item" bindtap="onModuleTap" data-module="data">
+      <view wx:if="{{hasDataAuth}}" class="grid-item" bindtap="onModuleTap" data-module="data">
         <view class="grid-icon data-icon">
           <text class="icon-text">🔧</text>
         </view>
         <text class="grid-label">数据管理</text>
       </view>
       <!-- 计算器 -->
-      <view class="grid-item" bindtap="onModuleTap" data-module="calculator">
+      <view wx:if="{{hasCalculatorAuth}}" class="grid-item" bindtap="onModuleTap" data-module="calculator">
         <view class="grid-icon calculator-icon">
           <text class="icon-text">🔢</text>
         </view>

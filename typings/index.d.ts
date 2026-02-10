@@ -250,8 +250,13 @@ interface UserPermissions {
   canAccessCashier: boolean;
   canAccessHistory: boolean;
   canAccessStaff: boolean;
-  canAccessRooms: boolean;
   canAccessCustomers: boolean;
+  canAccessMembershipCards: boolean;
+  canAccessDataManagement: boolean;
+  canAccessScreensaver: boolean;
+  canAccessAnalytics: boolean;
+  canAccessStoreConfig: boolean;
+  canAccessCalculator: boolean;
   // 按钮权限
   canVoidConsultation: boolean;
   canEditConsultation: boolean;
