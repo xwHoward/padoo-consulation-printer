@@ -52,6 +52,13 @@
         </view>
         <text class="grid-label">数据管理</text>
       </view>
+      <!-- 计算器 -->
+      <view class="grid-item" bindtap="onModuleTap" data-module="calculator">
+        <view class="grid-icon calculator-icon">
+          <text class="icon-text">🔢</text>
+        </view>
+        <text class="grid-label">计算器</text>
+      </view>
     </view>
   </view>
 </scroll-view>

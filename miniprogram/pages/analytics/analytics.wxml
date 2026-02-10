@@ -76,7 +76,7 @@
       <view class="section chart-section">
         <view class="section-title">营业额趋势</view>
         <view class="chart-container">
-          <canvas id="revenueTrendChart" type="2d" class="chart-canvas"></canvas>
+          <canvas canvas-id="revenueTrendChart" class="chart-canvas"></canvas>
         </view>
       </view>
 
@@ -84,7 +84,7 @@
       <view class="section chart-section">
         <view class="section-title">项目消费排行</view>
         <view class="chart-container">
-          <canvas id="projectRankingChart" type="2d" class="chart-canvas"></canvas>
+          <canvas canvas-id="projectRankingChart" class="chart-canvas"></canvas>
         </view>
       </view>
 
@@ -92,7 +92,7 @@
       <view class="section chart-section">
         <view class="section-title">项目消费对比</view>
         <view class="chart-container">
-          <canvas id="projectComparisonChart" type="2d" class="chart-canvas"></canvas>
+          <canvas canvas-id="projectComparisonChart" class="chart-canvas"></canvas>
         </view>
       </view>
 
@@ -100,7 +100,7 @@
       <view class="section chart-section">
         <view class="section-title">平台消费排行</view>
         <view class="chart-container">
-          <canvas id="platformRankingChart" type="2d" class="chart-canvas"></canvas>
+          <canvas canvas-id="platformRankingChart" class="chart-canvas"></canvas>
         </view>
       </view>
 
@@ -108,7 +108,7 @@
       <view class="section chart-section">
         <view class="section-title">性别分布</view>
         <view class="chart-container">
-          <canvas id="genderDistributionChart" type="2d" class="chart-canvas"></canvas>
+          <canvas canvas-id="genderDistributionChart" class="chart-canvas"></canvas>
         </view>
       </view>
 
@@ -116,7 +116,7 @@
       <view class="section chart-section">
         <view class="section-title">车辆分布</view>
         <view class="chart-container">
-          <canvas id="vehicleDistributionChart" type="2d" class="chart-canvas"></canvas>
+          <canvas canvas-id="vehicleDistributionChart" class="chart-canvas"></canvas>
         </view>
       </view>
     </block>

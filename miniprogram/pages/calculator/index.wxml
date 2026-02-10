@@ -1,0 +1,240 @@
+<view class="container">
+    <!-- 计算结果区域 -->
+    <view class="result-section">
+        <view class="result-title">计算结果</view>
+        <!-- 财务指标 -->
+        <view class="result-card">
+            <view class="result-item">
+                <text class="result-label">初始投资</text>
+                <text class="result-value">{{initialInvestment}}</text>
+            </view>
+            <view class="result-item">
+                <text class="tag">
+                    {{s*decorationStd}}装+{{openingMaterial}}物+2800团+18489押+29133季租+39800盟+{{9244.63}}交
+                </text>
+            </view>
+        </view>
+        <!-- 基础结果 -->
+        <view class="result-card">
+            <view class="result-item">
+                <text class="result-label">月均收入</text>
+                <text class="result-value">{{monthlyRevenue}}</text>
+                <text class="tag">{{grossMargin}}%毛</text>
+            </view>
+            <view class="result-item">
+                <text class="result-value">{{monthlyCost}}</text>
+                <text class="tag">支</text>
+                <text class="result-value">{{monthlyRevenue - monthlyCost - monthlyProfit}}</text>
+                <text class="tag">摊</text>
+                <text class="result-value">★{{monthlyProfit}}</text>
+                <text class="tag">{{netMargin}}%净</text>
+            </view>
+            <view class="result-item">
+                <text class="result-label">回本周期</text>
+                <text class="result-value">{{paybackPeriod}}个月</text>
+            </view>
+        </view>
+        <!-- 月均成本构成饼图 -->
+        <view class="chart-section">
+            <view class="chart-title">月均成本构成</view>
+            <view class="chart-container">
+                <view style="width: 100%;height: 300px;">
+                    <canvas canvas-id="costPieChart" id="costPieChart" class="pie-chart"></canvas>
+                </view>
+            </view>
+        </view>
+        <!-- 人力成本 -->
+        <view class="section">
+            <view class="section-title">人力成本</view>
+            <view class="input-group">
+                <view class="input-item">
+                    <text class="label">耗材成本(元/单)</text>
+                    <view class="stepper">
+                        <button class="step-btn" size="mini" data-field="materialCostPerOrder" data-delta="-0.5" bindtap="onStep">
+                            -
+                        </button>
+                        <input class="input" type="digit" value="{{materialCostPerOrder}}" bindinput="onInput" data-field="materialCostPerOrder" placeholder="2" />
+                        <button class="step-btn" size="mini" data-field="materialCostPerOrder" data-delta="0.5" bindtap="onStep">
+                            +
+                        </button>
+                    </view>
+                </view>
+                <view class="input-item">
+                    <text class="label">水电成本(元/人)</text>
+                    <view class="stepper">
+                        <button class="step-btn" size="mini" data-field="utilityCostPerStaff" data-delta="-100" bindtap="onStep">
+                            -
+                        </button>
+                        <input class="input" type="digit" value="{{utilityCostPerStaff}}" bindinput="onInput" data-field="utilityCostPerStaff" placeholder="300" />
+                        <button class="step-btn" size="mini" data-field="utilityCostPerStaff" data-delta="100" bindtap="onStep">
+                            +
+                        </button>
+                    </view>
+                </view>
+                <view class="input-item">
+                    <text class="label">技师数</text>
+                    <view class="stepper">
+                        <button class="step-btn" size="mini" data-field="staffCount" data-delta="-1" bindtap="onStep">
+                            -
+                        </button>
+                        <input class="input" type="digit" value="{{staffCount}}" bindinput="onInput" data-field="staffCount" placeholder="100" />
+                        <button class="step-btn" size="mini" data-field="staffCount" data-delta="1" bindtap="onStep">
+                            +
+                        </button>
+                    </view>
+                </view>
+                <view class="input-item">
+                    <text class="label">人均单量(单/月)</text>
+                    <view class="stepper">
+                        <button class="step-btn" size="mini" data-field="ordersPerStaff" data-delta="-5" bindtap="onStep">
+                            -
+                        </button>
+                        <input class="input" type="digit" value="{{ordersPerStaff}}" bindinput="onInput" data-field="ordersPerStaff" placeholder="100" />
+                        <button class="step-btn" size="mini" data-field="ordersPerStaff" data-delta="5" bindtap="onStep">
+                            +
+                        </button>
+                    </view>
+                </view>
+            </view>
+            <view class="result-item">
+                <text class="result-value">¥{{salaryPerStaff}} / {{totalOrders}}单</text>
+            </view>
+        </view>
+    </view>
+    <!-- <scroll-view scroll-y class="scroll-view"> -->
+    <!-- 营销参数 -->
+    <view class="section">
+        <view class="section-title">营销参数</view>
+        <view class="input-group">
+            <view class="input-item">
+                <text class="label">团购营销费(元/月)</text>
+                <view class="stepper">
+                    <button class="step-btn" size="mini" data-field="marketingFee" data-delta="-100" bindtap="onStep">
+                        -
+                    </button>
+                    <input class="input" type="digit" value="{{marketingFee}}" bindinput="onInput" data-field="marketingFee" placeholder="3000" />
+                    <button class="step-btn" size="mini" data-field="marketingFee" data-delta="100" bindtap="onStep">
+                        +
+                    </button>
+                </view>
+            </view>
+            <view class="input-item">
+                <text class="label">平台抽成比例(%)</text>
+                <view class="stepper">
+                    <button class="step-btn" size="mini" data-field="platformCommission" data-delta="-1" bindtap="onStep">
+                        -
+                    </button>
+                    <input class="input" type="digit" value="{{platformCommission}}" bindinput="onInput" data-field="platformCommission" placeholder="6" />
+                    <button class="step-btn" size="mini" data-field="platformCommission" data-delta="1" bindtap="onStep">
+                        +
+                    </button>
+                </view>
+            </view>
+            <view class="input-item">
+                <text class="label">线上销售比例</text>
+                <view class="stepper">
+                    <button class="step-btn" size="mini" data-field="onlineSalesRatio" data-delta="-1" bindtap="onStep">
+                        -
+                    </button>
+                    <input class="input" type="digit" value="{{onlineSalesRatio}}" bindinput="onInput" data-field="onlineSalesRatio" placeholder="100" />
+                    <button class="step-btn" size="mini" data-field="onlineSalesRatio" data-delta="1" bindtap="onStep">
+                        +
+                    </button>
+                </view>
+            </view>
+            <view class="input-item">
+                <text class="label">卡项使用比例（线下收入中划卡比例）</text>
+                <view class="stepper">
+                    <button class="step-btn" size="mini" data-field="cardUsageRatio" data-delta="-1" bindtap="onStep">
+                        -
+                    </button>
+                    <input class="input" type="digit" value="{{cardUsageRatio}}" bindinput="onInput" data-field="cardUsageRatio" placeholder="100" />
+                    <button class="step-btn" size="mini" data-field="cardUsageRatio" data-delta="1" bindtap="onStep">
+                        +
+                    </button>
+                </view>
+            </view>
+        </view>
+    </view>
+    <!-- 成本参数 -->
+    <view class="section">
+        <view class="section-title">成本参数</view>
+        <view class="input-group">
+            <view class="input-item">
+                <text class="label">装修标准(元/㎡)</text>
+                <view class="stepper">
+                    <button class="step-btn" size="mini" data-field="decorationStd" data-delta="-10" bindtap="onStep">
+                        -
+                    </button>
+                    <input class="input" type="digit" value="{{decorationStd}}" bindinput="onInput" data-field="decorationStd" placeholder="1400" />
+                    <button class="step-btn" size="mini" data-field="decorationStd" data-delta="10" bindtap="onStep">
+                        +
+                    </button>
+                </view>
+            </view>
+            <view class="input-item">
+                <text class="label">首批物料(元)</text>
+                <view class="stepper">
+                    <button class="step-btn" size="mini" data-field="openingMaterial" data-delta="-1000" bindtap="onStep">
+                        -
+                    </button>
+                    <input class="input" type="digit" value="{{openingMaterial}}" bindinput="onInput" data-field="openingMaterial" placeholder="30000" />
+                    <button class="step-btn" size="mini" data-field="openingMaterial" data-delta="1000" bindtap="onStep">
+                        +
+                    </button>
+                </view>
+            </view>
+        </view>
+    </view>
+    <!-- 基础信息 -->
+    <view class="section">
+        <view class="section-title">基础信息</view>
+        <view class="input-group">
+            <view class="result-item">
+                <text class="result-label">月租</text>
+                <text class="result-value">{{rents[0]}}</text>
+                <text class="tag">一</text>
+                <block wx:if="{{rents.length>12}}">
+                    <text class="result-value">{{rents[12]}}</text>
+                    <text class="tag">二</text>
+                </block>
+                <block wx:if="{{rents.length>24}}">
+                    <text class="result-value">{{rents[24]}}</text>
+                    <text class="tag">三</text>
+                </block>
+                <block wx:if="{{rents.length>36}}">
+                    <text class="result-value">{{rents[36]}}</text>
+                    <text class="tag">四</text>
+                </block>
+                <block wx:if="{{rents.length>48}}">
+                    <text class="result-value">{{rents[48]}}</text>
+                    <text class="tag">五</text>
+                </block>
+            </view>
+            <view class="input-item">
+                <text class="label">计算周期(月)</text>
+                <view class="stepper">
+                    <button class="step-btn" size="mini" data-field="months" data-delta="-12" bindtap="onStep">
+                        -
+                    </button>
+                    <input class="input" type="digit" value="{{months}}" bindinput="onInput" data-field="months" placeholder="18" />
+                    <button class="step-btn" size="mini" data-field="months" data-delta="12" bindtap="onStep">
+                        +
+                    </button>
+                </view>
+            </view>
+        </view>
+        <!-- 现金流图表 -->
+        <view class="chart-section">
+            <view class="chart-title">首年现金流对比</view>
+            <view class="chart-container">
+                <scroll-view scroll-x class="chart-scroll" show-scrollbar="false">
+                    <view style="width: {{chartWidth}}px;height: 100%">
+                        <canvas canvas-id="cashflowChart" id="cashflowChart" class="chart"></canvas>
+                    </view>
+                </scroll-view>
+            </view>
+        </view>
+    </view>
+    <!-- </scroll-view> -->
+</view>

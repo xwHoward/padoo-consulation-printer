@@ -10,7 +10,8 @@
     "pages/membership-cards/membership-cards",
     "pages/data-management/data-management",
     "pages/screensaver/screensaver",
-    "pages/analytics/analytics"
+    "pages/analytics/analytics",
+    "pages/calculator/index"
   ],
   "window": {
     "navigationBarTextStyle": "black",

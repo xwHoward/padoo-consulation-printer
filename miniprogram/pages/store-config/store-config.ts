@@ -30,6 +30,9 @@ Component({
 				case 'data':
 					wx.navigateTo({ url: '/pages/data-management/data-management' });
 					break;
+				case 'calculator':
+					wx.navigateTo({ url: '/pages/calculator/index' });
+					break;
 				default:
 					wx.showToast({ title: '功能开发中', icon: 'none' });
 			}
