@@ -118,6 +118,7 @@ interface ReservationRecord extends BaseRecord {
   technicianName?: string; // 选填
   startTime: string; // HH:MM
   endTime: string; // HH:MM
+  isClockIn?: boolean; // 点钟标记
 }
 
 // 会员卡数据结构
@@ -235,6 +236,7 @@ interface StaffAvailability {
   isOccupied: boolean;
   occupiedReason?: string;
   isSelected?: boolean;
+  isClockIn?: boolean; // 点钟标记
 }
 
 // 用户角色类型

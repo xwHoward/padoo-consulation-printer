@@ -16,6 +16,8 @@ interface AnalyticsData {
 }
 
 Page({
+  charts: {} as Record<string, typeof WxCharts>,
+  
   data: {
     timeRangeType: "today" as TimeRangeType,
     customStartDate: "",
@@ -194,15 +196,15 @@ Page({
     const { analyticsData } = this.data;
     if (!analyticsData) return;
 
-    this.drawRevenueTrendChart();
-    this.drawProjectRankingChart();
-    this.drawProjectComparisonChart();
-    this.drawPlatformRankingChart();
-    this.drawGenderDistributionChart();
-    this.drawVehicleDistributionChart();
+    this.updateRevenueTrendChart();
+    this.updateProjectRankingChart();
+    this.updateProjectComparisonChart();
+    this.updatePlatformRankingChart();
+    this.updateGenderDistributionChart();
+    this.updateVehicleDistributionChart();
   },
 
-  drawRevenueTrendChart() {
+  updateRevenueTrendChart() {
     const { analyticsData } = this.data;
     if (!analyticsData || !analyticsData.dailyRevenueTrend) return;
 
@@ -213,21 +215,35 @@ Page({
     });
     const revenues = data.map(item => item.revenue);
 
-    this.drawLineChart('revenueTrendChart', dates, [{ name: '营业额', data: revenues, color: '#FF6B00' }]);
+    if (this.charts['revenueTrendChart']) {
+      this.charts['revenueTrendChart'].updateData({
+        categories: dates,
+        series: [{ name: '营业额', data: revenues, color: '#FF6B00' }]
+      });
+    } else {
+      this.charts['revenueTrendChart'] = this.drawLineChart('revenueTrendChart', dates, [{ name: '营业额', data: revenues, color: '#FF6B00' }]);
+    }
   },
 
-  drawProjectRankingChart() {
+  updateProjectRankingChart() {
     const { analyticsData } = this.data;
     if (!analyticsData || !analyticsData.projectConsumption) return;
 
     const data = analyticsData.projectConsumption.slice(0, 10);
     const projects = data.map(item => item.project);
     const amounts = data.map(item => item.amount);
-    console.log(projects, amounts);
-    this.drawBarChart('projectRankingChart', projects, [{ name: '消费金额', data: amounts, color: '#FF6B00' }]);
+
+    if (this.charts['projectRankingChart']) {
+      this.charts['projectRankingChart'].updateData({
+        categories: projects,
+        series: [{ name: '消费金额', data: amounts, color: '#FF6B00' }]
+      });
+    } else {
+      this.charts['projectRankingChart'] = this.drawBarChart('projectRankingChart', projects, [{ name: '消费金额', data: amounts, color: '#FF6B00' }]);
+    }
   },
 
-  drawProjectComparisonChart() {
+  updateProjectComparisonChart() {
     const { analyticsData } = this.data;
     if (!analyticsData || !analyticsData.projectConsumption) return;
 
@@ -235,10 +251,17 @@ Page({
     const projects = data.map(item => item.project);
     const counts = data.map(item => item.count);
 
-    this.drawBarChart('projectComparisonChart', projects, [{ name: '消费次数', data: counts, color: '#4CAF50' }]);
+    if (this.charts['projectComparisonChart']) {
+      this.charts['projectComparisonChart'].updateData({
+        categories: projects,
+        series: [{ name: '消费次数', data: counts, color: '#4CAF50' }]
+      });
+    } else {
+      this.charts['projectComparisonChart'] = this.drawBarChart('projectComparisonChart', projects, [{ name: '消费次数', data: counts, color: '#4CAF50' }]);
+    }
   },
 
-  drawPlatformRankingChart() {
+  updatePlatformRankingChart() {
     const { analyticsData } = this.data;
     if (!analyticsData || !analyticsData.platformConsumption) return;
 
@@ -246,10 +269,17 @@ Page({
     const platforms = data.map(item => item.platform);
     const amounts = data.map(item => item.amount);
 
-    this.drawBarChart('platformRankingChart', platforms, [{ name: '消费金额', data: amounts, color: '#2196F3' }]);
+    if (this.charts['platformRankingChart']) {
+      this.charts['platformRankingChart'].updateData({
+        categories: platforms,
+        series: [{ name: '消费金额', data: amounts, color: '#2196F3' }]
+      });
+    } else {
+      this.charts['platformRankingChart'] = this.drawBarChart('platformRankingChart', platforms, [{ name: '消费金额', data: amounts, color: '#2196F3' }]);
+    }
   },
 
-  drawGenderDistributionChart() {
+  updateGenderDistributionChart() {
     const { analyticsData } = this.data;
     if (!analyticsData || !analyticsData.genderDistribution) return;
 
@@ -258,13 +288,22 @@ Page({
 
     if (total === 0) return;
 
-    this.drawPieChart('genderDistributionChart', [
-      { name: '男', value: male, color: '#2196F3' },
-      { name: '女', value: female, color: '#FF9800' }
-    ]);
+    if (this.charts['genderDistributionChart']) {
+      this.charts['genderDistributionChart'].updateData({
+        series: [{
+          name: '分布',
+          data: [male, female]
+        }]
+      });
+    } else {
+      this.charts['genderDistributionChart'] = this.drawPieChart('genderDistributionChart', [
+        { name: '男', value: male, color: '#2196F3' },
+        { name: '女', value: female, color: '#FF9800' }
+      ]);
+    }
   },
 
-  drawVehicleDistributionChart() {
+  updateVehicleDistributionChart() {
     const { analyticsData } = this.data;
     if (!analyticsData || !analyticsData.vehicleDistribution) return;
 
@@ -273,17 +312,26 @@ Page({
 
     if (total === 0) return;
 
-    this.drawPieChart('vehicleDistributionChart', [
-      { name: '有车', value: withVehicle, color: '#4CAF50' },
-      { name: '无车', value: withoutVehicle, color: '#9C27B0' }
-    ]);
+    if (this.charts['vehicleDistributionChart']) {
+      this.charts['vehicleDistributionChart'].updateData({
+        series: [{
+          name: '分布',
+          data: [withVehicle, withoutVehicle]
+        }]
+      });
+    } else {
+      this.charts['vehicleDistributionChart'] = this.drawPieChart('vehicleDistributionChart', [
+        { name: '有车', value: withVehicle, color: '#4CAF50' },
+        { name: '无车', value: withoutVehicle, color: '#9C27B0' }
+      ]);
+    }
   },
 
   drawLineChart(canvasId: string, categories: string[], series: { name: string; data: number[]; color?: string }[]) {
     const systemInfo = wx.getWindowInfo();
     const windowWidth = systemInfo.windowWidth;
     
-    new WxCharts({
+    return new WxCharts({
       canvasId: canvasId,
       type: 'line',
       categories: categories,
@@ -313,7 +361,7 @@ Page({
     const systemInfo = wx.getWindowInfo();
     const windowWidth = systemInfo.windowWidth;
     
-    new WxCharts({
+    return new WxCharts({
       canvasId: canvasId,
       type: 'column',
       categories: categories,
@@ -340,7 +388,7 @@ Page({
     const systemInfo = wx.getWindowInfo();
     const windowWidth = systemInfo.windowWidth;
     
-    new WxCharts({
+    return new WxCharts({
       canvasId: canvasId,
       type: 'pie',
       series: [{

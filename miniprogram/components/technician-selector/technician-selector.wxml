@@ -1,23 +1,11 @@
 <view class="technician-selector">
-  <label
-    wx:for="{{technicianList}}"
-    wx:key="_id"
-    class="technician-option {{(!multi ? selectedTechnician === item.name : item.isSelected) ? 'selected' : ''}} {{item.isOccupied ? 'occupied' : ''}}"
-    bindtap="onTechnicianTap"
-    data-id="{{item._id}}"
-    data-technician="{{item.name}}"
-    data-occupied="{{item.isOccupied}}"
-    data-reason="{{item.occupiedReason}}"
-    data-phone="{{item.phone}}"
-  >
-    <!-- <checkbox
-      wx:if="{{multi}}"
-      value="{{item.name}}"
-      checked="{{item.isSelected}}"
-      disabled="{{item.isOccupied}}" /> -->
+  <view wx:for="{{technicianList}}" wx:key="_id" class="technician-option {{(!multi ? selectedTechnician === item.name : item.isSelected) ? 'selected' : ''}} {{item.isOccupied ? 'occupied' : ''}}" bindtap="onTechnicianTap" data-id="{{item._id}}" data-technician="{{item.name}}" data-occupied="{{item.isOccupied}}" data-reason="{{item.occupiedReason}}" data-phone="{{item.phone}}" data-is-clock-in="{{item.isClockIn}}">
     <view class="tech-info">
       <text class="tech-name">{{item.name}}</text>
       <text class="tech-reason" wx:if="{{item.isOccupied}}">{{item.occupiedReason}}</text>
     </view>
-  </label>
+    <view wx:if="{{showClockInBadge}}" class="clockin-badge {{item.isClockIn ? 'clocked-in' : ''}}" catch:tap="toggleClockIn" data-id="{{item._id}}" data-is-clock-in="{{item.isClockIn}}">
+      <text class="clockin-icon">点</text>
+    </view>
+  </view>
 </view>

@@ -26,11 +26,19 @@ interface TimelineBlock {
 	isSettled?: boolean; // 是否已结算
 }
 
+interface AvailableSlot {
+	left: string; // 距离左侧百分比
+	width: string; // 宽度百分比
+	durationMinutes: number; // 时长（分钟）
+	displayText: string; // 显示文本
+}
+
 interface StaffTimeline {
 	_id: string;
 	name: string;
 	shift: ShiftType;
 	blocks: TimelineBlock[];
+	availableSlots?: AvailableSlot[]; // 空闲时段
 }
 
 interface ReserveForm {
@@ -40,7 +48,7 @@ interface ReserveForm {
 	project: string;
 	phone: string;
 	// 支持多位技师
-	selectedTechnicians: Array<{ _id: string; name: string; }>;
+	selectedTechnicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }>;
 	startTime: string;
 	// 编辑时用
 	_id?: string;
@@ -81,7 +89,7 @@ Page({
 			gender: 'male' as 'male' | 'female',
 			project: '',
 			phone: '',
-			selectedTechnicians: [] as Array<{ _id: string; name: string; phone: string; }>,
+			selectedTechnicians: [] as Array<{ _id: string; name: string; phone: string; isClockIn: boolean }>,
 			startTime: '',
 			// 兼容编辑模式
 			technicianId: '',
@@ -272,7 +280,7 @@ Page({
 					const staffReservations = reservations.filter(r => r.technicianName === staff.name || r.technicianId === staff._id);
 
 					// 合并并处理块
-					const blocks: TimelineBlock[] = [
+					const rawBlocks = [
 						...staffRecords.map(r => ({ ...r, isReservation: false })),
 						...staffReservations.map(r => ({
 							_id: r._id,
@@ -284,7 +292,16 @@ Page({
 							endTime: r.endTime,
 							isReservation: true
 						}))
-					].map(r => {
+					];
+
+					// 按开始时间排序
+					rawBlocks.sort((a, b) => {
+						const [aH, aM] = a.startTime.split(':').map(Number);
+						const [bH, bM] = b.startTime.split(':').map(Number);
+						return (aH * 60 + aM) - (bH * 60 + bM);
+					});
+
+					const blocks: TimelineBlock[] = rawBlocks.map(r => {
 						const [startH, startM] = r.startTime.split(':').map(Number);
 						const [endH, endM] = r.endTime.split(':').map(Number);
 
@@ -308,11 +325,15 @@ Page({
 						};
 					});
 
+					// 计算空闲时段
+					const availableSlots = this.calculateAvailableSlotsBetweenBlocks(blocks, shift);
+
 					staffTimeline.push({
 						_id: staff._id,
 						name: staff.name,
 						shift: shift as ShiftType,
-						blocks
+						blocks,
+						availableSlots
 					});
 				}
 
@@ -354,6 +375,155 @@ Page({
 		} finally {
 			this.setData({ loading: false });
 		}
+	},
+
+	// 计算时间轴上的空闲时段
+	calculateAvailableSlotsBetweenBlocks(blocks: TimelineBlock[], shift: ShiftType): AvailableSlot[] {
+		const availableSlots: AvailableSlot[] = [];
+		
+		if (blocks.length === 0) {
+			return availableSlots;
+		}
+
+		const timelineWidth = this.data.timeLabels.length * 60; // 总时间轴宽度（分钟）
+		const timelineStartHour = parseInt(this.data.timeLabels[0]);
+		
+		// 计算从班次开始时间到第一个预约之间的空闲时段
+		const firstBlock = blocks[0];
+		const [firstStartH, firstStartM] = firstBlock.startTime.split(':').map(Number);
+		const firstStartMinutes = firstStartH * 60 + firstStartM;
+		
+		// 获取上班时间
+		const shiftStartTime = SHIFT_START_TIME[shift];
+		if (shiftStartTime) {
+			const [shiftStartH, shiftStartM] = shiftStartTime.split(':').map(Number);
+			const shiftStartMinutes = shiftStartH * 60 + shiftStartM;
+			
+			// 计算从上班时间到第一个预约开始的空闲时长
+			const gapMinutes = firstStartMinutes - shiftStartMinutes;
+			
+			// 只显示30分钟及以上的空闲时段，且确保第一个预约在上班之后开始
+			if (gapMinutes >= 30 && firstStartMinutes > shiftStartMinutes) {
+				const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
+				const gapEndMinutesFromTimelineStart = (firstStartH - timelineStartHour) * 60 + firstStartM;
+				
+				const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
+				const width = (gapMinutes / timelineWidth * 100) + '%';
+				
+				// 格式化显示文本
+				let displayText: string;
+				if (gapMinutes < 60) {
+					displayText = `${gapMinutes}分钟`;
+				} else if (gapMinutes % 60 === 0) {
+					const hours = gapMinutes / 60;
+					displayText = `${hours}小时`;
+				} else {
+					const hours = Math.floor(gapMinutes / 60);
+					const minutes = gapMinutes % 60;
+					displayText = minutes > 0 ? `${hours}小时${minutes}分` : `${hours}小时`;
+				}
+				
+				availableSlots.push({
+					left,
+					width,
+					durationMinutes: gapMinutes,
+					displayText
+				});
+			}
+		}
+		
+		// 计算相邻块之间的空闲时段
+		for (let i = 0; i < blocks.length - 1; i++) {
+			const currentBlock = blocks[i];
+			const nextBlock = blocks[i + 1];
+			
+			// 获取当前块的结束时间
+			const [currentEndH, currentEndM] = currentBlock.endTime.split(':').map(Number);
+			const currentEndMinutes = currentEndH * 60 + currentEndM;
+			
+			// 获取下一个块的开始时间
+			const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
+			const nextStartMinutes = nextStartH * 60 + nextStartM;
+			
+			// 计算空闲时长
+			const gapMinutes = nextStartMinutes - currentEndMinutes;
+			
+			// 只显示30分钟及以上的空闲时段
+			if (gapMinutes >= 30) {
+				// 计算相对于时间轴起点的位置
+				const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
+				const gapEndMinutesFromTimelineStart = (nextStartH - timelineStartHour) * 60 + nextStartM;
+				
+				const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
+				const width = (gapMinutes / timelineWidth * 100) + '%';
+				
+				// 格式化显示文本
+				let displayText: string;
+				if (gapMinutes < 60) {
+					displayText = `${gapMinutes}分钟`;
+				} else if (gapMinutes % 60 === 0) {
+					const hours = gapMinutes / 60;
+					displayText = `${hours}小时`;
+				} else {
+					const hours = Math.floor(gapMinutes / 60);
+					const minutes = gapMinutes % 60;
+					displayText = minutes > 0 ? `${hours}小时${minutes}分` : `${hours}小时`;
+				}
+				
+				availableSlots.push({
+					left,
+					width,
+					durationMinutes: gapMinutes,
+					displayText
+				});
+			}
+		}
+		
+		// 计算最后一个预约块到下班时间的空闲时段
+		const lastBlock = blocks[blocks.length - 1];
+		const [lastEndH, lastEndM] = lastBlock.endTime.split(':').map(Number);
+		const lastEndMinutes = lastEndH * 60 + lastEndM;
+		
+		// 获取下班时间
+		const shiftEndTime = SHIFT_END_TIME[shift];
+		if (shiftEndTime) {
+			const [shiftEndH, shiftEndM] = shiftEndTime.split(':').map(Number);
+			const shiftEndMinutes = shiftEndH * 60 + shiftEndM;
+			
+			// 计算从最后一个预约结束到下班时间的空闲时长
+			const gapMinutes = shiftEndMinutes - lastEndMinutes;
+			
+			// 只显示30分钟及以上的空闲时段，且确保最后一个预约在下班之前结束
+			if (gapMinutes >= 30 && lastEndMinutes < shiftEndMinutes) {
+				const gapStartMinutesFromTimelineStart = (lastEndH - timelineStartHour) * 60 + lastEndM;
+				const gapEndMinutesFromTimelineStart = (shiftEndH - timelineStartHour) * 60 + shiftEndM;
+				
+				const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
+				const width = (gapMinutes / timelineWidth * 100) + '%';
+				
+				// 格式化显示文本
+				let displayText: string;
+				if (gapMinutes < 60) {
+					displayText = `${gapMinutes}分钟`;
+				} else if (gapMinutes % 60 === 0) {
+					const hours = gapMinutes / 60;
+					displayText = `${hours}小时`;
+				} else {
+					const hours = Math.floor(gapMinutes / 60);
+					const minutes = gapMinutes % 60;
+					displayText = minutes > 0 ? `${hours}小时${minutes}分` : `${hours}小时`;
+				}
+				
+				availableSlots.push({
+					left,
+					width,
+					durationMinutes: gapMinutes,
+					displayText
+				});
+			}
+		}
+		
+		return availableSlots;
 	},
 
 	// 计算技师可约时段
@@ -614,11 +784,11 @@ Page({
 		try {
 			const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, _id);
 			if (record) {
-				const selectedTechnicians: Array<{ _id: string; name: string; phone: string; }> = [];
+				const selectedTechnicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }> = [];
 				if (record.technicianId && record.technicianName) {
 					const staff = this.data.staffAvailability.find(s => s._id === record.technicianId);
 					if (staff) {
-						selectedTechnicians.push({ ...staff });
+						selectedTechnicians.push({ _id: staff._id, name: staff.name, phone: staff.phone, isClockIn: record.isClockIn || false });
 					}
 				}
 				this.setData({
@@ -681,10 +851,16 @@ Page({
 
 				const selectedTechnicianIds = this.data.reserveForm.selectedTechnicians.map(t => t._id);
 
-				const staffAvailability = list.map(staff => ({
-					...staff,
-					isSelected: selectedTechnicianIds.includes(staff._id)
-				}));
+				const selectedTechniciansMap = new Map(this.data.reserveForm.selectedTechnicians.map(t => [t._id, t]));
+
+				const staffAvailability = list.map(staff => {
+					const selectedTech = selectedTechniciansMap.get(staff._id);
+					return {
+						...staff,
+						isSelected: selectedTechnicianIds.includes(staff._id),
+						isClockIn: selectedTech?.isClockIn || false
+					};
+				});
 
 				this.setData({ staffAvailability });
 			} else {
@@ -751,7 +927,7 @@ Page({
 			selectedTechnicians.splice(existingIndex, 1);
 		} else {
 			// 未选中，添加
-			selectedTechnicians.push({ _id, name, phone });
+			selectedTechnicians.push({ _id, name, phone, isClockIn: false });
 		}
 
 		// 更新 staffAvailability 的 isSelected 状态
@@ -764,6 +940,24 @@ Page({
 			'reserveForm.selectedTechnicians': selectedTechnicians,
 			staffAvailability
 		});
+	},
+
+	toggleReserveClockIn(e: WechatMiniprogram.CustomEvent) {
+		const { _id } = e.detail;
+		const selectedTechnicians = [...this.data.reserveForm.selectedTechnicians];
+		const tech = selectedTechnicians.find(t => t._id === _id);
+		if (tech) {
+			tech.isClockIn = !tech.isClockIn;
+			this.setData({ 'reserveForm.selectedTechnicians': selectedTechnicians });
+		}
+
+		const staffAvailability = this.data.staffAvailability.map(staff => {
+			if (staff._id === _id) {
+				return { ...staff, isClockIn: !staff.isClockIn };
+			}
+			return staff;
+		});
+		this.setData({ staffAvailability });
 	},
 
 	// 选择项目（平铺版）
@@ -918,7 +1112,8 @@ Page({
 					technicianId: firstTech?._id || '',
 					technicianName: firstTech?.name || '',
 					startTime: reserveForm.startTime,
-					endTime: endTime
+					endTime: endTime,
+					isClockIn: firstTech?.isClockIn || false
 				};
 				const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
 				if (success) {
@@ -969,7 +1164,8 @@ Page({
 					technicianId: tech._id,
 					technicianName: tech.name,
 					startTime: reserveForm.startTime,
-					endTime: endTime
+					endTime: endTime,
+					isClockIn: tech.isClockIn || false
 				};
 				const insertResult = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
 				if (insertResult) {

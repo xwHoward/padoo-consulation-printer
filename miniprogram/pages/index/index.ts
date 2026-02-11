@@ -848,8 +848,10 @@ Page({
         const firstRecord = validRecords[0];
         const selectedProject = this.data.projects.find((p) => p.name === firstRecord.project);
         const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
+        const isClockInValue = firstRecord.isClockIn || false;
 
         if (validRecords.length > 1) {
+          const secondIsClockIn = validRecords[1].isClockIn || false;
           this.setData({
             isDualMode: true,
             activeGuest: 1 as 1 | 2,
@@ -860,6 +862,7 @@ Page({
               phone: firstRecord.phone,
               project: firstRecord.project,
               technician: firstRecord.technicianName || '',
+              isClockIn: isClockInValue,
             },
             guest1Info: {
               ...DefaultGuestInfo,
@@ -867,6 +870,7 @@ Page({
               gender: firstRecord.gender,
               project: firstRecord.project,
               technician: firstRecord.technicianName || '',
+              isClockIn: isClockInValue,
             },
             guest2Info: {
               ...DefaultGuestInfo,
@@ -874,6 +878,7 @@ Page({
               gender: firstRecord.gender,
               project: firstRecord.project,
               technician: validRecords[1].technicianName || '',
+              isClockIn: secondIsClockIn,
             },
             currentProjectIsEssentialOilOnly: isEssentialOilOnly,
             currentProjectNeedEssentialOil: selectedProject?.needEssentialOil || false,
@@ -888,6 +893,7 @@ Page({
               phone: firstRecord.phone,
               project: firstRecord.project,
               technician: firstRecord.technicianName || '',
+              isClockIn: isClockInValue,
             },
             currentProjectIsEssentialOilOnly: isEssentialOilOnly,
             currentProjectNeedEssentialOil: selectedProject?.needEssentialOil || false,

@@ -52,6 +52,10 @@
                   <view class="block-info">{{block.project}}</view>
                 </view>
               </view>
+              <!-- 空闲时段标记 -->
+              <view class="available-slot-label" wx:for="{{item.availableSlots}}" wx:for-item="slot" wx:key="left" style="left: {{slot.left}}; width: {{slot.width}};">
+                <text class="slot-text">{{slot.displayText}}</text>
+              </view>
             </view>
           </view>
         </view>
@@ -166,7 +170,7 @@
         <view class="form-label">
           技师{{reserveForm.selectedTechnicians.length > 0 ? '(' + reserveForm.selectedTechnicians.length + ')' : ''}}
         </view>
-        <technician-selector multi="{{true}}" technicianList="{{staffAvailability}}" bind:change="selectReserveTechnician" />
+        <technician-selector multi="{{true}}" technicianList="{{staffAvailability}}" showClockInBadge="{{true}}" bind:change="selectReserveTechnician" bind:toggleClockIn="toggleReserveClockIn" />
       </view>
     </view>
     <view class="modal-footer">
