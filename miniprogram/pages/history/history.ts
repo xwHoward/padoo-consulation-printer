@@ -406,7 +406,7 @@ Page({
 
         if (stats.overtimeTotal > 0) {
           const overtimeHours = (stats.overtimeTotal * 0.5).toFixed(1);
-          summaryText += `加班: ${stats.overtimeCount} (${overtimeHours}小时)\n`;
+          summaryText += `加班: ${stats.overtimeTotal} (${overtimeHours}小时)\n`;
         }
 
         summaryText += `项目统计:\n`;
@@ -428,10 +428,10 @@ Page({
       summaryText += `总点钟数: **${totalClockIn}**\n`;
 
       if (totalExtraTime > 0) {
-        summaryText += `总加钟: **${(totalExtraTime)}\n`;
+        summaryText += `总加钟: **${(totalExtraTime)}**\n`;
       }
       if (totalOvertime > 0) {
-        summaryText += `总加班: **${(totalOvertime)}\n`;
+        summaryText += `总加班: **${(totalOvertime)}**\n`;
       }
 
       this.setData({

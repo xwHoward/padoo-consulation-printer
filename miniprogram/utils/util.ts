@@ -101,3 +101,15 @@ export function calculateProjectEndTime(
   const totalDuration = projectDuration + extraTimeMinutes + 10; // 项目时长 + 加钟 + 10分钟准备
   return new Date(startTime.getTime() + totalDuration * 60 * 1000);
 }
+
+export function laterOrEqualTo(a: string, b: string): boolean {
+  const [aHour, aMin] = a.split(":").map(Number);
+  const [bHour, bMin] = b.split(":").map(Number);
+  return aHour * 60 + aMin >= bHour * 60 + bMin;
+}
+
+export function earlierThan(a: string, b: string): boolean {
+  const [aHour, aMin] = a.split(":").map(Number);
+  const [bHour, bMin] = b.split(":").map(Number);
+  return aHour * 60 + aMin < bHour * 60 + bMin;
+}

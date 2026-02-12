@@ -272,7 +272,6 @@ exports.main = async (event) => {
               totalCount: 0,
               extraTimeCount: 0,
               extraTimeTotal: 0,
-              overtimeCount: 0,
               overtimeTotal: 0
             };
           }
@@ -292,8 +291,7 @@ exports.main = async (event) => {
           }
 
           if (record.overtime && record.overtime > 0) {
-            technicianStats[technician].overtimeCount++;
-            technicianStats[technician].overtimeTotal += record.overtime;
+            technicianStats[technician].overtimeTotal = record.overtime;
           }
 
           technicianStats[technician].totalCount++;

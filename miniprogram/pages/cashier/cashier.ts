@@ -3,7 +3,7 @@ import { cloudDb, Collections } from '../../utils/cloud-db';
 import { DEFAULT_SHIFT, ShiftType, SHIFT_START_TIME, SHIFT_END_TIME } from '../../utils/constants';
 import { checkLogin } from '../../utils/auth';
 import { requirePagePermission } from '../../utils/permission';
-import { formatDate, formatDuration, getMinutesDiff, parseProjectDuration } from '../../utils/util';
+import { earlierThan, formatDate, formatDuration, getMinutesDiff, laterOrEqualTo, parseProjectDuration } from '../../utils/util';
 
 interface RotationItem {
 	_id: string;
@@ -149,7 +149,6 @@ Page({
 		const today = formatDate(new Date());
 		this.setData({ selectedDate: today });
 		this.loadProjects();
-		this.loadData();
 	},
 	async onShow() {
 		const isLoggedIn = await checkLogin();
@@ -184,12 +183,9 @@ Page({
 			const today = this.data.selectedDate || formatDate(new Date());
 			const allRooms = await app.getRooms();
 			const filteredRooms = allRooms.filter((r: Room) => r.status === 'normal');
-
 			const todayRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
 			const activeRecords = todayRecords.filter(r => !r.isVoided);
-
 			const reservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today });
-
 			const now = new Date();
 			const todayStr = formatDate(now);
 			const isToday = today === todayStr;
@@ -213,7 +209,7 @@ Page({
 				// 只显示当前时间正在占用的记录（对于今天）
 				if (isToday && currentTime) {
 					occupiedRecords = occupiedRecords.filter(r => {
-						return currentTime >= r.startTime && currentTime < r.endTime;
+						return laterOrEqualTo(currentTime, r.startTime) && earlierThan(currentTime, r.endTime);
 					});
 				}
 
@@ -380,36 +376,36 @@ Page({
 	// 计算时间轴上的空闲时段
 	calculateAvailableSlotsBetweenBlocks(blocks: TimelineBlock[], shift: ShiftType): AvailableSlot[] {
 		const availableSlots: AvailableSlot[] = [];
-		
+
 		if (blocks.length === 0) {
 			return availableSlots;
 		}
 
 		const timelineWidth = this.data.timeLabels.length * 60; // 总时间轴宽度（分钟）
 		const timelineStartHour = parseInt(this.data.timeLabels[0]);
-		
+
 		// 计算从班次开始时间到第一个预约之间的空闲时段
 		const firstBlock = blocks[0];
 		const [firstStartH, firstStartM] = firstBlock.startTime.split(':').map(Number);
 		const firstStartMinutes = firstStartH * 60 + firstStartM;
-		
+
 		// 获取上班时间
 		const shiftStartTime = SHIFT_START_TIME[shift];
 		if (shiftStartTime) {
 			const [shiftStartH, shiftStartM] = shiftStartTime.split(':').map(Number);
 			const shiftStartMinutes = shiftStartH * 60 + shiftStartM;
-			
+
 			// 计算从上班时间到第一个预约开始的空闲时长
 			const gapMinutes = firstStartMinutes - shiftStartMinutes;
-			
+
 			// 只显示30分钟及以上的空闲时段，且确保第一个预约在上班之后开始
 			if (gapMinutes >= 30 && firstStartMinutes > shiftStartMinutes) {
 				const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
 				const gapEndMinutesFromTimelineStart = (firstStartH - timelineStartHour) * 60 + firstStartM;
-				
+
 				const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
 				const width = (gapMinutes / timelineWidth * 100) + '%';
-				
+
 				// 格式化显示文本
 				let displayText: string;
 				if (gapMinutes < 60) {
@@ -422,7 +418,7 @@ Page({
 					const minutes = gapMinutes % 60;
 					displayText = minutes > 0 ? `${hours}小时${minutes}分` : `${hours}小时`;
 				}
-				
+
 				availableSlots.push({
 					left,
 					width,
@@ -431,32 +427,32 @@ Page({
 				});
 			}
 		}
-		
+
 		// 计算相邻块之间的空闲时段
 		for (let i = 0; i < blocks.length - 1; i++) {
 			const currentBlock = blocks[i];
 			const nextBlock = blocks[i + 1];
-			
+
 			// 获取当前块的结束时间
 			const [currentEndH, currentEndM] = currentBlock.endTime.split(':').map(Number);
 			const currentEndMinutes = currentEndH * 60 + currentEndM;
-			
+
 			// 获取下一个块的开始时间
 			const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
 			const nextStartMinutes = nextStartH * 60 + nextStartM;
-			
+
 			// 计算空闲时长
 			const gapMinutes = nextStartMinutes - currentEndMinutes;
-			
+
 			// 只显示30分钟及以上的空闲时段
 			if (gapMinutes >= 30) {
 				// 计算相对于时间轴起点的位置
 				const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
 				const gapEndMinutesFromTimelineStart = (nextStartH - timelineStartHour) * 60 + nextStartM;
-				
+
 				const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
 				const width = (gapMinutes / timelineWidth * 100) + '%';
-				
+
 				// 格式化显示文本
 				let displayText: string;
 				if (gapMinutes < 60) {
@@ -469,7 +465,7 @@ Page({
 					const minutes = gapMinutes % 60;
 					displayText = minutes > 0 ? `${hours}小时${minutes}分` : `${hours}小时`;
 				}
-				
+
 				availableSlots.push({
 					left,
 					width,
@@ -478,29 +474,29 @@ Page({
 				});
 			}
 		}
-		
+
 		// 计算最后一个预约块到下班时间的空闲时段
 		const lastBlock = blocks[blocks.length - 1];
 		const [lastEndH, lastEndM] = lastBlock.endTime.split(':').map(Number);
 		const lastEndMinutes = lastEndH * 60 + lastEndM;
-		
+
 		// 获取下班时间
 		const shiftEndTime = SHIFT_END_TIME[shift];
 		if (shiftEndTime) {
 			const [shiftEndH, shiftEndM] = shiftEndTime.split(':').map(Number);
 			const shiftEndMinutes = shiftEndH * 60 + shiftEndM;
-			
+
 			// 计算从最后一个预约结束到下班时间的空闲时长
 			const gapMinutes = shiftEndMinutes - lastEndMinutes;
-			
+
 			// 只显示30分钟及以上的空闲时段，且确保最后一个预约在下班之前结束
 			if (gapMinutes >= 30 && lastEndMinutes < shiftEndMinutes) {
 				const gapStartMinutesFromTimelineStart = (lastEndH - timelineStartHour) * 60 + lastEndM;
 				const gapEndMinutesFromTimelineStart = (shiftEndH - timelineStartHour) * 60 + shiftEndM;
-				
+
 				const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
 				const width = (gapMinutes / timelineWidth * 100) + '%';
-				
+
 				// 格式化显示文本
 				let displayText: string;
 				if (gapMinutes < 60) {
@@ -513,7 +509,7 @@ Page({
 					const minutes = gapMinutes % 60;
 					displayText = minutes > 0 ? `${hours}小时${minutes}分` : `${hours}小时`;
 				}
-				
+
 				availableSlots.push({
 					left,
 					width,
@@ -522,7 +518,7 @@ Page({
 				});
 			}
 		}
-		
+
 		return availableSlots;
 	},
 
@@ -764,6 +760,9 @@ Page({
 				project: record.project
 			});
 
+			// 推送到企业微信
+			await this.sendArrivalNotification(reservations);
+
 			if (reservations.length > 1) {
 				const reserveIds = reservations.map(r => r._id).join(',');
 				wx.navigateTo({ url: `/pages/index/index?reserveIds=${reserveIds}` });
@@ -775,6 +774,60 @@ Page({
 			wx.showToast({ title: '加载失败', icon: 'none' });
 		} finally {
 			this.setData({ loading: false });
+		}
+	},
+
+	// 推送到店通知
+	async sendArrivalNotification(reservations: ReservationRecord[]) {
+		try {
+			if (!reservations || reservations.length === 0) {
+				return;
+			}
+
+			const firstReservation = reservations[0];
+			const genderLabel = firstReservation.gender === 'male' ? '先生' : '女士';
+			const customerInfo = `${firstReservation.customerName}${genderLabel}`;
+
+			// 计算茶点份数（预约数量）
+			const teaCount = reservations.length;
+
+			// 获取技师信息
+			const staffList = await cloudDb.find<StaffInfo>(Collections.STAFF, {
+				status: 'active'
+			});
+			const staffMap = new Map(staffList.map(s => [s._id, s]));
+
+			// 提取技师姓名和手机号
+			const technicianMentions = reservations
+				.map(r => {
+					const staff = r.technicianId ? staffMap.get(r.technicianId) : null;
+					return staff && staff.phone ? `${r.technicianName}<@${staff.phone}>` : r.technicianName;
+				})
+				.filter(m => m)
+				.join(' ');
+
+			const message = `# 【🏃 到店通知】
+
+${customerInfo} 已到店
+项目：${firstReservation.project}
+
+请${technicianMentions}准备上钟，工服、口罩穿戴整齐，准备茶点（${teaCount}份）`;
+
+			const res = await wx.cloud.callFunction({
+				name: 'sendWechatMessage',
+				data: {
+					content: message
+				}
+			});
+
+			if (res.result && typeof res.result === 'object') {
+				const result = res.result as { code: number; message?: string };
+				if (result.code !== 0) {
+					console.error('推送到企业微信失败:', result.message);
+				}
+			}
+		} catch (error) {
+			console.error('推送到企业微信失败:', error);
 		}
 	},
 

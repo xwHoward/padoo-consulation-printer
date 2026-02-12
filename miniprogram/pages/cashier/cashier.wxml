@@ -71,7 +71,7 @@
             <view class="occupied-record" wx:for="{{item.occupiedRecords}}" wx:for-item="record" wx:key="endTime">
               <view class="customer-tag">{{record.customerName}}</view>
               <view class="staff-tag">{{record.technician}}</view>
-              <view class="time-tag">{{record.endTime}}</view>
+              <view class="time-tag">{{record.endTime}}下</view>
             </view>
           </view>
         </view>
@@ -233,32 +233,32 @@
       <view class="push-preview">
         <view class="preview-header">{{pushModal.type === 'cancel' ? '【预约取消提醒】' : '【新预约提醒】'}}</view>
         <view class="preview-row">
-          <text class="preview-label">顾客：</text>
-          <text class="preview-value">
+          <view class="preview-label">顾客：</view>
+          <view class="preview-value">
             {{pushModal.reservationData.customerName}}{{pushModal.reservationData.gender === 'male' ? '先生' : '女士'}}
-          </text>
+          </view>
         </view>
         <view class="preview-row">
-          <text class="preview-label">日期：</text>
-          <text class="preview-value">{{pushModal.reservationData.date}}</text>
+          <view class="preview-label">日期：</view>
+          <view class="preview-value">{{pushModal.reservationData.date}}</view>
         </view>
         <view class="preview-row">
-          <text class="preview-label">时间：</text>
-          <text class="preview-value">
+          <view class="preview-label">时间：</view>
+          <view class="preview-value">
             {{pushModal.reservationData.startTime}} - {{pushModal.reservationData.endTime}}
-          </text>
+          </view>
         </view>
         <view class="preview-row">
-          <text class="preview-label">项目：</text>
-          <text class="preview-value">{{pushModal.reservationData.project}}</text>
+          <view class="preview-label">项目：</view>
+          <view class="preview-value">{{pushModal.reservationData.project}}</view>
         </view>
         <view class="preview-row">
-          <text class="preview-label">技师：</text>
-          <text class="preview-value">
+          <view class="preview-label">技师：</view>
+          <view class="preview-value">
             <block wx:for="{{pushModal.reservationData.technicians}}" wx:key="_id" wx:for-item="tech">
               {{tech.name}}{{item.phone ? '<@' + item.phone + '>' : ''}}
             </block>
-          </text>
+          </view>
         </view>
       </view>
       <view class="push-tips">
