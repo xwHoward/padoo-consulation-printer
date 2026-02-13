@@ -210,6 +210,7 @@ interface AppGlobalData {
   projects: Project[];
   rooms: Room[];
   essentialOils: EssentialOil[];
+  staffs: StaffInfo[];
   isDataLoaded: boolean;
   loadPromise: Promise<void> | null;
   loginPromise?: Promise<UserRecord>;
@@ -227,6 +228,9 @@ interface IAppOption<T extends Record<string, any> = AppGlobalData> {
   getRooms: () => Promise<Room[]>;
   getEssentialOils: () => Promise<EssentialOil[]>;
   initLogin: () => Promise<void>;
+  getStaffs: () => Promise<StaffInfo[]>;
+  getActiveStaffs: () => Promise<StaffInfo[]>;
+  getStaff: (id: string) => Promise<StaffInfo | null>;
 }
 
 interface StaffAvailability {

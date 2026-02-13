@@ -1,5 +1,7 @@
 import { cloudDb, Collections } from '../../utils/cloud-db';
 
+const app = getApp<IAppOption>();
+
 Page({
   data: {
     loading: false,
@@ -35,7 +37,6 @@ Page({
 
   onLoad() {
     this.loadTechnicianList();
-    this.loadCustomerList();
   },
 
   onShow() {
@@ -44,9 +45,7 @@ Page({
 
   async loadTechnicianList() {
     try {
-      const staffList = await cloudDb.find<StaffInfo>(Collections.STAFF, {
-        status: 'active'
-      });
+      const staffList = await app.getActiveStaffs();
       this.setData({ technicianList: staffList });
     } catch (error) {
       console.error('加载技师列表失败:', error);

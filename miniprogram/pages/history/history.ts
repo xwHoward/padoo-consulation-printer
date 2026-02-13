@@ -415,7 +415,7 @@ Page({
           summaryText += `-  ${project}: ${stats.projects[project]}\n`;
         });
 
-        summaryText += `\n`;
+        summaryText += `\n\n`;
       });
 
       const totalRecords = Object.values(technicianStats).reduce((sum: number, stats: any) => sum + stats.totalCount, 0);

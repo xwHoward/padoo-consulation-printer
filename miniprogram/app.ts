@@ -6,6 +6,7 @@ App<IAppOption<AppGlobalData>>({
 		projects: [],
 		rooms: [],
 		essentialOils: [],
+		staffs: [],
 		isDataLoaded: false,
 		loadPromise: null as Promise<void> | null
 	},
@@ -45,14 +46,16 @@ App<IAppOption<AppGlobalData>>({
 		this.globalData.loadPromise = (async () => {
 			try {
 				const database = cloudDb;
-				const [projects, rooms, essentialOils] = await Promise.all([
+				const [projects, rooms, essentialOils, staff] = await Promise.all([
 					database.getAll<Project>(Collections.PROJECTS),
 					database.getAll<Room>(Collections.ROOMS),
-					database.getAll<EssentialOil>(Collections.ESSENTIAL_OILS)
+					database.getAll<EssentialOil>(Collections.ESSENTIAL_OILS),
+					database.getAll<StaffInfo>(Collections.STAFF)
 				]);
 				this.globalData.projects = (projects || []) as Project[];
 				this.globalData.rooms = (rooms || []) as Room[];
 				this.globalData.essentialOils = (essentialOils || []) as EssentialOil[];
+				this.globalData.staffs = (staff || []) as StaffInfo[];
 				this.globalData.isDataLoaded = true;
 			} catch (error) {
 				console.error('加载全局数据失败:', error);
@@ -83,5 +86,26 @@ App<IAppOption<AppGlobalData>>({
 			await this.loadGlobalData();
 		}
 		return this.globalData.essentialOils;
+	},
+
+	async getStaffs(): Promise<StaffInfo[]> {
+		if (!this.globalData.isDataLoaded) {
+			await this.loadGlobalData();
+		}
+		return this.globalData.staffs;
+	},
+
+	async getStaff(id: string): Promise<StaffInfo | null> {
+		if (!this.globalData.isDataLoaded) {
+			await this.loadGlobalData();
+		}
+		return this.globalData.staffs.find(s => s._id === id) || null;
+	},
+
+	async getActiveStaffs(): Promise<StaffInfo[]> {
+		if (!this.globalData.isDataLoaded) {
+			await this.loadGlobalData();
+		}
+		return this.globalData.staffs.filter(s => s.status === 'active');
 	}
 });

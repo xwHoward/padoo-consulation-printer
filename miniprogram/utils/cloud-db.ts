@@ -176,43 +176,6 @@ class CloudDatabase {
 	}
 
 	/**
-	 * 批量插入记录
-	 */
-	async insertMany<T extends BaseRecord>(collection: string, records: Add<T>[]): Promise<(T | null)[]> {
-		try {
-			const now = this.getTimestamp();
-
-			const dataToInsertList = records.map(record => {
-				return {
-					...record,
-					createdAt: now,
-					updatedAt: now,
-				};
-			});
-
-			const insertResults = await Promise.all(dataToInsertList.map(record =>
-				this.getCollection(collection).add({ data: record })
-			));
-
-			const newRecords = insertResults.map((res: T, index) => {
-				if (!res._id) {
-					console.error(`[CloudDB] 批量插入失败，第${index}条记录未返回 _id`);
-					return null;
-				}
-				return {
-					...dataToInsertList[index],
-					_id: res._id,
-				} as unknown as T;
-			}).filter(Boolean);
-
-			return newRecords;
-		} catch (error) {
-			console.error(`[CloudDB] 批量插入记录到 ${collection} 失败:`, error);
-			return [];
-		}
-	}
-
-	/**
 	 * 根据ID更新记录
 	 */
 	async updateById<T extends BaseRecord>(collection: string, _id: string, updates: Partial<Update<T>>): Promise<boolean> {
@@ -241,39 +204,6 @@ class CloudDatabase {
 	}
 
 	/**
-	 * 根据条件更新记录
-	 */
-	async update<T extends BaseRecord>(collection: string, condition: QueryCondition<T>, updates: Partial<Update<T>>): Promise<number> {
-		try {
-			const collectionRef = this.getCollection(collection);
-			const updateData = {
-				...updates,
-				updatedAt: this.getTimestamp()
-			};
-
-			if (typeof condition === 'function') {
-				const allData = await this.getAll<T>(collection);
-				const matchedRecords = allData.filter(condition);
-
-				await Promise.all(matchedRecords.map(record =>
-					this.updateById(collection, record._id, updates)
-				));
-
-				return matchedRecords.length;
-			}
-
-			const res = await collectionRef.where(condition).update({
-				data: updateData
-			});
-
-			return res.stats?.updated || 0;
-		} catch (error) {
-			console.error(`[CloudDB] 批量更新记录失败:`, error);
-			return 0;
-		}
-	}
-
-	/**
 	 * 根据ID删除记录
 	 */
 	async deleteById(collection: string, _id: string): Promise<boolean> {
@@ -290,86 +220,6 @@ class CloudDatabase {
 		}
 	}
 
-	/**
-	 * 根据条件删除记录
-	 */
-	async delete<T extends BaseRecord>(collection: string, condition: QueryCondition<T>): Promise<number> {
-		try {
-			const collectionRef = this.getCollection(collection);
-
-			if (typeof condition === 'function') {
-				const allData = await this.getAll<T>(collection);
-				const matchedRecords = allData.filter(condition);
-
-				await Promise.all(matchedRecords.map(record =>
-					this.deleteById(collection, record._id)
-				));
-
-				return matchedRecords.length;
-			}
-
-			const res = await collectionRef.where(condition).remove();
-			return res.stats?.removed || 0;
-		} catch (error) {
-			console.error(`[CloudDB] 批量删除记录失败:`, error);
-			return 0;
-		}
-	}
-
-	/**
-	 * 清空集合
-	 */
-	async clear(collection: string): Promise<boolean> {
-		try {
-			const allData = await this.getAll(collection);
-
-			if (allData.length === 0) {
-				return true;
-			}
-
-			await Promise.all(allData.map(record =>
-				this.deleteById(collection, record._id)
-			));
-
-			return true;
-		} catch (error) {
-			console.error(`[CloudDB] 清空集合 ${collection} 失败:`, error);
-			return false;
-		}
-	}
-
-	/**
-	 * 获取集合记录数量
-	 */
-	async count<T extends BaseRecord>(collection: string, condition?: QueryCondition<T>): Promise<number> {
-		try {
-			const collectionRef = this.getCollection(collection);
-
-			if (!condition) {
-				const res = await collectionRef.count();
-				return res.total || 0;
-			}
-
-			if (typeof condition === 'function') {
-				const results = await this.find<T>(collection, condition);
-				return results.length;
-			}
-
-			const res = await collectionRef.where(condition).count();
-			return res.total || 0;
-		} catch (error) {
-			console.error(`[CloudDB] 获取集合 ${collection} 数量失败:`, error);
-			return 0;
-		}
-	}
-
-	/**
-	 * 检查记录是否存在
-	 */
-	async exists<T extends BaseRecord>(collection: string, condition: QueryCondition<T>): Promise<boolean> {
-		const result = await this.findOne<T>(collection, condition);
-		return result !== null;
-	}
 
 	/**
 	 * 分页查询
@@ -466,86 +316,6 @@ class CloudDatabase {
 		} catch (error) {
 			console.error('[CloudDB] 获取日期咨询单失败:', error);
 			return [];
-		}
-	}
-
-	/**
-	 * 获取所有咨询单记录（按日期分组）
-	 */
-	async getAllConsultations<T extends ConsultationRecord>(): Promise<Record<string, T[]>> {
-		try {
-			const allRecords = await this.getAll<T>(Collections.CONSULTATION);
-			const grouped: Record<string, T[]> = {};
-
-			allRecords.forEach(record => {
-				const date = record.createdAt.substring(0, 10);
-				if (!grouped[date]) {
-					grouped[date] = [];
-				}
-				grouped[date].push(record);
-			});
-
-			return grouped;
-		} catch (error) {
-			console.error('[CloudDB] 获取所有咨询单失败:', error);
-			return {};
-		}
-	}
-
-	/**
-	 * 获取指定顾客的所有咨询单记录
-	 */
-	async getConsultationsByCustomer<T extends ConsultationRecord>(phone: string): Promise<T[]> {
-		try {
-			const res = await this.getCollection(Collections.CONSULTATION)
-				.where({ phone })
-				.orderBy('createdAt', 'desc')
-				.get();
-			return res.data || [];
-		} catch (error) {
-			console.error('[CloudDB] 获取顾客咨询单失败:', error);
-			return [];
-		}
-	}
-
-	/**
-	 * 根据技师获取咨询单记录
-	 */
-	async getConsultationsByTechnician<T extends ConsultationRecord>(technician: string): Promise<T[]> {
-		try {
-			const res = await this.getCollection(Collections.CONSULTATION)
-				.where({ technician })
-				.orderBy('createdAt', 'desc')
-				.get();
-			return res.data || [];
-		} catch (error) {
-			console.error('[CloudDB] 获取技师咨询单失败:', error);
-			return [];
-		}
-	}
-
-	/**
-	 * 清理超过指定天数的旧咨询单记录
-	 */
-	async cleanupOldConsultations(days: number = 30): Promise<number> {
-		try {
-			const cutoffDate = new Date();
-			cutoffDate.setDate(cutoffDate.getDate() - days);
-			const cutoffStr = cutoffDate.toISOString().substring(0, 10);
-
-			const allRecords = await this.getAll<ConsultationRecord>(Collections.CONSULTATION);
-			const oldRecords = allRecords.filter(record =>
-				record.createdAt.substring(0, 10) < cutoffStr
-			);
-
-			await Promise.all(oldRecords.map(record =>
-				this.deleteById(Collections.CONSULTATION, record._id)
-			));
-
-			return oldRecords.length;
-		} catch (error) {
-			console.error('[CloudDB] 清理旧咨询单失败:', error);
-			return 0;
 		}
 	}
 }

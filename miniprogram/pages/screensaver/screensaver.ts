@@ -20,7 +20,6 @@ Page({
   onLoad() {
     this.loadAvailableTechnicians();
     this.startAutoRefresh();
-    this.setKeepScreenOn();
   },
 
   onUnload() {

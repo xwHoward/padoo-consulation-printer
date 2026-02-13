@@ -154,7 +154,6 @@ Page({
 
     if (!requirePagePermission('index')) return;
     this.loadProjects();
-    this.loadTechnicianList();
     app.getEssentialOils().then((oils) => {
       this.printContentBuilder = new PrintContentBuilder(oils);
     });
@@ -621,16 +620,11 @@ Page({
 
   // 计算加班时长（根据排班和起始时间）
   async calculateOvertime(record: Add<ConsultationRecord>): Promise<number> {
-    console.log('calculateOvertime', record.startTime, record.endTime);
     try {
       // 获取技师信息以匹配 staffId
-      const staff = await cloudDb.findOne<StaffInfo>(Collections.STAFF, {
-        name: record.technician,
-        status: 'active'
-      });
+      const staff = await app.getActiveStaffs().then(staffs => staffs.find(s => s.name === record.technician));
 
       if (!staff) {
-        console.log('未找到技师');
         return 0; // 未找到技师或排班不匹配
       }
       // 获取当日排班

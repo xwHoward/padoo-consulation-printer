@@ -16,8 +16,8 @@ Page({
     projects: [] as Project[]
   },
 
-  async onLoad() {
-    await Promise.all([this.loadCardList(), this.loadProjects()]);
+  onLoad() {
+    this.loadProjects();
   },
 
   onShow() {

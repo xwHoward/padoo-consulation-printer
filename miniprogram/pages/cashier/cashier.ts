@@ -64,7 +64,7 @@ interface PaymentMethodItem {
 	couponCode?: string;
 }
 
-
+const app = getApp<IAppOption>();
 
 Page({
 	data: {
@@ -95,6 +95,7 @@ Page({
 			technicianId: '',
 			technicianName: '',
 		},
+		originalReservation: null as ReservationRecord | null,
 		// 结算弹窗相关
 		showSettlementModal: false,
 		settlementRecordId: '',
@@ -227,7 +228,7 @@ Page({
 
 			// 2. 获取员工轮牌与排钟表数据
 			const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
-			const allStaff = await cloudDb.getAll<StaffInfo>(Collections.STAFF);
+			const allStaff = await app.getStaffs();
 			const activeStaffList = allStaff.filter(s => s.status === 'active');
 			const scheduledStaff = allSchedules.map(s => s.staffId);
 			const activeStaff = activeStaffList.filter(s => scheduledStaff.includes(s._id));
@@ -792,9 +793,7 @@ Page({
 			const teaCount = reservations.length;
 
 			// 获取技师信息
-			const staffList = await cloudDb.find<StaffInfo>(Collections.STAFF, {
-				status: 'active'
-			});
+			const staffList = await app.getActiveStaffs();
 			const staffMap = new Map(staffList.map(s => [s._id, s]));
 
 			// 提取技师姓名和手机号
@@ -806,11 +805,10 @@ Page({
 				.filter(m => m)
 				.join(' ');
 
-			const message = `# 【🏃 到店通知】
+			const message = `【🏃 到店通知】
 
 ${customerInfo} 已到店
 项目：${firstReservation.project}
-
 请${technicianMentions}准备上钟，工服、口罩穿戴整齐，准备茶点（${teaCount}份）`;
 
 			const res = await wx.cloud.callFunction({
@@ -828,6 +826,79 @@ ${customerInfo} 已到店
 			}
 		} catch (error) {
 			console.error('推送到企业微信失败:', error);
+		}
+	},
+
+	// 推送预约变更通知
+	async sendReservationModificationNotification(original: ReservationRecord | null, updated: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>) {
+		try {
+			if (!original) {
+				return;
+			}
+
+			// 对比变更内容
+			const changes: string[] = [];
+			
+			if (original.date !== updated.date) {
+				changes.push(`📅 日期：${original.date} → ${updated.date}`);
+			}
+			if (original.startTime !== updated.startTime) {
+				changes.push(`⏰ 时间：${original.startTime} → ${updated.startTime}`);
+			}
+			if (original.project !== updated.project) {
+				changes.push(`💆 项目：${original.project} → ${updated.project}`);
+			}
+			if (original.technicianId !== updated.technicianId || original.technicianName !== updated.technicianName) {
+				changes.push(`👨‍💼 技师：${original.technicianName} → ${updated.technicianName}`);
+			}
+			if (original.customerName !== updated.customerName) {
+				changes.push(`👤 顾客：${original.customerName} → ${updated.customerName}`);
+			}
+			if (original.phone !== updated.phone) {
+				changes.push(`📱 电话：${original.phone} → ${updated.phone}`);
+			}
+
+			// 如果没有变更，不推送
+			if (changes.length === 0) {
+				return;
+			}
+
+			const genderLabel = updated.gender === 'male' ? '先生' : '女士';
+			const customerInfo = `${updated.customerName}${genderLabel}`;
+
+			// 获取技师手机号
+			let technicianMention = '';
+			if (updated.technicianId) {
+				const staff = await app.getStaff(updated.technicianId);
+				if (staff && staff.phone) {
+					technicianMention = `<@${staff.phone}>`;
+				}
+			}
+			const technicianName = updated.technicianName || '待定';
+
+			const message = `【📝 预约变更通知】
+
+顾客：${customerInfo}
+日期：${updated.date}
+${changes.join('\n')}
+
+请${technicianMention || technicianName}知悉，做好准备`;
+
+			const res = await wx.cloud.callFunction({
+				name: 'sendWechatMessage',
+				data: {
+					content: message
+				}
+			});
+
+			if (res.result && typeof res.result === 'object') {
+				const result = res.result as { code: number; message?: string };
+				if (result.code !== 0) {
+					console.error('推送预约变更失败:', result.message);
+				}
+			}
+		} catch (error) {
+			console.error('推送预约变更失败:', error);
 		}
 	},
 
@@ -857,7 +928,9 @@ ${customerInfo} 已到店
 						startTime: record.startTime,
 						technicianId: record.technicianId || '',
 						technicianName: record.technicianName || '',
-					}
+					},
+					// 保存原始预约数据用于变更对比
+					originalReservation: record
 				});
 				await this.checkStaffAvailability();
 			}
@@ -1170,6 +1243,8 @@ ${customerInfo} 已到店
 				};
 				const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
 				if (success) {
+					// 推送预约变更通知
+					await this.sendReservationModificationNotification(this.data.originalReservation, record);
 					wx.showToast({ title: '更新成功', icon: 'success' });
 					this.closeReserveModal();
 					await this.loadData();
@@ -1228,9 +1303,7 @@ ${customerInfo} 已到店
 
 			if (successCount === technicians.length) {
 				// 查询技师手机号信息
-				const staffList = await cloudDb.find<StaffInfo>(Collections.STAFF, {
-					status: 'active'
-				});
+				const staffList = await app.getActiveStaffs();
 				const staffMap = new Map(staffList.map(s => [s._id, s]));
 
 				// 构建技师信息（包含手机号）
@@ -1294,7 +1367,7 @@ ${customerInfo} 已到店
 						await this.loadData();
 
 						if (reservation.technicianId) {
-							const staff = await cloudDb.findById<StaffInfo>(Collections.STAFF, reservation.technicianId);
+							const staff = await app.getStaff(reservation.technicianId);
 
 							if (staff && staff.phone) {
 								this.setData({

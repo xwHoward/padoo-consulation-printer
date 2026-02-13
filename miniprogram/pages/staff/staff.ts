@@ -7,6 +7,8 @@ interface DateInfo {
 	date: string; dayNum: number; weekDay: string; isToday: boolean;
 }
 
+const app = getApp<IAppOption>();
+
 Page({
 	data: {
 		loading: false,
@@ -25,11 +27,6 @@ Page({
 		shiftNames: Object.values(SHIFT_NAMES),
 	},
 
-	onLoad() {
-		this.loadStaffList();
-		this.initSchedule();
-	},
-
 	onShow() {
 		this.loadStaffList();
 		this.initSchedule();
@@ -45,7 +42,7 @@ Page({
 
 			this.setData({ loading: true });
 
-			const staffList = await (cloudDb.find<StaffInfo>(Collections.STAFF, { status: 'active' }));
+			const staffList = await app.getActiveStaffs();
 
 			const startDate = dates[0].date;
 			const endDate = dates[dates.length - 1].date;
@@ -189,7 +186,7 @@ Page({
 	async loadStaffList() {
 		try {
 			this.setData({ loading: true });
-			const staffList = await (cloudDb.getAll<StaffInfo>(Collections.STAFF));
+			const staffList = await app.getStaffs();
 
 			// 按创建时间倒序排列，增加兼容性处理
 			staffList.sort((a, b) => {
@@ -225,7 +222,7 @@ Page({
 		try {
 			const _id = e.currentTarget.dataset.id as string;
 			this.setData({ loading: true });
-			const staff = await (cloudDb.findById<StaffInfo>(Collections.STAFF, _id));
+			const staff = await app.getStaff(_id);
 
 			if (staff) {
 				this.setData({
@@ -256,7 +253,7 @@ Page({
 		try {
 			const _id = e.currentTarget.dataset.id as string;
 			this.setData({ loading: true });
-			const staff = await (cloudDb.findById<StaffInfo>(Collections.STAFF, _id));
+			const staff = await app.getStaff(_id);
 
 			if (staff) {
 				const newStatus: StaffStatus = staff.status === 'active' ? 'disabled' : 'active';
@@ -289,7 +286,7 @@ Page({
 		try {
 			const _id = e.currentTarget.dataset.id as string;
 			this.setData({ loading: true });
-			const staff = await (cloudDb.findById<StaffInfo>(Collections.STAFF, _id));
+			const staff = await app.getStaff(_id);
 
 			if (!staff) {
 				this.setData({ loading: false });
@@ -442,7 +439,7 @@ Page({
 
 				wx.showToast({ title: '修改成功', icon: 'success' });
 			} else {
-				const exists = await (cloudDb.exists<StaffInfo>(Collections.STAFF, { name }));
+				const exists = await app.getActiveStaffs().then(staffs => staffs.some(s => s.name === name));
 
 				if (exists) {
 					wx.hideLoading();
