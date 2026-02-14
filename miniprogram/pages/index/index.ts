@@ -187,7 +187,6 @@ Page({
       this.setData({ loadingTechnicians: true });
 
       const projectDuration = parseProjectDuration(this.data.consultationInfo.project) || 60;
-      const savedRotation = wx.getStorageSync(`rotation_${targetDate}`) as string[];
 
       const res = await wx.cloud.callFunction({
         name: 'getAvailableTechnicians',
@@ -204,17 +203,6 @@ Page({
       }
       if (res.result.code === 0) {
         const list = res.result.data as StaffAvailability[];
-
-        if (savedRotation && savedRotation.length > 0) {
-          list.sort((a, b) => {
-            const idxA = savedRotation.indexOf(a._id);
-            const idxB = savedRotation.indexOf(b._id);
-            if (idxA === -1) return 1;
-            if (idxB === -1) return -1;
-            return idxA - idxB;
-          });
-        }
-
         this.setData({ technicianList: list, loadingTechnicians: false });
       } else {
         wx.showToast({
@@ -730,6 +718,29 @@ Page({
 
       if (!editId) {
         await this.deleteReservations();
+
+        // 更新员工权重（非点钟）
+        if (!consultation.isClockIn && consultation.technician) {
+          try {
+            const staffList = await app.getActiveStaffs();
+            const staff = staffList.find(s => s.name === consultation.technician);
+            if (staff) {
+              await wx.cloud.callFunction({
+                name: 'updateStaffWeight',
+                data: {
+                  action: 'consultation',
+                  staffId: staff._id,
+                  isClockIn: consultation.isClockIn || false
+                }
+              });
+              // 刷新全局数据中的员工信息
+              await app.loadGlobalData();
+            }
+          } catch (error) {
+            console.error('更新员工权重失败:', error);
+          }
+        }
+
       }
 
       // 如果顾客有手机号，则自动新增/更新顾客信息

@@ -112,7 +112,7 @@ exports.main = async (event) => {
       const allRecordsResult = await db.collection('consultation_records').field({
         date: true,
         createdAt: true
-      }).get();
+      }).limit(1000).get();
       const dateMap = {};
       allRecordsResult.data.forEach(record => {
         const date = record.date || record.createdAt.substring(0, 10);

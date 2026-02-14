@@ -98,14 +98,14 @@
               <view class="slots-time">{{item.availableSlots}}</view>
             </view>
           </view>
-          <view class="action-btns">
+          <!-- <view class="action-btns">
             <view class="btn move-up {{index === 0 ? 'disabled' : ''}}" bindtap="moveRotation" data-index="{{index}}" data-direction="up">
               <text>↑</text>
             </view>
             <view class="btn move-down {{index === rotationList.length - 1 ? 'disabled' : ''}}" bindtap="moveRotation" data-index="{{index}}" data-direction="down">
               <text>↓</text>
             </view>
-          </view>
+          </view> -->
         </view>
       </view>
       <view class="empty-hint" wx:else>今日暂无上班排班</view>

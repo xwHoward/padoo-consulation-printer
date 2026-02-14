@@ -88,8 +88,8 @@ App<IAppOption<AppGlobalData>>({
 		return this.globalData.essentialOils;
 	},
 
-	async getStaffs(): Promise<StaffInfo[]> {
-		if (!this.globalData.isDataLoaded) {
+	async getStaffs(forceReload: boolean = false): Promise<StaffInfo[]> {
+		if (forceReload || !this.globalData.isDataLoaded) {
 			await this.loadGlobalData();
 		}
 		return this.globalData.staffs;

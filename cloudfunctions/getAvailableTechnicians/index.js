@@ -102,14 +102,15 @@ exports.main = async (event, context) => {
                 name: staff.name,
                 phone: staff.phone || '',
                 isOccupied: hasConflict,
-                occupiedReason
+                occupiedReason,
+                weight: staff.weight
             }
         })
 
         return {
             code: 0,
             message: '获取成功',
-            data: technicians
+            data: technicians.sort((a, b) => -a.weight + b.weight)
         }
     } catch (error) {
         console.error('获取可用技师失败:', error)
@@ -131,13 +132,6 @@ async function getTechnicianAvailability(date) {
         
         const utcNow = new Date(now.getTime() + (8 * 60 * 60 * 1000))
         const currentMinutes = utcNow.getHours() * 60 + utcNow.getMinutes()
-        // const currentTimeStr = `${String(utcNow.getHours()).padStart(2, '0')}:${String(utcNow.getMinutes()).padStart(2, '0')}`
-        
-        // console.log('========== 技师可用性计算开始 ==========')
-        // console.log('查询日期:', date)
-        // console.log('服务器UTC时间:', now.toISOString(), '(小时:', now.getUTCHours(), ')')
-        // console.log('转换后中国时间:', currentTimeStr, '(分钟数:', currentMinutes, ')')
-        // console.log('时区偏移量(分钟):', now.getTimezoneOffset())
 
         const scheduleRes = await db.collection('schedule').where({
             date: date
@@ -217,14 +211,15 @@ async function getTechnicianAvailability(date) {
                 phone: staff.phone,
                 latestAppointment,
                 availableMinutes,
-                status
+                status,
+                weight: staff.weight
             }
         })
 
         return {
             code: 0,
             message: '获取成功',
-            data: techList
+            data: techList.sort((a, b) => -a.weight + b.weight)
         }
     } catch (error) {
         console.error('获取技师可用性失败:', error)

@@ -140,21 +140,47 @@ Page({
 
 			// 更新当前日期的排班（覆盖保存）
 			const existing = await (cloudDb.findOne<ScheduleRecord>(Collections.SCHEDULE, { staffId, date }));
-			console.log('查询到的现有排班:', existing);
 
 			if (existing) {
-				console.log('更新现有排班:', existing._id, { shift: shiftType });
-				const updateResult = await cloudDb.updateById<ScheduleRecord>(Collections.SCHEDULE, existing._id, { shift: shiftType });
-				console.log('更新结果:', updateResult);
+				await cloudDb.updateById<ScheduleRecord>(Collections.SCHEDULE, existing._id, { shift: shiftType });
+
+				// 更新员工权重
+				try {
+					await wx.cloud.callFunction({
+						name: 'updateStaffWeight',
+						data: {
+							action: 'schedule',
+							staffId: staffId,
+							shift: shiftType,
+						}
+					});
+				} catch (error) {
+					console.error('更新员工权重失败:', error);
+				}
 			} else {
-				console.log('新增排班:', { date, staffId, shift: shiftType });
-				const insertResult = await cloudDb.insert<ScheduleRecord>(Collections.SCHEDULE, {
+				await cloudDb.insert<ScheduleRecord>(Collections.SCHEDULE, {
 					date,
 					staffId,
 					shift: shiftType,
 				});
-				console.log('新增结果:', insertResult);
+
+				// 更新员工权重
+				try {
+					await wx.cloud.callFunction({
+						name: 'updateStaffWeight',
+						data: {
+							action: 'schedule',
+							staffId: staffId,
+							shift: shiftType
+						}
+					});
+				} catch (error) {
+					console.error('更新员工权重失败:', error);
+				}
 			}
+
+			// 刷新全局数据中的员工信息
+			await app.loadGlobalData();
 
 			wx.hideLoading();
 
@@ -452,7 +478,8 @@ Page({
 					gender: inputGender,
 					avatar: inputAvatar,
 					phone,
-					status: 'active'
+					status: 'active',
+					weight: 0
 				}));
 
 				if (inserted) {

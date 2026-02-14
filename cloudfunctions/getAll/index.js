@@ -4,6 +4,7 @@ cloud.init({
 })
 
 const db = cloud.database()
+const MAX_LIMIT = 1000
 
 exports.main = async (event, context) => {
   const { collection } = event
@@ -16,7 +17,6 @@ exports.main = async (event, context) => {
   }
 
   try {
-    const MAX_LIMIT = 1000
     
     let allData = []
     let hasMore = true

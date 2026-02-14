@@ -11,6 +11,7 @@ interface RotationItem {
 	shift: ShiftType;
 	shiftLabel: string;
 	availableSlots?: string; // 可约时段
+	weight: number; // 权重
 }
 
 interface TimelineBlock {
@@ -233,7 +234,6 @@ Page({
 			const scheduledStaff = allSchedules.map(s => s.staffId);
 			const activeStaff = activeStaffList.filter(s => scheduledStaff.includes(s._id));
 
-			const savedRotation = wx.getStorageSync(`rotation_${today}`) as string[];
 
 			this.setData({
 				activeStaffList: activeStaff,
@@ -342,22 +342,12 @@ Page({
 					name: staff.name,
 					shift: shift as ShiftType,
 					shiftLabel: shift === 'morning' ? '早班' : '晚班',
-					availableSlots
+					availableSlots,
+					weight: staff.weight
 				};
 			}).filter(item => item.shift === 'morning' || item.shift === 'evening');
 
-			// 按保存的顺序排序
-			if (savedRotation && savedRotation.length > 0) {
-				const sortFn = (a: any, b: any) => {
-					const idxA = savedRotation.indexOf(a._id);
-					const idxB = savedRotation.indexOf(b._id);
-					if (idxA === -1) return 1;
-					if (idxB === -1) return -1;
-					return idxA - idxB;
-				};
-				rotationList.sort(sortFn);
-				staffTimeline.sort(sortFn);
-			}
+			rotationList.sort((a, b) => -a.weight + b.weight)
 
 			this.setData({ rooms, rotationList, staffTimeline });
 
@@ -670,10 +660,6 @@ Page({
 		}
 
 		this.setData({ rotationList: list });
-
-		// 持久化顺序
-		const today = this.data.selectedDate || formatDate(new Date());
-		wx.setStorageSync(`rotation_${today}`, list.map(item => item._id));
 	},
 
 	// 预约相关
@@ -838,7 +824,7 @@ ${customerInfo} 已到店
 
 			// 对比变更内容
 			const changes: string[] = [];
-			
+
 			if (original.date !== updated.date) {
 				changes.push(`📅 日期：${original.date} → ${updated.date}`);
 			}
@@ -1172,7 +1158,7 @@ ${changes.join('\n')}
 			const staffAvailability = this.data.staffAvailability;
 			if (staffAvailability && staffAvailability.length > 0) {
 				const matchedStaff = staffAvailability.find(s => s.name === technicianName);
-				if (matchedStaff) {
+			if (matchedStaff) {
 					updates['reserveForm.selectedTechnicians'] = [{ _id: matchedStaff._id, name: matchedStaff.name }];
 					const updatedStaffAvailability = staffAvailability.map(s => ({
 						...s,
@@ -1298,10 +1284,28 @@ ${changes.join('\n')}
 				const insertResult = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
 				if (insertResult) {
 					successCount++;
+					// 更新员工权重（非点钟）
+					if (!tech.isClockIn) {
+						try {
+							await wx.cloud.callFunction({
+								name: 'updateStaffWeight',
+								data: {
+									action: 'reservation',
+									staffId: tech._id,
+									isClockIn: tech.isClockIn || false
+								}
+							});
+						} catch (error) {
+							console.error('更新员工权重失败:', error);
+						}
+					}
 				}
 			}
 
 			if (successCount === technicians.length) {
+				// 刷新全局数据中的员工信息
+				await app.loadGlobalData();
+
 				// 查询技师手机号信息
 				const staffList = await app.getActiveStaffs();
 				const staffMap = new Map(staffList.map(s => [s._id, s]));
@@ -1364,6 +1368,26 @@ ${changes.join('\n')}
 							wx.showToast({ title: '取消失败', icon: 'none' });
 							return;
 						}
+
+						// 更新员工权重（非点钟）
+						if (reservation.technicianId && !reservation.isClockIn) {
+							try {
+								await wx.cloud.callFunction({
+									name: 'updateStaffWeight',
+									data: {
+										action: 'cancelReservation',
+										staffId: reservation.technicianId,
+										isClockIn: reservation.isClockIn || false
+									}
+								});
+							} catch (error) {
+								console.error('更新员工权重失败:', error);
+							}
+						}
+
+						// 刷新全局数据中的员工信息
+						await app.loadGlobalData();
+
 						await this.loadData();
 
 						if (reservation.technicianId) {

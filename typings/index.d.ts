@@ -95,6 +95,7 @@ interface StaffInfo extends BaseRecord {
   gender: StaffGender;
   avatar: string;
   phone: string;
+  weight: number;
 }
 
 // 班次类型
@@ -239,7 +240,6 @@ interface StaffAvailability {
   phone: string;
   isOccupied: boolean;
   occupiedReason?: string;
-  isSelected?: boolean;
   isClockIn?: boolean; // 点钟标记
 }
 
