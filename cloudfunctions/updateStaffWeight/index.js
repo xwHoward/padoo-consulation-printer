@@ -104,7 +104,8 @@ exports.main = async (event, context) => {
 
                 const result = await db.collection('staff').doc(staffId).update({
                     data: {
-                        weight: _.inc(-1)
+                        // 咨询单完成后，权重增加1
+                        weight: _.inc(1)
                     }
                 })
 

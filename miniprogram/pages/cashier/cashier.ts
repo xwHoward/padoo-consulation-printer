@@ -368,145 +368,312 @@ Page({
 	calculateAvailableSlotsBetweenBlocks(blocks: TimelineBlock[], shift: ShiftType): AvailableSlot[] {
 		const availableSlots: AvailableSlot[] = [];
 
-		if (blocks.length === 0) {
-			return availableSlots;
-		}
-
 		const timelineWidth = this.data.timeLabels.length * 60; // 总时间轴宽度（分钟）
 		const timelineStartHour = parseInt(this.data.timeLabels[0]);
 
-		// 计算从班次开始时间到第一个预约之间的空闲时段
-		const firstBlock = blocks[0];
-		const [firstStartH, firstStartM] = firstBlock.startTime.split(':').map(Number);
-		const firstStartMinutes = firstStartH * 60 + firstStartM;
+		// 获取当前时间
+		const now = new Date();
+		const todayStr = formatDate(now);
+		const selectedDate = this.data.selectedDate;
+		const isToday = selectedDate === todayStr;
 
-		// 获取上班时间
+		const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+		// 获取上班和下班时间
 		const shiftStartTime = SHIFT_START_TIME[shift];
-		if (shiftStartTime) {
-			const [shiftStartH, shiftStartM] = shiftStartTime.split(':').map(Number);
-			const shiftStartMinutes = shiftStartH * 60 + shiftStartM;
+		const shiftEndTime = SHIFT_END_TIME[shift];
 
-			// 计算从上班时间到第一个预约开始的空闲时长
-			const gapMinutes = firstStartMinutes - shiftStartMinutes;
+		if (!shiftStartTime || !shiftEndTime) {
+			return availableSlots;
+		}
 
-			// 只显示30分钟及以上的空闲时段，且确保第一个预约在上班之后开始
-			if (gapMinutes >= 30 && firstStartMinutes > shiftStartMinutes) {
-				const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
-				const gapEndMinutesFromTimelineStart = (firstStartH - timelineStartHour) * 60 + firstStartM;
+		const [shiftStartH, shiftStartM] = shiftStartTime.split(':').map(Number);
+		const [shiftEndH, shiftEndM] = shiftEndTime.split(':').map(Number);
+		const shiftStartMinutes = shiftStartH * 60 + shiftStartM;
+		const shiftEndMinutes = shiftEndH * 60 + shiftEndM;
 
-				const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-				const width = (gapMinutes / timelineWidth * 100) + '%';
+		// 如果不是今天，显示所有空闲时段
+		if (!isToday) {
+			// 计算从班次开始时间到第一个预约之间的空闲时段
+			if (blocks.length > 0) {
+				const firstBlock = blocks[0];
+				const [firstStartH, firstStartM] = firstBlock.startTime.split(':').map(Number);
+				const firstStartMinutes = firstStartH * 60 + firstStartM;
 
-				// 格式化显示文本
-				let displayText: string;
-				if (gapMinutes < 60) {
-					displayText = `${gapMinutes}分钟`;
-				} else if (gapMinutes % 60 === 0) {
-					const hours = gapMinutes / 60;
-					displayText = `${hours}小时`;
-				} else {
-					const hours = Math.floor(gapMinutes / 60);
-					const minutes = gapMinutes % 60;
-					displayText = minutes > 0 ? `${hours}小时${minutes}分` : `${hours}小时`;
+				if (firstStartMinutes > shiftStartMinutes) {
+					const gapMinutes = firstStartMinutes - shiftStartMinutes;
+					const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
+
+					const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
+					const width = (gapMinutes / timelineWidth * 100) + '%';
+
+					availableSlots.push({
+						left,
+						width,
+						durationMinutes: gapMinutes,
+						displayText: `${gapMinutes}分钟`
+					});
 				}
+			}
 
-				availableSlots.push({
-					left,
-					width,
-					durationMinutes: gapMinutes,
-					displayText
-				});
+			// 计算相邻块之间的空闲时段
+			for (let i = 0; i < blocks.length - 1; i++) {
+				const currentBlock = blocks[i];
+				const nextBlock = blocks[i + 1];
+
+				const [currentEndH, currentEndM] = currentBlock.endTime.split(':').map(Number);
+				const currentEndMinutes = currentEndH * 60 + currentEndM;
+
+				const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
+				const nextStartMinutes = nextStartH * 60 + nextStartM;
+
+				const gapMinutes = nextStartMinutes - currentEndMinutes;
+
+				if (gapMinutes > 0) {
+					const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
+
+					const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
+					const width = (gapMinutes / timelineWidth * 100) + '%';
+
+					availableSlots.push({
+						left,
+						width,
+						durationMinutes: gapMinutes,
+						displayText: `${gapMinutes}分钟`
+					});
+				}
+			}
+
+			// 计算最后一个预约块到下班时间的空闲时段
+			if (blocks.length > 0) {
+				const lastBlock = blocks[blocks.length - 1];
+				const [lastEndH, lastEndM] = lastBlock.endTime.split(':').map(Number);
+				const lastEndMinutes = lastEndH * 60 + lastEndM;
+
+				if (lastEndMinutes < shiftEndMinutes) {
+					const gapMinutes = shiftEndMinutes - lastEndMinutes;
+					const gapStartMinutesFromTimelineStart = (lastEndH - timelineStartHour) * 60 + lastEndM;
+
+					const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
+					const width = (gapMinutes / timelineWidth * 100) + '%';
+
+					availableSlots.push({
+						left,
+						width,
+						durationMinutes: gapMinutes,
+						displayText: `${gapMinutes}分钟`
+					});
+				}
+			}
+
+			return availableSlots;
+		}
+
+		// 如果是今天，根据当前时间计算空闲时段
+		if (nowMinutes >= shiftEndMinutes) {
+			return availableSlots;
+		}
+
+		// 找到当前时间所在的预约块
+		let currentBlockIndex = -1;
+		for (let i = 0; i < blocks.length; i++) {
+			const block = blocks[i];
+			const [startH, startM] = block.startTime.split(':').map(Number);
+			const [endH, endM] = block.endTime.split(':').map(Number);
+			const startMinutes = startH * 60 + startM;
+			const endMinutes = endH * 60 + endM;
+
+			if (nowMinutes >= startMinutes && nowMinutes < endMinutes) {
+				currentBlockIndex = i;
+				break;
 			}
 		}
 
-		// 计算相邻块之间的空闲时段
-		for (let i = 0; i < blocks.length - 1; i++) {
-			const currentBlock = blocks[i];
-			const nextBlock = blocks[i + 1];
-
-			// 获取当前块的结束时间
+		// 如果当前时间在某个预约进行中
+		if (currentBlockIndex !== -1) {
+			const currentBlock = blocks[currentBlockIndex];
 			const [currentEndH, currentEndM] = currentBlock.endTime.split(':').map(Number);
 			const currentEndMinutes = currentEndH * 60 + currentEndM;
 
-			// 获取下一个块的开始时间
-			const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-			const nextStartMinutes = nextStartH * 60 + nextStartM;
+			// 显示当前预约结束到下一个预约的间隔
+			if (currentBlockIndex < blocks.length - 1) {
+				const nextBlock = blocks[currentBlockIndex + 1];
+				const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
+				const nextStartMinutes = nextStartH * 60 + nextStartM;
 
-			// 计算空闲时长
-			const gapMinutes = nextStartMinutes - currentEndMinutes;
+				const gapMinutes = nextStartMinutes - currentEndMinutes;
 
-			// 只显示30分钟及以上的空闲时段
-			if (gapMinutes >= 30) {
-				// 计算相对于时间轴起点的位置
-				const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
-				const gapEndMinutesFromTimelineStart = (nextStartH - timelineStartHour) * 60 + nextStartM;
+				if (gapMinutes > 0) {
+					const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
 
-				const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-				const width = (gapMinutes / timelineWidth * 100) + '%';
+					const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
+					const width = (gapMinutes / timelineWidth * 100) + '%';
 
-				// 格式化显示文本
-				let displayText: string;
-				if (gapMinutes < 60) {
-					displayText = `${gapMinutes}分钟`;
-				} else if (gapMinutes % 60 === 0) {
-					const hours = gapMinutes / 60;
-					displayText = `${hours}小时`;
-				} else {
-					const hours = Math.floor(gapMinutes / 60);
-					const minutes = gapMinutes % 60;
-					displayText = minutes > 0 ? `${hours}小时${minutes}分` : `${hours}小时`;
+					availableSlots.push({
+						left,
+						width,
+						durationMinutes: gapMinutes,
+						displayText: `${gapMinutes}分钟`
+					});
 				}
+			} else {
+				// 没有下一个预约，显示到下班时间的间隔
+				if (currentEndMinutes < shiftEndMinutes) {
+					const gapMinutes = shiftEndMinutes - currentEndMinutes;
+					const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
 
-				availableSlots.push({
-					left,
-					width,
-					durationMinutes: gapMinutes,
-					displayText
-				});
+					const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
+					const width = (gapMinutes / timelineWidth * 100) + '%';
+
+					availableSlots.push({
+						left,
+						width,
+						durationMinutes: gapMinutes,
+						displayText: `${gapMinutes}分钟`
+					});
+				}
 			}
-		}
+		} else {
+			// 当前时间不在任何预约中
+			// 找到当前时间之后的第一个预约
+			let nextBlockIndex = -1;
+			for (let i = 0; i < blocks.length; i++) {
+				const block = blocks[i];
+				const [startH, startM] = block.startTime.split(':').map(Number);
+				const startMinutes = startH * 60 + startM;
 
-		// 计算最后一个预约块到下班时间的空闲时段
-		const lastBlock = blocks[blocks.length - 1];
-		const [lastEndH, lastEndM] = lastBlock.endTime.split(':').map(Number);
-		const lastEndMinutes = lastEndH * 60 + lastEndM;
-
-		// 获取下班时间
-		const shiftEndTime = SHIFT_END_TIME[shift];
-		if (shiftEndTime) {
-			const [shiftEndH, shiftEndM] = shiftEndTime.split(':').map(Number);
-			const shiftEndMinutes = shiftEndH * 60 + shiftEndM;
-
-			// 计算从最后一个预约结束到下班时间的空闲时长
-			const gapMinutes = shiftEndMinutes - lastEndMinutes;
-
-			// 只显示30分钟及以上的空闲时段，且确保最后一个预约在下班之前结束
-			if (gapMinutes >= 30 && lastEndMinutes < shiftEndMinutes) {
-				const gapStartMinutesFromTimelineStart = (lastEndH - timelineStartHour) * 60 + lastEndM;
-				const gapEndMinutesFromTimelineStart = (shiftEndH - timelineStartHour) * 60 + shiftEndM;
-
-				const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-				const width = (gapMinutes / timelineWidth * 100) + '%';
-
-				// 格式化显示文本
-				let displayText: string;
-				if (gapMinutes < 60) {
-					displayText = `${gapMinutes}分钟`;
-				} else if (gapMinutes % 60 === 0) {
-					const hours = gapMinutes / 60;
-					displayText = `${hours}小时`;
-				} else {
-					const hours = Math.floor(gapMinutes / 60);
-					const minutes = gapMinutes % 60;
-					displayText = minutes > 0 ? `${hours}小时${minutes}分` : `${hours}小时`;
+				if (startMinutes > nowMinutes) {
+					nextBlockIndex = i;
+					break;
 				}
+			}
 
-				availableSlots.push({
-					left,
-					width,
-					durationMinutes: gapMinutes,
-					displayText
-				});
+			// 如果当前时间在班次开始之前
+			if (nowMinutes < shiftStartMinutes) {
+				// 显示班次开始到第一个预约的间隔
+				if (nextBlockIndex !== -1) {
+					const nextBlock = blocks[nextBlockIndex];
+					const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
+					const nextStartMinutes = nextStartH * 60 + nextStartM;
+
+					if (nextStartMinutes > shiftStartMinutes) {
+						const gapMinutes = nextStartMinutes - shiftStartMinutes;
+						const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
+
+						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
+						const width = (gapMinutes / timelineWidth * 100) + '%';
+
+						availableSlots.push({
+							left,
+							width,
+							durationMinutes: gapMinutes,
+							displayText: `${gapMinutes}分钟`
+						});
+					}
+				} else {
+					// 没有预约，显示班次开始到下班时间的间隔
+					if (shiftEndMinutes > shiftStartMinutes) {
+						const gapMinutes = shiftEndMinutes - shiftStartMinutes;
+						const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
+
+						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
+						const width = (gapMinutes / timelineWidth * 100) + '%';
+
+						availableSlots.push({
+							left,
+							width,
+							durationMinutes: gapMinutes,
+							displayText: `${gapMinutes}分钟`
+						});
+					}
+				}
+			} else {
+				// 当前时间在班次开始之后
+				if (nextBlockIndex !== -1) {
+					// 显示当前时间到下一个预约的间隔
+					const nextBlock = blocks[nextBlockIndex];
+					const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
+					const nextStartMinutes = nextStartH * 60 + nextStartM;
+
+					if (nextStartMinutes > nowMinutes) {
+						const gapMinutes = nextStartMinutes - nowMinutes;
+						const gapStartMinutesFromTimelineStart = (Math.floor(nowMinutes / 60) - timelineStartHour) * 60 + (nowMinutes % 60);
+
+						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
+						const width = (gapMinutes / timelineWidth * 100) + '%';
+
+						availableSlots.push({
+							left,
+							width,
+							durationMinutes: gapMinutes,
+							displayText: `${gapMinutes}分钟`
+						});
+					}
+
+					// 显示当前时间之后的预约之间的间隔
+					for (let i = nextBlockIndex; i < blocks.length - 1; i++) {
+						const currentBlock = blocks[i];
+						const nextBlock = blocks[i + 1];
+
+						const [currentEndH, currentEndM] = currentBlock.endTime.split(':').map(Number);
+						const currentEndMinutes = currentEndH * 60 + currentEndM;
+
+						const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
+						const nextStartMinutes = nextStartH * 60 + nextStartM;
+
+						const gapMinutes = nextStartMinutes - currentEndMinutes;
+
+						if (gapMinutes > 0) {
+							const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
+
+							const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
+							const width = (gapMinutes / timelineWidth * 100) + '%';
+
+							availableSlots.push({
+								left,
+								width,
+								durationMinutes: gapMinutes,
+								displayText: `${gapMinutes}分钟`
+							});
+						}
+					}
+
+					// 显示最后一个预约到下班时间的间隔
+					const lastBlock = blocks[blocks.length - 1];
+					const [lastEndH, lastEndM] = lastBlock.endTime.split(':').map(Number);
+					const lastEndMinutes = lastEndH * 60 + lastEndM;
+
+					if (lastEndMinutes < shiftEndMinutes) {
+						const gapMinutes = shiftEndMinutes - lastEndMinutes;
+						const gapStartMinutesFromTimelineStart = (lastEndH - timelineStartHour) * 60 + lastEndM;
+
+						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
+						const width = (gapMinutes / timelineWidth * 100) + '%';
+
+						availableSlots.push({
+							left,
+							width,
+							durationMinutes: gapMinutes,
+							displayText: `${gapMinutes}分钟`
+						});
+					}
+				} else {
+					// 当前时间之后没有预约，显示当前时间到下班时间的间隔
+					if (nowMinutes < shiftEndMinutes) {
+						const gapMinutes = shiftEndMinutes - nowMinutes;
+						const gapStartMinutesFromTimelineStart = (Math.floor(nowMinutes / 60) - timelineStartHour) * 60 + (nowMinutes % 60);
+
+						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
+						const width = (gapMinutes / timelineWidth * 100) + '%';
+
+						availableSlots.push({
+							left,
+							width,
+							durationMinutes: gapMinutes,
+							displayText: `${gapMinutes}分钟`
+						});
+					}
+				}
 			}
 		}
 
@@ -868,7 +1035,7 @@ ${customerInfo} 已到店
 日期：${updated.date}
 ${changes.join('\n')}
 
-请${technicianMention || technicianName}知悉，做好准备`;
+请${technicianName}${technicianMention || technicianName}知悉，做好准备`;
 
 			const res = await wx.cloud.callFunction({
 				name: 'sendWechatMessage',

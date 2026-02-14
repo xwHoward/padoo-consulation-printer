@@ -543,31 +543,62 @@ Page({
     if (inputValue > 0) {
       const typeText = '加钟';
 
-      const currentTime = new Date();
-      const durationMinutes = inputValue * 30;
-      const endTime = new Date(currentTime.getTime() + durationMinutes * 60 * 1000 + 5 * 60 * 1000);
-
-      const startTimeStr = formatTime(currentTime, false);
-      const endTimeStr = formatTime(endTime, false);
-
       const genderObj = GENDERS.find(g => g._id === record.gender);
       const genderText = genderObj ? genderObj.name : '';
-      const clockInfo = `顾客：${record.surname}${genderText}
-项目：${typeText}(${inputValue})
-技师：${record.technician}
-房间：${record.room}
-时间：${startTimeStr} - ${endTimeStr}`;
 
-      // TODO: 改为推送
-      wx.setClipboardData({
-        data: clockInfo,
-        success: () => {
+      const staffList = await app.getActiveStaffs();
+      const staff = staffList.find(s => s.name === record.technician);
+
+      let technicianMention = '';
+      if (staff && staff.phone) {
+        technicianMention = `<@${staff.phone}>`;
+      }
+
+      const updatedRecord = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, record._id) as ConsultationRecord | null;
+      const originalEndTime = record.endTime;
+      const newEndTime = updatedRecord?.endTime || record.endTime;
+
+      const message = `【⏰ 加钟提醒】
+顾客：${record.surname}${genderText}
+项目：${typeText}(${inputValue})
+技师：${record.technician}${technicianMention}
+房间：${record.room}
+时间：${originalEndTime} - ${newEndTime}`;
+
+      try {
+        const res = await wx.cloud.callFunction({
+          name: 'sendWechatMessage',
+          data: {
+            content: message
+          }
+        });
+
+        if (res.result && typeof res.result === 'object') {
+          const result = res.result as { code: number; message?: string };
+          if (result.code === 0) {
+            wx.showToast({
+              title: '推送成功',
+              icon: 'success'
+            });
+          } else {
+            wx.showToast({
+              title: '推送失败',
+              icon: 'none'
+            });
+          }
+        } else {
           wx.showToast({
-            title: `${typeText}信息已复制`,
-            icon: 'success'
+            title: '推送失败',
+            icon: 'none'
           });
         }
-      });
+      } catch (error) {
+        console.error('推送加钟消息失败:', error);
+        wx.showToast({
+          title: '推送失败',
+          icon: 'none'
+        });
+      }
     } else {
       wx.showToast({
         title: '已清除',
@@ -580,24 +611,21 @@ Page({
   async updateExtraTimeOrOvertime(recordId: string, date: string, value: number) {
     this.setData({ loading: true, loadingText: '更新中...' });
     try {
-
-
       const updateData: any = { extraTime: value };
 
       if (value > 0) {
         const record = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, recordId) as ConsultationRecord | null;
         if (record) {
-          const [hours, minutes] = record.startTime.split(':').map(Number);
-          const startDate = new Date();
-          startDate.setHours(hours, minutes, 0, 0);
+          const [hours, minutes] = record.endTime.split(':').map(Number);
+          const endDate = new Date();
+          endDate.setHours(hours, minutes, 0, 0);
 
-          const endDate = calculateProjectEndTime(startDate, record.project, value);
-          updateData.endTime = formatTime(endDate, false);
+          const newEndDate = new Date(endDate.getTime() + value * 30 * 60 * 1000);
+          updateData.endTime = formatTime(newEndDate, false);
         }
       }
 
       await cloudDb.updateById(Collections.CONSULTATION, recordId, updateData);
-
 
       await this.loadHistoryData();
     } catch (error) {
