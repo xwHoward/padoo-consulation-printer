@@ -155,7 +155,6 @@ Page({
 						}
 					});
 				} catch (error) {
-					console.error('更新员工权重失败:', error);
 				}
 			} else {
 				await cloudDb.insert<ScheduleRecord>(Collections.SCHEDULE, {
@@ -175,7 +174,6 @@ Page({
 						}
 					});
 				} catch (error) {
-					console.error('更新员工权重失败:', error);
 				}
 			}
 

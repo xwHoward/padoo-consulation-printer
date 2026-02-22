@@ -1463,7 +1463,6 @@ ${changes.join('\n')}
 								}
 							});
 						} catch (error) {
-							console.error('更新员工权重失败:', error);
 						}
 					}
 				}
@@ -1548,7 +1547,6 @@ ${changes.join('\n')}
 									}
 								});
 							} catch (error) {
-								console.error('更新员工权重失败:', error);
 							}
 						}
 

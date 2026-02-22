@@ -6,6 +6,9 @@ cloud.init({
 
 const db = cloud.database()
 
+const MAX_WEIGHT = 1
+const MIN_WEIGHT = -1
+
 exports.main = async (event, context) => {
     const { action, staffId } = event
 
@@ -35,6 +38,18 @@ exports.main = async (event, context) => {
                     weightChange = 1
                 }
                 if (weightChange !== 0) {
+                    const staffRecord = await db.collection('staff').doc(staffId).get()
+                    const currentWeight = staffRecord.data.weight || 0
+                    const newWeight = currentWeight + weightChange
+                    
+                    if (newWeight > MAX_WEIGHT || newWeight < MIN_WEIGHT) {
+                        return {
+                            code: 0,
+                            message: '权重已达限制，无需更新',
+                            data: null
+                        }
+                    }
+                    
                     const result = await db.collection('staff').doc(staffId).update({
                         data: {
                             weight: _.inc(weightChange)
@@ -72,6 +87,18 @@ exports.main = async (event, context) => {
                     }
                 }
 
+                const staffRecord = await db.collection('staff').doc(staffId).get()
+                const currentWeight = staffRecord.data.weight || 0
+                const newWeight = currentWeight - 1
+                
+                if (newWeight < MIN_WEIGHT) {
+                    return {
+                        code: 0,
+                        message: '权重已达最小值，无需更新',
+                        data: null
+                    }
+                }
+
                 const result = await db.collection('staff').doc(staffId).update({
                     data: {
                         weight: _.inc(-1)
@@ -102,9 +129,20 @@ exports.main = async (event, context) => {
                     }
                 }
 
+                const staffRecord = await db.collection('staff').doc(staffId).get()
+                const currentWeight = staffRecord.data.weight || 0
+                const newWeight = currentWeight + 1
+                
+                if (newWeight > MAX_WEIGHT) {
+                    return {
+                        code: 0,
+                        message: '权重已达最大值，无需更新',
+                        data: null
+                    }
+                }
+
                 const result = await db.collection('staff').doc(staffId).update({
                     data: {
-                        // 咨询单完成后，权重增加1
                         weight: _.inc(1)
                     }
                 })
@@ -129,6 +167,18 @@ exports.main = async (event, context) => {
                     return {
                         code: 0,
                         message: '点钟不更新权重',
+                        data: null
+                    }
+                }
+
+                const staffRecord = await db.collection('staff').doc(staffId).get()
+                const currentWeight = staffRecord.data.weight || 0
+                const newWeight = currentWeight + 1
+                
+                if (newWeight > MAX_WEIGHT) {
+                    return {
+                        code: 0,
+                        message: '权重已达最大值，无需更新',
                         data: null
                     }
                 }

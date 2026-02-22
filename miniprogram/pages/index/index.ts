@@ -1,7 +1,7 @@
 import { cloudDb, Collections } from "../../utils/cloud-db";
 import { checkLogin } from "../../utils/auth";
 import { requirePagePermission } from "../../utils/permission";
-import { calculateOvertimeUnits, calculateProjectEndTime, formatDate, formatTime, parseProjectDuration, SHIFT_END_TIMES, SHIFT_START_TIMES } from "../../utils/util";
+import { SPARE_TIME, calculateProjectEndTime, formatDate, formatTime, parseProjectDuration, SHIFT_END_TIMES, SHIFT_START_TIMES } from "../../utils/util";
 import { showValidationError, validateConsultationForPrint } from "../../utils/validators";
 import { printerService } from "../../services/printer-service";
 import { PrintContentBuilder } from "../../services/print-content-builder";
@@ -139,7 +139,8 @@ Page({
       show: false,
       content: '',
       loading: false
-    }
+    },
+    clockInSubmitting: false
   },
   printContentBuilder: null as PrintContentBuilder | null,
 
@@ -725,14 +726,17 @@ Page({
             const staffList = await app.getActiveStaffs();
             const staff = staffList.find(s => s.name === consultation.technician);
             if (staff) {
-              await wx.cloud.callFunction({
-                name: 'updateStaffWeight',
-                data: {
-                  action: 'consultation',
-                  staffId: staff._id,
-                  isClockIn: consultation.isClockIn || false
-                }
-              });
+              try {
+                await wx.cloud.callFunction({
+                  name: 'updateStaffWeight',
+                  data: {
+                    action: 'consultation',
+                    staffId: staff._id,
+                    isClockIn: consultation.isClockIn || false
+                  }
+                });
+              } catch (error) {
+              }
               // 刷新全局数据中的员工信息
               await app.loadGlobalData();
             }
@@ -1002,7 +1006,7 @@ Page({
       } else {
         const projectDuration = parseProjectDuration(consultationInfo.project) || 60;
         const extraTime = consultationInfo.extraTime || 0;
-        const totalDuration = projectDuration + extraTime + 10;
+        const totalDuration = projectDuration + extraTime + SPARE_TIME;
         const endTimeDate = new Date(startTimeDate.getTime() + totalDuration * 60 * 1000);
         const endTime = formatTime(endTimeDate, false);
         const updatedInfo = {
@@ -1016,7 +1020,8 @@ Page({
         if (success) {
           this.setData({
             'clockInModal.show': true,
-            'clockInModal.content': clockInInfo
+            'clockInModal.content': clockInInfo,
+            clockInSubmitting: true
           });
           this.loadTechnicianList();
         }
@@ -1294,8 +1299,8 @@ Page({
     const projectDuration1 = parseProjectDuration(info1.project) || 60;
     const projectDuration2 = parseProjectDuration(info2.project) || 60;
     const extraTime = consultationInfo.extraTime || 0;
-    const totalDuration1 = projectDuration1 + extraTime + 10;
-    const totalDuration2 = projectDuration2 + extraTime + 10;
+    const totalDuration1 = projectDuration1 + extraTime + SPARE_TIME;
+    const totalDuration2 = projectDuration2 + extraTime + SPARE_TIME;
 
     const endTimeDate1 = new Date(actualStartTime.getTime() + totalDuration1 * 60 * 1000);
     const endTimeDate2 = new Date(actualStartTime.getTime() + totalDuration2 * 60 * 1000);
@@ -1322,7 +1327,8 @@ ${clockInInfo2}`;
 
       this.setData({
         'clockInModal.show': true,
-        'clockInModal.content': combinedInfo
+        'clockInModal.content': combinedInfo,
+        clockInSubmitting: true
       });
       await this.loadTechnicianList();
     } else {
@@ -1367,7 +1373,7 @@ ${clockInInfo2}`;
 
     const startTime = info.startTime || formatTime(new Date(), false);
     const projectDuration = parseProjectDuration(info.project);
-    const totalDuration = projectDuration + 10;
+    const totalDuration = projectDuration + SPARE_TIME;
 
     let endTime: string;
     if (info.endTime) {
@@ -1435,7 +1441,8 @@ ${clockInInfo2}`;
   onClockInModalCancel() {
     this.setData({
       'clockInModal.show': false,
-      'clockInModal.content': ''
+      'clockInModal.content': '',
+      clockInSubmitting: false
     });
   },
 
@@ -1473,7 +1480,7 @@ ${clockInInfo2}`;
       console.error('推送到企业微信失败:', error);
       wx.showToast({ title: '推送失败，请重试', icon: 'none' });
     } finally {
-      this.setData({ 'clockInModal.loading': false });
+      this.setData({ 'clockInModal.loading': false, clockInSubmitting: false });
     }
   },
 

@@ -177,12 +177,16 @@
     <!-- 提交和打印按钮 -->
     <view class="button-container" wx:if="{{!editId}}">
       <button class="primary-button" bindtap="printConsultation">打印</button>
-      <button class="primary-button" bindtap="onClockIn">报钟</button>
+      <button class="primary-button" bindtap="onClockIn" disabled="{{clockInSubmitting}}">
+        {{clockInSubmitting ? '报钟中...' : '报钟'}}
+      </button>
     </view>
     <!-- 编辑模式按钮 -->
     <view class="button-container" wx:if="{{editId}}">
       <button class="primary-button" bindtap="printConsultation">打印</button>
-      <button class="primary-button" bindtap="onClockIn">报钟</button>
+      <button class="primary-button" bindtap="onClockIn" disabled="{{clockInSubmitting}}">
+        {{clockInSubmitting ? '报钟中...' : '报钟'}}
+      </button>
       <button class="primary-button secondary-button" bindtap="cancelEdit">取消</button>
     </view>
   </view>
@@ -214,7 +218,6 @@
 </view>
 <!-- 车牌号输入弹窗 -->
 <license-plate-input visible="{{licensePlateInputVisible}}" value="{{licensePlate}}" bind:cancel="hidePlateInputModal" bind:confirm="onPlateConfirm" />
-
 <!-- 报钟推送确认弹窗 -->
 <view class="modal-mask" wx:if="{{clockInModal.show}}" bindtap="onClockInModalCancel"></view>
 <view class="clockin-modal" wx:if="{{clockInModal.show}}">
@@ -223,15 +226,7 @@
     <text class="modal-close" bindtap="onClockInModalCancel">✕</text>
   </view>
   <view class="modal-body">
-    <textarea 
-      class="clockin-textarea" 
-      value="{{clockInModal.content}}" 
-      bindinput="onClockInContentInput"
-      placeholder="请输入报钟内容"
-      maxlength="1000"
-      auto-height
-      show-confirm-bar="{{false}}"
-    />
+    <textarea class="clockin-textarea" value="{{clockInModal.content}}" bindinput="onClockInContentInput" placeholder="请输入报钟内容" maxlength="1000" auto-height show-confirm-bar="{{false}}" />
     <text class="char-count">{{clockInModal.content.length}}/1000</text>
   </view>
   <view class="modal-footer">

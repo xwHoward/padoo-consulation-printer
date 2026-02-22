@@ -1,3 +1,5 @@
+export const SPARE_TIME = 20; // 20分钟准备时间
+
 export function formatTime(date: Date, withDate = true): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
@@ -98,7 +100,7 @@ export function calculateProjectEndTime(
 ): Date {
   const projectDuration = parseProjectDuration(project);
   const extraTimeMinutes = extraTimeUnits * 30;
-  const totalDuration = projectDuration + extraTimeMinutes + 10; // 项目时长 + 加钟 + 10分钟准备
+  const totalDuration = projectDuration + extraTimeMinutes + SPARE_TIME; // 项目时长 + 加钟 + 10分钟准备
   return new Date(startTime.getTime() + totalDuration * 60 * 1000);
 }
 
