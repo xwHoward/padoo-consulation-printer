@@ -7,30 +7,6 @@ cloud.init({
 const db = cloud.database()
 const _ = db.command
 
-const DEFAULT_PERMISSIONS = {
-    // 页面权限
-    canAccessIndex: false,
-    canAccessCashier: false,
-    canAccessHistory: false,
-    canAccessStaff: false,
-    canAccessRooms: false,
-    canAccessCustomers: false,
-    // 按钮权限
-    canVoidConsultation: false,
-    canEditConsultation: false,
-    canDeleteConsultation: false,
-    canEditReservation: false,
-    canCancelReservation: false,
-    canManageStaff: false,
-    canManageSchedule: false,
-    canManageRooms: false,
-    canSettleConsultation: false,
-    canExportData: false,
-    // 数据操作权限
-    dataScope: 'own',
-    canViewAllHistory: false,
-    canEditOwnOnly: true
-}
 
 exports.main = async (event, context) => {
     const { code, action } = event
@@ -74,7 +50,6 @@ exports.main = async (event, context) => {
                 openId: OPENID,
                 role: 'viewer',
                 status: 'active',
-                permissions: { ...DEFAULT_PERMISSIONS },
                 createdAt: now.toISOString(),
                 updatedAt: now.toISOString(),
                 lastLoginAt: now.toISOString()

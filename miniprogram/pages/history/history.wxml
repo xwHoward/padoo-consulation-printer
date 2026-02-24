@@ -2,9 +2,21 @@
 <wxs src="./format.wxs" module="format" />
 <navigation-bar title="{{customerPhone ? '顾客咨询单' : '咨询单纪录'}}" back="{{true}}" color="black" background="#FFF">
   <view slot="right" class="nav-right">
-    <view class="date-selector-btn" bindtap="showDateSelector" wx:if="{{!customerPhone}}">
-      <text class="date-selector-icon">📅</text>
-      <text class="date-selector-text">{{dateSelector.selectedDate || '选择日期'}}</text>
+    <view class="date-quick-nav" wx:if="{{!customerPhone}}">
+      <view class="date-nav-btn {{!dateSelector.previousDate ? 'disabled' : ''}}" bindtap="goToPreviousDay">
+        <text class="date-nav-icon">◀</text>
+      </view>
+      <view class="date-nav-btn {{dateSelector.isToday ? 'disabled' : ''}}" bindtap="goToToday">
+        <text class="date-nav-text">今日</text>
+      </view>
+      <view class="date-nav-btn {{!dateSelector.nextDate ? 'disabled' : ''}}" bindtap="goToNextDay">
+        <text class="date-nav-icon">▶</text>
+      </view>
+      <picker mode="date" value="{{dateSelector.selectedDate}}" end="{{dateSelector.maxDate}}" bindchange="onDateSelect">
+        <view class="date-nav-btn">
+          <text class="date-nav-icon">📅</text>
+        </view>
+      </picker>
     </view>
   </view>
 </navigation-bar>
@@ -60,14 +72,16 @@
                 <view class="settlement-info" wx:if="{{record.settlement}}">
                   <view class="settlement-header">
                     <view class="settlement-label">✓ 已结算</view>
-                    <view class="settlement-time">{{format.formatSettlementTime(record.settlement.settledAt)}}</view>
+                    <view class="settlement-time">
+                      {{format.formatSettlementTime(record.settlement.settledAt)}}
+                    </view>
                   </view>
-                  <view class="settlement-amount">
-                    实收总额：¥{{record.settlement.totalAmount}}
-                  </view>
+                  <view class="settlement-amount">实收总额：¥{{record.settlement.totalAmount}}</view>
                   <view class="payment-list">
                     <view class="payment-item" wx:for="{{record.settlement.payments}}" wx:key="method" wx:for-item="payment">
-                      <view class="payment-platform">{{paymentPlatformLabels[payment.method]}}</view>
+                      <view class="payment-platform">
+                        {{paymentPlatformLabels[payment.method]}}
+                      </view>
                       <view class="payment-detail">
                         <text wx:if="{{payment.method === 'membership'}}">{{payment.amount}}次</text>
                         <text wx:else>¥{{payment.amount}}</text>
@@ -82,6 +96,9 @@
                 <view class="consultation-actions" wx:if="{{!customerPhone}}">
                   <button class="action-btn edit-btn" bindtap="editConsultation" data-record="{{record}}">
                     修改
+                  </button>
+                  <button class="action-btn early-finish-btn" bindtap="onEarlyFinish" data-record="{{record}}" wx:if="{{record.isInProgress && !record.isVoided}}">
+                    提前下钟
                   </button>
                   <button class="action-btn extra-btn" bindtap="onExtraTime" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
                     加钟{{record.extraTime ? '(' + record.extraTime + ')' : ''}}
@@ -124,30 +141,36 @@
     <view class="modal-btn confirm-btn" bindtap="onModalConfirm">确定</view>
   </view>
 </view>
-<!-- 日期选择器弹窗 -->
-<view class="modal-mask" wx:if="{{dateSelector.show}}" bindtap="hideDateSelector"></view>
-<view class="date-selector-container" wx:if="{{dateSelector.show}}">
-  <view class="date-selector-header">
-    <view class="date-selector-title">选择日期</view>
-    <view class="date-selector-close" bindtap="hideDateSelector">✕</view>
-  </view>
-  <scroll-view class="date-selector-list" scroll-y>
-    <view class="date-item {{dateSelector.selectedDate === item ? 'selected' : ''}}" 
-          wx:for="{{dateSelector.availableDates}}" 
-          wx:key="item" 
-          bindtap="onDateSelect" 
-          data-date="{{item}}">
-      <text class="date-item-text">{{item}}</text>
-      <text class="date-item-check" wx:if="{{dateSelector.selectedDate === item}}">✓</text>
+  <!-- 提前下钟确认弹窗 -->
+<view class="modal-mask" wx:if="{{earlyFinishModal.show}}" bindtap="onEarlyFinishModalCancel"></view>
+<view class="modal-container" wx:if="{{earlyFinishModal.show}}">
+  <view class="modal-title">提前下钟</view>
+  <view class="modal-body">
+    <view class="early-finish-info">
+      <view class="info-row">
+        <view class="info-label">技师：</view>
+        <view class="info-value">{{earlyFinishModal.technician}}</view>
+      </view>
+      <view class="info-row">
+        <view class="info-label">房间：</view>
+        <view class="info-value">{{earlyFinishModal.room}}</view>
+      </view>
+      <view class="info-row">
+        <view class="info-label">操作：</view>
+        <view class="info-value">将结束时间更新为当前时间</view>
+      </view>
     </view>
-  </scroll-view>
+  </view>
+  <view class="modal-footer">
+    <view class="modal-btn cancel-btn" bindtap="onEarlyFinishModalCancel">取消</view>
+    <view class="modal-btn confirm-btn" bindtap="onEarlyFinishModalConfirm">确定</view>
+  </view>
 </view>
 <!-- loading遮罩 -->
 <view class="loading-mask" wx:if="{{loading}}">
   <view class="loading-spinner"></view>
   <view class="loading-text">{{loadingText}}</view>
 </view>
-
 <!-- 每日总结推送确认弹窗 -->
 <view class="modal-mask" wx:if="{{summaryModal.show}}" bindtap="onSummaryModalCancel"></view>
 <view class="summary-modal" wx:if="{{summaryModal.show}}">
@@ -156,15 +179,7 @@
     <text class="modal-close" bindtap="onSummaryModalCancel">✕</text>
   </view>
   <view class="modal-body">
-    <textarea 
-      class="summary-textarea" 
-      value="{{summaryModal.content}}" 
-      bindinput="onSummaryContentInput"
-      placeholder="请输入每日总结内容"
-      maxlength="2000"
-      auto-height
-      show-confirm-bar="{{false}}"
-    />
+    <textarea class="summary-textarea" value="{{summaryModal.content}}" bindinput="onSummaryContentInput" placeholder="请输入每日总结内容" maxlength="2000" auto-height show-confirm-bar="{{false}}" />
     <text class="char-count">{{summaryModal.content.length}}/2000</text>
   </view>
   <view class="modal-footer">

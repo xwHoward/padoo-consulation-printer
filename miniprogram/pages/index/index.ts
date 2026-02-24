@@ -726,19 +726,17 @@ Page({
             const staffList = await app.getActiveStaffs();
             const staff = staffList.find(s => s.name === consultation.technician);
             if (staff) {
-              try {
-                await wx.cloud.callFunction({
-                  name: 'updateStaffWeight',
-                  data: {
-                    action: 'consultation',
-                    staffId: staff._id,
-                    isClockIn: consultation.isClockIn || false
-                  }
-                });
-              } catch (error) {
-              }
+              await wx.cloud.callFunction({
+                name: 'updateStaffWeight',
+                data: {
+                  action: 'consultation',
+                  staffId: staff._id,
+                  isClockIn: consultation.isClockIn || false
+                }
+              });
               // 刷新全局数据中的员工信息
               await app.loadGlobalData();
+
             }
           } catch (error) {
             console.error('更新员工权重失败:', error);

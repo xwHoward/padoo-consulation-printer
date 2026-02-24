@@ -185,13 +185,10 @@ class CloudDatabase {
 				updatedAt: this.getTimestamp()
 			};
 
-			console.log(`[CloudDB] 更新记录 ${_id}，数据:`, updateData);
-			const doc = await this.getCollection(collection).doc(_id).get();
-			console.log(`[CloudDB] 更新记录 ${_id} 前数据:`, doc.data);
+			await this.getCollection(collection).doc(_id).get();
 			const res = await this.getCollection(collection).doc(_id).update({
 				data: updateData
 			});
-			console.log(`[CloudDB] 更新记录 ${_id} 结果:`, res);
 			return res.stats?.updated || 0 > 0;
 		} catch (error) {
 			if ((error as any).errMsg?.includes('document not found')) {

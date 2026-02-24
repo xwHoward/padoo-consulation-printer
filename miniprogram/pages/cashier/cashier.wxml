@@ -1,4 +1,8 @@
-<navigation-bar title="场控收银" back="{{true}}" color="black" background="#FFF"></navigation-bar>
+<navigation-bar title="场控收银" back="{{true}}" color="black" background="#FFF">
+  <view slot="right" class="landscape-btn" bindtap="toggleLandscape">
+    <text>{{isLandscape ? '竖屏' : '横屏'}}</text>
+  </view>
+</navigation-bar>
 <scroll-view class="scrollarea" scroll-y type="list">
   <view class="container">
     <!-- loading遮罩 -->
@@ -10,13 +14,20 @@
     <view class="section timeline-section">
       <view class="section-header">
         <view class="section-title">排钟进度</view>
-        <!-- 日期选择 -->
-        <view class="header-picker">
-          <picker mode="date" value="{{selectedDate}}" bindchange="onDateChange">
-            <view class="date-display">
-              <view class="calendar-icon">📅</view>
-              <view class="date-text">{{selectedDate}}</view>
-              <view class="arrow-down">▼</view>
+        <!-- 日期快速导航 -->
+        <view class="date-quick-nav">
+          <view class="date-nav-btn {{!dateSelector.previousDate ? 'disabled' : ''}}" bindtap="goToPreviousDay">
+            <text class="date-nav-icon">◀</text>
+          </view>
+          <view class="date-nav-btn {{dateSelector.isToday ? 'disabled' : ''}}" bindtap="goToToday">
+            <text class="date-nav-text">今日</text>
+          </view>
+          <view class="date-nav-btn {{!dateSelector.nextDate ? 'disabled' : ''}}" bindtap="goToNextDay">
+            <text class="date-nav-icon">▶</text>
+          </view>
+          <picker mode="date" value="{{dateSelector.selectedDate}}" end="{{dateSelector.maxDate}}" bindchange="onDateSelect">
+            <view class="date-nav-btn">
+              <text class="date-nav-icon">📅</text>
             </view>
           </picker>
         </view>
@@ -45,7 +56,7 @@
               <!-- 当前时间线 -->
               <view class="current-time-line" wx:if="{{showCurrentTimeLine}}" style="left: {{currentTimePosition}};"></view>
               <!-- 占用块 -->
-              <view class="time-block {{block.isReservation ? 'reservation' : ''}} {{block.isSettled ? 'settled' : ''}}" wx:for="{{item.blocks}}" wx:for-item="block" wx:key="startTime" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block._id}}" data-reservation="{{block.isReservation}}" data-settled="{{block.isSettled}}">
+              <view class="time-block {{block.isReservation ? 'reservation' : ''}} {{block.isSettled ? 'settled' : ''}}" wx:for="{{item.blocks}}" wx:for-item="block" wx:key="startTime" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block._id}}" data-reservation="{{block.isReservation}}" data-settled="{{block.isSettled}}" data-inprogress="{{block.isInProgress}}">
                 <view class="block-content">
                   <view class="block-customer">{{block.customerName}} | {{block.room}}</view>
                   <view class="block-time">{{block.startTime}}-{{block.endTime}}</view>

@@ -246,9 +246,6 @@ interface StaffAvailability {
 // 用户角色类型
 type UserRole = 'admin' | 'cashier' | 'technician' | 'viewer';
 
-// 数据可见范围
-type DataScope = 'all' | 'own' | 'department';
-
 // 用户权限配置
 interface UserPermissions {
   // 页面权限
@@ -272,12 +269,8 @@ interface UserPermissions {
   canManageStaff: boolean;
   canManageSchedule: boolean;
   canManageRooms: boolean;
-  canSettleConsultation: boolean;
   canExportData: boolean;
-  // 数据操作权限
-  dataScope: DataScope;
   canViewAllHistory: boolean;
-  canEditOwnOnly: boolean;
 }
 
 // 用户数据结构
@@ -289,7 +282,6 @@ interface UserRecord extends BaseRecord {
   phone?: string;
   role: UserRole;
   status: 'active' | 'disabled';
-  permissions: UserPermissions;
   staffId?: string;
   staffName?: string;
   department?: string;

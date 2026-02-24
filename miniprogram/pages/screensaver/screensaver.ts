@@ -1,4 +1,3 @@
-import { Collections, cloudDb } from '../../utils/cloud-db';
 import { formatDate } from '../../utils/util';
 
 interface TechCard {

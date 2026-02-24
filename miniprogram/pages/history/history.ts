@@ -1,12 +1,13 @@
 import { Collections, cloudDb } from '../../utils/cloud-db';
 import { COUPON_PLATFORMS, GENDERS, MASSAGE_STRENGTHS } from "../../utils/constants";
-import { calculateProjectEndTime, formatTime } from "../../utils/util";
 import { hasButtonPermission } from '../../utils/permission';
+import { formatTime, getCurrentDate, getPreviousDate, getNextDate } from "../../utils/util";
 
 // 扩展记录类型，添加折叠状态
 interface DisplayRecord extends ConsultationRecord {
   collapsed: boolean;
   dailyCount?: number;
+  isInProgress?: boolean; // 是否进行中
 }
 
 // 定义每日咨询单集合
@@ -60,15 +61,24 @@ Page({
     },
     // 日期选择器状态
     dateSelector: {
-      show: false,
       selectedDate: '',
-      availableDates: [] as string[]
+      maxDate: '',
+      previousDate: '',
+      nextDate: '',
+      isToday: false
     },
     // 每日总结推送弹窗状态
     summaryModal: {
       show: false,
       content: '',
       loading: false
+    },
+    // 提前下钟确认弹窗状态
+    earlyFinishModal: {
+      show: false,
+      recordId: '',
+      technician: '',
+      room: ''
     },
     canDelete: false // 是否有删除权限
   },
@@ -78,13 +88,13 @@ Page({
     this.setData({
       canDelete: hasButtonPermission('deleteConsultation')
     });
-    
+
     // 检查是否为顾客只读模式
     if (options.readonly === 'true' && options.customerPhone && options.customerId) {
       this.loadCustomerHistory(options.customerPhone, options.customerId);
     } else {
-      // 页面加载时获取历史数据，默认只获取当日的记录
-      this.loadHistoryData();
+      // 页面加载时获取当前日期的历史数据
+      this.loadHistoryData(getCurrentDate());
     }
   },
 
@@ -93,31 +103,42 @@ Page({
     if (this.data.customerPhone) {
       return;
     }
-    // 页面显示时重新加载数据，确保数据最新
-    this.loadHistoryData();
+    // 页面显示时重新加载当前日期的数据，确保数据最新
+    const currentDate = getCurrentDate();
+    if (this.data.dateSelector.selectedDate !== currentDate) {
+      this.loadHistoryData(currentDate);
+    }
   },
 
-  // 显示日期选择器
-  showDateSelector() {
-    this.setData({
-      'dateSelector.show': true
-    });
+  // 前一天
+  goToPreviousDay() {
+    const { previousDate } = this.data.dateSelector;
+    if (previousDate) {
+      this.loadHistoryData(previousDate);
+    }
   },
 
-  // 关闭日期选择器
-  hideDateSelector() {
-    this.setData({
-      'dateSelector.show': false
-    });
+  // 回到今天
+  goToToday() {
+    const currentDate = getCurrentDate();
+    this.loadHistoryData(currentDate);
   },
 
-  // 选择日期
+  // 后一天
+  goToNextDay() {
+    const { nextDate } = this.data.dateSelector;
+    if (nextDate) {
+      this.loadHistoryData(nextDate);
+    }
+  },
+
+  // 选择日期（picker 变化时触发）
   onDateSelect(e: WechatMiniprogram.CustomEvent) {
-    const selectedDate = e.currentTarget.dataset.date;
+    const selectedDate = e.detail.value;
     this.setData({
-      'dateSelector.selectedDate': selectedDate,
-      'dateSelector.show': false
+      'dateSelector.selectedDate': selectedDate
     });
+
     // 加载选中日期的记录
     this.loadHistoryData(selectedDate);
   },
@@ -161,13 +182,13 @@ Page({
   },
 
   // 加载历史数据
-  async loadHistoryData(targetDate?: string) {
+  async loadHistoryData(targetDate: string) {
     this.setData({ loading: true, loadingText: '加载中...' });
     try {
       const res = await wx.cloud.callFunction({
         name: 'getHistoryData',
         data: {
-          action: 'loadAllDates',
+          action: 'loadSingleDate',
           targetDate: targetDate,
         }
       });
@@ -176,14 +197,18 @@ Page({
       }
 
       if (res.result.code === 0) {
-        const { allDates, selectedDate, historyData } = res.result.data;
+        const { selectedDate, historyData } = res.result.data;
+        const currentDate = getCurrentDate();
+        const previousDate = getPreviousDate(selectedDate);
+        const nextDate = getNextDate(selectedDate, currentDate);
+        const isToday = selectedDate === currentDate;
 
         this.setData({
-          dateSelector: {
-            show: false,
-            selectedDate: selectedDate,
-            availableDates: allDates
-          },
+          'dateSelector.selectedDate': selectedDate,
+          'dateSelector.maxDate': currentDate,
+          'dateSelector.previousDate': previousDate,
+          'dateSelector.nextDate': nextDate,
+          'dateSelector.isToday': isToday,
           historyData
         });
       } else {
@@ -270,7 +295,7 @@ Page({
                 title: '作废成功',
                 icon: 'success'
               });
-              await this.loadHistoryData();
+              await this.loadHistoryData(this.data.dateSelector.selectedDate);
             } else {
               console.error('未找到要作废的记录:', record._id);
               wx.showToast({
@@ -293,12 +318,75 @@ Page({
     });
   },
 
+  // 提前下钟操作
+  onEarlyFinish(e: WechatMiniprogram.TouchEvent) {
+    const { record } = e.currentTarget.dataset;
+
+    this.setData({
+      'earlyFinishModal.show': true,
+      'earlyFinishModal.recordId': record._id,
+      'earlyFinishModal.technician': record.technician,
+      'earlyFinishModal.room': record.room
+    });
+  },
+
+  // 提前下钟确认弹窗 - 取消
+  onEarlyFinishModalCancel() {
+    this.setData({
+      'earlyFinishModal.show': false
+    });
+  },
+
+  // 提前下钟确认弹窗 - 确认
+  async onEarlyFinishModalConfirm() {
+    const { recordId } = this.data.earlyFinishModal;
+
+    if (!recordId) {
+      return;
+    }
+
+    this.setData({ loading: true, loadingText: '更新中...' });
+
+    try {
+      const now = new Date();
+      const newEndTime = formatTime(now, false);
+
+      const success = await cloudDb.updateById(Collections.CONSULTATION, recordId, {
+        endTime: newEndTime
+      });
+
+      if (success) {
+        wx.showToast({
+          title: '更新成功',
+          icon: 'success'
+        });
+        this.setData({
+          'earlyFinishModal.show': false
+        });
+        await this.loadHistoryData(this.data.dateSelector.selectedDate);
+      } else {
+        wx.showToast({
+          title: '更新失败',
+          icon: 'none'
+        });
+      }
+    } catch (error) {
+      console.error('提前下钟失败:', error);
+      wx.showToast({
+        title: '更新失败',
+        icon: 'none'
+      });
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
   // 删除咨询单
   deleteConsultation(e: WechatMiniprogram.TouchEvent) {
     if (!hasButtonPermission('deleteConsultation')) {
       return;
     }
-    
+
     const { record } = e.currentTarget.dataset;
 
     wx.showModal({
@@ -317,7 +405,7 @@ Page({
                 title: '删除成功',
                 icon: 'success'
               });
-              await this.loadHistoryData();
+              await this.loadHistoryData(this.data.dateSelector.selectedDate);
             } else {
               console.error('未找到要删除的记录:', record._id);
               wx.showToast({
@@ -627,7 +715,7 @@ Page({
 
       await cloudDb.updateById(Collections.CONSULTATION, recordId, updateData);
 
-      await this.loadHistoryData();
+      await this.loadHistoryData(date);
     } catch (error) {
       console.error('更新失败:', error);
       wx.showToast({

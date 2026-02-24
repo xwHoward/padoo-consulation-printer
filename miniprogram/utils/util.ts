@@ -1,4 +1,4 @@
-export const SPARE_TIME = 20; // 20分钟准备时间
+export const SPARE_TIME = 10; // 10分钟准备+休息时间
 
 export function formatTime(date: Date, withDate = true): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -114,4 +114,36 @@ export function earlierThan(a: string, b: string): boolean {
   const [aHour, aMin] = a.split(":").map(Number);
   const [bHour, bMin] = b.split(":").map(Number);
   return aHour * 60 + aMin < bHour * 60 + bMin;
+}
+
+export function getCurrentDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function getPreviousDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  date.setDate(date.getDate() - 1);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function getNextDate(dateStr: string, maxDate?: string): string | null {
+  const date = new Date(dateStr);
+  date.setDate(date.getDate() + 1);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const nextDate = `${year}-${month}-${day}`;
+  
+  if (maxDate && nextDate > maxDate) {
+    return null;
+  }
+  
+  return nextDate;
 }

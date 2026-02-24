@@ -8,6 +8,21 @@ page {
 	background-color: @bg-color-light;
 }
 
+.landscape-btn {
+	padding: 8px 16px;
+	background: rgba(255, 255, 255, 0.9);
+	border-radius: 16px;
+	font-size: 14px;
+	color: #333;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+	transition: all 0.2s ease;
+
+	&:active {
+		background: rgba(255, 255, 255, 1);
+		transform: scale(0.95);
+	}
+}
+
 .scrollarea {
 	flex: 1;
 	width: 100%;
@@ -19,34 +34,46 @@ page {
 	position: relative;
 }
 
-/* 日期选择器 */
-.header-picker {
-	.date-display {
-		display: inline-flex;
-		align-items: center;
-		background: #fff;
-		padding: 8px 16px;
-		border-radius: 20px;
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+/* 日期快速导航 */
+.date-quick-nav {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
 
-		.calendar-icon {
-			margin-right: 8px;
-			font-size: 16px;
-		}
+.date-nav-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 32px;
+	height: 32px;
+	padding: 0 8px;
+	background-color: #fff;
+	border-radius: 16px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
 
-		.date-text {
-			font-size: 16px;
-			white-space: nowrap;
-			font-weight: 500;
-			color: @text-color;
-		}
+.date-nav-btn:active {
+	background-color: rgba(255, 107, 0, 0.1);
+	transform: scale(0.95);
+}
 
-		.arrow-down {
-			margin-left: 8px;
-			font-size: 10px;
-			color: @text-color-secondary;
-		}
-	}
+.date-nav-btn.disabled {
+	opacity: 0.3;
+	pointer-events: none;
+}
+
+.date-nav-icon {
+	font-size: 14px;
+	color: @text-color;
+}
+
+.date-nav-text {
+	font-size: 13px;
+	color: @text-color;
+	font-weight: 500;
 }
 
 .timeline-scroll {
@@ -567,7 +594,7 @@ page {
 				color: @text-color;
 			}
 
-			
+
 			.picker-val,
 			.form-input {
 				flex: 1;
@@ -577,6 +604,7 @@ page {
 				border: none;
 				border-bottom: 1px solid @border-color;
 			}
+
 			.picker-val {
 				font-size: 16px;
 				font-weight: bold;

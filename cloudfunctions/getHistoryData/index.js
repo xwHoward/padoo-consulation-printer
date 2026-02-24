@@ -5,46 +5,16 @@ cloud.init({
 });
 
 const db = cloud.database();
-const _ = db.command;
 
-const SHIFT_TIMES = {
-  'morning': {
-    start: '10:00',
-    end: '22:00'
-  },
-  'evening': {
-    start: '12:00',
-    end: '23:00'
-  }
-};
-
-function calculateOvertimeUnits(startTime, endTime, shiftStart, shiftEnd) {
-  if (!startTime || !endTime || !shiftStart || !shiftEnd) return 0;
-
-  const [startHour, startMinute] = startTime.split(':').map(Number);
-  const [endHour, endMinute] = endTime.split(':').map(Number);
-  const [shiftStartHour, shiftStartMinute] = shiftStart.split(':').map(Number);
-  const [shiftEndHour, shiftEndMinute] = shiftEnd.split(':').map(Number);
-
-  const startMinutes = startHour * 60 + startMinute;
-  const endMinutes = endHour * 60 + endMinute;
-  const shiftStartMinutes = shiftStartHour * 60 + shiftStartMinute;
-  const shiftEndMinutes = shiftEndHour * 60 + shiftEndMinute;
-
-  let overtimeMinutes = 0;
-
-  if (startMinutes < 540) {
-    overtimeMinutes += endMinutes;
-  } else if (startMinutes >= 540 && startMinutes < shiftStartMinutes) {
-    overtimeMinutes += shiftStartMinutes - startMinutes;
-  }
-
-  if (endMinutes > shiftEndMinutes) {
-    overtimeMinutes += endMinutes - shiftEndMinutes;
-  }
-
-  return overtimeMinutes > 0 ? Math.floor(overtimeMinutes / 30) : 0;
+function isToday(date) {
+  const now = new Date();
+  const utcNow = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+  const today = new Date(utcNow.getFullYear(), utcNow.getMonth(), utcNow.getDate());
+  const recordDate = new Date(date);
+  return recordDate.toDateString() === today.toDateString();
 }
+
+
 
 function parseProjectDuration(project) {
   const match = project.match(/(\d+)min/);
@@ -68,6 +38,9 @@ async function getDailyRecordsWithCount(date) {
   const records = recordsResult.data;
   const technicianCounts = {};
 
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
   const processedRecords = records.map(record => {
     if (!technicianCounts[record.technician]) {
       technicianCounts[record.technician] = 0;
@@ -90,12 +63,20 @@ async function getDailyRecordsWithCount(date) {
       endTimeStr = formatTime(endDate);
     }
 
+    const [startHour, startMinute] = startTimeStr.split(':').map(Number);
+    const [endHour, endMinute] = endTimeStr.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMinute;
+    const endMinutes = endHour * 60 + endMinute;
+
+    const isInProgress = !record.isVoided && isToday(record.createdAt) && currentMinutes >= startMinutes && currentMinutes < endMinutes;
+
     return {
       ...record,
       dailyCount: record.isVoided ? 0 : technicianCounts[record.technician],
       startTime: startTimeStr,
       endTime: endTimeStr,
-      collapsed: record.isVoided
+      collapsed: record.isVoided,
+      isInProgress: isInProgress
     };
   });
 
@@ -108,7 +89,29 @@ exports.main = async (event) => {
   const { action, targetDate, customerPhone, customerId } = event;
 
   try {
-    if (action === 'loadAllDates') {
+    if (action === 'loadSingleDate') {
+      if (!targetDate) {
+        return {
+          code: -1,
+          message: '缺少日期参数'
+        };
+      }
+
+      const records = await getDailyRecordsWithCount(targetDate);
+      const historyData = [{
+        date: targetDate,
+        records: records
+      }];
+
+      return {
+        code: 0,
+        data: {
+          selectedDate: targetDate,
+          historyData
+        }
+      };
+
+    } else if (action === 'loadAllDates') {
       const allRecordsResult = await db.collection('consultation_records').field({
         date: true,
         createdAt: true

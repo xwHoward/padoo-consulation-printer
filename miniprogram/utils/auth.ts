@@ -62,15 +62,6 @@ export class AuthManager {
 		return !!this.currentUser && !!this.token;
 	}
 
-	hasPermission(permission: keyof UserRecord['permissions']): boolean {
-		if (!this.currentUser) return false;
-		return this.currentUser.permissions[permission] === true;
-	}
-
-	hasAnyPermission(permissions: (keyof UserRecord['permissions'])[]): boolean {
-		return permissions.some(permission => this.hasPermission(permission));
-	}
-
 	getUserRole(): UserRecord['role'] | null {
 		return this.currentUser?.role || null;
 	}
