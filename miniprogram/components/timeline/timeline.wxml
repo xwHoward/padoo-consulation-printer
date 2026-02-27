@@ -10,7 +10,7 @@
       </view>
 
       <!-- 员工行 -->
-      <view class="staff-timeline-row" wx:for="{{staffTimeline}}" wx:key="_id">
+      <view class="staff-timeline-row {{item.highlighted ? 'highlighted' : ''}}" wx:for="{{staffTimeline}}" wx:key="_id">
         <view class="staff-name-col">
           <view>{{item.name}}</view>
           <view class="shift-mini-tag {{item.shift}}">

@@ -50,6 +50,19 @@
 	height: 70px;
 	border-bottom: 1px dashed @border-color-light;
 	align-items: center;
+	transition: all 0.3s ease;
+
+	&.highlighted {
+		background-color: rgba(255, 107, 0, 0.08);
+		border-left: 3px solid @primary-color;
+		border-bottom: 1px solid rgba(255, 107, 0, 0.2);
+		font-weight: 600;
+
+		.staff-name-col {
+			color: @primary-color;
+			font-weight: 600;
+		}
+	}
 }
 
 .staff-name-col {

@@ -54,11 +54,19 @@
       <view class="stats-cards">
         <view class="stat-card">
           <view class="stat-value">{{performanceStats.totalCount}}</view>
-          <view class="stat-label">单据数量</view>
+          <view class="stat-label">单量</view>
+        </view>
+        <!-- <view class="stat-card">
+          <view class="stat-value">¥{{performanceStats.totalAmount}}</view>
+          <view class="stat-label">业绩</view>
+        </view> -->
+        <view class="stat-card">
+          <view class="stat-value">¥{{performanceStats.totalCommission}}</view>
+          <view class="stat-label">提成</view>
         </view>
         <view class="stat-card">
-          <view class="stat-value">¥{{performanceStats.totalAmount}}</view>
-          <view class="stat-label">总金额</view>
+          <view class="stat-value">{{performanceStats.clockInCount}}</view>
+          <view class="stat-label">点钟</view>
         </view>
       </view>
       <view class="project-stats" wx:if="{{performanceStats.projectStats.length > 0}}">

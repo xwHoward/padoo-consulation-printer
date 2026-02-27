@@ -30,6 +30,8 @@ interface ProfileData {
 	performanceStats: {
 		totalCount: number
 		totalAmount: number
+		totalCommission: number
+		clockInCount: number
 		projectStats: Array<{ project: string; count: number; amount: number }>
 	}
 	paymentPlatformLabels: Record<string, string>
@@ -53,6 +55,8 @@ Page({
 		performanceStats: {
 			totalCount: 0,
 			totalAmount: 0,
+			totalCommission: 0,
+			clockInCount: 0,
 			projectStats: []
 		},
 		paymentPlatforms: {
@@ -196,8 +200,16 @@ Page({
 				isVoided: false
 			});
 
+			const allProjects = await app.getProjects();
+			const projectCommissionMap: Record<string, number> = {};
+			allProjects.forEach(project => {
+				projectCommissionMap[project.name] = project.commission || 0;
+			});
+
 			const projectStats: Record<string, { count: number; amount: number }> = {};
 			let totalAmount = 0;
+			let totalCommission = 0;
+			let clockInCount = 0;
 
 			records.forEach(record => {
 				const project = record.project;
@@ -205,7 +217,15 @@ Page({
 					projectStats[project] = { count: 0, amount: 0 };
 				}
 				projectStats[project].count += 1;
-				projectStats[project].amount += record.settlement?.totalAmount || 0;
+
+				let commission = projectCommissionMap[project] || 0;
+				if (record.isClockIn) {
+					clockInCount += 1;
+					commission += 5;
+				}
+
+				projectStats[project].amount += commission;
+				totalCommission += commission;
 				totalAmount += record.settlement?.totalAmount || 0;
 			});
 
@@ -220,6 +240,8 @@ Page({
 				performanceStats: {
 					totalCount: records.length,
 					totalAmount: totalAmount,
+					totalCommission: totalCommission,
+					clockInCount: clockInCount,
 					projectStats: projectStatsArray
 				}
 			});

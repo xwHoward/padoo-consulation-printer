@@ -14,6 +14,7 @@ Page({
 			name: '',
 			duration: 60,
 			price: 0,
+			commission: 0,
 			effect: '',
 			status: 'normal' as ItemStatus,
 			isEssentialOilOnly: false,
@@ -60,6 +61,7 @@ Page({
 				name: '',
 				duration: 60,
 				price: 0,
+				commission: 0,
 				effect: '',
 				status: 'normal',
 				isEssentialOilOnly: false,
@@ -90,6 +92,7 @@ Page({
 					name: item.name,
 					duration: (item as Project).duration || 60,
 					price: (item as Project).price || 0,
+					commission: (item as Project).commission || 0,
 					effect: (item as EssentialOil).effect || '',
 					status: item.status || 'normal',
 					isEssentialOilOnly: (item as Project).isEssentialOilOnly || false,
@@ -113,6 +116,10 @@ Page({
 
 	onPriceInput(e: WechatMiniprogram.CustomEvent) {
 		this.setData({ 'formData.price': parseFloat(e.detail.value) || 0 });
+	},
+
+	onCommissionInput(e: WechatMiniprogram.CustomEvent) {
+		this.setData({ 'formData.commission': parseInt(e.detail.value) || 0 });
 	},
 
 	onEffectInput(e: WechatMiniprogram.CustomEvent) {
@@ -144,12 +151,19 @@ Page({
 				wx.showToast({ title: '功效不能为空', icon: 'none' });
 				return;
 			}
+
+			if (modalType === 'project' && (!formData.commission || formData.commission <= 0)) {
+				wx.showToast({ title: '手工提成必须为正整数', icon: 'none' });
+				return;
+			}
+
 			this.setData({ loading: true });
 			if (activeTab === 'projects') {
 				const projectData: Update<Project> = {
 					name: formData.name,
 					duration: formData.duration,
 					price: formData.price,
+					commission: formData.commission,
 					status: formData.status,
 					isEssentialOilOnly: formData.isEssentialOilOnly,
 					needEssentialOil: formData.needEssentialOil

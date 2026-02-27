@@ -1,6 +1,6 @@
 import { cloudDb, Collections } from '../../utils/cloud-db';
-import { getCurrentDate, earlierThan, laterOrEqualTo } from '../../utils/util';
-import { SHIFT_START_TIME, SHIFT_END_TIME, ShiftType } from '../../utils/constants';
+import { SHIFT_END_TIME, SHIFT_START_TIME, ShiftType } from '../../utils/constants';
+import { getCurrentDate } from '../../utils/util';
 
 const app = getApp<IAppOption>();
 
@@ -19,6 +19,7 @@ interface StaffTimelineItem {
 	shift: 'morning' | 'evening'
 	blocks: TimeBlock[]
 	availableSlots: AvailableSlot[]
+	highlighted?: boolean
 }
 
 interface TimeBlock {
@@ -34,13 +35,6 @@ interface TimeBlock {
 	isSettled: boolean
 	isInProgress: boolean
 	technician: string
-}
-
-interface ScheduleRecord {
-	_id: string
-	staffId: string
-	date: string
-	shift: 'morning' | 'evening'
 }
 
 Component({
@@ -69,151 +63,20 @@ Component({
 	} as TimelineData,
 
 	observers: {
-		'selectedDate, staffId': function(selectedDate: string, staffId: string) {
+		'selectedDate, staffId': function (selectedDate: string, staffId: string) {
 			if (!selectedDate) return;
 
-			// 单员工模式（profile页面）
-			if (staffId) {
-				this.loadTimelineData();
-			} else {
-				// 多员工模式（cashier页面）
-				this.loadAllStaffTimelineData();
-			}
+			this.loadAllStaffTimelineData(staffId);
+		}
+	},
+	pageLifetimes: {
+		show: function () {
+			this.loadAllStaffTimelineData();
 		}
 	},
 
 	methods: {
-		async loadTimelineData() {
-			if (!this.data.staffId) return;
-
-			this.setData({ loading: true });
-
-			try {
-				const today = this.properties.selectedDate || getCurrentDate();
-				const todayStr = getCurrentDate();
-				const isToday = today === todayStr;
-
-				const staff = await app.getStaff(this.data.staffId);
-				if (!staff) {
-					console.error('员工信息不存在');
-					return;
-				}
-
-				const staffName = staff.name;
-				const staffId = this.data.staffId;
-
-				const todayRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
-				const activeRecords = todayRecords.filter(r => !r.isVoided && r.technician === staffName);
-				const reservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, {
-					date: today,
-					'technicians._id': staffId
-				});
-
-				const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
-				const schedule = allSchedules.find(s => s.date === today && s.staffId === staffId);
-				const shift = schedule ? schedule.shift : 'morning';
-
-				const timelineWidth = 14 * 60;
-				const shiftStart = shift === 'morning' ? SHIFT_START_TIME.morning : SHIFT_START_TIME.evening;
-				const shiftStartMinutes = parseInt(shiftStart.split(':')[0]) * 60 + parseInt(shiftStart.split(':')[1]);
-
-				const blocks = activeRecords.map(r => {
-					const [startH, startM] = r.startTime.split(':').map(Number);
-					const [endH, endM] = r.endTime.split(':').map(Number);
-					const startMinutes = startH * 60 + startM - shiftStartMinutes;
-					const endMinutes = endH * 60 + endM - shiftStartMinutes;
-					const duration = endMinutes - startMinutes;
-
-					const isSettled = !!r.settlement;
-					const now = new Date();
-					const nowMinutes = now.getHours() * 60 + now.getMinutes();
-					const recordStartMinutes = startH * 60 + startM;
-					const recordEndMinutes = endH * 60 + endM;
-					const isInProgress = isToday && nowMinutes >= recordStartMinutes && nowMinutes < recordEndMinutes;
-
-					return {
-						_id: r._id,
-						customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
-						startTime: r.startTime,
-						endTime: r.endTime,
-						project: r.project,
-						room: r.room,
-						left: (startMinutes / timelineWidth * 100) + '%',
-						width: (duration / timelineWidth * 100) + '%',
-						isReservation: r.isReservation || false,
-						isSettled,
-						isInProgress,
-						technician: r.technician
-					};
-				});
-
-				reservations.forEach(r => {
-					const [startH, startM] = r.startTime.split(':').map(Number);
-					const [endH, endM] = r.endTime.split(':').map(Number);
-					const startMinutes = startH * 60 + startM - shiftStartMinutes;
-					const endMinutes = endH * 60 + endM - shiftStartMinutes;
-					const duration = endMinutes - startMinutes;
-
-					blocks.push({
-						_id: r._id,
-						customerName: r.customerName,
-						startTime: r.startTime,
-						endTime: r.endTime,
-						project: r.project,
-						room: '',
-						left: (startMinutes / timelineWidth * 100) + '%',
-						width: (duration / timelineWidth * 100) + '%',
-						isReservation: true,
-						isSettled: false,
-						isInProgress: false,
-						technician: staffName
-					});
-				});
-
-				blocks.sort((a, b) => a.startTime.localeCompare(b.startTime));
-
-				const availableSlots = this.calculateAvailableSlotsBetweenBlocks(blocks, shift);
-
-				const staffTimelineItem: StaffTimelineItem = {
-					_id: staffId,
-					name: staffName,
-					shift,
-					blocks,
-					availableSlots
-				};
-
-				let currentTimePosition = '0%';
-				let showCurrentTimeLine = false;
-				if (isToday) {
-					const now = new Date();
-					const nowMinutes = now.getHours() * 60 + now.getMinutes();
-					const timeInShift = nowMinutes - shiftStartMinutes;
-					if (timeInShift >= 0 && timeInShift <= timelineWidth) {
-						currentTimePosition = (timeInShift / timelineWidth * 100) + '%';
-						showCurrentTimeLine = true;
-					}
-				}
-
-				this.setData({
-					staffTimeline: [staffTimelineItem],
-					showCurrentTimeLine,
-					currentTimePosition
-				});
-
-				this.triggerEvent('loaded', {
-					staffTimeline: [staffTimelineItem],
-					showCurrentTimeLine,
-					currentTimePosition
-				});
-			} catch (error) {
-				console.error('加载排钟数据失败:', error);
-				this.triggerEvent('error', { error });
-			} finally {
-				this.setData({ loading: false });
-			}
-		},
-
-		async loadAllStaffTimelineData() {
+		async loadAllStaffTimelineData(highlightStaffId?: string) {
 			this.setData({ loading: true });
 
 			try {
@@ -273,7 +136,7 @@ Component({
 						const startMinutes = (startH - parseInt(this.data.timeLabels[0])) * 60 + startM;
 						const duration = (endH - startH) * 60 + (endM - startM);
 
-						const isSettled = !r.isReservation && (r as ConsultationRecord).settlement && Object.keys((r as ConsultationRecord).settlement!).length > 0;
+						const isSettled = !r.isReservation && (r as ConsultationRecord).settlement && Object.keys((r as ConsultationRecord).settlement!).length > 0 || false;
 
 						const now = new Date();
 						const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -293,7 +156,7 @@ Component({
 							isReservation: r.isReservation,
 							isSettled,
 							isInProgress,
-							technician: r.technician
+							technician: r.technician!
 						};
 					});
 
@@ -304,7 +167,8 @@ Component({
 						name: staff.name,
 						shift,
 						blocks,
-						availableSlots
+						availableSlots,
+						highlighted: highlightStaffId === staff._id
 					});
 				}
 
@@ -319,19 +183,15 @@ Component({
 						currentTimePosition = (timeInTimeline / timelineWidth * 100) + '%';
 						showCurrentTimeLine = true;
 					}
+					this.setData({ scrollLeft: timeInTimeline });
 				}
 
 				this.setData({
 					staffTimeline,
 					showCurrentTimeLine,
-					currentTimePosition
+					currentTimePosition,
 				});
 
-				this.triggerEvent('loaded', {
-					staffTimeline,
-					showCurrentTimeLine,
-					currentTimePosition
-				});
 			} catch (error) {
 				console.error('加载所有员工排钟数据失败:', error);
 				this.triggerEvent('error', { error });
@@ -381,7 +241,8 @@ Component({
 						availableSlots.push({
 							left,
 							width,
-							displayText: `${gapMinutes}分钟`
+							displayText: `${gapMinutes}分钟`,
+							durationMinutes: gapMinutes
 						});
 					}
 				}
@@ -407,7 +268,8 @@ Component({
 						availableSlots.push({
 							left,
 							width,
-							displayText: `${gapMinutes}分钟`
+							displayText: `${gapMinutes}分钟`,
+							durationMinutes: gapMinutes
 						});
 					}
 				}
@@ -427,7 +289,8 @@ Component({
 						availableSlots.push({
 							left,
 							width,
-							displayText: `${gapMinutes}分钟`
+							displayText: `${gapMinutes}分钟`,
+							durationMinutes: gapMinutes
 						});
 					}
 				}
@@ -474,7 +337,8 @@ Component({
 						availableSlots.push({
 							left,
 							width,
-							displayText: `${gapMinutes}分钟`
+							displayText: `${gapMinutes}分钟`,
+							durationMinutes: gapMinutes
 						});
 					}
 				} else {
@@ -488,7 +352,8 @@ Component({
 						availableSlots.push({
 							left,
 							width,
-							displayText: `${gapMinutes}分钟`
+							displayText: `${gapMinutes}分钟`,
+							durationMinutes: gapMinutes
 						});
 					}
 				}
@@ -521,7 +386,8 @@ Component({
 							availableSlots.push({
 								left,
 								width,
-								displayText: `${gapMinutes}分钟`
+								displayText: `${gapMinutes}分钟`,
+								durationMinutes: gapMinutes
 							});
 						}
 					} else {
@@ -535,7 +401,8 @@ Component({
 							availableSlots.push({
 								left,
 								width,
-								displayText: `${gapMinutes}分钟`
+								displayText: `${gapMinutes}分钟`,
+								durationMinutes: gapMinutes
 							});
 						}
 					}
@@ -555,7 +422,8 @@ Component({
 							availableSlots.push({
 								left,
 								width,
-								displayText: `${gapMinutes}分钟`
+								displayText: `${gapMinutes}分钟`,
+								durationMinutes: gapMinutes
 							});
 						}
 					} else {
@@ -569,7 +437,8 @@ Component({
 							availableSlots.push({
 								left,
 								width,
-								displayText: `${gapMinutes}分钟`
+								displayText: `${gapMinutes}分钟`,
+								durationMinutes: gapMinutes
 							});
 						}
 					}
