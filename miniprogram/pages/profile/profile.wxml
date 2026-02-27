@@ -1,0 +1,156 @@
+<navigation-bar title="我的" back="{{false}}" color="black" background="#FFF">
+  <view slot="right" class="user-info" wx:if="{{staffInfo}}">
+    <view class="staff-name">{{staffInfo.name}}</view>
+    <view class="staff-role">技师</view>
+  </view>
+</navigation-bar>
+<scroll-view class="scrollarea" scroll-y type="list">
+  <view class="container">
+    <!-- loading遮罩 -->
+    <view class="loading-mask" wx:if="{{loading}}">
+      <view class="loading-spinner"></view>
+      <view class="loading-text">{{loadingText}}</view>
+    </view>
+
+    <!-- 排钟进度 -->
+    <view class="section timeline-section">
+      <view class="section-header">
+        <view class="section-title">排钟进度</view>
+        <date-picker initialDate="{{selectedDate}}" bind:change="onDatePickerChange" />
+      </view>
+      <timeline
+        wx:if="{{staffId}}"
+        staffId="{{staffId}}"
+        selectedDate="{{selectedDate}}"
+        readonly="{{true}}"
+      />
+      <view class="empty-timeline" wx:else>
+        <view>暂无排班信息</view>
+      </view>
+    </view>
+
+    <!-- 房间状态 -->
+    <view class="section">
+      <view class="section-title">房间状态</view>
+      <view class="room-grid">
+        <view class="room-item {{item.isOccupied ? 'occupied' : 'empty'}}" wx:for="{{rooms}}" wx:key="name">
+          <view class="room-name">{{item.name}}</view>
+          <view class="room-detail" wx:if="{{item.isOccupied}}">
+            <view class="occupied-record" wx:for="{{item.occupiedRecords}}" wx:for-item="record" wx:key="endTime">
+              <view class="customer-tag">{{record.customerName}}</view>
+              <view class="staff-tag">{{record.technician}}</view>
+              <view class="time-tag">{{record.endTime}}下</view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 业绩统计 -->
+    <view class="section stats-section">
+      <view class="section-header">
+        <view class="section-title">业绩统计</view>
+      </view>
+      <view class="stats-cards">
+        <view class="stat-card">
+          <view class="stat-value">{{performanceStats.totalCount}}</view>
+          <view class="stat-label">单据数量</view>
+        </view>
+        <view class="stat-card">
+          <view class="stat-value">¥{{performanceStats.totalAmount}}</view>
+          <view class="stat-label">总金额</view>
+        </view>
+      </view>
+      <view class="project-stats" wx:if="{{performanceStats.projectStats.length > 0}}">
+        <view class="section-subtitle">项目统计</view>
+        <view class="project-stat-item" wx:for="{{performanceStats.projectStats}}" wx:key="project">
+          <view class="project-name">{{item.project}}</view>
+          <view class="project-data">
+            <view class="project-count">{{item.count}}单</view>
+            <view class="project-amount">¥{{item.amount}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 单据列表 -->
+    <view class="section records-section">
+      <view class="section-title">单据列表</view>
+      <view class="consultation-list">
+        <view wx:for="{{performanceRecords}}" wx:key="_id" wx:for-item="record" class="consultation-item {{record.isVoided ? 'voided' : ''}}">
+          <view class="consultation-header" bindtap="toggleRecordCollapse" data-index="{{index}}">
+            <view class="consultation-basic">
+              <view class="customer-info">{{index + 1}}. {{record.customerName}}</view>
+              <view class="tag">{{record.room}}</view>
+              <view class="tag">{{record.endTime}}</view>
+              <view wx:if="{{record.isVoided}}" class="voided-tag">已作废</view>
+            </view>
+          </view>
+          <view class="consultation-body" wx:if="{{!record.collapsed}}">
+            <view class="consultation-details">
+              <view class="consultation-meta">
+                <view class="text-info">
+                  {{record.technician}}{{record.isClockIn ? '[点]' : ''}}
+                </view>
+                <view class="text-info">{{record.project}}</view>
+                <view class="text-info">{{record.startTime}} - {{record.endTime}}</view>
+                <view wx:if="{{record.phone}}" class="text-info">{{record.phone}}</view>
+                <view class="text-info" wx:if="{{!record.isVoided}}">
+                  加班{{record.overtime ? '(' + record.overtime + ')' : '(0)'}}
+                </view>
+                <view wx:if="{{record.couponPlatform}}" class="text-info">
+                  {{paymentPlatforms[record.couponPlatform]}} {{record.couponCode}}
+                </view>
+              </view>
+            </view>
+            <view class="settlement-info" wx:if="{{record.settlement}}">
+              <view class="settlement-header">
+                <view class="settlement-label">✓ 已结算</view>
+                <view class="settlement-time">{{record.settlement.settledAt}}</view>
+              </view>
+              <view class="settlement-amount">实收总额：¥{{record.settlement.totalAmount}}</view>
+              <view class="payment-list">
+                <view class="payment-item" wx:for="{{record.settlement.payments}}" wx:key="method" wx:for-item="payment">
+                  <view class="payment-platform">{{paymentPlatformLabels[payment.method]}}</view>
+                  <view class="payment-detail">
+                    <view wx:if="{{payment.method === 'membership'}}">{{payment.amount}}次</view>
+                    <view wx:else>¥{{payment.amount}}</view>
+                  </view>
+                  <view class="payment-coupon" wx:if="{{payment.couponCode}}">
+                    券码：{{payment.couponCode}}
+                  </view>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="empty-hint" wx:if="{{performanceRecords.length === 0}}">暂无单据记录</view>
+    </view>
+
+    <!-- 今日轮牌 -->
+    <view class="section rotation-section">
+      <view class="section-header">
+        <view class="section-title">今日轮牌</view>
+        <view class="my-position" wx:if="{{rotationTodayPosition > 0}}">
+          <view class="position-label">我的位置:</view>
+          <view class="position-value">第{{rotationTodayPosition}}位</view>
+        </view>
+      </view>
+      <view class="rotation-list">
+        <view class="rotation-item {{item._id === staffId ? 'current' : ''}}" wx:for="{{rotationList}}" wx:key="_id">
+          <view class="rank-num">{{index + 1}}</view>
+          <view class="staff-info">
+            <view class="staff-name-row">
+              <view class="staff-name">{{item.name}}</view>
+              <view class="shift-tag {{item.shift}}">
+                {{item.shift === 'morning' ? '早班' : '晚班'}}
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="empty-hint" wx:if="{{rotationList.length === 0}}">暂无轮牌信息</view>
+    </view>
+  </view>
+</scroll-view>

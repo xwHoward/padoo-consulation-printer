@@ -1,0 +1,47 @@
+/**date-picker.less**/
+@import "../../app.less";
+
+.date-picker-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 32px;
+  padding: 0 10px;
+  background-color: @bg-color-light;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: @text-color;
+}
+
+.date-nav-btn:active {
+  background-color: rgba(255, 107, 0, 0.1);
+  transform: scale(0.95);
+}
+
+.date-nav-btn.active {
+  color: @primary-color;
+  background-color: rgba(255, 107, 0, 0.1);
+}
+
+.date-picker-btn {
+  min-width: 80px;
+  flex: 1;
+}
+
+.date-nav-icon {
+  font-size: 14px;
+  color: @text-color;
+}
+
+.date-nav-text {
+  font-size: 13px;
+  font-weight: 500;
+}

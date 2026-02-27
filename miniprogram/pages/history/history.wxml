@@ -2,22 +2,7 @@
 <wxs src="./format.wxs" module="format" />
 <navigation-bar title="{{customerPhone ? '顾客咨询单' : '咨询单纪录'}}" back="{{true}}" color="black" background="#FFF">
   <view slot="right" class="nav-right">
-    <view class="date-quick-nav" wx:if="{{!customerPhone}}">
-      <view class="date-nav-btn {{!dateSelector.previousDate ? 'disabled' : ''}}" bindtap="goToPreviousDay">
-        <text class="date-nav-icon">◀</text>
-      </view>
-      <view class="date-nav-btn {{dateSelector.isToday ? 'disabled' : ''}}" bindtap="goToToday">
-        <text class="date-nav-text">今日</text>
-      </view>
-      <view class="date-nav-btn {{!dateSelector.nextDate ? 'disabled' : ''}}" bindtap="goToNextDay">
-        <text class="date-nav-icon">▶</text>
-      </view>
-      <picker mode="date" value="{{dateSelector.selectedDate}}" end="{{dateSelector.maxDate}}" bindchange="onDateSelect">
-        <view class="date-nav-btn">
-          <text class="date-nav-icon">📅</text>
-        </view>
-      </picker>
-    </view>
+    <date-picker wx:if="{{!customerPhone}}" initialDate="{{dateSelector.selectedDate}}" bind:change="onDatePickerChange" />
   </view>
 </navigation-bar>
 <scroll-view class="scrollarea" scroll-y type="list">

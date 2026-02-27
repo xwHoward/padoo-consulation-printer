@@ -4,6 +4,8 @@
 		"navigation-bar": "/components/navigation-bar/navigation-bar",
 		"project-selector": "/components/project-selector/project-selector",
 		"technician-selector": "/components/technician-selector/technician-selector",
-		"gender-selector": "/components/gender-selector/gender-selector"
+		"gender-selector": "/components/gender-selector/gender-selector",
+		"date-picker": "/components/date-picker/date-picker",
+		"timeline": "/components/timeline/timeline"
 	}
 }

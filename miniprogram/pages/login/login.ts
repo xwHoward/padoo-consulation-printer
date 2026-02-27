@@ -21,6 +21,20 @@ Page({
 					isLoggedIn: true
 				});
 
+				if (this.shouldBindStaff(user)) {
+					wx.showModal({
+						title: '绑定提示',
+						content: '技师角色需要先绑定员工账号',
+						showCancel: false,
+						success: () => {
+							wx.redirectTo({
+								url: '/pages/bind-staff/bind-staff'
+							});
+						}
+					});
+					return;
+				}
+
 				wx.showToast({
 					title: '登录成功',
 					icon: 'success'
@@ -48,6 +62,20 @@ Page({
 					loading: false
 				});
 
+				if (this.shouldBindStaff(user)) {
+					wx.showModal({
+						title: '绑定提示',
+						content: '技师角色需要先绑定员工账号',
+						showCancel: false,
+						success: () => {
+							wx.redirectTo({
+								url: '/pages/bind-staff/bind-staff'
+							});
+						}
+					});
+					return;
+				}
+
 				wx.showToast({
 					title: '登录成功',
 					icon: 'success'
@@ -67,13 +95,30 @@ Page({
 		}
 	},
 
+	shouldBindStaff(user: any): boolean {
+		return user.role === 'technician' && !user.staffId;
+	},
+
 	navigateAfterLogin() {
 		const pages = getCurrentPages();
-		const hasIndexPermission = hasPagePermission('index');
-		const hasCashierPermission = hasPagePermission('cashier');
+		const user = this.data.userInfo;
+
 		if (pages.length > 1) {
 			wx.navigateBack();
-		} else if (hasIndexPermission) {
+			return;
+		}
+
+		if (user.role === 'technician' && user.staffId) {
+			wx.redirectTo({
+				url: '/pages/profile/profile'
+			});
+			return;
+		}
+
+		const hasIndexPermission = hasPagePermission('index');
+		const hasCashierPermission = hasPagePermission('cashier');
+
+		if (hasIndexPermission) {
 			wx.redirectTo({
 				url: '/pages/index/index'
 			});

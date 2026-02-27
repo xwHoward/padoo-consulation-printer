@@ -2,47 +2,9 @@
 import { checkLogin } from '../../utils/auth';
 import { cloudDb, Collections } from '../../utils/cloud-db';
 import { DEFAULT_SHIFT, SHIFT_END_TIME, SHIFT_START_TIME, ShiftType } from '../../utils/constants';
-import { requirePagePermission } from '../../utils/permission';
+import { hasButtonPermission, requirePagePermission } from '../../utils/permission';
 import { earlierThan, formatTime, getCurrentDate, getMinutesDiff, getNextDate, getPreviousDate, laterOrEqualTo, parseProjectDuration } from '../../utils/util';
 
-interface RotationItem {
-	_id: string;
-	name: string;
-	shift: ShiftType;
-	shiftLabel: string;
-	availableSlots?: string; // 可约时段
-	weight: number; // 权重
-}
-
-interface TimelineBlock {
-	_id: string;
-	customerName: string;
-	startTime: string;
-	endTime: string;
-	project: string;
-	room: string;
-	left: string; // 距离左侧百分比
-	width: string; // 宽度百分比
-	isReservation?: boolean;
-	isSettled?: boolean; // 是否已结算
-	isInProgress?: boolean; // 是否进行中
-	technician?: string; // 技师名称
-}
-
-interface AvailableSlot {
-	left: string; // 距离左侧百分比
-	width: string; // 宽度百分比
-	durationMinutes: number; // 时长（分钟）
-	displayText: string; // 显示文本
-}
-
-interface StaffTimeline {
-	_id: string;
-	name: string;
-	shift: ShiftType;
-	blocks: TimelineBlock[];
-	availableSlots?: AvailableSlot[]; // 空闲时段
-}
 
 interface ReserveForm {
 	date: string;
@@ -75,20 +37,16 @@ Page({
 		selectedDate: '',
 		rooms: [] as Room[],
 		rotationList: [] as RotationItem[],
-		staffTimeline: [] as StaffTimeline[],
-		timeLabels: ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '00', '01', '02'],
-		// 当前时间线位置（百分比）
-		currentTimePosition: '0%',
-		showCurrentTimeLine: false,
-		timelineScrollLeft: 0,
 		// 日期选择器状态
 		dateSelector: {
 			selectedDate: '',
-			maxDate: '',
 			previousDate: '',
 			nextDate: '',
 			isToday: false
 		},
+		// 权限状态
+		canCreateReservation: false,
+		canPushRotation: false,
 		// 预约弹窗相关
 		showReserveModal: false,
 		projects: [] as Project[],
@@ -143,7 +101,7 @@ Page({
 				startTime: string;
 				endTime: string;
 				project: string;
-				technicians: Array<{ _id: string; name: string; phone: string; }>;
+				technicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }>;
 			} | null
 		},
 		// 轮牌推送确认弹窗
@@ -168,6 +126,12 @@ Page({
 		if (!isLoggedIn) return;
 
 		if (!requirePagePermission('cashier')) return;
+
+		// 检查按钮权限
+		this.setData({
+			canCreateReservation: hasButtonPermission('createReservation'),
+			canPushRotation: hasButtonPermission('pushRotation')
+		});
 
 		this.loadInitialData();
 	},
@@ -214,34 +178,8 @@ Page({
 		await this.loadTimelineData();
 	},
 
-	// 前一天
-	goToPreviousDay() {
-		const { previousDate } = this.data.dateSelector;
-		if (previousDate) {
-			this.setData({ selectedDate: previousDate });
-			this.loadTimelineData();
-		}
-	},
-
-	// 回到今天
-	goToToday() {
-		const currentDate = getCurrentDate();
-		this.setData({ selectedDate: currentDate });
-		this.loadTimelineData();
-	},
-
-	// 后一天
-	goToNextDay() {
-		const { nextDate } = this.data.dateSelector;
-		if (nextDate) {
-			this.setData({ selectedDate: nextDate });
-			this.loadTimelineData();
-		}
-	},
-
-	// 选择日期（picker 变化时触发）
-	onDateSelect(e: WechatMiniprogram.CustomEvent) {
-		const selectedDate = e.detail.value;
+	onDatePickerChange(e: WechatMiniprogram.CustomEvent) {
+		const selectedDate = e.detail.date;
 		this.setData({ selectedDate });
 		this.loadTimelineData();
 	},
@@ -256,7 +194,6 @@ Page({
 			const filteredRooms = allRooms.filter((r: Room) => r.status === 'normal');
 			const todayRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
 			const activeRecords = todayRecords.filter(r => !r.isVoided);
-			const reservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today });
 			const now = new Date();
 			const todayStr = getCurrentDate();
 			const isToday = today === todayStr;
@@ -333,120 +270,23 @@ Page({
 
 			this.setData({ staffAvailability: availableTechnicians });
 
-			// 转换排钟数据
-			const staffTimeline: StaffTimeline[] = [];
-			const rotationList: RotationItem[] = activeStaff.map(staff => {
-				const schedule = allSchedules.find(s => s.date === today && s.staffId === staff._id);
-				const shift = schedule ? schedule.shift : DEFAULT_SHIFT;
-
-				// 过滤出上钟员工
-				if (shift === 'morning' || shift === 'evening') {
-					// 处理排钟表数据 (合并实际报钟和预约)
-					const staffRecords = activeRecords.filter(r => r.technician === staff.name);
-					const staffReservations = reservations.filter(r => r.technicianName === staff.name || r.technicianId === staff._id);
-
-					// 合并并处理块
-					const rawBlocks = [
-						...staffRecords.map(r => ({ ...r, isReservation: false })),
-						...staffReservations.map(r => ({
-							_id: r._id,
-							surname: r.customerName,
-							gender: r.gender,
-							project: r.project,
-							room: '预约',
-							startTime: r.startTime,
-							endTime: r.endTime,
-							isReservation: true,
-							technician: r.technicianName
-						}))
-					];
-
-					// 按开始时间排序
-					rawBlocks.sort((a, b) => {
-						const [aH, aM] = a.startTime.split(':').map(Number);
-						const [bH, bM] = b.startTime.split(':').map(Number);
-						return (aH * 60 + aM) - (bH * 60 + bM);
-					});
-
-					const blocks: TimelineBlock[] = rawBlocks.map(r => {
-						const [startH, startM] = r.startTime.split(':').map(Number);
-						const [endH, endM] = r.endTime.split(':').map(Number);
-
-						const startMinutes = (startH - parseInt(this.data.timeLabels[0])) * 60 + startM;
-						const duration = (endH - startH) * 60 + (endM - startM);
-						const timelineWidth = this.data.timeLabels.length * 60; // min
-						// 检查是否已结算
-						const isSettled = !r.isReservation && (r as ConsultationRecord).settlement && Object.keys((r as ConsultationRecord).settlement!).length > 0;
-
-						// 检查是否进行中
-						const nowMinutes = now.getHours() * 60 + now.getMinutes();
-						const recordStartMinutes = startH * 60 + startM;
-						const recordEndMinutes = endH * 60 + endM;
-						const isInProgress = isToday && nowMinutes >= recordStartMinutes && nowMinutes < recordEndMinutes;
-
-						return {
-							_id: r._id,
-							customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
-							startTime: r.startTime,
-							endTime: r.endTime,
-							project: r.project,
-							room: r.room,
-							left: (startMinutes / timelineWidth * 100) + '%',
-							width: (duration / timelineWidth * 100) + '%',
-							isReservation: (r).isReservation,
-							isSettled,
-							isInProgress,
-							technician: (r).technician
-						};
-					});
-
-					// 计算空闲时段
-					const availableSlots = this.calculateAvailableSlotsBetweenBlocks(blocks, shift);
-
-					staffTimeline.push({
-						_id: staff._id,
-						name: staff.name,
-						shift: shift as ShiftType,
-						blocks,
-						availableSlots
-					});
-				}
-
-				// 计算可约时段
-				const availableSlots = this.calculateAvailableSlots(staff.name, activeRecords, reservations, today, shift);
-
-				return {
-					_id: staff._id,
-					name: staff.name,
-					shift: shift as ShiftType,
-					shiftLabel: shift === 'morning' ? '早班' : '晚班',
-					availableSlots,
-					weight: staff.weight
-				};
-			}).filter(item => item.shift === 'morning' || item.shift === 'evening');
-
-			rotationList.sort((a, b) => -a.weight + b.weight)
+			// 使用辅助方法准备轮牌数据
+			const rotationList = await this.prepareRotationList(today);
 
 			// 计算日期导航状态
-			const currentDate = getCurrentDate();
 			const previousDate = getPreviousDate(today);
-			const nextDate = getNextDate(today, currentDate) || '';
+			const nextDate = getNextDate(today) || '';
 
 			this.setData({
 				rooms,
 				rotationList,
-				staffTimeline,
 				dateSelector: {
 					selectedDate: today,
-					maxDate: currentDate,
 					previousDate,
 					nextDate,
 					isToday
 				}
 			});
-
-			// 计算当前时间线位置
-			this.updateCurrentTimeLine();
 		} catch (error) {
 			console.error('加载数据失败:', error);
 			wx.showToast({
@@ -463,129 +303,11 @@ Page({
 		this.setData({ loading: true, loadingText: '刷新排钟...' });
 		try {
 			const today = this.data.selectedDate || getCurrentDate();
-			const todayRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
-			const activeRecords = todayRecords.filter(r => !r.isVoided);
-			const reservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today });
-			const now = new Date();
-			const todayStr = getCurrentDate();
-			const isToday = today === todayStr;
-
-			const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
-			const activeStaff = this.data.activeStaffList;
-
-			// 转换排钟数据
-			const staffTimeline: StaffTimeline[] = [];
-			const rotationList: RotationItem[] = activeStaff.map(staff => {
-				const schedule = allSchedules.find(s => s.date === today && s.staffId === staff._id);
-				const shift = schedule ? schedule.shift : DEFAULT_SHIFT;
-
-				// 过滤出上钟员工
-				if (shift === 'morning' || shift === 'evening') {
-					// 处理排钟表数据 (合并实际报钟和预约)
-					const staffRecords = activeRecords.filter(r => r.technician === staff.name);
-					const staffReservations = reservations.filter(r => r.technicianName === staff.name || r.technicianId === staff._id);
-
-					// 合并并处理块
-					const rawBlocks = [
-						...staffRecords.map(r => ({ ...r, isReservation: false })),
-						...staffReservations.map(r => ({
-							_id: r._id,
-							surname: r.customerName,
-							gender: r.gender,
-							project: r.project,
-							room: '预约',
-							startTime: r.startTime,
-							endTime: r.endTime,
-							isReservation: true,
-							technician: r.technicianName
-						}))
-					];
-
-					// 按开始时间排序
-					rawBlocks.sort((a, b) => {
-						const [aH, aM] = a.startTime.split(':').map(Number);
-						const [bH, bM] = b.startTime.split(':').map(Number);
-						return (aH * 60 + aM) - (bH * 60 + bM);
-					});
-
-					const blocks: TimelineBlock[] = rawBlocks.map(r => {
-						const [startH, startM] = r.startTime.split(':').map(Number);
-						const [endH, endM] = r.endTime.split(':').map(Number);
-
-						const startMinutes = (startH - parseInt(this.data.timeLabels[0])) * 60 + startM;
-						const duration = (endH - startH) * 60 + (endM - startM);
-						const timelineWidth = this.data.timeLabels.length * 60;
-						// 检查是否已结算
-						const isSettled = !r.isReservation && (r as ConsultationRecord).settlement && Object.keys((r as ConsultationRecord).settlement!).length > 0;
-
-						// 检查是否进行中
-						const nowMinutes = now.getHours() * 60 + now.getMinutes();
-						const recordStartMinutes = startH * 60 + startM;
-						const recordEndMinutes = endH * 60 + endM;
-						const isInProgress = isToday && nowMinutes >= recordStartMinutes && nowMinutes < recordEndMinutes;
-
-						return {
-							_id: r._id,
-							customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
-							startTime: r.startTime,
-							endTime: r.endTime,
-							project: r.project,
-							room: r.room,
-							left: (startMinutes / timelineWidth * 100) + '%',
-							width: (duration / timelineWidth * 100) + '%',
-							isReservation: (r).isReservation,
-							isSettled,
-							isInProgress,
-							technician: (r).technician
-						};
-					});
-
-					// 计算空闲时段
-					const availableSlots = this.calculateAvailableSlotsBetweenBlocks(blocks, shift);
-
-					staffTimeline.push({
-						_id: staff._id,
-						name: staff.name,
-						shift: shift as ShiftType,
-						blocks,
-						availableSlots
-					});
-				}
-
-				// 计算可约时段
-				const availableSlots = this.calculateAvailableSlots(staff.name, activeRecords, reservations, today, shift);
-
-				return {
-					_id: staff._id,
-					name: staff.name,
-					shift: shift as ShiftType,
-					shiftLabel: shift === 'morning' ? '早班' : '晚班',
-					availableSlots,
-					weight: staff.weight
-				};
-			}).filter(item => item.shift === 'morning' || item.shift === 'evening');
-
-			rotationList.sort((a, b) => -a.weight + b.weight)
-
-			// 计算日期导航状态
-			const currentDate = getCurrentDate();
-			const previousDate = getPreviousDate(today);
-			const nextDate = getNextDate(today, currentDate) || '';
+			const rotationList = await this.prepareRotationList(today);
 
 			this.setData({
-				rotationList,
-				staffTimeline,
-				dateSelector: {
-					selectedDate: today,
-					maxDate: currentDate,
-					previousDate,
-					nextDate,
-					isToday
-				}
+				rotationList
 			});
-
-			// 计算当前时间线位置
-			this.updateCurrentTimeLine();
 		} catch (error) {
 			console.error('刷新排钟失败:', error);
 			wx.showToast({
@@ -597,322 +319,37 @@ Page({
 		}
 	},
 
-	// 计算时间轴上的空闲时段
-	calculateAvailableSlotsBetweenBlocks(blocks: TimelineBlock[], shift: ShiftType): AvailableSlot[] {
-		const availableSlots: AvailableSlot[] = [];
+	// 准备轮牌列表数据（提取的辅助方法）
+	async prepareRotationList(today: string) {
+		const todayRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
+		const activeRecords = todayRecords.filter(r => !r.isVoided);
+		const reservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today });
 
-		const timelineWidth = this.data.timeLabels.length * 60; // 总时间轴宽度（分钟）
-		const timelineStartHour = parseInt(this.data.timeLabels[0]);
+		const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
+		const activeStaff = this.data.activeStaffList;
 
-		// 获取当前时间
-		const now = new Date();
-		const todayStr = getCurrentDate();
-		const selectedDate = this.data.selectedDate;
-		const isToday = selectedDate === todayStr;
+		const rotationList: RotationItem[] = activeStaff.map(staff => {
+			const schedule = allSchedules.find(s => s.date === today && s.staffId === staff._id);
+			const shift = schedule ? schedule.shift : DEFAULT_SHIFT;
 
-		const nowMinutes = now.getHours() * 60 + now.getMinutes();
+			const availableSlots = this.calculateAvailableSlots(staff.name, activeRecords, reservations, today, shift);
 
-		// 获取上班和下班时间
-		const shiftStartTime = SHIFT_START_TIME[shift];
-		const shiftEndTime = SHIFT_END_TIME[shift];
+			return {
+				_id: staff._id,
+				name: staff.name,
+				shift: shift as ShiftType,
+				shiftLabel: shift === 'morning' ? '早班' : '晚班',
+				availableSlots,
+				weight: staff.weight
+			};
+		}).filter(item => item.shift === 'morning' || item.shift === 'evening');
 
-		if (!shiftStartTime || !shiftEndTime) {
-			return availableSlots;
-		}
+		rotationList.sort((a, b) => -a.weight + b.weight);
 
-		const [shiftStartH, shiftStartM] = shiftStartTime.split(':').map(Number);
-		const [shiftEndH, shiftEndM] = shiftEndTime.split(':').map(Number);
-		const shiftStartMinutes = shiftStartH * 60 + shiftStartM;
-		const shiftEndMinutes = shiftEndH * 60 + shiftEndM;
-
-		// 如果不是今天，显示所有空闲时段
-		if (!isToday) {
-			// 计算从班次开始时间到第一个预约之间的空闲时段
-			if (blocks.length > 0) {
-				const firstBlock = blocks[0];
-				const [firstStartH, firstStartM] = firstBlock.startTime.split(':').map(Number);
-				const firstStartMinutes = firstStartH * 60 + firstStartM;
-
-				if (firstStartMinutes > shiftStartMinutes) {
-					const gapMinutes = firstStartMinutes - shiftStartMinutes;
-					const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
-
-					const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-					const width = (gapMinutes / timelineWidth * 100) + '%';
-
-					availableSlots.push({
-						left,
-						width,
-						durationMinutes: gapMinutes,
-						displayText: `${gapMinutes}分钟`
-					});
-				}
-			}
-
-			// 计算相邻块之间的空闲时段
-			for (let i = 0; i < blocks.length - 1; i++) {
-				const currentBlock = blocks[i];
-				const nextBlock = blocks[i + 1];
-
-				const [currentEndH, currentEndM] = currentBlock.endTime.split(':').map(Number);
-				const currentEndMinutes = currentEndH * 60 + currentEndM;
-
-				const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-				const nextStartMinutes = nextStartH * 60 + nextStartM;
-
-				const gapMinutes = nextStartMinutes - currentEndMinutes;
-
-				if (gapMinutes > 0) {
-					const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
-
-					const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-					const width = (gapMinutes / timelineWidth * 100) + '%';
-
-					availableSlots.push({
-						left,
-						width,
-						durationMinutes: gapMinutes,
-						displayText: `${gapMinutes}分钟`
-					});
-				}
-			}
-
-			// 计算最后一个预约块到下班时间的空闲时段
-			if (blocks.length > 0) {
-				const lastBlock = blocks[blocks.length - 1];
-				const [lastEndH, lastEndM] = lastBlock.endTime.split(':').map(Number);
-				const lastEndMinutes = lastEndH * 60 + lastEndM;
-
-				if (lastEndMinutes < shiftEndMinutes) {
-					const gapMinutes = shiftEndMinutes - lastEndMinutes;
-					const gapStartMinutesFromTimelineStart = (lastEndH - timelineStartHour) * 60 + lastEndM;
-
-					const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-					const width = (gapMinutes / timelineWidth * 100) + '%';
-
-					availableSlots.push({
-						left,
-						width,
-						durationMinutes: gapMinutes,
-						displayText: `${gapMinutes}分钟`
-					});
-				}
-			}
-
-			return availableSlots;
-		}
-
-		// 如果是今天，根据当前时间计算空闲时段
-		if (nowMinutes >= shiftEndMinutes) {
-			return availableSlots;
-		}
-
-		// 找到当前时间所在的预约块
-		let currentBlockIndex = -1;
-		for (let i = 0; i < blocks.length; i++) {
-			const block = blocks[i];
-			const [startH, startM] = block.startTime.split(':').map(Number);
-			const [endH, endM] = block.endTime.split(':').map(Number);
-			const startMinutes = startH * 60 + startM;
-			const endMinutes = endH * 60 + endM;
-
-			if (nowMinutes >= startMinutes && nowMinutes < endMinutes) {
-				currentBlockIndex = i;
-				break;
-			}
-		}
-
-		// 如果当前时间在某个预约进行中
-		if (currentBlockIndex !== -1) {
-			const currentBlock = blocks[currentBlockIndex];
-			const [currentEndH, currentEndM] = currentBlock.endTime.split(':').map(Number);
-			const currentEndMinutes = currentEndH * 60 + currentEndM;
-
-			// 显示当前预约结束到下一个预约的间隔
-			if (currentBlockIndex < blocks.length - 1) {
-				const nextBlock = blocks[currentBlockIndex + 1];
-				const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-				const nextStartMinutes = nextStartH * 60 + nextStartM;
-
-				const gapMinutes = nextStartMinutes - currentEndMinutes;
-
-				if (gapMinutes > 0) {
-					const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
-
-					const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-					const width = (gapMinutes / timelineWidth * 100) + '%';
-
-					availableSlots.push({
-						left,
-						width,
-						durationMinutes: gapMinutes,
-						displayText: `${gapMinutes}分钟`
-					});
-				}
-			} else {
-				// 没有下一个预约，显示到下班时间的间隔
-				if (currentEndMinutes < shiftEndMinutes) {
-					const gapMinutes = shiftEndMinutes - currentEndMinutes;
-					const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
-
-					const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-					const width = (gapMinutes / timelineWidth * 100) + '%';
-
-					availableSlots.push({
-						left,
-						width,
-						durationMinutes: gapMinutes,
-						displayText: `${gapMinutes}分钟`
-					});
-				}
-			}
-		} else {
-			// 当前时间不在任何预约中
-			// 找到当前时间之后的第一个预约
-			let nextBlockIndex = -1;
-			for (let i = 0; i < blocks.length; i++) {
-				const block = blocks[i];
-				const [startH, startM] = block.startTime.split(':').map(Number);
-				const startMinutes = startH * 60 + startM;
-
-				if (startMinutes > nowMinutes) {
-					nextBlockIndex = i;
-					break;
-				}
-			}
-
-			// 如果当前时间在班次开始之前
-			if (nowMinutes < shiftStartMinutes) {
-				// 显示班次开始到第一个预约的间隔
-				if (nextBlockIndex !== -1) {
-					const nextBlock = blocks[nextBlockIndex];
-					const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-					const nextStartMinutes = nextStartH * 60 + nextStartM;
-
-					if (nextStartMinutes > shiftStartMinutes) {
-						const gapMinutes = nextStartMinutes - shiftStartMinutes;
-						const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
-
-						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-						const width = (gapMinutes / timelineWidth * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							durationMinutes: gapMinutes,
-							displayText: `${gapMinutes}分钟`
-						});
-					}
-				} else {
-					// 没有预约，显示班次开始到下班时间的间隔
-					if (shiftEndMinutes > shiftStartMinutes) {
-						const gapMinutes = shiftEndMinutes - shiftStartMinutes;
-						const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
-
-						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-						const width = (gapMinutes / timelineWidth * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							durationMinutes: gapMinutes,
-							displayText: `${gapMinutes}分钟`
-						});
-					}
-				}
-			} else {
-				// 当前时间在班次开始之后
-				if (nextBlockIndex !== -1) {
-					// 显示当前时间到下一个预约的间隔
-					const nextBlock = blocks[nextBlockIndex];
-					const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-					const nextStartMinutes = nextStartH * 60 + nextStartM;
-
-					if (nextStartMinutes > nowMinutes) {
-						const gapMinutes = nextStartMinutes - nowMinutes;
-						const gapStartMinutesFromTimelineStart = (Math.floor(nowMinutes / 60) - timelineStartHour) * 60 + (nowMinutes % 60);
-
-						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-						const width = (gapMinutes / timelineWidth * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							durationMinutes: gapMinutes,
-							displayText: `${gapMinutes}分钟`
-						});
-					}
-
-					// 显示当前时间之后的预约之间的间隔
-					for (let i = nextBlockIndex; i < blocks.length - 1; i++) {
-						const currentBlock = blocks[i];
-						const nextBlock = blocks[i + 1];
-
-						const [currentEndH, currentEndM] = currentBlock.endTime.split(':').map(Number);
-						const currentEndMinutes = currentEndH * 60 + currentEndM;
-
-						const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-						const nextStartMinutes = nextStartH * 60 + nextStartM;
-
-						const gapMinutes = nextStartMinutes - currentEndMinutes;
-
-						if (gapMinutes > 0) {
-							const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
-
-							const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-							const width = (gapMinutes / timelineWidth * 100) + '%';
-
-							availableSlots.push({
-								left,
-								width,
-								durationMinutes: gapMinutes,
-								displayText: `${gapMinutes}分钟`
-							});
-						}
-					}
-
-					// 显示最后一个预约到下班时间的间隔
-					const lastBlock = blocks[blocks.length - 1];
-					const [lastEndH, lastEndM] = lastBlock.endTime.split(':').map(Number);
-					const lastEndMinutes = lastEndH * 60 + lastEndM;
-
-					if (lastEndMinutes < shiftEndMinutes) {
-						const gapMinutes = shiftEndMinutes - lastEndMinutes;
-						const gapStartMinutesFromTimelineStart = (lastEndH - timelineStartHour) * 60 + lastEndM;
-
-						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-						const width = (gapMinutes / timelineWidth * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							durationMinutes: gapMinutes,
-							displayText: `${gapMinutes}分钟`
-						});
-					}
-				} else {
-					// 当前时间之后没有预约，显示当前时间到下班时间的间隔
-					if (nowMinutes < shiftEndMinutes) {
-						const gapMinutes = shiftEndMinutes - nowMinutes;
-						const gapStartMinutesFromTimelineStart = (Math.floor(nowMinutes / 60) - timelineStartHour) * 60 + (nowMinutes % 60);
-
-						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-						const width = (gapMinutes / timelineWidth * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							durationMinutes: gapMinutes,
-							displayText: `${gapMinutes}分钟`
-						});
-					}
-				}
-			}
-		}
-
-		return availableSlots;
+		return rotationList;
 	},
 
+	// 计算时间轴上的空闲时段
 	// 计算技师可约时段
 	calculateAvailableSlots(
 		staffName: string,
@@ -1006,46 +443,6 @@ Page({
 		return availableSlots.join(', ');
 	},
 
-	// 更新当前时间线位置
-	updateCurrentTimeLine() {
-		const now = new Date();
-		const todayStr = getCurrentDate();
-		const selectedDate = this.data.selectedDate;
-
-		// 只有当选中的是今天时才显示当前时间线
-		if (selectedDate !== todayStr) {
-			this.setData({ showCurrentTimeLine: false });
-			return;
-		}
-
-		const hours = now.getHours();
-		const minutes = now.getMinutes();
-
-		// 只在排班时间范围内显示时间线
-		if (hours >= parseInt(this.data.timeLabels[this.data.timeLabels.length - 1]) && hours < parseInt(this.data.timeLabels[0])) {
-			this.setData({ showCurrentTimeLine: false });
-			return;
-		}
-
-		// 计算相对于排班开始时间的分钟数
-		const currentMinutes = (hours - parseInt(this.data.timeLabels[0])) * 60 + minutes;
-		const totalMinutes = (this.data.timeLabels.length) * 60;
-		const position = (currentMinutes / totalMinutes * 100).toFixed(2) + '%';
-
-		// 计算滚动位置：假设每个时间标签占据80px
-		// 将当前时间位置转换为滚动距离，使当前时间显示在左侧约20%的位置
-		const timeLabelWidth = 80;
-		const startHour = parseInt(this.data.timeLabels[0]);
-		const currentHourLabelIndex = hours - startHour;
-		const scrollLeft = Math.max(0, (currentHourLabelIndex * timeLabelWidth) - (timeLabelWidth * 0.5));
-
-		this.setData({
-			showCurrentTimeLine: true,
-			currentTimePosition: position,
-			timelineScrollLeft: scrollLeft
-		});
-	},
-
 	// 调整轮牌顺序
 	moveRotation(e: WechatMiniprogram.TouchEvent) {
 		const { index, direction } = e.currentTarget.dataset;
@@ -1064,6 +461,11 @@ Page({
 
 	// 预约相关
 	async openReserveModal() {
+		if (!hasButtonPermission('createReservation')) {
+			wx.showToast({ title: '您没有权限新增预约', icon: 'none' });
+			return;
+		}
+
 		const now = new Date();
 		// 计算最近的整点或半点
 		const minutes = now.getMinutes();
@@ -1190,11 +592,12 @@ Page({
 
 	// 处理到店操作
 	async handleArrival(reserveId: string) {
-		this.setData({ loading: true, loadingText: '加载中...' });
+		this.setData({ loading: true, loadingText: '处理中...' });
 		try {
 			const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
 			if (!record) {
 				wx.showToast({ title: '预约不存在', icon: 'none' });
+				this.setData({ loading: false });
 				return;
 			}
 
@@ -1208,6 +611,9 @@ Page({
 			// 推送到企业微信
 			await this.sendArrivalNotification(reservations);
 
+			// 关闭 loading 后再跳转页面
+			this.setData({ loading: false });
+
 			if (reservations.length > 1) {
 				const reserveIds = reservations.map(r => r._id).join(',');
 				wx.navigateTo({ url: `/pages/index/index?reserveIds=${reserveIds}` });
@@ -1217,7 +623,6 @@ Page({
 		} catch (error) {
 			console.error('加载预约失败:', error);
 			wx.showToast({ title: '加载失败', icon: 'none' });
-		} finally {
 			this.setData({ loading: false });
 		}
 	},
@@ -1240,13 +645,18 @@ Page({
 			const staffList = await app.getActiveStaffs();
 			const staffMap = new Map(staffList.map(s => [s._id, s]));
 
-			// 提取技师姓名和手机号
-			const technicianMentions = reservations
-				.map(r => {
-					const staff = r.technicianId ? staffMap.get(r.technicianId) : null;
-					return staff && staff.phone ? `${r.technicianName}<@${staff.phone}>` : r.technicianName;
-				})
-				.filter(m => m)
+			// 提取技师姓名和手机号（去重）
+			const uniqueTechnicians = new Map<string, { name: string; phone?: string }>();
+			reservations.forEach(r => {
+				const staff = r.technicianId ? staffMap.get(r.technicianId) : null;
+				const key = r.technicianId || r.technicianName;
+				if (!uniqueTechnicians.has(key!)) {
+					uniqueTechnicians.set(key!, { name: r.technicianName!, phone: staff?.phone });
+				}
+			});
+
+			const technicianMentions = Array.from(uniqueTechnicians.values())
+				.map(t => t.phone ? `${t.name}<@${t.phone}>` : t.name)
 				.join(' ');
 
 			const message = `【🏃 到店通知】
@@ -1301,6 +711,9 @@ ${customerInfo} 已到店
 			if (original.phone !== updated.phone) {
 				changes.push(`📱 电话：${original.phone} → ${updated.phone}`);
 			}
+			if ((original.isClockIn || false) !== (updated.isClockIn || false)) {
+				changes.push(`🎯 类型：${original.isClockIn ? '点钟' : '排钟'} → ${updated.isClockIn ? '点钟' : '排钟'}`);
+			}
 
 			// 如果没有变更，不推送
 			if (changes.length === 0) {
@@ -1320,10 +733,14 @@ ${customerInfo} 已到店
 			}
 			const technicianName = updated.technicianName || '待定';
 
+			// 预约类型
+			const reservationType = updated.isClockIn ? '🎯 点钟' : '🔄 排钟';
+
 			const message = `【📝 预约变更通知】
 
 顾客：${customerInfo}
 日期：${updated.date}
+类型：${reservationType}
 ${changes.join('\n')}
 
 请${technicianName}${technicianMention || technicianName}知悉，做好准备`;
@@ -1673,6 +1090,49 @@ ${changes.join('\n')}
 			// 如果是编辑模式，只更新第一个技师
 			if (reserveForm._id) {
 				const firstTech = reserveForm.selectedTechnicians[0];
+				const originalReservation = this.data.originalReservation;
+
+				// 检查技师是否变更
+				const newTechId = firstTech?._id || '';
+				const oldTechId = originalReservation?.technicianId || '';
+				const staffChanged = newTechId !== oldTechId;
+
+				// 情况1：从有技师改为技师待定（原技师权重 +1）
+				if (staffChanged && oldTechId && !newTechId) {
+					if (!originalReservation?.isClockIn) {
+						try {
+							await wx.cloud.callFunction({
+								name: 'updateStaffWeight',
+								data: {
+									action: 'cancelReservation',
+									staffId: oldTechId,
+									isClockIn: originalReservation?.isClockIn || false
+								}
+							});
+						} catch (error) {
+							console.error('更新原技师权重失败:', error);
+						}
+					}
+				}
+				// 情况2：技师变更（原技师权重 +1，新技师权重 -1）
+				else if (staffChanged && oldTechId && newTechId) {
+					// 原技师被取消：权重 +1（非点钟）
+					if (!originalReservation?.isClockIn) {
+						try {
+							await wx.cloud.callFunction({
+								name: 'updateStaffWeight',
+								data: {
+									action: 'cancelReservation',
+									staffId: oldTechId,
+									isClockIn: originalReservation?.isClockIn || false
+								}
+							});
+						} catch (error) {
+							console.error('更新原技师权重失败:', error);
+						}
+					}
+				}
+
 				const record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'> = {
 					date: reserveForm.date,
 					customerName: reserveForm.customerName || '',
@@ -1687,8 +1147,44 @@ ${changes.join('\n')}
 				};
 				const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
 				if (success) {
+					// 情况2：技师变更（新技师权重 -1）
+					if (staffChanged && oldTechId && newTechId && firstTech && !firstTech.isClockIn) {
+						try {
+							await wx.cloud.callFunction({
+								name: 'updateStaffWeight',
+								data: {
+									action: 'reservation',
+									staffId: newTechId,
+									isClockIn: firstTech.isClockIn || false
+								}
+							});
+						} catch (error) {
+							console.error('更新新技师权重失败:', error);
+						}
+					}
+					// 情况3：从技师待定改为有技师（新技师权重 -1）
+					else if (staffChanged && !oldTechId && newTechId && firstTech && !firstTech.isClockIn) {
+						try {
+							await wx.cloud.callFunction({
+								name: 'updateStaffWeight',
+								data: {
+									action: 'reservation',
+									staffId: newTechId,
+									isClockIn: firstTech.isClockIn || false
+								}
+							});
+						} catch (error) {
+							console.error('更新新技师权重失败:', error);
+						}
+					}
+
+					// 刷新全局数据中的员工信息
+					if (staffChanged) {
+						await app.loadGlobalData();
+					}
+
 					// 推送预约变更通知
-					await this.sendReservationModificationNotification(this.data.originalReservation, record);
+					await this.sendReservationModificationNotification(originalReservation, record);
 					wx.showToast({ title: '更新成功', icon: 'success' });
 					this.closeReserveModal();
 					await this.loadTimelineData();
@@ -1767,11 +1263,12 @@ ${changes.join('\n')}
 				const staffList = await app.getActiveStaffs();
 				const staffMap = new Map(staffList.map(s => [s._id, s]));
 
-				// 构建技师信息（包含手机号）
+				// 构建技师信息（包含手机号和点钟信息）
 				const techniciansWithPhone = technicians.map(t => ({
 					_id: t._id,
 					name: t.name,
-					phone: staffMap.get(t._id)?.phone || ''
+					phone: staffMap.get(t._id)?.phone || '',
+					isClockIn: t.isClockIn || false
 				}));
 
 				// 显示推送确认弹窗
@@ -1863,7 +1360,8 @@ ${changes.join('\n')}
 										technicians: [{
 											_id: reservation.technicianId,
 											name: reservation.technicianName,
-											phone: staff.phone
+											phone: staff.phone,
+											isClockIn: reservation.isClockIn || false
 										}]
 									}
 								});
@@ -2147,6 +1645,22 @@ ${changes.join('\n')}
 		});
 	},
 
+	// 获取预约类型文本
+	getReservationTypeText(technicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }>): string {
+		if (technicians.length === 0) {
+			return '🔄 排钟';
+		}
+		const hasClockIn = technicians.some(t => t.isClockIn);
+		const hasNonClockIn = technicians.some(t => !t.isClockIn);
+		if (hasClockIn && hasNonClockIn) {
+			return '🎯 混合（点钟+排钟）';
+		} else if (hasClockIn) {
+			return '🎯 点钟';
+		} else {
+			return '🔄 排钟';
+		}
+	},
+
 	// 推送弹窗 - 确认推送
 	async onPushModalConfirm() {
 		const { pushModal } = this.data;
@@ -2168,6 +1682,8 @@ ${changes.join('\n')}
 				.map(t => t.name)
 				.join('、');
 
+			const reservationType = this.getReservationTypeText(reservationData.technicians);
+
 			let message: string;
 
 			if (type === 'cancel') {
@@ -2177,6 +1693,7 @@ ${changes.join('\n')}
 日期：${reservationData.date}
 时间：${reservationData.startTime} - ${reservationData.endTime}
 项目：${reservationData.project}
+类型：${reservationType}
 技师：${technicianNames}
 
 ${technicianMentions}`;
@@ -2187,6 +1704,7 @@ ${technicianMentions}`;
 日期：${reservationData.date}
 时间：**${reservationData.startTime} - ${reservationData.endTime}**
 项目：${reservationData.project}
+类型：${reservationType}
 技师：**${technicianNames}**
 
 ${technicianMentions}`;
@@ -2223,6 +1741,11 @@ ${technicianMentions}`;
 
 	// 打开轮牌推送弹窗
 	openRotationPushModal() {
+		if (!hasButtonPermission('pushRotation')) {
+			wx.showToast({ title: '您没有权限推送轮牌', icon: 'none' });
+			return;
+		}
+
 		this.setData({ 'rotationPushModal.show': true });
 	},
 

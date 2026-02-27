@@ -38,7 +38,7 @@ const DefaultGuestInfo: GuestInfo = {
   technician: "",
   isClockIn: false,
   couponCode: "",
-  couponPlatform: "",
+  couponPlatform: "meituan",
   upgradeHimalayanSaltStone: false,
   project: "",
 };
@@ -554,31 +554,38 @@ Page({
       content: "确定要重置咨询单内容吗？",
       success: (res) => {
         if (res.confirm) {
-          // 重置为初始值
-          this.setData({
-            consultationInfo: {
-              ...DefaultConsultationInfo,
-              selectedParts: {},
-            },
-            editId: "", // 重置编辑状态
-            // 重置双人模式相关数据
-            isDualMode: false,
-            activeGuest: 1,
-            guest1Info: { ...DefaultGuestInfo, selectedParts: {} },
-            guest2Info: { ...DefaultGuestInfo, selectedParts: {} },
-            // 重置车牌号相关数据
-            licensePlate: '',
-            plateNumber: ['', '', '', '', '', '', '', ''],
-            // 重置顾客匹配相关数据
-            matchedCustomer: null,
-            matchedCustomerApplied: false
-          });
-          wx.showToast({
-            title: "咨询单已重置",
-            icon: "success",
-          });
+          this.resetForm();
         }
       },
+    });
+  },
+
+  // 重置表单
+  resetForm() {
+    this.setData({
+      consultationInfo: {
+        ...DefaultConsultationInfo,
+        selectedParts: {},
+      },
+      editId: "",
+      // 重置双人模式相关数据
+      isDualMode: false,
+      activeGuest: 1,
+      guest1Info: { ...DefaultGuestInfo, selectedParts: {} },
+      guest2Info: { ...DefaultGuestInfo, selectedParts: {} },
+      // 重置车牌号相关数据
+      licensePlate: '',
+      plateNumber: ['', '', '', '', '', '', '', ''],
+      // 重置顾客匹配相关数据
+      matchedCustomer: null,
+      matchedCustomerApplied: false,
+      // 重置专用精油相关
+      currentProjectIsEssentialOilOnly: false,
+      currentProjectNeedEssentialOil: false
+    });
+    wx.showToast({
+      title: "咨询单已重置",
+      icon: "success",
     });
   },
 
@@ -1437,11 +1444,19 @@ ${clockInInfo2}`;
 
   // 报钟弹窗 - 关闭
   onClockInModalCancel() {
+    const { editId } = this.data;
+
     this.setData({
       'clockInModal.show': false,
       'clockInModal.content': '',
       clockInSubmitting: false
     });
+
+    if (editId) {
+      wx.navigateBack();
+    } else {
+      this.resetForm();
+    }
   },
 
   // 报钟弹窗 - 内容修改
@@ -1455,6 +1470,7 @@ ${clockInInfo2}`;
   // 报钟弹窗 - 确认推送到企业微信
   async onClockInModalConfirm() {
     const { content } = this.data.clockInModal;
+    const { editId } = this.data;
 
     if (!content || content.trim() === '') {
       wx.showToast({ title: '报钟内容不能为空', icon: 'none' });
@@ -1469,15 +1485,26 @@ ${clockInInfo2}`;
       if (result) {
         wx.showToast({ title: '推送成功', icon: 'success', duration: 2000 });
         setTimeout(() => {
-          this.onClockInModalCancel();
+          this.setData({
+            'clockInModal.show': false,
+            'clockInModal.content': '',
+            clockInSubmitting: false,
+            'clockInModal.loading': false
+          });
+
+          if (editId) {
+            wx.navigateBack();
+          } else {
+            this.resetForm();
+          }
         }, 1500);
       } else {
         wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+        this.setData({ 'clockInModal.loading': false, clockInSubmitting: false });
       }
     } catch (error) {
       console.error('推送到企业微信失败:', error);
       wx.showToast({ title: '推送失败，请重试', icon: 'none' });
-    } finally {
       this.setData({ 'clockInModal.loading': false, clockInSubmitting: false });
     }
   },

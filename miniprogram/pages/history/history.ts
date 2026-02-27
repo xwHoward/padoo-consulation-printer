@@ -110,36 +110,11 @@ Page({
     }
   },
 
-  // 前一天
-  goToPreviousDay() {
-    const { previousDate } = this.data.dateSelector;
-    if (previousDate) {
-      this.loadHistoryData(previousDate);
-    }
-  },
-
-  // 回到今天
-  goToToday() {
-    const currentDate = getCurrentDate();
-    this.loadHistoryData(currentDate);
-  },
-
-  // 后一天
-  goToNextDay() {
-    const { nextDate } = this.data.dateSelector;
-    if (nextDate) {
-      this.loadHistoryData(nextDate);
-    }
-  },
-
-  // 选择日期（picker 变化时触发）
-  onDateSelect(e: WechatMiniprogram.CustomEvent) {
-    const selectedDate = e.detail.value;
+  onDatePickerChange(e: WechatMiniprogram.CustomEvent) {
+    const selectedDate = e.detail.date;
     this.setData({
       'dateSelector.selectedDate': selectedDate
     });
-
-    // 加载选中日期的记录
     this.loadHistoryData(selectedDate);
   },
 

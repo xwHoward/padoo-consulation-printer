@@ -23,11 +23,18 @@
         "miniprogram": {
             "list": [
                 {
-                    "name": "calculator",
-                    "pathName": "pages/calculator/index",
+                    "name": "profile",
+                    "pathName": "pages/profile/profile",
                     "query": "",
                     "scene": null,
                     "launchMode": "default"
+                },
+                {
+                    "name": "calculator",
+                    "pathName": "pages/calculator/index",
+                    "query": "",
+                    "launchMode": "default",
+                    "scene": null
                 },
                 {
                     "name": "测试加班时间计算",

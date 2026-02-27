@@ -1,5 +1,5 @@
-<navigation-bar title="" back="{{false}}" color="black" background="#FFF">
-  <view slot="left" class="nav-btns">
+<navigation-bar title="" back="{{editId ? true : false}}" color="black" background="#FFF">
+  <view slot="left" class="nav-btns" wx:if="{{!editId}}">
     <view bindtap="goToHome" class="nav-btn" aria-role="button" aria-label="主页">
       <text class="nav-btn-text">主页</text>
     </view>
@@ -10,7 +10,7 @@
       <text class="nav-btn-text">无人值守</text>
     </view>
   </view>
-  <view slot="right" class="nav-btns">
+  <view slot="right" class="nav-btns" wx:if="{{!editId}}">
     <view bindtap="goToCashier" class="nav-btn" aria-role="button" aria-label="场控收银">
       <text class="nav-btn-text">场控收银</text>
     </view>

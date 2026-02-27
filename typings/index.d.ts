@@ -49,7 +49,7 @@ interface ConsultationInfo extends BaseRecord {
   phone: string;
   extraTime: number;
   couponCode: string;
-  couponPlatform: "meituan" | "dianping" | "douyin" | "membership" | "";
+  couponPlatform: PaymentMethod;
   upgradeHimalayanSaltStone: boolean;
   date: string; // YYYY-MM-DD
   startTime: string; // 报钟时间（格式 HH:MM）
@@ -67,7 +67,7 @@ interface GuestInfo {
   technician: string;
   isClockIn: boolean;
   couponCode: string;
-  couponPlatform: "" | "meituan" | "dianping" | "douyin" | "membership";
+  couponPlatform: PaymentMethod;
   upgradeHimalayanSaltStone: boolean;
   project: string;
 }
@@ -121,6 +121,37 @@ interface ReservationRecord extends BaseRecord {
   endTime: string; // HH:MM
   isClockIn?: boolean; // 点钟标记
 }
+
+// interface ConsultationRecord {
+//   _id: string
+//   date: string
+//   surname: string
+//   gender: 'male' | 'female'
+//   project: string
+//   room: string
+//   technician: string
+//   startTime: string
+//   endTime: string
+//   isVoided: boolean
+//   isReservation: boolean
+//   settlement?: any
+// }
+
+// interface ReservationRecord {
+//   _id: string
+//   date: string
+//   customerName: string
+//   gender: 'male' | 'female'
+//   project: string
+//   startTime: string
+//   endTime: string
+//   technicians: Array<{
+//     _id: string
+//     name: string
+//   }>
+//   technicianName?: string
+//   technicianId?: string
+// }
 
 // 会员卡数据结构
 interface MembershipCard extends BaseRecord {
@@ -271,6 +302,8 @@ interface UserPermissions {
   canManageRooms: boolean;
   canExportData: boolean;
   canViewAllHistory: boolean;
+  canCreateReservation: boolean;
+  canPushRotation: boolean;
 }
 
 // 用户数据结构
@@ -295,4 +328,43 @@ interface LoginResponse {
   user: UserRecord;
   token: string;
   isNewUser: boolean;
+}
+
+interface RotationItem {
+  _id: string;
+  name: string;
+  shift: ShiftType;
+  shiftLabel: string;
+  availableSlots?: string; // 可约时段
+  weight: number; // 权重
+}
+
+interface StaffTimeline {
+  _id: string;
+  name: string;
+  shift: ShiftType;
+  blocks: TimelineBlock[];
+  availableSlots?: AvailableSlot[]; // 空闲时段
+}
+
+interface TimelineBlock {
+  _id: string;
+  customerName: string;
+  startTime: string;
+  endTime: string;
+  project: string;
+  room: string;
+  left: string; // 距离左侧百分比
+  width: string; // 宽度百分比
+  isReservation?: boolean;
+  isSettled?: boolean; // 是否已结算
+  isInProgress?: boolean; // 是否进行中
+  technician?: string; // 技师名称
+}
+
+interface AvailableSlot {
+  left: string; // 距离左侧百分比
+  width: string; // 宽度百分比
+  durationMinutes: number; // 时长（分钟）
+  displayText: string; // 显示文本
 }

@@ -195,6 +195,32 @@ export class AuthManager {
 
 		return this.currentUser;
 	}
+
+	async updateStaffId(staffId: string): Promise<void> {
+		if (!this.currentUser) {
+			throw new Error('用户未登录');
+		}
+
+		const res = await wx.cloud.callFunction({
+			name: 'login',
+			data: { action: 'updateStaffId', staffId }
+		});
+
+		if (!res.result || typeof res.result !== 'object') {
+			throw new Error('更新staffId响应格式错误');
+		}
+
+		const { code: resultCode, data, message } = res.result as any;
+
+		if (resultCode !== 0) {
+			throw new Error(message || '更新staffId失败');
+		}
+
+		const loginResponse = data as LoginResponse;
+
+		this.currentUser = loginResponse.user;
+		this.saveToStorage();
+	}
 }
 
 export const authManager = AuthManager.getInstance();

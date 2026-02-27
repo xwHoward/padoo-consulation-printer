@@ -1,0 +1,16 @@
+<view class="date-picker-wrapper">
+  <view class="date-nav-btn" bindtap="onPreviousDay">
+    <text class="date-nav-icon">◀</text>
+  </view>
+  <view class="date-nav-btn {{isToday ? 'active' : ''}}" bindtap="onToday">
+    <text class="date-nav-text">今日</text>
+  </view>
+  <picker mode="date" value="{{selectedDate}}" bindchange="onDateSelect">
+    <view class="date-nav-btn date-picker-btn">
+      <text class="date-nav-text">📅 {{displayDate}}</text>
+    </view>
+  </picker>
+  <view class="date-nav-btn" bindtap="onNextDay">
+    <text class="date-nav-icon">▶</text>
+  </view>
+</view>

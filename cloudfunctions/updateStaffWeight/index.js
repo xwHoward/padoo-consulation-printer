@@ -131,19 +131,19 @@ exports.main = async (event, context) => {
 
                 const staffRecord = await db.collection('staff').doc(staffId).get()
                 const currentWeight = staffRecord.data.weight || 0
-                const newWeight = currentWeight + 1
+                const newWeight = currentWeight - 1
                 
-                if (newWeight > MAX_WEIGHT) {
+                if (newWeight < MIN_WEIGHT) {
                     return {
                         code: 0,
-                        message: '权重已达最大值，无需更新',
+                        message: '权重已达最小值，无需更新',
                         data: null
                     }
                 }
 
                 const result = await db.collection('staff').doc(staffId).update({
                     data: {
-                        weight: _.inc(1)
+                        weight: _.inc(-1)
                     }
                 })
 

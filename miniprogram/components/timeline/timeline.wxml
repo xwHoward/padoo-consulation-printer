@@ -1,0 +1,61 @@
+<view class="timeline-wrapper">
+  <scroll-view class="timeline-scroll" scroll-x scroll-left="{{scrollLeft}}" scroll-into-view="timeline" id="timelineScrollView">
+    <view class="timeline-container" style="width: {{timeLabels.length*80}}px;">
+      <!-- 时间轴刻度 -->
+      <view class="time-axis">
+        <view class="time-axis-spacer"></view>
+        <view class="time-mark" wx:for="{{timeLabels}}" wx:key="*this">
+          <text style="margin-left: -6px;">{{item}}</text>
+        </view>
+      </view>
+
+      <!-- 员工行 -->
+      <view class="staff-timeline-row" wx:for="{{staffTimeline}}" wx:key="_id">
+        <view class="staff-name-col">
+          <view>{{item.name}}</view>
+          <view class="shift-mini-tag {{item.shift}}">
+            {{item.shift === 'morning' ? '早' : '晚'}}
+          </view>
+        </view>
+        <view class="timeline-track">
+          <!-- 背景网格线 -->
+          <view class="grid-line" wx:for="{{timeLabels}}" wx:key="*this"></view>
+
+          <!-- 当前时间线 -->
+          <view class="current-time-line" wx:if="{{showCurrentTimeLine}}" style="left: {{currentTimePosition}};"></view>
+
+          <!-- 占用块 -->
+          <view
+            class="time-block {{block.isReservation ? 'reservation' : ''}} {{block.isSettled ? 'settled' : ''}}"
+            wx:for="{{item.blocks}}"
+            wx:for-item="block"
+            wx:key="startTime"
+            style="left: {{block.left}}; width: {{block.width}};"
+            bindtap="onBlockClick"
+            data-id="{{block._id}}"
+            data-reservation="{{block.isReservation}}"
+            data-settled="{{block.isSettled}}"
+            data-inprogress="{{block.isInProgress}}"
+          >
+            <view class="block-content">
+              <view class="block-customer">{{block.customerName}} | {{block.room}}</view>
+              <view class="block-time">{{block.startTime}}-{{block.endTime}}</view>
+              <view class="block-info">{{block.project}}</view>
+            </view>
+          </view>
+
+          <!-- 空闲时段标记 -->
+          <view
+            class="available-slot-label"
+            wx:for="{{item.availableSlots}}"
+            wx:for-item="slot"
+            wx:key="left"
+            style="left: {{slot.left}}; width: {{slot.width}};"
+          >
+            <text class="slot-text">{{slot.displayText}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+</view>

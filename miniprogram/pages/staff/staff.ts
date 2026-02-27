@@ -143,39 +143,25 @@ Page({
 
 			if (existing) {
 				await cloudDb.updateById<ScheduleRecord>(Collections.SCHEDULE, existing._id, { shift: shiftType });
-
-				// 更新员工权重
-				try {
-					await wx.cloud.callFunction({
-						name: 'updateStaffWeight',
-						data: {
-							action: 'schedule',
-							staffId: staffId,
-							shift: shiftType,
-						}
-					});
-				} catch (error) {
-				}
 			} else {
 				await cloudDb.insert<ScheduleRecord>(Collections.SCHEDULE, {
 					date,
 					staffId,
 					shift: shiftType,
 				});
-
-				// 更新员工权重
-				try {
-					await wx.cloud.callFunction({
-						name: 'updateStaffWeight',
-						data: {
-							action: 'schedule',
-							staffId: staffId,
-							shift: shiftType
-						}
-					});
-				} catch (error) {
-				}
 			}
+
+			// 更新员工权重
+			try {
+				await wx.cloud.callFunction({
+					name: 'updateStaffWeight',
+					data: {
+						action: 'schedule',
+						staffId: staffId,
+						shift: shiftType
+					}
+				});
+			} catch (error) { }
 
 			// 刷新全局数据中的员工信息
 			await app.loadGlobalData();
