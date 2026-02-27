@@ -16,7 +16,7 @@
         <view class="tech-avatar">
           <image class="avatar-img" src="{{ item.avatar || '/assets/default-avatar.png' }}" mode="aspectFill" />
           <view class="status-badge {{item.status}}">
-            {{ item.status === 'available' ? '空闲' : '服务中' }}
+            {{ item.status === 'available' ? '空闲' : (item.status === 'busy' ? '服务中' : '已下班') }}
           </view>
         </view>
         <view class="tech-info">
@@ -27,17 +27,22 @@
           </view>
         </view>
         <view class="available-info">
-          <view class="info-label available" wx:if="{{ item.lastAppointmentTime }}">
-            最近可预约时间：{{ item.lastAppointmentTime }}
+          <view class="info-label {{item.status}}" wx:if="{{ item.status === 'off_duty' }}">
+            {{ item.latestAppointment }}
           </view>
-          <view class="info-label available" wx:if="{{ item.status === 'available' }}">当前可预约</view>
-          <view class="info-label" wx:if="{{ item.status === 'busy' }}">
-            预计等待
-            <view class="info-time" wx:if="{{ item.availableMinutes }}">
-              {{ item.availableMinutes }} 分钟
+          <view class="info-label available" wx:if="{{ item.status === 'available' && item.availableMinutes > 0 }}">
+            {{ item.availableMinutes }}分钟后有预约
+          </view>
+          <view class="info-label available" wx:if="{{ item.status === 'available' && !item.availableMinutes }}">
+            当前可预约
+          </view>
+          <view class="info-label busy" wx:if="{{ item.status === 'busy' }}">
+            预计服务结束
+            <view class="info-time" wx:if="{{ item.latestAppointment }}">
+              {{ item.latestAppointment }}
             </view>
-            <view class="info-time now" wx:if="{{ item.status === 'available' && !item.availableMinutes }}">
-              现在
+            <view class="info-time" wx:if="{{ item.availableMinutes }}">
+              ({{ item.availableMinutes }} 分钟)
             </view>
           </view>
         </view>

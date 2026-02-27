@@ -32,10 +32,10 @@ interface ProfileData {
 		totalAmount: number
 		totalCommission: number
 		clockInCount: number
+		overtimeCount: number
 		projectStats: Array<{ project: string; count: number; amount: number }>
 	}
 	paymentPlatformLabels: Record<string, string>
-	paymentPlatforms: Record<string, string>
 }
 
 const app = getApp<IAppOption>();
@@ -57,15 +57,8 @@ Page({
 			totalAmount: 0,
 			totalCommission: 0,
 			clockInCount: 0,
+			overtimeCount: 0,
 			projectStats: []
-		},
-		paymentPlatforms: {
-			cash: '现金',
-			alipay: '支付宝',
-			wxpay: '微信支付',
-			gaode: '高德',
-			free: '免单',
-			membership: '划卡'
 		},
 		paymentPlatformLabels: {
 			meituan: '美团',
@@ -80,7 +73,7 @@ Page({
 		},
 	} as ProfileData,
 
-	async onLoad() {
+	async onShow() {
 		const isLoggedIn = await checkLogin();
 		if (!isLoggedIn) return;
 
@@ -105,8 +98,10 @@ Page({
 			isToday: true
 		});
 
-		await this.loadStaffInfo();
-		this.loadAllData();
+		this.loadStaffInfo();
+		this.loadRoomData();
+		this.loadRotationData();
+		this.loadPerformanceData();
 	},
 
 	async loadStaffInfo() {
@@ -118,15 +113,7 @@ Page({
 		}
 	},
 
-	async loadAllData() {
-		await Promise.all([
-			this.loadTimelineData(),
-			this.loadPerformanceData(),
-			this.loadRotationData()
-		]);
-	},
-
-	async loadTimelineData() {
+	async loadRoomData() {
 		this.setData({ loading: true, loadingText: '加载数据...' });
 
 		try {
@@ -210,6 +197,7 @@ Page({
 			let totalAmount = 0;
 			let totalCommission = 0;
 			let clockInCount = 0;
+			let overtimeCount = 0;
 
 			records.forEach(record => {
 				const project = record.project;
@@ -222,6 +210,12 @@ Page({
 				if (record.isClockIn) {
 					clockInCount += 1;
 					commission += 5;
+				}
+
+				if (record.overtime) {
+					overtimeCount += record.overtime;
+					const overtimeCommission = record.overtime * 7.5;
+					commission += overtimeCommission;
 				}
 
 				projectStats[project].amount += commission;
@@ -242,6 +236,7 @@ Page({
 					totalAmount: totalAmount,
 					totalCommission: totalCommission,
 					clockInCount: clockInCount,
+					overtimeCount: overtimeCount,
 					projectStats: projectStatsArray
 				}
 			});
@@ -283,7 +278,7 @@ Page({
 		const date = e.detail.date;
 		const isToday = date === getCurrentDate();
 		this.setData({ selectedDate: date, isToday });
-		this.loadAllData();
+		this.loadPerformanceData();
 	},
 
 	onBlockClick(e: WechatMiniprogram.CustomEvent) {

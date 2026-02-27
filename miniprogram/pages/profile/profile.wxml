@@ -11,41 +11,17 @@
       <view class="loading-spinner"></view>
       <view class="loading-text">{{loadingText}}</view>
     </view>
-
     <!-- 排钟进度 -->
     <view class="section timeline-section">
       <view class="section-header">
         <view class="section-title">排钟进度</view>
         <date-picker initialDate="{{selectedDate}}" bind:change="onDatePickerChange" />
       </view>
-      <timeline
-        wx:if="{{staffId}}"
-        staffId="{{staffId}}"
-        selectedDate="{{selectedDate}}"
-        readonly="{{true}}"
-      />
+      <timeline wx:if="{{staffId}}" staffId="{{staffId}}" selectedDate="{{selectedDate}}" readonly="{{true}}" />
       <view class="empty-timeline" wx:else>
         <view>暂无排班信息</view>
       </view>
     </view>
-
-    <!-- 房间状态 -->
-    <view class="section">
-      <view class="section-title">房间状态</view>
-      <view class="room-grid">
-        <view class="room-item {{item.isOccupied ? 'occupied' : 'empty'}}" wx:for="{{rooms}}" wx:key="name">
-          <view class="room-name">{{item.name}}</view>
-          <view class="room-detail" wx:if="{{item.isOccupied}}">
-            <view class="occupied-record" wx:for="{{item.occupiedRecords}}" wx:for-item="record" wx:key="endTime">
-              <view class="customer-tag">{{record.customerName}}</view>
-              <view class="staff-tag">{{record.technician}}</view>
-              <view class="time-tag">{{record.endTime}}下</view>
-            </view>
-          </view>
-        </view>
-      </view>
-    </view>
-
     <!-- 业绩统计 -->
     <view class="section stats-section">
       <view class="section-header">
@@ -68,6 +44,10 @@
           <view class="stat-value">{{performanceStats.clockInCount}}</view>
           <view class="stat-label">点钟</view>
         </view>
+        <view class="stat-card">
+          <view class="stat-value">{{performanceStats.overtimeCount*7.5}}</view>
+          <view class="stat-label">加班</view>
+        </view>
       </view>
       <view class="project-stats" wx:if="{{performanceStats.projectStats.length > 0}}">
         <view class="section-subtitle">项目统计</view>
@@ -80,7 +60,6 @@
         </view>
       </view>
     </view>
-
     <!-- 单据列表 -->
     <view class="section records-section">
       <view class="section-title">单据列表</view>
@@ -89,25 +68,23 @@
           <view class="consultation-header" bindtap="toggleRecordCollapse" data-index="{{index}}">
             <view class="consultation-basic">
               <view class="customer-info">{{index + 1}}. {{record.customerName}}</view>
-              <view class="tag">{{record.room}}</view>
               <view class="tag">{{record.endTime}}</view>
               <view wx:if="{{record.isVoided}}" class="voided-tag">已作废</view>
+              <view wx:if="{{record.isClockIn}}" class="tag">点</view>
+              <view class="tag">{{record.project}}</view>
+              <view class="tag" wx:if="{{!record.isVoided&&record.overtime}}">
+                加班{{record.overtime}}
+              </view>
             </view>
           </view>
           <view class="consultation-body" wx:if="{{!record.collapsed}}">
             <view class="consultation-details">
               <view class="consultation-meta">
-                <view class="text-info">
-                  {{record.technician}}{{record.isClockIn ? '[点]' : ''}}
-                </view>
-                <view class="text-info">{{record.project}}</view>
+                <view class="text-info">{{record.room}}</view>
                 <view class="text-info">{{record.startTime}} - {{record.endTime}}</view>
                 <view wx:if="{{record.phone}}" class="text-info">{{record.phone}}</view>
-                <view class="text-info" wx:if="{{!record.isVoided}}">
-                  加班{{record.overtime ? '(' + record.overtime + ')' : '(0)'}}
-                </view>
                 <view wx:if="{{record.couponPlatform}}" class="text-info">
-                  {{paymentPlatforms[record.couponPlatform]}} {{record.couponCode}}
+                  {{paymentPlatformLabels[record.couponPlatform]}} {{record.couponCode}}
                 </view>
               </view>
             </view>
@@ -135,7 +112,6 @@
       </view>
       <view class="empty-hint" wx:if="{{performanceRecords.length === 0}}">暂无单据记录</view>
     </view>
-
     <!-- 今日轮牌 -->
     <view class="section rotation-section">
       <view class="section-header">
@@ -159,6 +135,22 @@
         </view>
       </view>
       <view class="empty-hint" wx:if="{{rotationList.length === 0}}">暂无轮牌信息</view>
+    </view>
+    <!-- 房间状态 -->
+    <view class="section">
+      <view class="section-title">房间状态</view>
+      <view class="room-grid">
+        <view class="room-item {{item.isOccupied ? 'occupied' : 'empty'}}" wx:for="{{rooms}}" wx:key="name">
+          <view class="room-name">{{item.name}}</view>
+          <view class="room-detail" wx:if="{{item.isOccupied}}">
+            <view class="occupied-record" wx:for="{{item.occupiedRecords}}" wx:for-item="record" wx:key="endTime">
+              <view class="customer-tag">{{record.customerName}}</view>
+              <view class="staff-tag">{{record.technician}}</view>
+              <view class="time-tag">{{record.endTime}}下</view>
+            </view>
+          </view>
+        </view>
+      </view>
     </view>
   </view>
 </scroll-view>

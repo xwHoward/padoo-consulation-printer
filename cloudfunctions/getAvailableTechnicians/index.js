@@ -162,43 +162,82 @@ async function getTechnicianAvailability(date) {
         }).get()
         const consultations = consultationsRes.data || []
 
+        const reservationsRes = await db.collection('reservations').where({
+            date: date
+        }).get()
+        const allReservations = reservationsRes.data || []
+        const reservations = allReservations.filter(r => r.status !== 'cancelled')
+
+        const SHIFT_START_TIME = {
+            'morning': '12:00',
+            'evening': '13:00'
+        }
+
+        const SHIFT_END_TIME = {
+            'morning': '22:00',
+            'evening': '23:00'
+        }
+
         const techList = onDutyStaff.map(staff => {
-            const staffConsultations = consultations.filter(c => c.technician === staff.name)
+            const schedule = schedules.find(s => s.staffId === staff._id)
+            const shift = schedule ? schedule.shift : 'evening'
+            
+            const shiftStartTime = SHIFT_START_TIME[shift] || SHIFT_START_TIME['evening']
+            const shiftEndTime = SHIFT_END_TIME[shift] || SHIFT_END_TIME['evening']
+            
+            const shiftStartMinutes = parseTimeToMinutes(shiftStartTime)
+            const shiftEndMinutes = parseTimeToMinutes(shiftEndTime)
 
             let latestAppointment = null
             let availableMinutes = null
             let status = 'available'
             const nowMinutes = currentMinutes
 
-            if (staffConsultations.length > 0) {
-                const activeConsultation = staffConsultations.find(consultation => {
-                    const startTimeMinutes = parseTimeToMinutes(consultation.startTime)
-                    const endTimeMinutes = parseTimeToMinutes(consultation.endTime)
-                    return startTimeMinutes <= nowMinutes && nowMinutes < endTimeMinutes
-                })
+            if (nowMinutes < shiftStartMinutes) {
+                status = 'off_duty'
+                latestAppointment = `${shiftStartTime}上班`
+            } else if (nowMinutes >= shiftEndMinutes) {
+                status = 'off_duty'
+                latestAppointment = '已下班'
+            } else {
+                const staffConsultations = consultations.filter(c => c.technician === staff.name)
+                const staffReservations = reservations.filter(r => r.technicianName === staff.name)
 
-                if (activeConsultation) {
-                    latestAppointment = activeConsultation.endTime
-                    const endTimeMinutes = parseTimeToMinutes(activeConsultation.endTime)
-                    availableMinutes = endTimeMinutes - nowMinutes
-                    status = 'busy'
-                } else {
-                    const upcomingConsultations = staffConsultations
-                        .filter(consultation => {
-                            const startTimeMinutes = parseTimeToMinutes(consultation.startTime)
-                            return startTimeMinutes > nowMinutes
-                        })
-                        .sort((a, b) => {
-                            const aStart = parseTimeToMinutes(a.startTime)
-                            const bStart = parseTimeToMinutes(b.startTime)
-                            return aStart - bStart
-                        })
+                const allAppointments = [
+                    ...staffConsultations.map(c => ({ ...c, type: 'consultation' })),
+                    ...staffReservations.map(r => ({ ...r, type: 'reservation' }))
+                ]
 
-                    if (upcomingConsultations.length > 0) {
-                        const nextConsultation = upcomingConsultations[0]
-                        const nextStartMinutes = parseTimeToMinutes(nextConsultation.startTime)
-                        availableMinutes = nextStartMinutes - nowMinutes
-                        status = 'available'
+                if (allAppointments.length > 0) {
+                    const activeAppointment = allAppointments.find(appointment => {
+                        const startTimeMinutes = parseTimeToMinutes(appointment.startTime)
+                        const endTimeMinutes = parseTimeToMinutes(appointment.endTime)
+                        return startTimeMinutes <= nowMinutes && nowMinutes < endTimeMinutes
+                    })
+
+                    if (activeAppointment) {
+                        latestAppointment = activeAppointment.endTime
+                        const endTimeMinutes = parseTimeToMinutes(activeAppointment.endTime)
+                        availableMinutes = endTimeMinutes - nowMinutes
+                        status = 'busy'
+                    } else {
+                        const upcomingAppointments = allAppointments
+                            .filter(appointment => {
+                                const startTimeMinutes = parseTimeToMinutes(appointment.startTime)
+                                return startTimeMinutes > nowMinutes
+                            })
+                            .sort((a, b) => {
+                                const aStart = parseTimeToMinutes(a.startTime)
+                                const bStart = parseTimeToMinutes(b.startTime)
+                                return aStart - bStart
+                            })
+
+                        if (upcomingAppointments.length > 0) {
+                            const nextAppointment = upcomingAppointments[0]
+                            const nextStartMinutes = parseTimeToMinutes(nextAppointment.startTime)
+                            availableMinutes = nextStartMinutes - nowMinutes
+                            status = 'available'
+                        }
                     }
                 }
             }

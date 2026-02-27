@@ -7,7 +7,7 @@ interface TechCard {
   gender: string;
   latestAppointment?: string;
   availableMinutes?: number;
-  status: 'available' | 'busy';
+  status: 'available' | 'busy' | 'off_duty';
 }
 
 Page({

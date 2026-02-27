@@ -454,9 +454,9 @@ Component({
 			const { id, reservation, settled, inprogress } = e.currentTarget.dataset;
 			this.triggerEvent('blockclick', {
 				id,
-				isReservation: reservation,
-				isSettled: settled,
-				isInProgress: inprogress
+				reservation,
+				settled,
+				inprogress
 			});
 		}
 	}

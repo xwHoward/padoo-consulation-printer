@@ -120,6 +120,7 @@ interface ReservationRecord extends BaseRecord {
   startTime: string; // HH:MM
   endTime: string; // HH:MM
   isClockIn?: boolean; // 点钟标记
+  status: "active" | "cancelled"; // 状态
 }
 
 // interface ConsultationRecord {
@@ -220,6 +221,7 @@ interface Project extends BaseRecord {
   isEssentialOilOnly?: boolean;
   status: ItemStatus;
   needEssentialOil?: boolean;
+  commission: number;
 }
 
 interface Room extends BaseRecord {

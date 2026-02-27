@@ -323,7 +323,7 @@ Page({
 	async prepareRotationList(today: string) {
 		const todayRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
 		const activeRecords = todayRecords.filter(r => !r.isVoided);
-		const reservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today });
+		const reservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today }).then(reservations => reservations.filter(r => r.status !== 'cancelled'));
 
 		const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
 		const activeStaff = this.data.activeStaffList;
@@ -500,7 +500,7 @@ Page({
 
 	// 点击排钟项目操作
 	onBlockClick(e: WechatMiniprogram.CustomEvent) {
-		const { id: _id, reservation, settled, inprogress } = e.currentTarget.dataset;
+		const { id: _id, reservation, settled, inprogress } = e.detail;
 
 		let itemList: string[];
 
@@ -601,12 +601,18 @@ Page({
 				return;
 			}
 
+			if (record.status === 'cancelled') {
+				wx.showToast({ title: '该预约已取消', icon: 'none' });
+				this.setData({ loading: false });
+				return;
+			}
+
 			const reservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, {
 				date: record.date,
 				customerName: record.customerName,
 				startTime: record.startTime,
 				project: record.project
-			});
+			}).then(reservations => reservations.filter(r => r.status !== 'cancelled'));
 
 			// 推送到企业微信
 			await this.sendArrivalNotification(reservations);
@@ -769,6 +775,11 @@ ${changes.join('\n')}
 		try {
 			const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, _id);
 			if (record) {
+				if (record.status === 'cancelled') {
+					wx.showToast({ title: '该预约已取消，无法编辑', icon: 'none' });
+					this.setData({ loading: false });
+					return;
+				}
 				const selectedTechnicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }> = [];
 				if (record.technicianId && record.technicianName) {
 					const staff = this.data.staffAvailability.find(s => s._id === record.technicianId);
@@ -1143,7 +1154,8 @@ ${changes.join('\n')}
 					technicianName: firstTech?.name || '',
 					startTime: reserveForm.startTime,
 					endTime: endTime,
-					isClockIn: firstTech?.isClockIn || false
+					isClockIn: firstTech?.isClockIn || false,
+					status: "active"
 				};
 				const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
 				if (success) {
@@ -1207,7 +1219,9 @@ ${changes.join('\n')}
 					technicianId: '',
 					technicianName: '',
 					startTime: reserveForm.startTime,
-					endTime: endTime
+					endTime: endTime,
+					isClockIn: false,
+					status: "active"
 				};
 				const success = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
 				if (success) {
@@ -1233,7 +1247,8 @@ ${changes.join('\n')}
 					technicianName: tech.name,
 					startTime: reserveForm.startTime,
 					endTime: endTime,
-					isClockIn: tech.isClockIn || false
+					isClockIn: tech.isClockIn || false,
+					status: "active"
 				};
 				const insertResult = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
 				if (insertResult) {
@@ -1316,7 +1331,10 @@ ${changes.join('\n')}
 							wx.showToast({ title: '预约不存在', icon: 'none' });
 							return;
 						}
-						const success = await cloudDb.deleteById(Collections.RESERVATIONS, _id);
+						const success = await cloudDb.updateById(Collections.RESERVATIONS, _id, {
+							status: 'cancelled',
+							cancelledAt: new Date().toISOString()
+						});
 
 						if (!success) {
 							wx.showToast({ title: '取消失败', icon: 'none' });

@@ -52,7 +52,7 @@ exports.main = async (event, context) => {
             const now = new Date()
             const newUser = {
                 openId: OPENID,
-                role: 'viewer',
+                role: 'technician',
                 status: 'active',
                 createdAt: now.toISOString(),
                 updatedAt: now.toISOString(),

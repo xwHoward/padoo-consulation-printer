@@ -207,11 +207,9 @@
 .tech-card {
   min-height: 240px;
   width: 180px;
-  // flex: auto;
   background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(10rpx);
   border-radius: 8px;
-  // padding: 12px 8px;
   box-shadow: 0 2px 11px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   box-sizing: border-box;
@@ -220,6 +218,11 @@
   &:hover {
     background: rgba(255, 255, 255, 0.2);
     transform: translateY(-2px);
+  }
+
+  &.off_duty {
+    background: rgba(0, 0, 0, 0.95);
+    opacity: 0.7;
   }
 }
 
@@ -257,6 +260,10 @@
 
 .status-badge.busy {
   background: @primary-color;
+}
+
+.status-badge.off_duty {
+  background: #757575;
 }
 
 /* 技师信息 */
@@ -298,9 +305,18 @@
   font-size: 12px;
   color: rgba(255, 255, 255, 0.7);
   margin-bottom: 1px;
+
   &.available {
     color: #64dd17;
     font-weight: bold;
+  }
+
+  &.busy {
+    color: @primary-color;
+  }
+
+  &.off_duty {
+    color: #9e9e9e;
   }
 }
 
