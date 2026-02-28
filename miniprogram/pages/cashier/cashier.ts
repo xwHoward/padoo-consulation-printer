@@ -37,6 +37,7 @@ Page({
 		selectedDate: '',
 		rooms: [] as Room[],
 		rotationList: [] as RotationItem[],
+		timelineRefreshTrigger: 0,
 		// 日期选择器状态
 		dateSelector: {
 			selectedDate: '',
@@ -306,7 +307,8 @@ Page({
 			const rotationList = await this.prepareRotationList(today);
 
 			this.setData({
-				rotationList
+				rotationList,
+				timelineRefreshTrigger: this.data.timelineRefreshTrigger + 1
 			});
 		} catch (error) {
 			console.error('刷新排钟失败:', error);
@@ -319,32 +321,34 @@ Page({
 		}
 	},
 
-	// 准备轮牌列表数据（提取的辅助方法）
 	async prepareRotationList(today: string) {
+		const rotationData = await app.getRotationQueue(today);
+
+		if (!rotationData || !rotationData.staffList || rotationData.staffList.length === 0) {
+			return [];
+		}
+
 		const todayRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
 		const activeRecords = todayRecords.filter(r => !r.isVoided);
 		const reservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today }).then(reservations => reservations.filter(r => r.status !== 'cancelled'));
 
 		const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
-		const activeStaff = this.data.activeStaffList;
 
-		const rotationList: RotationItem[] = activeStaff.map(staff => {
-			const schedule = allSchedules.find(s => s.date === today && s.staffId === staff._id);
+		const rotationList: RotationItem[] = rotationData.staffList.map((staffData, index) => {
+			const schedule = allSchedules.find(s => s.date === today && s.staffId === staffData.staffId);
 			const shift = schedule ? schedule.shift : DEFAULT_SHIFT;
 
-			const availableSlots = this.calculateAvailableSlots(staff.name, activeRecords, reservations, today, shift);
+			const availableSlots = this.calculateAvailableSlots(staffData.name, activeRecords, reservations, today, shift);
 
 			return {
-				_id: staff._id,
-				name: staff.name,
+				_id: staffData.staffId,
+				name: staffData.name,
 				shift: shift as ShiftType,
 				shiftLabel: shift === 'morning' ? '早班' : '晚班',
 				availableSlots,
-				weight: staff.weight
+				weight: rotationData.staffList.length - index
 			};
 		}).filter(item => item.shift === 'morning' || item.shift === 'evening');
-
-		rotationList.sort((a, b) => -a.weight + b.weight);
 
 		return rotationList;
 	},
@@ -443,20 +447,42 @@ Page({
 		return availableSlots.join(', ');
 	},
 
-	// 调整轮牌顺序
-	moveRotation(e: WechatMiniprogram.TouchEvent) {
+	async moveRotation(e: WechatMiniprogram.TouchEvent) {
 		const { index, direction } = e.currentTarget.dataset;
 		const list = [...this.data.rotationList];
 
+		let fromIndex = index;
+		let toIndex = index;
+
 		if (direction === 'up' && index > 0) {
-			[list[index - 1], list[index]] = [list[index], list[index - 1]];
+			toIndex = index - 1;
 		} else if (direction === 'down' && index < list.length - 1) {
-			[list[index + 1], list[index]] = [list[index], list[index + 1]];
+			toIndex = index + 1;
 		} else {
 			return;
 		}
 
-		this.setData({ rotationList: list });
+		this.setData({ loading: true, loadingText: '调整中...' });
+
+		try {
+			const result = await app.adjustRotationPosition(this.data.selectedDate, fromIndex, toIndex);
+
+			if (result) {
+				[list[fromIndex], list[toIndex]] = [list[toIndex], list[fromIndex]];
+				this.setData({ rotationList: list });
+
+				await app.loadGlobalData();
+
+				wx.showToast({ title: '调整成功', icon: 'success' });
+			} else {
+				wx.showToast({ title: '调整失败', icon: 'none' });
+			}
+		} catch (error) {
+			console.error('调整轮牌位置失败:', error);
+			wx.showToast({ title: '调整失败', icon: 'none' });
+		} finally {
+			this.setData({ loading: false });
+		}
 	},
 
 	// 预约相关
@@ -1103,47 +1129,6 @@ ${changes.join('\n')}
 				const firstTech = reserveForm.selectedTechnicians[0];
 				const originalReservation = this.data.originalReservation;
 
-				// 检查技师是否变更
-				const newTechId = firstTech?._id || '';
-				const oldTechId = originalReservation?.technicianId || '';
-				const staffChanged = newTechId !== oldTechId;
-
-				// 情况1：从有技师改为技师待定（原技师权重 +1）
-				if (staffChanged && oldTechId && !newTechId) {
-					if (!originalReservation?.isClockIn) {
-						try {
-							await wx.cloud.callFunction({
-								name: 'updateStaffWeight',
-								data: {
-									action: 'cancelReservation',
-									staffId: oldTechId,
-									isClockIn: originalReservation?.isClockIn || false
-								}
-							});
-						} catch (error) {
-							console.error('更新原技师权重失败:', error);
-						}
-					}
-				}
-				// 情况2：技师变更（原技师权重 +1，新技师权重 -1）
-				else if (staffChanged && oldTechId && newTechId) {
-					// 原技师被取消：权重 +1（非点钟）
-					if (!originalReservation?.isClockIn) {
-						try {
-							await wx.cloud.callFunction({
-								name: 'updateStaffWeight',
-								data: {
-									action: 'cancelReservation',
-									staffId: oldTechId,
-									isClockIn: originalReservation?.isClockIn || false
-								}
-							});
-						} catch (error) {
-							console.error('更新原技师权重失败:', error);
-						}
-					}
-				}
-
 				const record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'> = {
 					date: reserveForm.date,
 					customerName: reserveForm.customerName || '',
@@ -1159,42 +1144,6 @@ ${changes.join('\n')}
 				};
 				const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
 				if (success) {
-					// 情况2：技师变更（新技师权重 -1）
-					if (staffChanged && oldTechId && newTechId && firstTech && !firstTech.isClockIn) {
-						try {
-							await wx.cloud.callFunction({
-								name: 'updateStaffWeight',
-								data: {
-									action: 'reservation',
-									staffId: newTechId,
-									isClockIn: firstTech.isClockIn || false
-								}
-							});
-						} catch (error) {
-							console.error('更新新技师权重失败:', error);
-						}
-					}
-					// 情况3：从技师待定改为有技师（新技师权重 -1）
-					else if (staffChanged && !oldTechId && newTechId && firstTech && !firstTech.isClockIn) {
-						try {
-							await wx.cloud.callFunction({
-								name: 'updateStaffWeight',
-								data: {
-									action: 'reservation',
-									staffId: newTechId,
-									isClockIn: firstTech.isClockIn || false
-								}
-							});
-						} catch (error) {
-							console.error('更新新技师权重失败:', error);
-						}
-					}
-
-					// 刷新全局数据中的员工信息
-					if (staffChanged) {
-						await app.loadGlobalData();
-					}
-
 					// 推送预约变更通知
 					await this.sendReservationModificationNotification(originalReservation, record);
 					wx.showToast({ title: '更新成功', icon: 'success' });
@@ -1253,20 +1202,6 @@ ${changes.join('\n')}
 				const insertResult = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
 				if (insertResult) {
 					successCount++;
-					// 更新员工权重（非点钟）
-					if (!tech.isClockIn) {
-						try {
-							await wx.cloud.callFunction({
-								name: 'updateStaffWeight',
-								data: {
-									action: 'reservation',
-									staffId: tech._id,
-									isClockIn: tech.isClockIn || false
-								}
-							});
-						} catch (error) {
-						}
-					}
 				}
 			}
 
@@ -1340,24 +1275,6 @@ ${changes.join('\n')}
 							wx.showToast({ title: '取消失败', icon: 'none' });
 							return;
 						}
-
-						// 更新员工权重（非点钟）
-						if (reservation.technicianId && !reservation.isClockIn) {
-							try {
-								await wx.cloud.callFunction({
-									name: 'updateStaffWeight',
-									data: {
-										action: 'cancelReservation',
-										staffId: reservation.technicianId,
-										isClockIn: reservation.isClockIn || false
-									}
-								});
-							} catch (error) {
-							}
-						}
-
-						// 刷新全局数据中的员工信息
-						await app.loadGlobalData();
 
 						await this.loadTimelineData();
 

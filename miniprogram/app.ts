@@ -107,5 +107,90 @@ App<IAppOption<AppGlobalData>>({
 			await this.loadGlobalData();
 		}
 		return this.globalData.staffs.filter(s => s.status === 'active');
+	},
+
+	async getRotationQueue(date: string) {
+		try {
+			const result = await wx.cloud.callFunction({
+				name: 'manageRotation',
+				data: {
+					action: 'getQueue',
+					date: date
+				}
+			});
+
+			if (result.result && typeof result.result === 'object') {
+				const rotationData = result.result.data;
+				return rotationData as RotationQueue;
+			}
+			return null;
+		} catch (error) {
+			console.error('获取轮牌失败:', error);
+			return null;
+		}
+	},
+
+	async getNextTechnician(date: string) {
+		try {
+			const result = await wx.cloud.callFunction({
+				name: 'manageRotation',
+				data: {
+					action: 'getNext',
+					date: date
+				}
+			});
+
+			if (result.result && typeof result.result === 'object') {
+				return result.result.data;
+			}
+			return null;
+		} catch (error) {
+			console.error('获取下一位技师失败:', error);
+			return null;
+		}
+	},
+
+	async serveCustomer(date: string, staffId: string, isClockIn: boolean) {
+		try {
+			const result = await wx.cloud.callFunction({
+				name: 'manageRotation',
+				data: {
+					action: 'serveCustomer',
+					date: date,
+					staffId: staffId,
+					isClockIn: isClockIn
+				}
+			});
+
+			if (result.result && typeof result.result === 'object') {
+				return result.result.data;
+			}
+			return null;
+		} catch (error) {
+			console.error('更新轮牌失败:', error);
+			return null;
+		}
+	},
+
+	async adjustRotationPosition(date: string, fromIndex: number, toIndex: number) {
+		try {
+			const result = await wx.cloud.callFunction({
+				name: 'manageRotation',
+				data: {
+					action: 'adjustPosition',
+					date: date,
+					fromIndex: fromIndex,
+					toIndex: toIndex
+				}
+			});
+
+			if (result.result && typeof result.result === 'object') {
+				return result.result.data;
+			}
+			return null;
+		} catch (error) {
+			console.error('调整轮牌位置失败:', error);
+			return null;
+		}
 	}
 });

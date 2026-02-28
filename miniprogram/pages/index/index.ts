@@ -727,29 +727,24 @@ Page({
       if (!editId) {
         await this.deleteReservations();
 
-        // 更新员工权重（非点钟）
-        if (!consultation.isClockIn && consultation.technician) {
+        // 更新轮牌系统
+        if (consultation.technician) {
           try {
             const staffList = await app.getActiveStaffs();
             const staff = staffList.find(s => s.name === consultation.technician);
             if (staff) {
-              await wx.cloud.callFunction({
-                name: 'updateStaffWeight',
-                data: {
-                  action: 'consultation',
-                  staffId: staff._id,
-                  isClockIn: consultation.isClockIn || false
-                }
-              });
-              // 刷新全局数据中的员工信息
-              await app.loadGlobalData();
+              await app.serveCustomer(
+                currentDate,
+                staff._id,
+                consultation.isClockIn || false
+              );
 
+              await app.loadGlobalData();
             }
           } catch (error) {
-            console.error('更新员工权重失败:', error);
+            console.error('更新轮牌失败:', error);
           }
         }
-
       }
 
       // 如果顾客有手机号，则自动新增/更新顾客信息

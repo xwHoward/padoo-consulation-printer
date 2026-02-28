@@ -4,7 +4,7 @@ import { hasPagePermission } from '../../utils/permission';
 Page({
 	data: {
 		loading: false,
-		userInfo: null as any,
+		userInfo: null as UserRecord | null,
 		isLoggedIn: false
 	},
 
@@ -95,7 +95,7 @@ Page({
 		}
 	},
 
-	shouldBindStaff(user: any): boolean {
+	shouldBindStaff(user: UserRecord): boolean {
 		return user.role === 'technician' && !user.staffId;
 	},
 
@@ -108,7 +108,7 @@ Page({
 			return;
 		}
 
-		if (user.role === 'technician' && user.staffId) {
+		if (user && user.role === 'technician' && user.staffId) {
 			wx.redirectTo({
 				url: '/pages/profile/profile'
 			});

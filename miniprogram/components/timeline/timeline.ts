@@ -47,6 +47,15 @@ Component({
 			type: String,
 			value: ''
 		},
+		refreshTrigger: {
+			type: Number,
+			value: 0,
+			observer: function(newVal: number) {
+				if (newVal > 0) {
+					this.loadAllStaffTimelineData(this.properties.staffId);
+				}
+			}
+		},
 		readonly: {
 			type: Boolean,
 			value: false

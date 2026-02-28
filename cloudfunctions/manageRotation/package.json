@@ -1,7 +1,7 @@
 {
-  "name": "updateStaffWeight",
+  "name": "manageRotation",
   "version": "1.0.0",
-  "description": "更新员工权重",
+  "description": "Manage staff rotation queue",
   "main": "index.js",
   "dependencies": {
     "wx-server-sdk": "~2.6.3"

@@ -151,21 +151,6 @@ Page({
 				});
 			}
 
-			// 更新员工权重
-			try {
-				await wx.cloud.callFunction({
-					name: 'updateStaffWeight',
-					data: {
-						action: 'schedule',
-						staffId: staffId,
-						shift: shiftType
-					}
-				});
-			} catch (error) { }
-
-			// 刷新全局数据中的员工信息
-			await app.loadGlobalData();
-
 			wx.hideLoading();
 
 			// 更新界面

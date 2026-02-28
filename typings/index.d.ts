@@ -265,6 +265,10 @@ interface IAppOption<T extends Record<string, any> = AppGlobalData> {
   getStaffs: () => Promise<StaffInfo[]>;
   getActiveStaffs: () => Promise<StaffInfo[]>;
   getStaff: (id: string) => Promise<StaffInfo | null>;
+  getRotationQueue: (date: string) => Promise<RotationQueue | null>;
+  serveCustomer: (date: string, staffId: string, isClockIn: boolean) => Promise<void>;
+  adjustRotationPosition: (date: string, fromIndex: number, toIndex: number) => Promise<RotationQueue | null>;
+  getNextTechnician: (date: string) => Promise<RotationItem | null>;
 }
 
 interface StaffAvailability {
@@ -339,6 +343,16 @@ interface RotationItem {
   shiftLabel: string;
   availableSlots?: string; // 可约时段
   weight: number; // 权重
+}
+
+interface RotationQueue extends BaseRecord {
+  staffList: Array<StaffInfo&{
+    lastServedTime?: string; // 上次服务时间
+    orderCount?: number; // 服务次数
+    staffId: string;
+    shift: ShiftType;
+  }>;
+  currentIndex: number;
 }
 
 interface StaffTimeline {

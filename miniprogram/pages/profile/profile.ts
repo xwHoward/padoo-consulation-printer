@@ -255,7 +255,23 @@ Page({
 		this.setData({ loading: true, loadingText: '加载轮牌...' });
 
 		try {
-			const rotationList = await app.getActiveStaffs();
+			const rotationData = await app.getRotationQueue(this.data.selectedDate);
+
+			if (!rotationData || !rotationData.staffList || rotationData.staffList.length === 0) {
+				this.setData({
+					rotationList: [],
+					rotationTodayPosition: 0,
+					loading: false
+				});
+				return;
+			}
+
+			const rotationList: RotationItem[] = rotationData.staffList.map((staffData, index) => ({
+				_id: staffData.staffId,
+				name: staffData.name,
+				shift: staffData.shift as 'morning' | 'evening',
+				weight: rotationData.staffList.length - index
+			}));
 
 			const todayPosition = rotationList.findIndex(s => s._id === this.data.staffId);
 
