@@ -22,7 +22,6 @@ const DefaultConsultationInfo: Add<ConsultationInfo> = {
   couponCode: "",
   extraTime: 0,
   couponPlatform: "meituan",
-  upgradeHimalayanSaltStone: false,
   date: formatDate(new Date()),
   startTime: "",
   endTime: "",
@@ -39,7 +38,6 @@ const DefaultGuestInfo: GuestInfo = {
   isClockIn: false,
   couponCode: "",
   couponPlatform: "meituan",
-  upgradeHimalayanSaltStone: false,
   project: "",
 };
 
@@ -60,7 +58,6 @@ function ensureConsultationInfoCompatibility(data: ConsultationInfo, projects: P
     phone: data.phone || "",
     couponCode: data.couponCode || "",
     couponPlatform: data.couponPlatform || "",
-    upgradeHimalayanSaltStone: data.upgradeHimalayanSaltStone || false,
     date: data.date || formatDate(new Date()),
     startTime: data.startTime || "",
     endTime: data.endTime || "",
@@ -255,7 +252,6 @@ Page({
           isClockIn: consultationInfo.isClockIn,
           couponCode: consultationInfo.couponCode,
           couponPlatform: consultationInfo.couponPlatform,
-          upgradeHimalayanSaltStone: consultationInfo.upgradeHimalayanSaltStone,
           project: consultationInfo.project,
         },
         guest2Info: { ...DefaultGuestInfo, selectedParts: {} },
@@ -278,7 +274,6 @@ Page({
         'consultationInfo.isClockIn': guest1Info.isClockIn,
         'consultationInfo.couponCode': guest1Info.couponCode,
         'consultationInfo.couponPlatform': guest1Info.couponPlatform,
-        'consultationInfo.upgradeHimalayanSaltStone': guest1Info.upgradeHimalayanSaltStone,
         'consultationInfo.project': guest1Info.project,
         matchedCustomer: null,
         matchedCustomerApplied: false
@@ -444,18 +439,6 @@ Page({
     } else {
       this.setData({ "consultationInfo.essentialOil": oil });
     }
-  },
-
-  // 升级选项选择
-  onUpgradeSelect() {
-    const context: GuestContext = {
-      isDualMode: this.data.isDualMode,
-      activeGuest: this.data.activeGuest,
-      guest1Info: this.data.guest1Info,
-      guest2Info: this.data.guest2Info,
-      consultationInfo: this.data.consultationInfo
-    };
-    this.setData(toggleGuestBooleanField(context, 'upgradeHimalayanSaltStone'));
   },
 
   // 加强部位选择（使用字段map控制）
@@ -1256,7 +1239,6 @@ Page({
       isClockIn: guest1Info.isClockIn,
       couponCode: guest1Info.couponCode,
       couponPlatform: guest1Info.couponPlatform,
-      upgradeHimalayanSaltStone: guest1Info.upgradeHimalayanSaltStone,
     };
     const info2: Add<ConsultationInfo> = {
       ...consultationInfo,
@@ -1271,7 +1253,6 @@ Page({
       isClockIn: guest2Info.isClockIn,
       couponCode: guest2Info.couponCode,
       couponPlatform: guest2Info.couponPlatform,
-      upgradeHimalayanSaltStone: guest2Info.upgradeHimalayanSaltStone,
     };
 
     let actualStartTime: Date;

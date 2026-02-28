@@ -75,19 +75,6 @@
       <view class="section-title">专属精油</view>
       <image class="exclusive-oil-image" src="/assets/essential-oil.jpg" mode="aspectFill" />
     </view>
-    <!-- 升级选项 -->
-    <view class="section">
-      <view class="section-title">升级选项</view>
-      <view class="checkbox-group">
-        <label class="checkbox-item upgrade-option {{(isDualMode ? (activeGuest === 1 ? guest1Info.upgradeHimalayanSaltStone : guest2Info.upgradeHimalayanSaltStone) : consultationInfo.upgradeHimalayanSaltStone) ? 'selected' : ''}}" bindtap="onUpgradeSelect">
-          <view class="upgrade-checkbox"></view>
-          <image class="upgrade-bg" src="/assets/saltstone.jpg" mode="aspectFill" />
-          <image class="upgrade-bg-qr" src="/assets/qr.jpg" mode="aspectFill" />
-          <view class="upgrade-mask"></view>
-          <view class="upgrade-gradient-mask"></view>
-        </label>
-      </view>
-    </view>
     <!-- 免费停车区域 -->
     <view class="section">
       <view class="section-title">免费停车</view>

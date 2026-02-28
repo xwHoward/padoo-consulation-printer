@@ -62,10 +62,6 @@ export class PrintContentBuilder {
       content += "无";
     }
 
-    if (info.upgradeHimalayanSaltStone) {
-      content += `\n升级: 冬季喜马拉雅热油盐石`;
-    }
-
     if (info.remarks) {
       content += `\n备注: ${info.remarks}`;
     }
@@ -146,10 +142,6 @@ export class PrintContentBuilder {
       });
     } else {
       formattedInfo += "无";
-    }
-
-    if (info.upgradeHimalayanSaltStone) {
-      formattedInfo += `\n升级: 冬季喜马拉雅热油盐石`;
     }
 
     if (info.remarks) {

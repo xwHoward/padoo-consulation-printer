@@ -50,7 +50,6 @@ interface ConsultationInfo extends BaseRecord {
   extraTime: number;
   couponCode: string;
   couponPlatform: PaymentMethod;
-  upgradeHimalayanSaltStone: boolean;
   date: string; // YYYY-MM-DD
   startTime: string; // 报钟时间（格式 HH:MM）
   endTime: string; // 结束时间（格式 HH:MM）
@@ -68,7 +67,6 @@ interface GuestInfo {
   isClockIn: boolean;
   couponCode: string;
   couponPlatform: PaymentMethod;
-  upgradeHimalayanSaltStone: boolean;
   project: string;
 }
 
