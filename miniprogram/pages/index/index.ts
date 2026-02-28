@@ -779,6 +779,8 @@ Page({
 
   // 加载编辑数据
   async loadEditData(editId: string) {
+    this.setData({ loading: true, loadingText: '加载中...' });
+
     try {
       const foundRecord = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, editId) as ConsultationRecord | null;
       if (foundRecord) {
@@ -824,11 +826,15 @@ Page({
         title: "加载失败",
         icon: "error",
       });
+    } finally {
+      this.setData({ loading: false });
     }
   },
 
   // 加载预约数据
   async loadReservationData(reserveIdOrIds: string) {
+    this.setData({ loading: true, loadingText: '加载中...' });
+
     try {
       const reserveIds = reserveIdOrIds.includes(',') ? reserveIdOrIds.split(',') : [reserveIdOrIds];
       const records = await Promise.all(
@@ -898,6 +904,8 @@ Page({
       }
     } catch (error) {
       console.error("加载预约数据失败:", error);
+    } finally {
+      this.setData({ loading: false });
     }
   },
 

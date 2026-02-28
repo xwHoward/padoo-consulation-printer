@@ -564,14 +564,16 @@ Page({
 
 	// 提前下钟操作（使用 wx.showModal）
 	async handleEarlyFinish(recordId: string) {
+		this.setData({ loading: true, loadingText: '处理中...' });
+
 		try {
-			// 先获取记录信息
 			const record = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, recordId);
 			if (!record) {
 				wx.showToast({
 					title: '记录不存在',
 					icon: 'none'
 				});
+				this.setData({ loading: false });
 				return;
 			}
 
@@ -583,6 +585,7 @@ Page({
 			});
 
 			if (!modalRes.confirm) {
+				this.setData({ loading: false });
 				return;
 			}
 
@@ -611,6 +614,8 @@ Page({
 				title: '操作失败',
 				icon: 'none'
 			});
+		} finally {
+			this.setData({ loading: false });
 		}
 	},
 
@@ -732,17 +737,14 @@ ${customerInfo} 已到店
 			if (original.project !== updated.project) {
 				changes.push(`💆 项目：${original.project} → ${updated.project}`);
 			}
-			if (original.technicianId !== updated.technicianId || original.technicianName !== updated.technicianName) {
-				changes.push(`👨‍💼 技师：${original.technicianName} → ${updated.technicianName}`);
+			if (original.technicianId !== updated.technicianId || original.technicianName !== updated.technicianName || (original.isClockIn || false) !== (updated.isClockIn || false)) {
+				changes.push(`👨‍💼 技师：${original.technicianName}${original.isClockIn ? '[点]' : ''} → ${updated.technicianName}${updated.isClockIn ? '[点]' : ''}`);
 			}
 			if (original.customerName !== updated.customerName) {
 				changes.push(`👤 顾客：${original.customerName} → ${updated.customerName}`);
 			}
 			if (original.phone !== updated.phone) {
 				changes.push(`📱 电话：${original.phone} → ${updated.phone}`);
-			}
-			if ((original.isClockIn || false) !== (updated.isClockIn || false)) {
-				changes.push(`🎯 类型：${original.isClockIn ? '点钟' : '排钟'} → ${updated.isClockIn ? '点钟' : '排钟'}`);
 			}
 
 			// 如果没有变更，不推送
@@ -762,15 +764,9 @@ ${customerInfo} 已到店
 				}
 			}
 			const technicianName = updated.technicianName || '待定';
-
-			// 预约类型
-			const reservationType = updated.isClockIn ? '🎯 点钟' : '🔄 排钟';
-
 			const message = `【📝 预约变更通知】
 
 顾客：${customerInfo}
-日期：${updated.date}
-类型：${reservationType}
 ${changes.join('\n')}
 
 请${technicianName}${technicianMention || technicianName}知悉，做好准备`;
@@ -1316,6 +1312,8 @@ ${changes.join('\n')}
 
 	// 打开结算弹窗
 	async openSettlement(_id: string) {
+		this.setData({ loading: true, loadingText: '加载中...' });
+
 		try {
 			const today = this.data.selectedDate || getCurrentDate();
 			const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
@@ -1323,10 +1321,13 @@ ${changes.join('\n')}
 
 			if (!record) {
 				wx.showToast({ title: '未找到该单据', icon: 'none' });
+				this.setData({ loading: false });
 				return;
 			}
 
 			if (record.settlement) {
+				this.setData({ loading: false });
+
 				wx.showModal({
 					title: '已结算',
 					content: '该单据已经结算，是否重新结算？',
@@ -1342,6 +1343,7 @@ ${changes.join('\n')}
 		} catch (error) {
 			console.error('打开结算失败:', error);
 			wx.showToast({ title: '加载失败', icon: 'none' });
+			this.setData({ loading: false });
 		}
 	},
 
@@ -1581,16 +1583,16 @@ ${changes.join('\n')}
 	// 获取预约类型文本
 	getReservationTypeText(technicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }>): string {
 		if (technicians.length === 0) {
-			return '🔄 排钟';
+			return '排钟';
 		}
 		const hasClockIn = technicians.some(t => t.isClockIn);
 		const hasNonClockIn = technicians.some(t => !t.isClockIn);
 		if (hasClockIn && hasNonClockIn) {
-			return '🎯 混合（点钟+排钟）';
+			return '混合（点钟+排钟）';
 		} else if (hasClockIn) {
-			return '🎯 点钟';
+			return '点钟';
 		} else {
-			return '🔄 排钟';
+			return '排钟';
 		}
 	},
 
