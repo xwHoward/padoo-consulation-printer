@@ -62,7 +62,6 @@ exports.main = async (event, context) => {
       score: bestScore
     }
   } catch (error) {
-    console.error('匹配顾客失败:', error)
     return {
       code: -1,
       message: '匹配失败: ' + error.message

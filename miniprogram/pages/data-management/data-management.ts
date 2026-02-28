@@ -43,7 +43,6 @@ Page({
 				this.setData({ essentialOils: oils, loading: false });
 			}
 		} catch (error) {
-			console.error('加载数据失败:', error);
 			this.setData({ loading: false });
 			wx.showToast({
 				title: '加载失败',
@@ -208,7 +207,6 @@ Page({
 			this.closeModal();
 			await this.loadData();
 		} catch (error) {
-			console.error('保存失败:', error);
 			wx.showToast({ title: '保存失败', icon: 'none' });
 		}
 	},
@@ -245,7 +243,6 @@ Page({
 						wx.showToast({ title: '删除成功', icon: 'success' });
 						await this.loadData();
 					} catch (error) {
-						console.error('删除失败:', error);
 						wx.showToast({ title: '删除失败', icon: 'none' });
 					}
 					this.setData({ loading: false });

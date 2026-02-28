@@ -45,7 +45,6 @@ Page({
 				}, 1500);
 			}
 		} catch (error) {
-			console.error('自动登录失败:', error);
 		}
 	},
 
@@ -86,7 +85,6 @@ Page({
 				}, 1500);
 			}
 		} catch (error) {
-			console.error('登录失败:', error);
 			this.setData({ loading: false });
 			wx.showToast({
 				title: '登录失败，请重试',
@@ -144,7 +142,6 @@ Page({
 					icon: 'success'
 				});
 			}).catch((error) => {
-				console.error('授权手机号失败:', error);
 				this.setData({ loading: false });
 				wx.showToast({
 					title: '授权失败',

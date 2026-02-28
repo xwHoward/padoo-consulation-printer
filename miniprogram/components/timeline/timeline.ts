@@ -202,7 +202,6 @@ Component({
 				});
 
 			} catch (error) {
-				console.error('加载所有员工排钟数据失败:', error);
 				this.triggerEvent('error', { error });
 			} finally {
 				this.setData({ loading: false });

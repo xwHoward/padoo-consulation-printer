@@ -47,13 +47,11 @@ Page({
 			const startDate = dates[0].date;
 			const endDate = dates[dates.length - 1].date;
 
-			console.log('初始化排班表，日期范围:', { startDate, endDate });
 
 			const allSchedules = await (cloudDb.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
 				return item.date >= startDate && item.date <= endDate;
 			}));
 
-			console.log('查询到的排班记录数量:', allSchedules.length);
 
 			// 构造渲染用的 Map
 			const scheduleMap: Record<string, Record<string, { label: string; type: ShiftType; index: number }>> = {};
@@ -124,7 +122,6 @@ Page({
 			const shiftType = SHIFT_TYPES[index];
 			const today = this.data.today;
 
-			console.log('排班变更参数:', { staffId, date, shiftType, index });
 
 			// 检查是否为今日之前的日期
 			if (date < today) {
@@ -168,7 +165,6 @@ Page({
 				icon: 'success',
 			});
 		} catch (error) {
-			console.error('排班变更失败:', error);
 			wx.hideLoading();
 			wx.showToast({
 				title: '更新失败',
@@ -191,7 +187,6 @@ Page({
 			});
 			this.setData({ staffList, loading: false });
 		} catch (error) {
-			console.error('加载员工列表失败:', error);
 			this.setData({ loading: false });
 			wx.showToast({
 				title: '加载失败',
@@ -234,7 +229,6 @@ Page({
 				this.setData({ loading: false });
 			}
 		} catch (error) {
-			console.error('编辑员工失败:', error);
 			this.setData({ loading: false });
 			wx.showToast({
 				title: '加载失败',
@@ -267,7 +261,6 @@ Page({
 				this.setData({ loading: false });
 			}
 		} catch (error) {
-			console.error('切换员工状态失败:', error);
 			this.setData({ loading: false });
 			wx.showToast({
 				title: '操作失败',
@@ -303,14 +296,12 @@ Page({
 							wx.showToast({ title: '已删除', icon: 'success' });
 						} catch (error) {
 							this.setData({ loading: false });
-							console.error('删除员工失败:', error);
 							wx.showToast({ title: '删除失败', icon: 'none' });
 						}
 					}
 				},
 			});
 		} catch (error) {
-			console.error('删除员工失败:', error);
 			this.setData({ loading: false });
 			wx.showToast({
 				title: '操作失败',
@@ -351,7 +342,6 @@ Page({
 
 	// 上传照片到云端
 	async uploadAvatar(filePath: string) {
-		console.log('上传照片到云端:', filePath);
 		try {
 			wx.showLoading({ title: '上传中...' });
 
@@ -361,7 +351,6 @@ Page({
 				cloudPath,
 				filePath
 			});
-			console.log('上传照片到云端成功:', uploadRes);
 			const fileID = uploadRes.fileID;
 			this.setData({ inputAvatar: fileID });
 			wx.hideLoading();
@@ -370,7 +359,6 @@ Page({
 				icon: 'success'
 			});
 		} catch (error) {
-			console.error('上传照片失败:', error);
 			wx.hideLoading();
 			wx.showToast({
 				title: '上传失败',
@@ -461,7 +449,6 @@ Page({
 			this.onCloseModal();
 			await this.loadStaffList();
 		} catch (error) {
-			console.error('保存员工失败:', error);
 			wx.hideLoading();
 			wx.showToast({
 				title: '保存失败',

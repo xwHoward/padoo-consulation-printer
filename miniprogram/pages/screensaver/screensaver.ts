@@ -67,18 +67,15 @@ Page({
       if (!result.result || typeof result.result !== 'object') {
         throw new Error('获取技师信息失败');
       }
-      console.log('获取到的技师信息:', result.result.data);
       if (result.result.code === 0) {
         this.setData({
           techList: result.result.data,
           loading: false
         });
       } else {
-        console.error('获取技师信息失败:', result.result.message);
         this.setData({ loading: false });
       }
     } catch (error) {
-      console.error('加载技师信息失败:', error);
       this.setData({ loading: false });
     }
   },

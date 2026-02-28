@@ -101,7 +101,6 @@ Page({
 			const staff = await cloudDb.findById<StaffInfo>(Collections.STAFF, this.data.staffId);
 			this.setData({ staffInfo: staff });
 		} catch (error) {
-			console.error('加载员工信息失败:', error);
 		}
 	},
 
@@ -155,7 +154,6 @@ Page({
 
 			this.setData({ rooms });
 		} catch (error) {
-			console.error('加载数据失败:', error);
 			wx.showToast({
 				title: '加载失败',
 				icon: 'none'
@@ -233,7 +231,6 @@ Page({
 				}
 			});
 		} catch (error) {
-			console.error('加载业绩数据失败:', error);
 			wx.showToast({
 				title: '加载失败',
 				icon: 'none'
@@ -272,7 +269,6 @@ Page({
 				loading: false
 			});
 		} catch (error) {
-			console.error('加载轮牌数据失败:', error);
 			this.setData({ loading: false });
 			wx.showToast({
 				title: '加载失败',
@@ -287,8 +283,4 @@ Page({
 		this.setData({ selectedDate: date, isToday });
 		this.loadPerformanceData();
 	},
-
-	onBlockClick(e: WechatMiniprogram.CustomEvent) {
-		console.log('Block clicked:', e.currentTarget.dataset);
-	}
 });

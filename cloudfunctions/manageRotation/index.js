@@ -28,7 +28,6 @@ exports.main = async (event, context) => {
                 }
         }
     } catch (error) {
-        console.error('轮牌管理失败:', error)
         return {
             code: -1,
             message: '操作失败: ' + error.message

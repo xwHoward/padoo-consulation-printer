@@ -43,14 +43,12 @@ exports.main = async (event, context) => {
                 data: response
             }
         } else {
-            console.error('企业微信返回错误:', response)
             return {
                 code: response.errcode || -1,
                 message: response.errmsg || '发送失败'
             }
         }
     } catch (error) {
-        console.error('发送企业微信消息失败:', error)
         return {
             code: -1,
             message: '发送失败: ' + error.message

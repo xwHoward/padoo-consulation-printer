@@ -21,7 +21,6 @@ App<IAppOption<AppGlobalData>>({
 			this.globalData.currentUser = user;
 			this.globalData.token = authManager.getToken();
 		} catch (error) {
-			console.error('自动登录失败:', error);
 		}
 	},
 
@@ -58,7 +57,6 @@ App<IAppOption<AppGlobalData>>({
 				this.globalData.staffs = (staff || []) as StaffInfo[];
 				this.globalData.isDataLoaded = true;
 			} catch (error) {
-				console.error('加载全局数据失败:', error);
 			} finally {
 				this.globalData.loadPromise = null;
 			}
@@ -125,7 +123,6 @@ App<IAppOption<AppGlobalData>>({
 			}
 			return null;
 		} catch (error) {
-			console.error('获取轮牌失败:', error);
 			return null;
 		}
 	},
@@ -145,7 +142,6 @@ App<IAppOption<AppGlobalData>>({
 			}
 			return null;
 		} catch (error) {
-			console.error('获取下一位技师失败:', error);
 			return null;
 		}
 	},
@@ -167,7 +163,6 @@ App<IAppOption<AppGlobalData>>({
 			}
 			return null;
 		} catch (error) {
-			console.error('更新轮牌失败:', error);
 			return null;
 		}
 	},
@@ -189,7 +184,6 @@ App<IAppOption<AppGlobalData>>({
 			}
 			return null;
 		} catch (error) {
-			console.error('调整轮牌位置失败:', error);
 			return null;
 		}
 	}

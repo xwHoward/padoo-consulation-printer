@@ -19,7 +19,6 @@ Component({
 				const projectNames = normalProjects.map((p) => p.name);
 				this.setData({projects: projectNames});
 			} catch (error) {
-				console.error('加载项目失败:', error);
 				this.setData({projects: []});
 			}
 		},

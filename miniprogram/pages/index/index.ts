@@ -64,39 +64,7 @@ function ensureConsultationInfoCompatibility(data: ConsultationInfo, projects: P
   };
 }
 
-type GuestContext = {
-  isDualMode: boolean;
-  activeGuest: 1 | 2;
-  guest1Info: GuestInfo;
-  guest2Info: GuestInfo;
-  consultationInfo: Add<ConsultationInfo>;
-};
 
-
-function updateGuestField(context: GuestContext, fieldName: string, value: any) {
-  if (context.isDualMode) {
-    const guestKey = context.activeGuest === 1 ? 'guest1Info' : 'guest2Info';
-    return {
-      [`${guestKey}.${fieldName}`]: value
-    };
-  }
-  return {
-    [`consultationInfo.${fieldName}`]: value
-  };
-}
-
-function toggleGuestBooleanField(context: GuestContext, fieldName: keyof GuestInfo) {
-  const currentValue = getGuestFieldValue(context, fieldName);
-  return updateGuestField(context, fieldName, !currentValue);
-}
-
-function getGuestFieldValue(context: GuestContext, fieldName: keyof GuestInfo) {
-  if (context.isDualMode) {
-    const guestInfo = context.activeGuest === 1 ? context.guest1Info : context.guest2Info;
-    return (guestInfo)[fieldName];
-  }
-  return (context.consultationInfo)[fieldName];
-}
 
 Page({
   data: {
@@ -210,7 +178,6 @@ Page({
         this.setData({ loadingTechnicians: false });
       }
     } catch (error) {
-      console.error('加载技师列表失败:', error);
       this.setData({ loadingTechnicians: false });
       wx.showToast({
         title: '加载技师列表失败',
@@ -225,7 +192,6 @@ Page({
       const allProjects = await app.getProjects();
       this.setData({ projects: allProjects });
     } catch (error) {
-      console.error('加载项目失败:', error);
       this.setData({ projects: [] });
     }
   },
@@ -526,7 +492,6 @@ Page({
         title: "打印失败",
         icon: "none",
       });
-      console.error("打印失败:", error);
     }
   },
 
@@ -593,7 +558,6 @@ Page({
         this.setData({ currentReservationIds: [] });
       }
     } catch (error) {
-      console.error("删除预约失败:", error);
     }
   },
 
@@ -612,10 +576,8 @@ Page({
       });
       const schedule = schedules.find(s => s.staffId === staff._id);
       if (!schedule) {
-        console.log('未找到排班');
         return 0; // 没有排班，不计算加班
       }
-      console.log('排班:', schedule.shift);
 
 
       const { startTime, endTime } = record;
@@ -627,32 +589,24 @@ Page({
       const [shiftEndHour] = shiftEndTime.split(":").map(Number);
       let totalOvertimeMins = 0;
       if (startHour <= endHour) {
-        console.log('当天内加班');
         if (endHour < 6) {
           // 凌晨加班，使用结束时间计算加班
-          console.log('凌晨加班');
           totalOvertimeMins += endHour * 60 + endMin;
         } else if (startHour < shiftStartHour) {
           // 上班前加班，使用开始时间计算加班
-          console.log('上班前加班');
           totalOvertimeMins += (shiftStartHour - startHour) * 60 - startMin;
         } else if (endHour >= shiftEndHour) {
           // 下班后加班，使用结束时间计算加班
-          console.log('下班后加班');
           totalOvertimeMins += (endHour - shiftEndHour) * 60 + endMin;
         } else {
-          console.log('正常上班');
         }
       } else {
         // 跨天加班，使用结束时间计算加班
-        console.log('跨天加班');
         totalOvertimeMins += (24 - shiftEndHour + endHour) * 60 + endMin;
       }
       // 加班时长必须是30分钟的倍数
-      console.log('加班分钟数:', totalOvertimeMins);
       return Math.floor(totalOvertimeMins / 30);
     } catch (error) {
-      console.error('计算加班时长失败:', error);
       return 0;
     }
   },
@@ -703,7 +657,6 @@ Page({
       this.setData({ loading: false });
 
       if (!result) {
-        console.error("保存咨询单失败");
         return false;
       }
 
@@ -725,7 +678,6 @@ Page({
               await app.loadGlobalData();
             }
           } catch (error) {
-            console.error('更新轮牌失败:', error);
           }
         }
       }
@@ -773,7 +725,6 @@ Page({
         await cloudDb.insert<CustomerRecord>(Collections.CUSTOMERS, newCustomer);
       }
     } catch (error) {
-      console.error('保存顾客信息失败:', error);
     }
   },
 
@@ -814,14 +765,12 @@ Page({
         this.setData(updateData);
         this.loadTechnicianList();
       } else {
-        console.error("未找到要编辑的记录:", editId);
         wx.showToast({
           title: "编辑记录不存在",
           icon: "error",
         });
       }
     } catch (error) {
-      console.error("加载编辑数据失败:", error);
       wx.showToast({
         title: "加载失败",
         icon: "error",
@@ -900,10 +849,8 @@ Page({
         }
         await this.loadTechnicianList();
       } else {
-        console.error("未找到要加载的预约:", reserveIdOrIds);
       }
     } catch (error) {
-      console.error("加载预约数据失败:", error);
     } finally {
       this.setData({ loading: false });
     }
@@ -1079,7 +1026,6 @@ Page({
         });
       }
     } catch (error) {
-      console.error('匹配顾客失败:', error);
       this.setData({
         matchedCustomer: null,
         matchedCustomerApplied: false
@@ -1487,7 +1433,6 @@ ${clockInInfo2}`;
         this.setData({ 'clockInModal.loading': false, clockInSubmitting: false });
       }
     } catch (error) {
-      console.error('推送到企业微信失败:', error);
       wx.showToast({ title: '推送失败，请重试', icon: 'none' });
       this.setData({ 'clockInModal.loading': false, clockInSubmitting: false });
     }
@@ -1511,7 +1456,6 @@ ${clockInInfo2}`;
 
       return false;
     } catch (error) {
-      console.error('调用云函数失败:', error);
       return false;
     }
   }

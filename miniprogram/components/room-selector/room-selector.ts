@@ -24,7 +24,6 @@ Component({
 				const roomNames = normalRooms.map((r: any) => r.name);
 				this.setData({ rooms: roomNames });
 			} catch (error) {
-				console.error('加载房间失败:', error);
 				this.setData({ rooms: [] });
 			}
 		},

@@ -316,7 +316,6 @@ exports.main = async (event) => {
     }
 
   } catch (error) {
-    console.error('云函数执行错误:', error);
     return {
       code: -1,
       message: error.message || '执行失败',

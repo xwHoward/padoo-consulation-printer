@@ -48,17 +48,16 @@ Page({
       const staffList = await app.getActiveStaffs();
       this.setData({ technicianList: staffList });
     } catch (error) {
-      console.error('加载技师列表失败:', error);
     }
   },
 
   async loadCustomerList(resetPage: boolean = true) {
     try {
       if (resetPage) {
-        this.setData({ 
-          loading: true, 
+        this.setData({
+          loading: true,
           currentPage: 1,
-          customerList: [] 
+          customerList: []
         });
       } else {
         this.setData({ loading: true });
@@ -70,11 +69,11 @@ Page({
         Collections.CUSTOMERS,
         (customer) => {
           if (!searchKeyword) return true;
-          
+
           const keyword = searchKeyword.toLowerCase();
           const nameMatch = customer.name ? customer.name.toLowerCase().includes(keyword) : false;
           const phoneMatch = customer.phone ? customer.phone.includes(keyword) : false;
-          
+
           return nameMatch || phoneMatch;
         },
         currentPage,
@@ -84,14 +83,13 @@ Page({
 
       const newList = resetPage ? result.data : [...this.data.customerList, ...result.data];
 
-      this.setData({ 
+      this.setData({
         customerList: newList,
         total: result.total,
         hasMore: result.hasMore,
-        loading: false 
+        loading: false
       });
     } catch (error) {
-      console.error('加载顾客列表失败:', error);
       this.setData({ loading: false });
       wx.showToast({
         title: '加载失败',
@@ -193,7 +191,6 @@ Page({
 
       await this.loadCustomerList();
     } catch (error) {
-      console.error('保存顾客信息失败:', error);
       this.setData({ loading: false });
       wx.showToast({
         title: '保存失败',
@@ -280,7 +277,6 @@ Page({
         loading: false
       });
     } catch (error) {
-      console.error('加载顾客历史失败:', error);
       this.setData({ loading: false });
     }
   },
@@ -308,7 +304,6 @@ Page({
       const activeCards = cards.filter(card => card.status === 'active');
       this.setData({ membershipCards: activeCards, loading: false });
     } catch (error) {
-      console.error('加载会员卡列表失败:', error);
       this.setData({ loading: false });
       wx.showToast({
         title: '加载会员卡失败',
@@ -441,7 +436,6 @@ Page({
         icon: 'success'
       });
     } catch (error) {
-      console.error('开卡失败:', error);
       this.setData({ loading: false });
       wx.showToast({
         title: '开卡失败',

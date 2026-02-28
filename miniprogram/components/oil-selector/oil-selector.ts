@@ -18,7 +18,6 @@ Component({
 				const normalOils = allOils.filter((o) => o.status === 'normal' || !o.status);
 				this.setData({ oils: normalOils });
 			} catch (error) {
-				console.error('加载精油失败:', error);
 				this.setData({ oils: [] });
 			}
 		},

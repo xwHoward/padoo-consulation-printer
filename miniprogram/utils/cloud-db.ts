@@ -27,7 +27,6 @@ class CloudDatabase {
 	private init() {
 		try {
 			if (!wx.cloud) {
-				console.error('[CloudDB] 云开发环境未初始化');
 				return;
 			}
 
@@ -37,16 +36,13 @@ class CloudDatabase {
 					traceUser: true
 				});
 				this.initialized = true;
-				console.log('[CloudDB] 云开发环境初始化成功，环境ID:', this.envId || '默认环境');
 			}
 
 			this.db = wx.cloud.database({
 				env: this.envId || undefined
 			});
 
-			console.log('[CloudDB] 云数据库初始化成功');
 		} catch (error) {
-			console.error('[CloudDB] 云数据库初始化失败:', error);
 		}
 	}
 
@@ -78,18 +74,15 @@ class CloudDatabase {
 			});
 
 			if (!res.result || typeof res.result !== 'object') {
-				console.error(`[CloudDB] 云函数 ${collection} 调用失败:`, res);
 				return [];
 			}
 
 			if (res.result.code === 0) {
 				return res.result.data || [];
 			} else {
-				console.error(`[CloudDB] 云函数获取集合 ${collection} 数据失败:`, res.result.message);
 				return [];
 			}
 		} catch (error) {
-			console.error(`[CloudDB] 获取集合 ${collection} 数据失败:`, error);
 			return [];
 		}
 	}
@@ -105,7 +98,6 @@ class CloudDatabase {
 			if ((error as any).errMsg?.includes('document not found')) {
 				return null;
 			}
-			console.error(`[CloudDB] 查找记录 ${_id} 失败:`, error);
 			return null;
 		}
 	}
@@ -126,7 +118,6 @@ class CloudDatabase {
 			const res = await query.get();
 			return res.data || [];
 		} catch (error) {
-			console.error(`[CloudDB] 查询集合 ${collection} 失败:`, error);
 			return [];
 		}
 	}
@@ -159,7 +150,6 @@ class CloudDatabase {
 
 
 			if (!res._id) {
-				console.error(`[CloudDB] 插入失败，未返回 _id`);
 				return null;
 			}
 
@@ -170,7 +160,6 @@ class CloudDatabase {
 
 			return newRecord;
 		} catch (error) {
-			console.error(`[CloudDB] 插入记录到 ${collection} 失败:`, error);
 			return null;
 		}
 	}
@@ -192,10 +181,8 @@ class CloudDatabase {
 			return res.stats?.updated || 0 > 0;
 		} catch (error) {
 			if ((error as any).errMsg?.includes('document not found')) {
-				console.warn(`[CloudDB] 未找到ID为 ${_id} 的记录`);
 				return false;
 			}
-			console.error(`[CloudDB] 更新记录 ${_id} 失败:`, error);
 			return false;
 		}
 	}
@@ -209,10 +196,8 @@ class CloudDatabase {
 			return true;
 		} catch (error) {
 			if ((error as any).errMsg?.includes('document not found')) {
-				console.warn(`[CloudDB] 未找到ID为 ${_id} 的记录`);
 				return false;
 			}
-			console.error(`[CloudDB] 删除记录 ${_id} 失败:`, error);
 			return false;
 		}
 	}
@@ -265,7 +250,6 @@ class CloudDatabase {
 				hasMore: skip + pageSize < (countRes.total || 0)
 			};
 		} catch (error) {
-			console.error(`[CloudDB] 分页查询集合 ${collection} 失败:`, error);
 			return { data: [], total: 0, hasMore: false };
 		}
 	}
@@ -281,7 +265,6 @@ class CloudDatabase {
 			if (editId) {
 				const existing = await this.findById<T>(Collections.CONSULTATION, editId);
 				if (!existing) {
-					console.error('[CloudDB] 未找到要更新的咨询单:', editId);
 					return null;
 				}
 				await this.updateById<T>(Collections.CONSULTATION, editId, consultation);
@@ -290,7 +273,6 @@ class CloudDatabase {
 				return await this.insert<T>(Collections.CONSULTATION, consultation);
 			}
 		} catch (error) {
-			console.error('[CloudDB] 保存咨询单失败:', error);
 			return null;
 		}
 	}
@@ -311,7 +293,6 @@ class CloudDatabase {
 				.get();
 			return res.data || [];
 		} catch (error) {
-			console.error('[CloudDB] 获取日期咨询单失败:', error);
 			return [];
 		}
 	}

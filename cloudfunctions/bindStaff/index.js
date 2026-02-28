@@ -43,7 +43,6 @@ exports.main = async (event, context) => {
             message: '无效的操作'
         }
     } catch (error) {
-        console.error('操作失败:', error)
         return {
             code: -1,
             message: '操作失败: ' + error.message

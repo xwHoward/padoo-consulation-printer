@@ -37,7 +37,7 @@ Page({
 				throw new Error('响应格式错误');
 			}
 
-			const { code, data, message } = res.result as any;
+			const { code, data } = res.result as any;
 
 			if (code === 0 && data.staffInfo) {
 				this.setData({
@@ -49,7 +49,6 @@ Page({
 				this.setData({ loading: false });
 			}
 		} catch (error) {
-			console.error('检查绑定状态失败:', error);
 			this.setData({ loading: false });
 		}
 	},
@@ -118,7 +117,6 @@ Page({
 				});
 			}
 		} catch (error) {
-			console.error('绑定失败:', error);
 			this.setData({ loading: false });
 			wx.showToast({
 				title: '绑定失败，请重试',
@@ -179,7 +177,6 @@ Page({
 				});
 			}
 		} catch (error) {
-			console.error('解绑失败:', error);
 			this.setData({ loading: false, unbinding: false });
 			wx.showToast({
 				title: '解绑失败，请重试',

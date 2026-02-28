@@ -34,7 +34,6 @@ Page({
         formProject: defaultProject
       });
     } catch (error) {
-      console.error('加载项目失败:', error);
       this.setData({ projects: [] });
     }
   },
@@ -45,7 +44,6 @@ Page({
       const cards = await cloudDb.getAll<MembershipCard>(Collections.MEMBERSHIP);
       this.setData({ cardList: cards, loading: false });
     } catch (error) {
-      console.error('加载会员卡列表失败:', error);
       this.setData({ loading: false });
       wx.showToast({
         title: '加载失败',
@@ -201,7 +199,6 @@ Page({
       }
       this.onModalCancel();
     } catch (error) {
-      console.error('保存会员卡失败:', error);
       this.setData({ loading: false });
       wx.showToast({ title: '保存失败', icon: 'none' });
     }
@@ -227,7 +224,6 @@ Page({
         wx.showToast({ title: '操作失败', icon: 'none' });
       }
     } catch (error) {
-      console.error('切换会员卡状态失败:', error);
       this.setData({ loading: false });
       wx.showToast({ title: '操作失败', icon: 'none' });
     }
@@ -254,7 +250,6 @@ Page({
               wx.showToast({ title: '删除失败', icon: 'none' });
             }
           } catch (error) {
-            console.error('删除会员卡失败:', error);
             this.setData({ loading: false });
             wx.showToast({ title: '删除失败', icon: 'none' });
           }

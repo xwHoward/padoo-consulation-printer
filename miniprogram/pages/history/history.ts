@@ -149,7 +149,6 @@ Page({
         });
       }
     } catch (error) {
-      console.error('加载顾客历史失败:', error);
       wx.showToast({ title: '加载失败', icon: 'error' });
     } finally {
       this.setData({ loading: false });
@@ -193,7 +192,6 @@ Page({
         });
       }
     } catch (error) {
-      console.error('加载历史数据失败:', error);
       wx.showToast({ title: '加载失败', icon: 'error' });
     } finally {
       this.setData({ loading: false });
@@ -267,7 +265,6 @@ Page({
               });
               await this.loadHistoryData(this.data.dateSelector.selectedDate);
             } else {
-              console.error('未找到要作废的记录:', record._id);
               wx.showToast({
                 title: '记录不存在',
                 icon: 'error'
@@ -275,7 +272,6 @@ Page({
             }
 
           } catch (error) {
-            console.error('作废咨询单失败:', error);
             wx.showToast({
               title: '操作失败',
               icon: 'error'
@@ -341,7 +337,6 @@ Page({
         });
       }
     } catch (error) {
-      console.error('提前下钟失败:', error);
       wx.showToast({
         title: '更新失败',
         icon: 'none'
@@ -377,14 +372,12 @@ Page({
               });
               await this.loadHistoryData(this.data.dateSelector.selectedDate);
             } else {
-              console.error('未找到要删除的记录:', record._id);
               wx.showToast({
                 title: '记录不存在',
                 icon: 'error'
               });
             }
           } catch (error) {
-            console.error('删除咨询单失败:', error);
             wx.showToast({
               title: '删除失败',
               icon: 'error'
@@ -498,7 +491,6 @@ Page({
       });
 
     } catch (error) {
-      console.error('生成总结失败:', error);
       wx.showToast({
         title: '生成失败',
         icon: 'error'
@@ -651,7 +643,6 @@ Page({
           });
         }
       } catch (error) {
-        console.error('推送加钟消息失败:', error);
         wx.showToast({
           title: '推送失败',
           icon: 'none'
@@ -687,7 +678,6 @@ Page({
 
       await this.loadHistoryData(date);
     } catch (error) {
-      console.error('更新失败:', error);
       wx.showToast({
         title: '更新失败',
         icon: 'error'
@@ -747,7 +737,6 @@ Page({
         wx.showToast({ title: '推送失败，请重试', icon: 'none' });
       }
     } catch (error) {
-      console.error('推送到企业微信失败:', error);
       wx.showToast({ title: '推送失败，请重试', icon: 'none' });
     } finally {
       this.setData({ 'summaryModal.loading': false });

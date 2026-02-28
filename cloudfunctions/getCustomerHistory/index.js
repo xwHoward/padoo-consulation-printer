@@ -91,7 +91,6 @@ exports.main = async (event, context) => {
       }
     }
   } catch (error) {
-    console.error('获取顾客历史失败:', error)
     return {
       code: -1,
       message: '获取失败: ' + error.message

@@ -71,7 +71,6 @@ Page({
         wx.showToast({ title: "加载数据失败", icon: "none" });
       }
     } catch (error) {
-      console.error("加载报表数据失败:", error);
       wx.showToast({ title: "加载数据失败", icon: "none" });
     } finally {
       this.setData({ loading: false });

@@ -11,7 +11,6 @@ export const AppConfig = {
 
 	setCloudEnvId(envId: string) {
 		AppConfig.cloudEnvId = envId;
-		console.log('[AppConfig] 云环境ID已更新:', envId);
 	}
 };
 

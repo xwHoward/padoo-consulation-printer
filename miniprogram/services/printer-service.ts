@@ -23,9 +23,9 @@ class PrinterService {
 
   isConnected(): boolean {
     return this.state.isPrinterConnected &&
-           !!this.state.printerDeviceId &&
-           !!this.state.printerServiceId &&
-           !!this.state.printerCharacteristicId;
+      !!this.state.printerDeviceId &&
+      !!this.state.printerServiceId &&
+      !!this.state.printerCharacteristicId;
   }
 
   async connectBluetooth(): Promise<boolean> {
@@ -74,7 +74,6 @@ class PrinterService {
                 title: "搜索蓝牙设备失败",
                 icon: "none",
               });
-              console.error("搜索蓝牙设备失败:", err);
               resolve(false);
             },
           });
@@ -85,7 +84,6 @@ class PrinterService {
             title: "蓝牙初始化失败",
             icon: "none",
           });
-          console.error("蓝牙初始化失败:", err);
           resolve(false);
         },
       });
@@ -107,7 +105,6 @@ class PrinterService {
             title: "连接打印机失败",
             icon: "none",
           });
-          console.error("连接打印机失败:", err);
           resolve(false);
         },
       });
@@ -135,7 +132,6 @@ class PrinterService {
         },
         fail: (err) => {
           wx.hideLoading();
-          console.error("获取设备服务失败:", err);
           wx.showToast({
             title: "获取服务失败",
             icon: "none",
@@ -173,7 +169,6 @@ class PrinterService {
         },
         fail: (err) => {
           wx.hideLoading();
-          console.error("获取服务特征失败:", err);
           wx.showToast({
             title: "获取特征失败",
             icon: "none",
@@ -264,7 +259,6 @@ class PrinterService {
           },
           fail: (err) => {
             wx.showToast({ title: '打印失败', icon: 'none' });
-            console.error('分片打印失败:', err);
             resolve(false);
           },
         });
@@ -281,7 +275,6 @@ class PrinterService {
           deviceId: this.state.printerDeviceId
         });
       } catch (err) {
-        console.error("断开蓝牙连接失败:", err);
       }
     }
 
@@ -289,7 +282,6 @@ class PrinterService {
       await wx.stopBluetoothDevicesDiscovery();
       await wx.closeBluetoothAdapter();
     } catch (err) {
-      console.error("关闭蓝牙适配器失败:", err);
     }
 
     this.state = {

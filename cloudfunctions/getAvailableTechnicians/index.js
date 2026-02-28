@@ -114,7 +114,6 @@ exports.main = async (event, context) => {
             data: technicians.sort((a, b) => a.position - b.position)
         }
     } catch (error) {
-        console.error('获取可用技师失败:', error)
         return {
             code: -1,
             message: '获取失败: ' + error.message
@@ -275,7 +274,6 @@ async function getTechnicianAvailability(date) {
             data: techList.sort((a, b) => a.position - b.position)
         }
     } catch (error) {
-        console.error('获取技师可用性失败:', error)
         return {
             code: -1,
             message: '获取失败: ' + error.message,

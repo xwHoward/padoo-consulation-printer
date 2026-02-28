@@ -50,7 +50,6 @@ exports.main = async (event, context) => {
       count: allData.length
     }
   } catch (error) {
-    console.error('获取数据失败:', error)
     return {
       code: -1,
       message: '获取失败: ' + error.message

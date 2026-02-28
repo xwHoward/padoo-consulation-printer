@@ -82,7 +82,6 @@ exports.main = async (event, context) => {
             }
         }
     } catch (error) {
-        console.error('登录失败:', error)
         return {
             code: -1,
             message: '登录失败: ' + error.message
@@ -119,7 +118,6 @@ async function refreshUserInfo() {
             }
         }
     } catch (error) {
-        console.error('刷新用户信息失败:', error)
         return {
             code: -1,
             message: '刷新失败: ' + error.message
@@ -173,7 +171,6 @@ async function updateStaffId(staffId) {
             }
         }
     } catch (error) {
-        console.error('更新staffId失败:', error)
         return {
             code: -1,
             message: '更新失败: ' + error.message

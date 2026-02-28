@@ -154,7 +154,6 @@ Page({
 				});
 			}
 		} catch (error) {
-			console.error('设置页面方向失败:', error);
 			wx.showToast({
 				title: '设置失败',
 				icon: 'none'
@@ -168,7 +167,6 @@ Page({
 			const allProjects = await app.getProjects();
 			this.setData({ projects: allProjects });
 		} catch (error) {
-			console.error('加载项目失败:', error);
 			this.setData({ projects: [] });
 		}
 	},
@@ -289,7 +287,6 @@ Page({
 				}
 			});
 		} catch (error) {
-			console.error('加载数据失败:', error);
 			wx.showToast({
 				title: '加载数据失败',
 				icon: 'none'
@@ -311,7 +308,6 @@ Page({
 				timelineRefreshTrigger: this.data.timelineRefreshTrigger + 1
 			});
 		} catch (error) {
-			console.error('刷新排钟失败:', error);
 			wx.showToast({
 				title: '刷新失败',
 				icon: 'none'
@@ -476,7 +472,6 @@ Page({
 				wx.showToast({ title: '调整失败', icon: 'none' });
 			}
 		} catch (error) {
-			console.error('调整轮牌位置失败:', error);
 			wx.showToast({ title: '调整失败', icon: 'none' });
 		} finally {
 			this.setData({ loading: false });
@@ -609,7 +604,6 @@ Page({
 				});
 			}
 		} catch (error) {
-			console.error('提前下钟失败:', error);
 			wx.showToast({
 				title: '操作失败',
 				icon: 'none'
@@ -656,7 +650,6 @@ Page({
 				wx.navigateTo({ url: `/pages/index/index?reserveId=${reserveId}` });
 			}
 		} catch (error) {
-			console.error('加载预约失败:', error);
 			wx.showToast({ title: '加载失败', icon: 'none' });
 			this.setData({ loading: false });
 		}
@@ -710,11 +703,9 @@ ${customerInfo} 已到店
 			if (res.result && typeof res.result === 'object') {
 				const result = res.result as { code: number; message?: string };
 				if (result.code !== 0) {
-					console.error('推送到企业微信失败:', result.message);
 				}
 			}
 		} catch (error) {
-			console.error('推送到企业微信失败:', error);
 		}
 	},
 
@@ -781,11 +772,9 @@ ${changes.join('\n')}
 			if (res.result && typeof res.result === 'object') {
 				const result = res.result as { code: number; message?: string };
 				if (result.code !== 0) {
-					console.error('推送预约变更失败:', result.message);
 				}
 			}
 		} catch (error) {
-			console.error('推送预约变更失败:', error);
 		}
 	},
 
@@ -827,7 +816,6 @@ ${changes.join('\n')}
 				await this.checkStaffAvailability();
 			}
 		} catch (error) {
-			console.error('编辑预约失败:', error);
 			wx.showToast({
 				title: '加载预约失败',
 				icon: 'none'
@@ -888,7 +876,6 @@ ${changes.join('\n')}
 				});
 			}
 		} catch (error) {
-			console.error('检查技师可用性失败:', error);
 			wx.showToast({
 				title: '获取技师列表失败',
 				icon: 'none'
@@ -1036,7 +1023,6 @@ ${changes.join('\n')}
 				});
 			}
 		} catch (error) {
-			console.error('匹配顾客失败:', error);
 			this.setData({
 				matchedCustomer: null,
 				matchedCustomerApplied: false
@@ -1236,7 +1222,6 @@ ${changes.join('\n')}
 				wx.showToast({ title: `部分保存失败(${successCount}/${technicians.length})`, icon: 'none' });
 			}
 		} catch (error) {
-			console.error('保存预约失败:', error);
 			wx.showToast({ title: '保存失败', icon: 'none' });
 		} finally {
 			this.setData({ loading: false });
@@ -1300,7 +1285,6 @@ ${changes.join('\n')}
 
 						wx.showToast({ title: '已取消预约', icon: 'success' });
 					} catch (error) {
-						console.error('取消预约失败:', error);
 						wx.showToast({ title: '取消失败', icon: 'none' });
 					} finally {
 						this.setData({ loading: false });
@@ -1341,7 +1325,6 @@ ${changes.join('\n')}
 				this.loadSettlement(_id, record);
 			}
 		} catch (error) {
-			console.error('打开结算失败:', error);
 			wx.showToast({ title: '加载失败', icon: 'none' });
 			this.setData({ loading: false });
 		}
@@ -1565,7 +1548,6 @@ ${changes.join('\n')}
 			this.closeSettlementModal();
 			await this.loadTimelineData();
 		} catch (error) {
-			console.error('结算失败:', error);
 			wx.showToast({ title: '结算失败', icon: 'none' });
 		} finally {
 			this.setData({ loading: false });
@@ -1667,7 +1649,6 @@ ${technicianMentions}`;
 				wx.showToast({ title: '推送失败，请重试', icon: 'none' });
 			}
 		} catch (error) {
-			console.error('推送到企业微信失败:', error);
 			wx.showToast({ title: '推送失败，请重试', icon: 'none' });
 		} finally {
 			this.setData({ 'pushModal.loading': false });
@@ -1734,7 +1715,6 @@ ${rotationLines}
 				wx.showToast({ title: '推送失败，请重试', icon: 'none' });
 			}
 		} catch (error) {
-			console.error('推送轮牌到企业微信失败:', error);
 			wx.showToast({ title: '推送失败，请重试', icon: 'none' });
 		} finally {
 			this.setData({ 'rotationPushModal.loading': false });

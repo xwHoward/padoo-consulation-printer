@@ -29,7 +29,6 @@ export class AuthManager {
 				this.token = tokenStr;
 			}
 		} catch (error) {
-			console.error('加载用户信息失败:', error);
 		}
 	}
 
@@ -46,7 +45,6 @@ export class AuthManager {
 				wx.removeStorageSync(STORAGE_KEY_TOKEN);
 			}
 		} catch (error) {
-			console.error('保存用户信息失败:', error);
 		}
 	}
 
@@ -123,7 +121,6 @@ export class AuthManager {
 
 			return this.currentUser;
 		} catch (error) {
-			console.error('静默登录失败:', error);
 			throw error;
 		}
 	}
@@ -153,7 +150,6 @@ export class AuthManager {
 
 			return this.currentUser;
 		} catch (error) {
-			console.error('手机号授权失败:', error);
 			throw error;
 		}
 	}

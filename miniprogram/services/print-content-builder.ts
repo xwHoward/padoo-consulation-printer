@@ -68,8 +68,7 @@ export class PrintContentBuilder {
 
     content += "\n================\n";
 
-    const printDate = this.getPrintDate(info.date);
-    content += `打印时间: ${formatTime(printDate, false)}
+    content += `打印时间: ${formatTime(new Date(), false)}
 
       
 
@@ -91,18 +90,8 @@ export class PrintContentBuilder {
         (record: ConsultationRecord) => record.technician === info.technician && !record.isVoided,
       ).length + 1;
     } catch (error) {
-      console.error("获取报钟数量失败:", error);
       return 1;
     }
-  }
-
-  private getPrintDate(dateStr?: string): Date {
-    if (!dateStr) {
-      return new Date();
-    }
-
-    const [year, month, day] = dateStr.split('-').map(Number);
-    return new Date(year, month - 1, day);
   }
 
   formatConsultationInfo(info: Add<ConsultationInfo>): string {

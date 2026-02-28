@@ -43,7 +43,6 @@ exports.main = async (event, context) => {
       data: result
     };
   } catch (error) {
-    console.error('获取报表数据失败:', error);
     return {
       code: -1,
       error: error.message
