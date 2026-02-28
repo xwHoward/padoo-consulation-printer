@@ -8,14 +8,6 @@ interface Room {
 	status: string
 }
 
-interface RotationItem {
-	_id: string
-	name: string
-	shift: 'morning' | 'evening'
-	weight: number
-}
-
-
 interface ProfileData {
 	staffId: string
 	staffInfo: StaffInfo | null
@@ -266,11 +258,10 @@ Page({
 				return;
 			}
 
-			const rotationList: RotationItem[] = rotationData.staffList.map((staffData, index) => ({
+			const rotationList: RotationItem[] = rotationData.staffList.map((staffData) => ({
 				_id: staffData.staffId,
 				name: staffData.name,
 				shift: staffData.shift as 'morning' | 'evening',
-				weight: rotationData.staffList.length - index
 			}));
 
 			const todayPosition = rotationList.findIndex(s => s._id === this.data.staffId);

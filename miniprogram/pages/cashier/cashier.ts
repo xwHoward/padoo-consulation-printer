@@ -334,7 +334,7 @@ Page({
 
 		const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
 
-		const rotationList: RotationItem[] = rotationData.staffList.map((staffData, index) => {
+		const rotationList: RotationItem[] = rotationData.staffList.map((staffData) => {
 			const schedule = allSchedules.find(s => s.date === today && s.staffId === staffData.staffId);
 			const shift = schedule ? schedule.shift : DEFAULT_SHIFT;
 
@@ -344,9 +344,7 @@ Page({
 				_id: staffData.staffId,
 				name: staffData.name,
 				shift: shift as ShiftType,
-				shiftLabel: shift === 'morning' ? '早班' : '晚班',
 				availableSlots,
-				weight: rotationData.staffList.length - index
 			};
 		}).filter(item => item.shift === 'morning' || item.shift === 'evening');
 
@@ -1702,7 +1700,7 @@ ${technicianMentions}`;
 
 		try {
 			const rotationLines = rotationList.map((staff, index) =>
-				`${index + 1}. ${staff.name} (${staff.shiftLabel})`
+				`${index + 1}. ${staff.name} (${staff.shift === 'morning' ? '早班' : '晚班'})`
 			).join('\n');
 
 			const message = `【📋 今日轮牌】

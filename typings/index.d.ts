@@ -93,7 +93,6 @@ interface StaffInfo extends BaseRecord {
   gender: StaffGender;
   avatar: string;
   phone: string;
-  weight: number;
 }
 
 // 班次类型
@@ -338,9 +337,7 @@ interface RotationItem {
   _id: string;
   name: string;
   shift: ShiftType;
-  shiftLabel: string;
   availableSlots?: string; // 可约时段
-  weight: number; // 权重
 }
 
 interface RotationQueue extends BaseRecord {

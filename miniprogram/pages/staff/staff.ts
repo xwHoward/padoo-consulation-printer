@@ -448,7 +448,6 @@ Page({
 					avatar: inputAvatar,
 					phone,
 					status: 'active',
-					weight: 0
 				}));
 
 				if (inserted) {

@@ -55,7 +55,7 @@
           <view class="staff-info">
             <view class="staff-name-row">
               <view class="staff-name">{{item.name}}</view>
-              <view class="shift-tag {{item.shift}}">{{item.shiftLabel}}</view>
+              <view class="shift-tag {{item.shift}}">{{item.shift === 'morning' ? '早班' : '晚班'}}</view>
             </view>
             <view class="available-slots" wx:if="{{item.availableSlots}}">
               <view class="slots-label">可约:</view>
@@ -253,7 +253,7 @@
         </view>
         <block wx:for="{{rotationList}}" wx:key="_id" wx:for-index="idx">
           <view class="preview-row">
-            <text class="preview-value">{{idx + 1}}. {{item.name}} ({{item.shiftLabel}})</text>
+            <text class="preview-value">{{idx + 1}}. {{item.name}} ({{item.shift === 'morning' ? '早班' : '晚班'}})</text>
           </view>
         </block>
       </view>
