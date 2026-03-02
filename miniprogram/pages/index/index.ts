@@ -547,17 +547,157 @@ Page({
     try {
       let deletedCount = 0;
       for (const reserveId of currentReservationIds) {
-        const success = await cloudDb.deleteById(Collections.RESERVATIONS, reserveId);
-        if (success) {
-          deletedCount++;
-        }
+        await cloudDb.updateById(Collections.RESERVATIONS, reserveId, {
+          status: 'arrived'
+        });
+        deletedCount++;
       }
-
       if (deletedCount > 0) {
         // 清空当前预约ID列表
         this.setData({ currentReservationIds: [] });
       }
+    } catch (error) { }
+  },
+
+  // 重新分配未来的非点钟预约
+  async reassignFutureReservations(date: string, currentTime: string) {
+    try {
+      // 获取当日所有非点钟的活跃预约
+      const allReservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, {
+        date: date,
+        status: 'active'
+      });
+
+      // 筛选出非点钟预约且时间晚于当前时间的预约
+      const futureReservations = allReservations.filter(r => {
+        if (r.isClockIn) {
+          return false; // 跳过点钟预约
+        }
+        // 比较时间，只处理未来的预约
+        return r.startTime >= currentTime;
+      });
+
+      if (futureReservations.length === 0) {
+        return;
+      }
+
+      // 获取轮牌数据
+      const rotationData = await app.getRotationQueue(date);
+      if (!rotationData || !rotationData.staffList || rotationData.staffList.length === 0) {
+        return;
+      }
+
+      // 获取所有员工信息
+      const allStaff = await app.getStaffs();
+      const staffMap = new Map(allStaff.map(s => [s._id, s]));
+
+      // 按轮牌顺序排序的员工列表
+      const rotationStaffList = rotationData.staffList.map(item => ({
+        staffId: item.staffId,
+        position: item.position,
+        staff: staffMap.get(item.staffId)
+      })).filter(item => item.staff && item.staff!.status === 'active');
+
+      // 按开始时间排序预约
+      const sortedReservations = [...futureReservations].sort((a, b) => 
+        a.startTime.localeCompare(b.startTime)
+      );
+
+      // 记录每个技师的预约数量，用于负载均衡
+      const staffReservationCount = new Map<string, number>();
+      for (const item of rotationStaffList) {
+        staffReservationCount.set(item.staffId, 0);
+      }
+
+      // 为每个预约重新分配技师
+      for (const reservation of sortedReservations) {
+        // 获取预约的性别需求
+        // 如果有 genderRequirement 字段，使用它；否则从技师性别推断
+        let requiredGender: 'male' | 'female' | undefined;
+        
+        if (reservation.genderRequirement) {
+          requiredGender = reservation.genderRequirement;
+        } else if (reservation.technicianId) {
+          // 从已分配的技师推断性别
+          const staff = staffMap.get(reservation.technicianId);
+          if (staff) {
+            requiredGender = staff.gender;
+          }
+        }
+
+        if (!requiredGender) {
+          continue; // 无法确定性别需求，跳过
+        }
+
+        // 查找第一个可用的同性技师，且预约数最少的
+        let bestStaffId: string | null = null;
+        let minReservationCount = Infinity;
+
+        for (const rotationItem of rotationStaffList) {
+          const staff = rotationItem.staff!;
+          const staffId = rotationItem.staffId;
+
+          // 检查性别是否匹配
+          if (staff.gender !== requiredGender) {
+            continue;
+          }
+
+          // 获取该技师当前的预约数
+          const currentCount = staffReservationCount.get(staffId) || 0;
+
+          // 选择预约数最少的技师（负载均衡）
+          if (currentCount < minReservationCount) {
+            // 检查该技师在预约时间段是否可用
+            const projectDuration = parseProjectDuration(reservation.project) || 60;
+            
+            try {
+              const checkRes = await wx.cloud.callFunction({
+                name: 'getAvailableTechnicians',
+                data: {
+                  date: date,
+                  currentTime: reservation.startTime,
+                  projectDuration: projectDuration,
+                  currentReservationIds: [reservation._id],
+                  currentConsultationId: undefined
+                }
+              });
+
+              let checkAvailable: StaffAvailability[] = [];
+              if (checkRes.result && typeof checkRes.result === 'object') {
+                const result = checkRes.result as { code: number; data: StaffAvailability[] };
+                if (result.code === 0 && result.data) {
+                  checkAvailable = result.data;
+                }
+              }
+
+              const isAvailable = checkAvailable.some(t => t._id === staffId);
+
+              if (isAvailable) {
+                bestStaffId = staffId;
+                minReservationCount = currentCount;
+              }
+            } catch (error) {
+              // 检查可用性失败，跳过该技师
+              continue;
+            }
+          }
+        }
+
+        // 如果找到了可用的技师，更新预约
+        if (bestStaffId) {
+          const staff = staffMap.get(bestStaffId)!;
+          await cloudDb.updateById(Collections.RESERVATIONS, reservation._id, {
+            technicianId: bestStaffId,
+            technicianName: staff.name,
+            isClockIn: false
+          });
+
+          // 更新技师的预约计数
+          staffReservationCount.set(bestStaffId, (staffReservationCount.get(bestStaffId) || 0) + 1);
+        }
+      }
     } catch (error) {
+      console.error('重新分配预约失败:', error);
     }
   },
 
@@ -679,6 +819,20 @@ Page({
             }
           } catch (error) {
           }
+        }
+
+        // 重新分配未来的非点钟预约
+        try {
+          await this.reassignFutureReservations(currentDate, startTimeStr);
+        } catch (error) {
+          console.error('重新分配预约失败:', error);
+        }
+      } else {
+        // 编辑模式下也需要重新分配未来的非点钟预约
+        try {
+          await this.reassignFutureReservations(currentDate, startTimeStr);
+        } catch (error) {
+          console.error('重新分配预约失败:', error);
         }
       }
 

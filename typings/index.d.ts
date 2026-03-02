@@ -117,7 +117,8 @@ interface ReservationRecord extends BaseRecord {
   startTime: string; // HH:MM
   endTime: string; // HH:MM
   isClockIn?: boolean; // 点钟标记
-  status: "active" | "cancelled"; // 状态
+  status: "active" | "cancelled" | 'arrived'; // 状态
+  genderRequirement?: "male" | "female";
 }
 
 // interface ConsultationRecord {
@@ -275,6 +276,7 @@ interface StaffAvailability {
   isOccupied: boolean;
   occupiedReason?: string;
   isClockIn?: boolean; // 点钟标记
+  gender: 'male' | 'female'; // 性别
 }
 
 // 用户角色类型
@@ -341,11 +343,12 @@ interface RotationItem {
 }
 
 interface RotationQueue extends BaseRecord {
-  staffList: Array<StaffInfo&{
+  staffList: Array<StaffInfo & {
     lastServedTime?: string; // 上次服务时间
     orderCount?: number; // 服务次数
     staffId: string;
     shift: ShiftType;
+    position: number; // 队列位置
   }>;
   currentIndex: number;
 }

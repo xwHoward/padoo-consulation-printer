@@ -34,6 +34,13 @@ exports.main = async (event, context) => {
                 'Content-Type': 'application/json'
             }
         }
+        // DEV
+        console.log('message: ', data)
+        return {
+            code: 0,
+            message: '发送成功',
+            data: response
+        }
         const response = await request(options)
 
         if (response.errcode === 0) {

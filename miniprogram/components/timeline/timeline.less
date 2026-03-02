@@ -160,6 +160,29 @@
 		color: #fff;
 		white-space: nowrap;
 
+		.gender-tags {
+			display: flex;
+			gap: 4px;
+			margin-bottom: 2px;
+
+			.gender-tag {
+				display: inline-block;
+				padding: 1px 6px;
+				border-radius: 4px;
+				font-size: 10px;
+				font-weight: bold;
+				line-height: 14px;
+
+				&.male {
+					background-color: #1890ff;
+				}
+
+				&.female {
+					background-color: #ff69b4;
+				}
+			}
+		}
+
 		.block-customer {
 			line-height: 24px;
 			font-size: 12px;

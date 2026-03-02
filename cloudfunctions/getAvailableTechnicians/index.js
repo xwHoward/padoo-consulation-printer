@@ -24,9 +24,10 @@ exports.main = async (event, context) => {
         const proposedEndTimeMinutes = currentMinutes + projectDuration + 10
 
         const reservationsRes = await db.collection('reservations').where({
-            date: date
+            date: date,
+            status: 'active'
         }).get()
-        const reservations = reservationsRes.data || []
+        const reservations = (reservationsRes.data || [])
 
         const filteredReservations = reservations.filter(r => !currentReservationIds || !currentReservationIds.includes(r._id))
 
@@ -101,6 +102,7 @@ exports.main = async (event, context) => {
             return {
                 _id: staff._id,
                 name: staff.name,
+                gender: staff.gender,
                 phone: staff.phone || '',
                 isOccupied: hasConflict,
                 occupiedReason,
@@ -163,10 +165,10 @@ async function getTechnicianAvailability(date) {
         const consultations = consultationsRes.data || []
 
         const reservationsRes = await db.collection('reservations').where({
-            date: date
+            date: date,
+            status: 'active'
         }).get()
-        const allReservations = reservationsRes.data || []
-        const reservations = allReservations.filter(r => r.status !== 'cancelled')
+        const reservations = reservationsRes.data || []
 
         const rotationRes = await db.collection('rotation_queue').where({
             date: date

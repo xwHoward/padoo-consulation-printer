@@ -35,6 +35,7 @@ interface TimeBlock {
 	isSettled: boolean
 	isInProgress: boolean
 	technician: string
+	genderRequirement?: 'male' | 'female'
 }
 
 Component({
@@ -50,7 +51,7 @@ Component({
 		refreshTrigger: {
 			type: Number,
 			value: 0,
-			observer: function(newVal: number) {
+			observer: function (newVal: number) {
 				if (newVal > 0) {
 					this.loadAllStaffTimelineData(this.properties.staffId);
 				}
@@ -95,7 +96,7 @@ Component({
 
 				const todayRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
 				const activeRecords = todayRecords.filter(r => !r.isVoided);
-				const reservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today });
+				const reservations = (await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today, status: 'active' }));
 
 				const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
 				const allStaff = await app.getStaffs();
@@ -128,7 +129,8 @@ Component({
 							startTime: r.startTime,
 							endTime: r.endTime,
 							isReservation: true,
-							technician: r.technicianName
+							technician: r.technicianName,
+							genderRequirement: r.genderRequirement // 新增：性别需求
 						}))
 					];
 
@@ -152,7 +154,6 @@ Component({
 						const recordStartMinutes = startH * 60 + startM;
 						const recordEndMinutes = endH * 60 + endM;
 						const isInProgress = isToday && nowMinutes >= recordStartMinutes && nowMinutes < recordEndMinutes;
-
 						return {
 							_id: r._id,
 							customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
@@ -165,7 +166,8 @@ Component({
 							isReservation: r.isReservation,
 							isSettled,
 							isInProgress,
-							technician: r.technician!
+							technician: r.technician!,
+							genderRequirement: (r as any).genderRequirement
 						};
 					});
 
