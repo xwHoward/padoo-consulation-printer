@@ -382,3 +382,31 @@ interface AvailableSlot {
   durationMinutes: number; // 时长（分钟）
   displayText: string; // 显示文本
 }
+
+interface IndexPage<D> {
+  data: {
+    editId?: string;
+    consultationInfo: Omit<ConsultationInfo, "_id" | "createdAt" | "updatedAt"> & { selectedParts: {} };
+    currentReservationIds: string[];
+    projects: Project[];
+    isDualMode: boolean;
+    activeGuest: number;
+    guest1Info: GuestInfo;
+    guest2Info: GuestInfo;
+    timePickerModal: {
+      currentTime: string;
+    };
+    licensePlate: string;
+    clockInModal: {
+      content: string;
+    };
+    [key: string]: any;
+  };
+  dataLoader: D | null;
+  setData: (data: Record<string, any>) => void;
+  searchCustomer: () => void;
+  doDualClockIn: (startTimeDate?: Date, editId?: string) => Promise<void>;
+  saveConsultation: (consultation: Add<ConsultationInfo>, editId?: string) => Promise<boolean>;
+  sendToWechatWebhook: (content: string) => Promise<boolean>;
+  resetForm: () => void;
+}
