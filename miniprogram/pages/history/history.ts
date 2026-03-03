@@ -433,7 +433,7 @@ Page({
         return;
       }
 
-      const { technicianStats } = res.result.data;
+      const { technicianStats, monthlyScoreRanking } = res.result.data;
 
       if (Object.keys(technicianStats).length === 0) {
         wx.showToast({
@@ -444,6 +444,8 @@ Page({
       }
 
       let summaryText = `# ${date} 每日总结\n\n`;
+
+      summaryText += `## 📊 当日统计\n\n`;
 
       Object.keys(technicianStats).forEach(technician => {
         const stats = technicianStats[technician];
@@ -483,6 +485,18 @@ Page({
       }
       if (totalOvertime > 0) {
         summaryText += `总加班: **${(totalOvertime)}**\n`;
+      }
+
+      if (monthlyScoreRanking && monthlyScoreRanking.rankings) {
+        summaryText += `\n## 🏆 ${monthlyScoreRanking.period.month}月积分排名\n\n`;
+
+        monthlyScoreRanking.rankings.forEach((item: any) => {
+          const rankEmoji = item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : item.rank === 3 ? '🥉' : `${item.rank}.`;
+          summaryText += `${rankEmoji} **${item.technician}**: ${item.totalScore}分 `;
+          summaryText += `(${item.salesCount}次卡 | 点钟${item.clockInCount}次)\n`;
+        });
+
+        summaryText += `\n`;
       }
 
       this.setData({

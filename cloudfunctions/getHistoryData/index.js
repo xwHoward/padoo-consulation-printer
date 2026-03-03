@@ -301,10 +301,95 @@ exports.main = async (event) => {
         }
       });
 
+      const currentDate = new Date(targetDate);
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth();
+      const monthStart = new Date(currentYear, currentMonth, 1);
+      const monthEnd = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
+      const monthStartStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+      const monthEndStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(monthEnd.getDate()).padStart(2, '0')}`;
+
+      const monthlyMemberships = await db.collection('customer_membership')
+        .where({
+          createdAt: db.RegExp({
+            regexp: `^(${currentYear}-${String(currentMonth + 1).padStart(2, '0')})`
+          })
+        })
+        .get();
+
+      const membershipSales = {};
+      monthlyMemberships.data.forEach(membership => {
+        const salesStaff = membership.salesStaff;
+        if (salesStaff) {
+          if (!membershipSales[salesStaff]) {
+            membershipSales[salesStaff] = 0;
+          }
+          // TODO: 使用更准确的方式判断次卡数量
+          membershipSales[salesStaff]+=parseInt(membership.cardName);
+        }
+      });
+
+      const monthlyClockIns = await db.collection('consultation_records')
+        .where({
+          date: db.RegExp({
+            regexp: `^(${currentYear}-${String(currentMonth + 1).padStart(2, '0')})`
+          }),
+          isClockIn: true,
+          isVoided: false
+        })
+        .get();
+
+      const clockInCounts = {};
+      monthlyClockIns.data.forEach(record => {
+        const technician = record.technician;
+        if (technician) {
+          if (!clockInCounts[technician]) {
+            clockInCounts[technician] = 0;
+          }
+          clockInCounts[technician]++;
+        }
+      });
+
+      const allTechnicians = new Set([
+        ...Object.keys(membershipSales),
+        ...Object.keys(clockInCounts),
+        ...Object.keys(technicianStats)
+      ]);
+
+      const monthlyScores = [];
+      allTechnicians.forEach(technician => {
+        const salesCount = membershipSales[technician] || 0;
+        const clockInCount = clockInCounts[technician] || 0;
+        const totalScore = salesCount + clockInCount;
+        
+        monthlyScores.push({
+          technician,
+          salesCount,
+          clockInCount,
+          totalScore
+        });
+      });
+
+      monthlyScores.sort((a, b) => b.totalScore - a.totalScore);
+
+      const rankedScores = monthlyScores.map((item, index) => ({
+        ...item,
+        rank: index + 1
+      }));
+
       return {
         code: 0,
         data: {
-          technicianStats
+          technicianStats,
+          monthlyScoreRanking: {
+            period: {
+              year: currentYear,
+              month: currentMonth + 1,
+              startDate: monthStartStr,
+              endDate: monthEndStr
+            },
+            rankings: rankedScores
+          }
         }
       };
 
