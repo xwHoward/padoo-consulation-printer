@@ -1,3 +1,5 @@
+import { CustomerUtils as CommonCustomerUtils } from "../../common/utils/customer-utils";
+
 export class CustomerUtils {
   static async searchCustomer(
     consultationInfo: any,
@@ -7,7 +9,7 @@ export class CustomerUtils {
     guest2Info: any
   ): Promise<CustomerRecord | null> {
     let currentSurname = '';
-    let currentGender = '';
+    let currentGender: 'male' | 'female';
     let currentPhone = '';
 
     if (isDualMode) {
@@ -20,32 +22,7 @@ export class CustomerUtils {
     }
     currentPhone = consultationInfo.phone;
 
-    if (!currentSurname && !currentPhone) {
-      return null;
-    }
-
-    try {
-      const res = await wx.cloud.callFunction({
-        name: 'matchCustomer',
-        data: {
-          surname: currentSurname,
-          gender: currentGender,
-          phone: currentPhone
-        }
-      });
-      
-      if (!res.result || typeof res.result !== 'object') {
-        throw new Error('匹配顾客失败');
-      }
-      
-      if (res.result.code === 0 && res.result.data) {
-        return res.result.data;
-      }
-      
-      return null;
-    } catch (error) {
-      return null;
-    }
+    return await CommonCustomerUtils.searchCustomer(currentSurname, currentGender, currentPhone);
   }
 
   static buildCustomerUpdates(
@@ -53,12 +30,11 @@ export class CustomerUtils {
     isDualMode: boolean,
     activeGuest: 1 | 2
   ): Record<string, any> {
-    if (!matchedCustomer) return {};
-
-    const guestKey = activeGuest === 1 ? 'guest1Info' : 'guest2Info';
-    const updates: any = {};
+    const baseUpdates = CommonCustomerUtils.buildCustomerUpdates(matchedCustomer, {});
+    const updates: Record<string, any> = {};
 
     if (isDualMode) {
+      const guestKey = activeGuest === 1 ? 'guest1Info' : 'guest2Info';
       updates[`${guestKey}.surname`] = matchedCustomer.name.replace(/先生|女士/g, '');
       updates[`${guestKey}.gender`] = matchedCustomer.name.endsWith('女士') ? 'female' : 'male';
 
@@ -66,7 +42,7 @@ export class CustomerUtils {
         updates[`${guestKey}.technician`] = matchedCustomer.responsibleTechnician;
       }
 
-      if (matchedCustomer.phone) {
+      if (matchedCustomer.phone && !baseUpdates.phone) {
         updates['consultationInfo.phone'] = matchedCustomer.phone;
       }
 
@@ -78,7 +54,7 @@ export class CustomerUtils {
       updates['consultationInfo.surname'] = matchedCustomer.name.replace(/先生|女士/g, '');
       updates['consultationInfo.gender'] = matchedCustomer.name.endsWith('女士') ? 'female' : 'male';
 
-      if (matchedCustomer.phone) {
+      if (matchedCustomer.phone && !baseUpdates.phone) {
         updates['consultationInfo.phone'] = matchedCustomer.phone;
       }
 

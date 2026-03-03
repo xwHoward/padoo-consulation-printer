@@ -16,14 +16,11 @@
         <view class="section-title">排钟进度</view>
         <!-- 日期快速导航 -->
         <date-picker initialDate="{{dateSelector.selectedDate}}" bind:change="onDatePickerChange" />
-        <view class="reserve-btn" wx:if="{{canCreateReservation}}" bindtap="openReserveModal">新增预约</view>
+        <view class="reserve-btn" wx:if="{{canCreateReservation}}" bindtap="openReserveModal">
+          新增预约
+        </view>
       </view>
-      <timeline
-        selectedDate="{{selectedDate}}"
-        readonly="{{false}}"
-        refreshTrigger="{{timelineRefreshTrigger}}"
-        bind:blockclick="onBlockClick"
-      />
+      <timeline selectedDate="{{selectedDate}}" readonly="{{false}}" refreshTrigger="{{timelineRefreshTrigger}}" bind:blockclick="onBlockClick" />
     </view>
     <!-- 房间状态 -->
     <view class="section">
@@ -45,6 +42,9 @@
     <view class="section">
       <view class="section-header">
         <view class="section-title">今日轮牌</view>
+        <view class="push-rotation-btn" bindtap="resetRotation" wx:if="{{canPushRotation}}">
+          重置
+        </view>
         <view class="push-rotation-btn" bindtap="openRotationPushModal" wx:if="{{rotationList.length > 0 && canPushRotation}}">
           推送轮牌
         </view>
@@ -55,7 +55,9 @@
           <view class="staff-info">
             <view class="staff-name-row">
               <view class="staff-name">{{item.name}}</view>
-              <view class="shift-tag {{item.shift}}">{{item.shift === 'morning' ? '早班' : '晚班'}}</view>
+              <view class="shift-tag {{item.shift}}">
+                {{item.shift === 'morning' ? '早班' : '晚班'}}
+              </view>
             </view>
             <view class="available-slots" wx:if="{{item.availableSlots}}">
               <view class="slots-label">可约:</view>
@@ -157,18 +159,26 @@
         <view class="gender-counter">
           <view class="gender-label">男技师</view>
           <view class="counter-controls">
-            <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="male" data-action="decrease" disabled="{{reserveForm.genderRequirement.male <= 0}}">-</view>
+            <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="male" data-action="decrease" disabled="{{reserveForm.genderRequirement.male <= 0}}">
+              -
+            </view>
             <view class="counter-value">{{reserveForm.genderRequirement.male}}</view>
-            <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="male" data-action="increase" disabled="{{reserveForm.genderRequirement.male >= 2}}">+</view>
+            <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="male" data-action="increase" disabled="{{reserveForm.genderRequirement.male >= 2}}">
+              +
+            </view>
           </view>
         </view>
         <!-- 女技师数量 -->
         <view class="gender-counter">
           <view class="gender-label">女技师</view>
           <view class="counter-controls">
-            <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="female" data-action="decrease" disabled="{{reserveForm.genderRequirement.female <= 0}}">-</view>
+            <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="female" data-action="decrease" disabled="{{reserveForm.genderRequirement.female <= 0}}">
+              -
+            </view>
             <view class="counter-value">{{reserveForm.genderRequirement.female}}</view>
-            <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="female" data-action="increase" disabled="{{reserveForm.genderRequirement.female >= 2}}">+</view>
+            <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="female" data-action="increase" disabled="{{reserveForm.genderRequirement.female >= 2}}">
+              +
+            </view>
           </view>
         </view>
         <view class="availability-hint" wx:if="{{staffAvailability.length > 0}}">
@@ -299,7 +309,9 @@
         </view>
         <block wx:for="{{rotationList}}" wx:key="_id" wx:for-index="idx">
           <view class="preview-row">
-            <text class="preview-value">{{idx + 1}}. {{item.name}} ({{item.shift === 'morning' ? '早班' : '晚班'}})</text>
+            <text class="preview-value">
+              {{idx + 1}}. {{item.name}} ({{item.shift === 'morning' ? '早班' : '晚班'}})
+            </text>
           </view>
         </block>
       </view>

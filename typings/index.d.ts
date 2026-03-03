@@ -121,36 +121,6 @@ interface ReservationRecord extends BaseRecord {
   genderRequirement?: "male" | "female";
 }
 
-// interface ConsultationRecord {
-//   _id: string
-//   date: string
-//   surname: string
-//   gender: 'male' | 'female'
-//   project: string
-//   room: string
-//   technician: string
-//   startTime: string
-//   endTime: string
-//   isVoided: boolean
-//   isReservation: boolean
-//   settlement?: any
-// }
-
-// interface ReservationRecord {
-//   _id: string
-//   date: string
-//   customerName: string
-//   gender: 'male' | 'female'
-//   project: string
-//   startTime: string
-//   endTime: string
-//   technicians: Array<{
-//     _id: string
-//     name: string
-//   }>
-//   technicianName?: string
-//   technicianId?: string
-// }
 
 // 会员卡数据结构
 interface MembershipCard extends BaseRecord {
@@ -410,3 +380,56 @@ interface IndexPage<D> {
   sendToWechatWebhook: (content: string) => Promise<boolean>;
   resetForm: () => void;
 }
+
+// interface CashierPage {
+//   data: ;
+// }
+
+type CashierPage = WechatMiniprogram.Page.Instance<{
+  reserveForm: {
+    _id: string;
+    customerName: string;
+    project: string;
+    startTime: string;
+    endTime?: string;
+    date: string;
+    gender: 'male' | 'female';
+    phone: string;
+    requirementType: 'specific' | 'gender';
+    selectedTechnicians: {
+      _id: string;
+      name: string;
+      phone: string;
+      isClockIn: boolean;
+    }[];
+    genderRequirement: { male: number; female: number; };
+    technicianId: string;
+    technicianName: string;
+  };
+  pushModal: {
+    show: boolean;
+    loading: boolean;
+    type: 'create' | 'cancel';
+    reservationData: Add<ReservationRecord> & {
+      technicians: {
+        _id: string,
+        name: string,
+        phone: string,
+        isClockIn: boolean
+      }[]
+    } | null;
+  };
+  originalReservation: ReservationRecord | null;
+  projects: Project[];
+  selectedDate: string;
+  settlementRecordId: string;
+  settlementCouponCode?: string;
+  paymentMethods: {
+    key: string; selected: boolean; amount: string; couponCode: string; label: string;
+  }[];
+  matchedCustomer: CustomerRecord | null;
+}, {
+
+  //   setData: (data: Record<string, any>) => void;
+  checkStaffAvailability: () => undefined | Promise<void>;
+}>
