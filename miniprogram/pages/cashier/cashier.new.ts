@@ -1,14 +1,14 @@
 // cashier.ts - 收银台主页面（模块化重构版）
-import { checkLogin } from '../../utils/auth';
-import { loadingService, LockKeys } from '../../utils/loading-service';
-import { hasButtonPermission, requirePagePermission } from '../../utils/permission';
-import { getCurrentDate } from '../../utils/util';
-import type { PaymentMethodItem } from './cashier.types';
-import { ReservationHandler } from './handlers/reservation.handler';
-import { SettlementHandler } from './handlers/settlement.handler';
-import { PushHandler } from './handlers/push.handler';
-import { CashierDataLoaderService } from './services/data-loader.service';
-import { searchCustomer, applyMatchedCustomer, clearMatchedCustomer } from './utils/customer-match';
+import {checkLogin} from '../../utils/auth';
+import {loadingService, LockKeys} from '../../utils/loading-service';
+import {hasButtonPermission, requirePagePermission} from '../../utils/permission';
+import {getCurrentDate} from '../../utils/util';
+import type {PaymentMethodItem} from './cashier.types';
+import {PushHandler} from './handlers/push.handler';
+import {ReservationHandler} from './handlers/reservation.handler';
+import {SettlementHandler} from './handlers/settlement.handler';
+import {CashierDataLoaderService} from './services/data-loader.service';
+import {applyMatchedCustomer, clearMatchedCustomer, searchCustomer} from './utils/customer-match';
 
 const app = getApp<IAppOption>();
 
