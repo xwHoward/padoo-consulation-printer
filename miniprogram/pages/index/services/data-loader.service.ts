@@ -1,13 +1,12 @@
-import { DataLoader as CommonDataLoader } from "../../common/utils/data-loader";
 import { cloudDb, Collections } from "../../../utils/cloud-db";
 import { formatDate, formatTime, parseProjectDuration } from "../../../utils/util";
 
 const app = getApp<IAppOption>();
 
 export class DataLoaderService {
-  private page: any;
+  private page: IndexPage<DataLoaderService>;
 
-  constructor(page: any) {
+  constructor(page: IndexPage<DataLoaderService>) {
     this.page = page;
   }
 
@@ -31,19 +30,27 @@ export class DataLoaderService {
 
       const projectDuration = parseProjectDuration(this.page.data.consultationInfo.project) || 60;
 
-      const list = await CommonDataLoader.loadTechnicianAvailability(
-        targetDate,
-        currentTimeStr,
-        projectDuration,
-        this.page.data.currentReservationIds,
-        this.page.data.editId
-      );
+      const res = await wx.cloud.callFunction({
+        name: 'getAvailableTechnicians',
+        data: {
+          date: targetDate,
+          currentTime: currentTimeStr,
+          projectDuration: projectDuration,
+          currentReservationIds: this.page.data.currentReservationIds,
+          currentConsultationId: this.page.data.editId || undefined
+        }
+      });
 
-      if (list && list.length > 0) {
+      if (!res.result || typeof res.result !== 'object') {
+        throw new Error('获取技师列表失败');
+      }
+
+      if (res.result.code === 0) {
+        const list = res.result.data;
         this.page.setData({ technicianList: list, loadingTechnicians: false });
       } else {
         wx.showToast({
-          title: '加载技师列表失败',
+          title: res.result.message || '加载技师列表失败',
           icon: 'none'
         });
         this.page.setData({ loadingTechnicians: false });
@@ -58,8 +65,12 @@ export class DataLoaderService {
   }
 
   async loadProjects() {
-    const projects = await CommonDataLoader.loadProjects();
-    this.page.setData({ projects });
+    try {
+      const allProjects = await app.getProjects();
+      this.page.setData({ projects: allProjects });
+    } catch (error) {
+      this.page.setData({ projects: [] });
+    }
   }
 
   async loadEditData(editId: string, ensureConsultationInfoCompatibility: any) {
@@ -69,12 +80,11 @@ export class DataLoaderService {
       const foundRecord = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, editId);
 
       if (foundRecord) {
-        const projects = await CommonDataLoader.loadProjects();
-        const selectedProject = projects.find((p: any) => p.name === foundRecord.project);
+        const selectedProject = this.page.data.projects.find((p) => p.name === foundRecord.project);
         const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
 
         const updateData: any = {
-          consultationInfo: ensureConsultationInfoCompatibility(foundRecord, projects),
+          consultationInfo: ensureConsultationInfoCompatibility(foundRecord, this.page.data.projects),
           editId: editId,
           currentProjectIsEssentialOilOnly: isEssentialOilOnly,
           currentProjectNeedEssentialOil: selectedProject?.needEssentialOil || false,
@@ -130,9 +140,8 @@ export class DataLoaderService {
       const validRecords = records.filter((r: any) => r !== null) as ReservationRecord[];
 
       if (validRecords.length > 0) {
-        const projects = await CommonDataLoader.loadProjects();
         const firstRecord = validRecords[0];
-        const selectedProject = projects.find((p: any) => p.name === firstRecord.project);
+        const selectedProject = this.page.data.projects.find((p: any) => p.name === firstRecord.project);
         const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
         const isClockInValue = firstRecord.isClockIn || false;
 

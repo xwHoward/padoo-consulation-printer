@@ -1,164 +1,172 @@
 import { cloudDb, Collections } from "../../../utils/cloud-db";
+import { parseProjectDuration } from "../../../utils/util";
 
 const app = getApp<IAppOption>();
 
 export class ReservationUtils {
-	static async deleteReservations(currentReservationIds: string[]): Promise<number> {
-		if (!currentReservationIds || currentReservationIds.length === 0) {
-			return 0;
-		}
+  static async deleteReservations(currentReservationIds: string[]): Promise<number> {
+    if (!currentReservationIds || currentReservationIds.length === 0) {
+      return 0;
+    }
 
-		try {
-			const results = await Promise.all(
-				currentReservationIds.map(id =>
-					cloudDb.updateById(Collections.RESERVATIONS, id, {
-						status: 'completed',
-						updatedAt: new Date().toISOString()
-					})
-				)
-			);
+    try {
+      let deletedCount = 0;
+      for (const reserveId of currentReservationIds) {
+        await cloudDb.updateById(Collections.RESERVATIONS, reserveId, {
+          status: 'arrived'
+        });
+        deletedCount++;
+      }
+      return deletedCount;
+    } catch (error) {
+      return 0;
+    }
+  }
 
-			const deletedCount = results.filter(r => r !== null).length;
-			if (deletedCount > 0) {
-				console.log(`标记了 ${deletedCount} 个预约为已完成`);
-			}
+  static async reassignFutureReservations(date: string, currentTime: string): Promise<void> {
+    try {
+      const allReservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, {
+        date: date,
+        status: 'active'
+      });
 
-			return deletedCount;
-		} catch (error) {
-			console.error('标记预约完成失败:', error);
-			return 0;
-		}
-	}
+      const futureReservations = allReservations.filter(r => {
+        if (r.isClockIn) {
+          return false;
+        }
+        return r.startTime >= currentTime;
+      });
 
-	static async reassignFutureReservations(date: string, currentTime: string): Promise<void> {
-		try {
-			const allReservations = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, {
-				date: date,
-				status: 'active'
-			});
+      if (futureReservations.length === 0) {
+        return;
+      }
 
-			const futureReservations = allReservations.filter(r => {
-				if (r.isClockIn) return false;
-				return r.startTime >= currentTime;
-			});
+      const rotationData = await app.getRotationQueue(date);
+      if (!rotationData || !rotationData.staffList || rotationData.staffList.length === 0) {
+        return;
+      }
 
-			if (futureReservations.length === 0) {
-				return;
-			}
+      const allStaff = await app.getStaffs();
+      const staffMap = new Map(allStaff.map(s => [s._id, s]));
 
-			const rotationData = await app.getRotationQueue(date);
-			if (!rotationData || !rotationData.staffList || rotationData.staffList.length === 0) {
-				return;
-			}
+      const rotationStaffList = rotationData.staffList.map(item => ({
+        staffId: item.staffId,
+        position: item.position,
+        staff: staffMap.get(item.staffId)
+      })).filter(item => item.staff && item.staff!.status === 'active');
 
-			const allStaff = await app.getActiveStaffs();
+      const sortedReservations = [...futureReservations].sort((a, b) => 
+        a.startTime.localeCompare(b.startTime)
+      );
 
-			const staffMap = new Map(allStaff.map(s => [s._id, s]));
-			const rotationStaffIds = rotationData.staffList.map(s => s.staffId);
+      const staffReservationCount = new Map<string, number>();
+      for (const item of rotationStaffList) {
+        staffReservationCount.set(item.staffId, 0);
+      }
 
-			const updatePromises = futureReservations.map(async (reservation) => {
-				const genderStaff = allStaff.filter(s => s.gender === reservation.gender);
-				const availableGenderStaff = genderStaff.filter(s => rotationStaffIds.includes(s._id));
+      for (const reservation of sortedReservations) {
+        let requiredGender: 'male' | 'female' | undefined;
+        
+        if (reservation.genderRequirement) {
+          requiredGender = reservation.genderRequirement;
+        } else if (reservation.technicianId) {
+          const staff = staffMap.get(reservation.technicianId);
+          if (staff) {
+            requiredGender = staff.gender;
+          }
+        }
 
-				if (availableGenderStaff.length === 0) {
-					return null;
-				}
+        if (!requiredGender) {
+          continue;
+        }
 
-				const todayRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(date);
-				const activeRecords = todayRecords.filter(r => !r.isVoided);
+        let bestStaffId: string | null = null;
+        let minReservationCount = Infinity;
 
-				const otherReservations = allReservations.filter(r => r._id !== reservation._id);
+        for (const rotationItem of rotationStaffList) {
+          const staff = rotationItem.staff!;
+          const staffId = rotationItem.staffId;
 
-				const staffWithAssignments = new Map<string, number>();
+          if (staff.gender !== requiredGender) {
+            continue;
+          }
 
-				for (const record of activeRecords) {
-					if (record.technician) {
-						staffWithAssignments.set(record.technician, (staffWithAssignments.get(record.technician) || 0) + 1);
-					}
-				}
+          const currentCount = staffReservationCount.get(staffId) || 0;
 
-				for (const r of otherReservations) {
-					if (r.technicianName) {
-						staffWithAssignments.set(r.technicianName, (staffWithAssignments.get(r.technicianName) || 0) + 1);
-					}
-				}
+          if (currentCount < minReservationCount) {
+            const projectDuration = parseProjectDuration(reservation.project) || 60;
+            
+            try {
+              const checkRes = await wx.cloud.callFunction({
+                name: 'getAvailableTechnicians',
+                data: {
+                  date: date,
+                  currentTime: reservation.startTime,
+                  projectDuration: projectDuration,
+                  currentReservationIds: [reservation._id],
+                  currentConsultationId: undefined
+                }
+              });
 
-				let assignedStaff: typeof availableGenderStaff[0] | null = null;
-				let minAssignments = Infinity;
+              let checkAvailable: any[] = [];
+              if (checkRes.result && typeof checkRes.result === 'object') {
+                const result = checkRes.result as { code: number; data: any[] };
+                if (result.code === 0 && result.data) {
+                  checkAvailable = result.data;
+                }
+              }
 
-				for (const staff of availableGenderStaff) {
-					const rotationIndex = rotationStaffIds.indexOf(staff._id);
-					if (rotationIndex === -1) continue;
+              const isAvailable = checkAvailable.some(t => t._id === staffId);
 
-					const assignments = staffWithAssignments.get(staff.name) || 0;
-					if (assignments < minAssignments) {
-						minAssignments = assignments;
-						assignedStaff = staff;
-					}
-				}
+              if (isAvailable) {
+                bestStaffId = staffId;
+                minReservationCount = currentCount;
+              }
+            } catch (error) {
+              continue;
+            }
+          }
+        }
 
-				if (assignedStaff) {
-					const updateData = {
-						technicianId: assignedStaff._id,
-						technicianName: assignedStaff.name,
-						updatedAt: new Date().toISOString()
-					};
+        if (bestStaffId) {
+          const staff = staffMap.get(bestStaffId)!;
+          await cloudDb.updateById(Collections.RESERVATIONS, reservation._id, {
+            technicianId: bestStaffId,
+            technicianName: staff.name,
+            isClockIn: false
+          });
 
-					return cloudDb.updateById(Collections.RESERVATIONS, reservation._id, updateData);
-				}
+          staffReservationCount.set(bestStaffId, (staffReservationCount.get(bestStaffId) || 0) + 1);
+        }
+      }
+    } catch (error) {
+      console.error('重新分配预约失败:', error);
+    }
+  }
 
-				return null;
-			});
+  static async saveCustomerInfo(consultation: any): Promise<void> {
+    try {
+      const phone = consultation.phone.trim();
+      if (!phone) return;
 
-			await Promise.all(updatePromises);
-		} catch (error) {
-			console.error('重新分配预约技师失败:', error);
-		}
-	}
+      const existingCustomers = await cloudDb.find<any>(Collections.CUSTOMERS, { phone });
 
-	static async saveCustomerInfo(consultation: any) {
-		try {
-			const { surname, gender, phone, project, licensePlate, isClockIn } = consultation;
+      const customerData: any = {
+        phone: phone,
+        name: consultation.surname + (consultation.gender === 'male' ? '先生' : '女士'),
+        gender: consultation.gender || '',
+        responsibleTechnician: consultation.technician || '',
+        licensePlate: consultation.licensePlate || '',
+        remarks: consultation.remarks || '',
+      };
 
-			if (!surname || !gender) {
-				return;
-			}
-
-			const existing = await wx.cloud.callFunction({
-				name: 'matchCustomer',
-				data: { surname, gender, phone: phone || '' }
-			});
-
-			if (existing.result && typeof existing.result === 'object') {
-				const result = existing.result as { code: number; data?: any };
-				if (result.code === 0 && result.data) {
-					const updateData: any = {};
-					if (phone && !result.data.phone) {
-						updateData.phone = phone;
-					}
-
-					if (Object.keys(updateData).length > 0) {
-						await cloudDb.updateById(Collections.CUSTOMERS, result.data._id, updateData);
-					}
-
-					return;
-				}
-			}
-
-			const customerData = {
-				surname,
-				gender,
-				phone: phone || '',
-				projects: project ? [project] : [],
-				licensePlate: licensePlate || '',
-				isClockIn: isClockIn || false,
-				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString()
-			};
-
-			await cloudDb.insert(Collections.CUSTOMERS, customerData);
-		} catch (error) {
-			console.error('保存顾客信息失败:', error);
-		}
-	}
+      if (existingCustomers && existingCustomers.length > 0) {
+        const existingCustomer = existingCustomers[0];
+        await cloudDb.updateById<any>(Collections.CUSTOMERS, existingCustomer._id, customerData);
+      } else {
+        await cloudDb.insert<any>(Collections.CUSTOMERS, customerData);
+      }
+    } catch (error) {
+    }
+  }
 }
