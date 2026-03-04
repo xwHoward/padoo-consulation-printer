@@ -1,5 +1,6 @@
 import { Collections, cloudDb } from '../../utils/cloud-db';
 import { COUPON_PLATFORMS, GENDERS, MASSAGE_STRENGTHS } from "../../utils/constants";
+import { loadingService, LockKeys } from '../../utils/loading-service';
 import { hasButtonPermission } from '../../utils/permission';
 import { formatTime, getCurrentDate, getPreviousDate, getNextDate } from "../../utils/util";
 
@@ -120,8 +121,7 @@ Page({
 
   // 加载顾客历史记录
   async loadCustomerHistory(customerPhone: string, customerId: string) {
-    this.setData({ loading: true, loadingText: '加载中...' });
-    try {
+    await loadingService.withLoading(this, async () => {
       const res = await wx.cloud.callFunction({
         name: 'getHistoryData',
         data: {
@@ -143,22 +143,18 @@ Page({
           customerId
         });
       } else {
-        wx.showToast({
-          title: res.result.message || '加载失败',
-          icon: 'error'
-        });
+        throw new Error(res.result.message || '加载失败');
       }
-    } catch (error) {
-      wx.showToast({ title: '加载失败', icon: 'error' });
-    } finally {
-      this.setData({ loading: false });
-    }
+    }, {
+      loadingText: '加载中...',
+      lockKey: LockKeys.LOAD_HISTORY,
+      errorText: '加载失败'
+    });
   },
 
   // 加载历史数据
   async loadHistoryData(targetDate: string) {
-    this.setData({ loading: true, loadingText: '加载中...' });
-    try {
+    await loadingService.withLoading(this, async () => {
       const res = await wx.cloud.callFunction({
         name: 'getHistoryData',
         data: {
@@ -186,16 +182,13 @@ Page({
           historyData
         });
       } else {
-        wx.showToast({
-          title: res.result.message || '加载失败',
-          icon: 'error'
-        });
+        throw new Error(res.result.message || '加载失败');
       }
-    } catch (error) {
-      wx.showToast({ title: '加载失败', icon: 'error' });
-    } finally {
-      this.setData({ loading: false });
-    }
+    }, {
+      loadingText: '加载中...',
+      lockKey: LockKeys.LOAD_HISTORY,
+      errorText: '加载失败'
+    });
   },
 
   // 显示咨询单详情
@@ -248,10 +241,7 @@ Page({
       content: '确定要作废该咨询单吗？',
       success: async (res) => {
         if (res.confirm) {
-          this.setData({ loading: true, loadingText: '作废中...' });
-          try {
-
-
+          await loadingService.withLoading(this, async () => {
             const updated = await cloudDb.updateById(
               Collections.CONSULTATION,
               record._id,
@@ -265,20 +255,13 @@ Page({
               });
               await this.loadHistoryData(this.data.dateSelector.selectedDate);
             } else {
-              wx.showToast({
-                title: '记录不存在',
-                icon: 'error'
-              });
+              throw new Error('记录不存在');
             }
-
-          } catch (error) {
-            wx.showToast({
-              title: '操作失败',
-              icon: 'error'
-            });
-          } finally {
-            this.setData({ loading: false });
-          }
+          }, {
+            loadingText: '作废中...',
+            lockKey: LockKeys.VOID_CONSULTATION,
+            errorText: '操作失败'
+          });
         }
       }
     });

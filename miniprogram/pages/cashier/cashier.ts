@@ -2,6 +2,7 @@
 import { checkLogin } from '../../utils/auth';
 import { cloudDb, Collections } from '../../utils/cloud-db';
 import { DEFAULT_SHIFT, SHIFT_END_TIME, SHIFT_START_TIME, ShiftType } from '../../utils/constants';
+import { loadingService, LockKeys } from '../../utils/loading-service';
 import { hasButtonPermission, requirePagePermission } from '../../utils/permission';
 import { earlierThan, formatTime, getCurrentDate, getMinutesDiff, getNextDate, getPreviousDate, laterOrEqualTo, parseProjectDuration } from '../../utils/util';
 
@@ -173,14 +174,9 @@ Page({
 
 	// 加载初始数据（房间状态、员工轮牌状态、排钟进度）
 	async loadInitialData() {
-		this.setData({ loading: true, loadingText: '加载数据...' });
-		try {
+		await loadingService.withLoading(this, async () => {
 			const app = getApp<IAppOption>();
 			const today = this.data.selectedDate || getCurrentDate();
-			const allRooms = await app.getRooms();
-			const filteredRooms = allRooms.filter((r: Room) => r.status === 'normal');
-			const todayRecords = await cloudDb.getConsultationsByDate<ConsultationRecord>(today);
-			const activeRecords = todayRecords.filter(r => !r.isVoided);
 			const now = new Date();
 			const todayStr = getCurrentDate();
 			const isToday = today === todayStr;
@@ -190,6 +186,27 @@ Page({
 				const minutes = now.getMinutes();
 				currentTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 			}
+			const currentTimeStr = isToday ? currentTime : '12:00';
+
+			// 并行获取所有基础数据
+			const [allRooms, todayRecords, allSchedules, allStaff, technicianRes] = await Promise.all([
+				app.getRooms(),
+				cloudDb.getConsultationsByDate<ConsultationRecord>(today),
+				cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE),
+				app.getStaffs(),
+				wx.cloud.callFunction({
+					name: 'getAvailableTechnicians',
+					data: {
+						date: today,
+						currentTime: currentTimeStr,
+						projectDuration: 60,
+						currentReservationIds: []
+					}
+				})
+			]);
+
+			const filteredRooms = allRooms.filter((r: Room) => r.status === 'normal');
+			const activeRecords = todayRecords.filter(r => !r.isVoided);
 
 			const rooms = filteredRooms.map((room) => {
 				let occupiedRecords = activeRecords
@@ -220,39 +237,21 @@ Page({
 				};
 			});
 
-			// 2. 获取员工轮牌与排钟表数据
-			const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
-			const allStaff = await app.getStaffs();
+			// 处理员工轮牌数据
 			const activeStaffList = allStaff.filter(s => s.status === 'active');
 			const scheduledStaff = allSchedules.map(s => s.staffId);
 			const activeStaff = activeStaffList.filter(s => scheduledStaff.includes(s._id));
-
 
 			this.setData({
 				activeStaffList: activeStaff,
 			});
 
-			// 调用云函数获取技师可用列表
-			const projectDuration = 60;
-			const currentTimeStr = isToday ? currentTime : '12:00';
-
-			const technicianRes = await wx.cloud.callFunction({
-				name: 'getAvailableTechnicians',
-				data: {
-					date: today,
-					currentTime: currentTimeStr,
-					projectDuration: projectDuration,
-					currentReservationIds: []
-				}
-			});
-
+			// 处理技师可用列表
 			let availableTechnicians = [] as StaffAvailability[];
-			if (!technicianRes.result || typeof technicianRes.result !== 'object') {
-				this.setData({ staffAvailability: availableTechnicians });
-				return;
-			}
-			if (technicianRes.result && technicianRes.result.code === 0) {
-				availableTechnicians = technicianRes.result.data as StaffAvailability[];
+			if (technicianRes.result && typeof technicianRes.result === 'object') {
+				if (technicianRes.result.code === 0) {
+					availableTechnicians = technicianRes.result.data as StaffAvailability[];
+				}
 			}
 
 			this.setData({ staffAvailability: availableTechnicians });
@@ -274,20 +273,16 @@ Page({
 					isToday
 				}
 			});
-		} catch (error) {
-			wx.showToast({
-				title: '加载数据失败',
-				icon: 'none'
-			});
-		} finally {
-			this.setData({ loading: false });
-		}
+		}, {
+			loadingText: '加载数据...',
+			lockKey: LockKeys.LOAD_CASHIER_DATA,
+			errorText: '加载数据失败'
+		});
 	},
 
 	// 只刷新排钟进度（日期切换时使用）
 	async loadTimelineData() {
-		this.setData({ loading: true, loadingText: '刷新排钟...' });
-		try {
+		await loadingService.withLoading(this, async () => {
 			const today = this.data.selectedDate || getCurrentDate();
 			const rotationList = await this.prepareRotationList(today);
 
@@ -295,14 +290,11 @@ Page({
 				rotationList,
 				timelineRefreshTrigger: this.data.timelineRefreshTrigger + 1
 			});
-		} catch (error) {
-			wx.showToast({
-				title: '刷新失败',
-				icon: 'none'
-			});
-		} finally {
-			this.setData({ loading: false });
-		}
+		}, {
+			loadingText: '刷新排钟...',
+			lockKey: LockKeys.REFRESH_ROTATION,
+			errorText: '刷新失败'
+		});
 	},
 
 	async prepareRotationList(today: string) {
@@ -444,9 +436,7 @@ Page({
 			return;
 		}
 
-		this.setData({ loading: true, loadingText: '调整中...' });
-
-		try {
+		await loadingService.withLoading(this, async () => {
 			const result = await app.adjustRotationPosition(this.data.selectedDate, fromIndex, toIndex);
 
 			if (result) {
@@ -457,13 +447,13 @@ Page({
 
 				wx.showToast({ title: '调整成功', icon: 'success' });
 			} else {
-				wx.showToast({ title: '调整失败', icon: 'none' });
+				throw new Error('调整失败');
 			}
-		} catch (error) {
-			wx.showToast({ title: '调整失败', icon: 'none' });
-		} finally {
-			this.setData({ loading: false });
-		}
+		}, {
+			loadingText: '调整中...',
+			lockKey: LockKeys.ADJUST_ROTATION,
+			errorText: '调整失败'
+		});
 	},
 
 	// 预约相关
