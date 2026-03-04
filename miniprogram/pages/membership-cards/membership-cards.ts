@@ -114,7 +114,7 @@ Page({
   },
 
   onTotalTimesInput(e: WechatMiniprogram.Input) {
-    const updates: any = { formTotalTimes: e.detail.value };
+    const updates: { formTotalTimes: string; formName?: string } = { formTotalTimes: e.detail.value };
     if (this.data.formProject) {
       updates.formName = `${e.detail.value}次卡·${this.data.formProject}`;
     }
@@ -126,7 +126,7 @@ Page({
   },
 
   onProjectSelect(e: WechatMiniprogram.CustomEvent) {
-    const updates: any = { formProject: e.detail.project };
+    const updates: { formProject: string; formName?: string } = { formProject: e.detail.project };
     if (this.data.formTotalTimes) {
       updates.formName = `${this.data.formTotalTimes}次卡·${this.data.formProject}`;
     }

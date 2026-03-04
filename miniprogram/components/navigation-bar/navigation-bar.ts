@@ -105,7 +105,7 @@ Component({
       })
       this.triggerEvent('home', {}, {})
     },
-    onTabChange(e: any) {
+    onTabChange(e: WechatMiniprogram.CustomEvent) {
       const key = e.currentTarget.dataset.key
       this.triggerEvent('tabchange', { key }, {})
     }

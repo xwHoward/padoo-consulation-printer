@@ -34,7 +34,7 @@ export class FormHandler {
     const project = e.detail.project || e.currentTarget.dataset.project;
     const { isDualMode, activeGuest, projects } = this.page.data;
 
-    const selectedProject = projects.find((p: any) => p.name === project);
+    const selectedProject = projects.find((p: Project) => p.name === project);
     const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
 
     if (isDualMode) {

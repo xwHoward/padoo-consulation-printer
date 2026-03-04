@@ -356,7 +356,7 @@ Page({
 
     wx.showModal({
       title: '确认删除',
-      content: '确定要删除该咨询单吗？删除后无法恢复！',
+      content: '确定要删除该咨询单吗？删除后无法恢复。',
       confirmText: '确认删除',
       confirmColor: '#ff4d4f',
       success: async (res) => {
@@ -413,7 +413,7 @@ Page({
 
     this.setData({ loading: true, loadingText: '生成统计中...' });
     try {
-      const res = await wx.cloud.callFunction({
+      const res= await wx.cloud.callFunction({
         name: 'getHistoryData',
         data: {
           action: 'getDailySummary',
@@ -433,7 +433,10 @@ Page({
         return;
       }
 
-      const { technicianStats, monthlyScoreRanking } = res.result.data;
+      const { technicianStats, monthlyScoreRanking } = res.result.data as { technicianStats: Record<string, TechnicianStats>; monthlyScoreRanking: MonthlyScoreRanking } || {
+        technicianStats:{},
+        monthlyScoreRanking:[]
+      };
 
       if (Object.keys(technicianStats).length === 0) {
         wx.showToast({
@@ -444,8 +447,6 @@ Page({
       }
 
       let summaryText = `# ${date} 每日总结\n\n`;
-
-      summaryText += `## 📊 当日统计\n\n`;
 
       Object.keys(technicianStats).forEach(technician => {
         const stats = technicianStats[technician];
@@ -471,10 +472,10 @@ Page({
         summaryText += `\n\n`;
       });
 
-      const totalRecords = Object.values(technicianStats).reduce((sum: number, stats: any) => sum + stats.totalCount, 0);
-      const totalClockIn = Object.values(technicianStats).reduce((sum: number, stats: any) => sum + stats.clockInCount, 0);
-      const totalExtraTime = Object.values(technicianStats).reduce((sum: number, stats: any) => sum + stats.extraTimeTotal, 0);
-      const totalOvertime = Object.values(technicianStats).reduce((sum: number, stats: any) => sum + stats.overtimeTotal, 0);
+      const totalRecords = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.totalCount, 0);
+      const totalClockIn = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.clockInCount, 0);
+      const totalExtraTime = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.extraTimeTotal, 0);
+      const totalOvertime = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.overtimeTotal, 0);
 
       summaryText += `# 总计\n`;
       summaryText += `总单数: **${totalRecords}**\n`;
@@ -490,7 +491,7 @@ Page({
       if (monthlyScoreRanking && monthlyScoreRanking.rankings) {
         summaryText += `\n## 🏆 ${monthlyScoreRanking.period.month}月积分排名\n\n`;
 
-        monthlyScoreRanking.rankings.forEach((item: any) => {
+        monthlyScoreRanking.rankings.forEach((item) => {
           const rankEmoji = item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : item.rank === 3 ? '🥉' : `${item.rank}.`;
           summaryText += `${rankEmoji} **${item.technician}**: ${item.totalScore}分 `;
           summaryText += `(${item.salesCount}次卡 | 点钟${item.clockInCount}次)\n`;
@@ -592,7 +593,7 @@ Page({
 
     if (!record || inputValue < 0) {
       wx.showToast({
-        title: '请输入有效数字',
+        title: '请输入有效数值',
         icon: 'none'
       });
       return;
@@ -670,11 +671,11 @@ Page({
     }
   },
 
-  // 更新加钟或加班数据
+  // 更新加钟或加班数值
   async updateExtraTimeOrOvertime(recordId: string, date: string, value: number) {
     this.setData({ loading: true, loadingText: '更新中...' });
     try {
-      const updateData: any = { extraTime: value };
+      const updateData: { extraTime: number; endTime?: string } = { extraTime: value };
 
       if (value > 0) {
         const record = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, recordId) as ConsultationRecord | null;

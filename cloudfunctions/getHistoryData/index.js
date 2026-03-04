@@ -304,7 +304,7 @@ exports.main = async (event) => {
       const currentDate = new Date(targetDate);
       const currentYear = currentDate.getFullYear();
       const currentMonth = currentDate.getMonth();
-      const monthStart = new Date(currentYear, currentMonth, 1);
+      // const monthStart = new Date(currentYear, currentMonth, 1);
       const monthEnd = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
       const monthStartStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
       const monthEndStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(monthEnd.getDate()).padStart(2, '0')}`;

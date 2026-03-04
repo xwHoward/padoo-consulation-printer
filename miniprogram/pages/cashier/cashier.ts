@@ -76,7 +76,7 @@ Page({
 		loading: false,
 		loadingText: '加载中...',
 		// 顾客匹配
-		matchedCustomer: null as any,
+		matchedCustomer: null as CustomerRecord|null,
 		matchedCustomerApplied: false,
 		// 预约推送确认弹窗
 		pushModal: {
@@ -1075,7 +1075,7 @@ ${changes.join('\n')}
 
 		if (!matchedCustomer) return;
 
-		const updates: any = {
+		const updates: Record<string, any> = {
 			'reserveForm.customerName': matchedCustomer.name.replace(/先生|女士/g, ''),
 			'reserveForm.gender': matchedCustomer.name.endsWith('女士') ? 'female' : 'male',
 		};

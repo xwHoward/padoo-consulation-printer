@@ -6,9 +6,9 @@ const SPARE_TIME = 15;
 
 export class ModalHandler {
   private page: IndexPage<DataLoaderService>;
-  private dataLoader: any;
+  private dataLoader: DataLoaderService | null;
 
-  constructor(page: IndexPage<DataLoaderService>, dataLoader?: any) {
+  constructor(page: IndexPage<DataLoaderService>, dataLoader: DataLoaderService | null) {
     this.page = page;
     this.dataLoader = dataLoader;
   }

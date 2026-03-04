@@ -110,8 +110,8 @@ export class ClockInUtils {
 
   static buildDualClockInInfo(
     consultationInfo: Add<ConsultationInfo>,
-    guest1Info: any,
-    guest2Info: any,
+    guest1Info: GuestInfo,
+    guest2Info: GuestInfo,
     startTimeDate?: Date,
     editId?: string
   ): { info1: Add<ConsultationInfo>; info2: Add<ConsultationInfo>; startTime: string } {

@@ -1,10 +1,10 @@
 export class CustomerUtils {
   static async searchCustomer(
-    consultationInfo: any,
+    consultationInfo: Add<ConsultationInfo>,
     isDualMode: boolean,
     activeGuest: 1 | 2,
-    guest1Info: any,
-    guest2Info: any
+    guest1Info: GuestInfo,
+    guest2Info: GuestInfo
   ): Promise<CustomerRecord | null> {
     let currentSurname = '';
     let currentGender = '';
@@ -52,11 +52,11 @@ export class CustomerUtils {
     matchedCustomer: CustomerRecord,
     isDualMode: boolean,
     activeGuest: 1 | 2
-  ): Record<string, any> {
+  ): Record<string, unknown> {
     if (!matchedCustomer) return {};
 
     const guestKey = activeGuest === 1 ? 'guest1Info' : 'guest2Info';
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
 
     if (isDualMode) {
       updates[`${guestKey}.surname`] = matchedCustomer.name.replace(/先生|女士/g, '');
@@ -97,8 +97,8 @@ export class CustomerUtils {
     return updates;
   }
 
-  private static buildPlateNumberUpdates(licensePlate: string): Record<string, any> {
-    const updates: any = {
+  private static buildPlateNumberUpdates(licensePlate: string): Record<string, unknown> {
+    const updates: Record<string, string | string[]> = {
       'licensePlate': licensePlate
     };
 

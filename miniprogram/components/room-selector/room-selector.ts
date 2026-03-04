@@ -20,8 +20,8 @@ Component({
 			try {
 				const app = getApp<IAppOption>();
 				const allRooms = await app.getRooms();
-				const normalRooms = allRooms.filter((r: any) => r.status === 'normal' || !r.status);
-				const roomNames = normalRooms.map((r: any) => r.name);
+				const normalRooms = allRooms.filter((r: Room) => r.status === 'normal' || !r.status);
+				const roomNames = normalRooms.map((r: Room) => r.name);
 				this.setData({ rooms: roomNames });
 			} catch (error) {
 				this.setData({ rooms: [] });

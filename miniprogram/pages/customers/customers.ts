@@ -247,7 +247,7 @@ Page({
         const { code, data, message } = res.result as any;
 
         if (code === 0 && data) {
-          data.visitRecords.forEach((record: any) => {
+          data.visitRecords.forEach((record: CustomerVisit) => {
             if (!record.isVoided) {
               visitRecords.push({
                 _id: record._id,
@@ -256,7 +256,8 @@ Page({
                 technician: record.technician,
                 room: record.room,
                 amount: record.amount,
-                isClockIn: record.isClockIn
+                isClockIn: record.isClockIn,
+                isVoided: record.isVoided
               });
             }
           });

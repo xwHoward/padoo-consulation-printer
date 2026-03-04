@@ -108,9 +108,9 @@ export class ReservationUtils {
                 }
               });
 
-              let checkAvailable: any[] = [];
+              let checkAvailable: StaffAvailability[] = [];
               if (checkRes.result && typeof checkRes.result === 'object') {
-                const result = checkRes.result as { code: number; data: any[] };
+                const result = checkRes.result as GetAvailableTechniciansResult;
                 if (result.code === 0 && result.data) {
                   checkAvailable = result.data;
                 }
@@ -144,14 +144,14 @@ export class ReservationUtils {
     }
   }
 
-  static async saveCustomerInfo(consultation: any): Promise<void> {
+  static async saveCustomerInfo(consultation: Add<ConsultationInfo> & { licensePlate?: string }): Promise<void> {
     try {
       const phone = consultation.phone.trim();
       if (!phone) return;
 
-      const existingCustomers = await cloudDb.find<any>(Collections.CUSTOMERS, { phone });
+      const existingCustomers = await cloudDb.find<CustomerRecord>(Collections.CUSTOMERS, { phone });
 
-      const customerData: any = {
+      const customerData: Omit<CustomerRecord, "_id" | "createdAt" | "updatedAt"> = {
         phone: phone,
         name: consultation.surname + (consultation.gender === 'male' ? '先生' : '女士'),
         gender: consultation.gender || '',
@@ -162,9 +162,9 @@ export class ReservationUtils {
 
       if (existingCustomers && existingCustomers.length > 0) {
         const existingCustomer = existingCustomers[0];
-        await cloudDb.updateById<any>(Collections.CUSTOMERS, existingCustomer._id, customerData);
+        await cloudDb.updateById<CustomerRecord>(Collections.CUSTOMERS, existingCustomer._id, customerData);
       } else {
-        await cloudDb.insert<any>(Collections.CUSTOMERS, customerData);
+        await cloudDb.insert<CustomerRecord>(Collections.CUSTOMERS, customerData);
       }
     } catch (error) {
     }

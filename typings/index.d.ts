@@ -152,6 +152,7 @@ interface CustomerVisit {
   room: string;
   amount?: number;
   isClockIn: boolean;
+  isVoided: boolean;
 }
 
 // 顾客会员卡关联数据结构

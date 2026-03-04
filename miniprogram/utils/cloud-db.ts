@@ -10,7 +10,7 @@ export interface CloudDbConfig {
  * 云数据库类
  */
 class CloudDatabase {
-	private db: any;
+	private db: DB.Database | null = null;
 	private envId: string = '';
 	private initialized: boolean = false;
 
@@ -93,7 +93,7 @@ class CloudDatabase {
 	async findById<T extends BaseRecord>(collection: string, _id: string): Promise<T | null> {
 		try {
 			const res = await this.getCollection(collection).doc(_id).get();
-			return res.data || null;
+			return res.data as T | null;
 		} catch (error) {
 			if ((error as any).errMsg?.includes('document not found')) {
 				return null;
@@ -116,7 +116,7 @@ class CloudDatabase {
 
 			const query = collectionRef.where(condition);
 			const res = await query.get();
-			return res.data || [];
+			return res.data as T[];
 		} catch (error) {
 			return [];
 		}
@@ -178,7 +178,7 @@ class CloudDatabase {
 			const res = await this.getCollection(collection).doc(_id).update({
 				data: updateData
 			});
-			return res.stats?.updated || 0 > 0;
+			return (res.stats?.updated || 0) > 0;
 		} catch (error) {
 			if ((error as any).errMsg?.includes('document not found')) {
 				return false;
@@ -208,7 +208,7 @@ class CloudDatabase {
 	 */
 	async findWithPage<T extends BaseRecord>(
 		collection: string,
-		condition?: QueryCondition<T>,
+		condition: QueryCondition<T>,
 		page: number = 1,
 		pageSize: number = 20,
 		orderBy?: { field: string, direction: 'asc' | 'desc' }
@@ -245,7 +245,7 @@ class CloudDatabase {
 			]);
 
 			return {
-				data: dataRes.data || [],
+				data: dataRes.data as T[],
 				total: countRes.total || 0,
 				hasMore: skip + pageSize < (countRes.total || 0)
 			};
@@ -284,14 +284,14 @@ class CloudDatabase {
 		try {
 			const res = await this.getCollection(Collections.CONSULTATION)
 				.where({
-					createdAt: this.db.RegExp({
+					createdAt: this.db?.RegExp({
 						regexp: `^${date}`,
 						options: 'i'
 					})
 				})
 				.orderBy('createdAt', 'asc')
 				.get();
-			return res.data || [];
+			return res.data as T[];
 		} catch (error) {
 			return [];
 		}

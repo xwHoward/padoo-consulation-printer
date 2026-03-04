@@ -73,7 +73,7 @@ export class DataLoaderService {
     }
   }
 
-  async loadEditData(editId: string, ensureConsultationInfoCompatibility: any) {
+  async loadEditData(editId: string, ensureConsultationInfoCompatibility: EnsureConsultationInfoCompatibilityFn) {
     this.page.setData({ loading: true, loadingText: '加载中...' });
 
     try {
@@ -83,7 +83,7 @@ export class DataLoaderService {
         const selectedProject = this.page.data.projects.find((p) => p.name === foundRecord.project);
         const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
 
-        const updateData: any = {
+        const updateData: Record<string, unknown> = {
           consultationInfo: ensureConsultationInfoCompatibility(foundRecord, this.page.data.projects),
           editId: editId,
           currentProjectIsEssentialOilOnly: isEssentialOilOnly,
@@ -127,8 +127,8 @@ export class DataLoaderService {
 
   async loadReservationData(
     reserveIdOrIds: string,
-    DefaultConsultationInfo: any,
-    DefaultGuestInfo: any
+    DefaultConsultationInfo: Add<ConsultationInfo>,
+    DefaultGuestInfo: GuestInfo
   ) {
     this.page.setData({ loading: true, loadingText: '加载中...' });
 
@@ -137,11 +137,11 @@ export class DataLoaderService {
       const records = await Promise.all(
         reserveIds.map((_id: string) => cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, _id))
       );
-      const validRecords = records.filter((r: any) => r !== null) as ReservationRecord[];
+      const validRecords = records.filter((r): r is ReservationRecord => r !== null) as ReservationRecord[];
 
       if (validRecords.length > 0) {
         const firstRecord = validRecords[0];
-        const selectedProject = this.page.data.projects.find((p: any) => p.name === firstRecord.project);
+        const selectedProject = this.page.data.projects.find((p: Project) => p.name === firstRecord.project);
         const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
         const isClockInValue = firstRecord.isClockIn || false;
 
