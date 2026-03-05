@@ -285,19 +285,7 @@ page {
 	font-size: 14px;
 }
 
-/* 弹窗样式 */
-.modal-mask {
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	background: rgba(0, 0, 0, 0.6);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	z-index: 100;
-}
+/* 弹窗样式 - .modal-mask 通用样式由 app.less 提供 */
 
 .modal-content {
 	width: 85%;
@@ -606,6 +594,7 @@ page {
 		}
 
 	}
+
 	.modal-footer {
 		display: flex;
 		gap: 15px;

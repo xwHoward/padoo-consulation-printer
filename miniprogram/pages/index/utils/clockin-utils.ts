@@ -1,5 +1,6 @@
 import { cloudDb, Collections } from "../../../utils/cloud-db";
-import { formatDate, formatTime, parseProjectDuration, SHIFT_END_TIMES, SHIFT_START_TIMES } from "../../../utils/util";
+import { formatDate, formatTime, parseProjectDuration } from "../../../utils/util";
+import { SHIFT_START_TIME, SHIFT_END_TIME } from "../../../utils/constants";
 
 const app = getApp<IAppOption>();
 const SPARE_TIME = 15;
@@ -22,7 +23,7 @@ export class ClockInUtils {
       }
 
       const { startTime, endTime } = record;
-      const shiftStartTime = SHIFT_START_TIMES[schedule.shift], shiftEndTime = SHIFT_END_TIMES[schedule.shift];
+      const shiftStartTime = SHIFT_START_TIME[schedule.shift as keyof typeof SHIFT_START_TIME], shiftEndTime = SHIFT_END_TIME[schedule.shift as keyof typeof SHIFT_END_TIME];
       if (!startTime || !endTime || !shiftStartTime || !shiftEndTime) return 0;
       const [startHour, startMin] = startTime.split(":").map(Number);
       const [endHour, endMin] = endTime.split(":").map(Number);
