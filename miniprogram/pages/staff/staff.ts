@@ -20,6 +20,7 @@ Page({
 		inputAvatar: '',
 		inputPhone: '',
 		inputStatus: 'active' as StaffStatus,
+		inputWechatWorkId: '',
 		// 排班相关
 		today: '',
 		dates: [] as DateInfo[],
@@ -222,6 +223,7 @@ Page({
 					inputGender: staff.gender || 'male',
 					inputAvatar: staff.avatar || '',
 					inputPhone: staff.phone || '',
+					inputWechatWorkId: staff.wechatWorkId || '',
 					inputStatus: staff.status,
 					loading: false
 				});
@@ -326,6 +328,11 @@ Page({
 		this.setData({ inputGender: gender });
 	},
 
+	// 企业微信ID输入
+	onWechatWorkIdInput(e: WechatMiniprogram.Input) {
+		this.setData({ inputWechatWorkId: e.detail.value });
+	},
+
 	// 选择照片
 	onChooseAvatar() {
 		const that = this;
@@ -389,9 +396,10 @@ Page({
 	// 确认弹窗
 	async onConfirmModal() {
 		try {
-			const { inputName, inputGender, inputAvatar, inputPhone, inputStatus, editingStaff } = this.data;
+			const { inputName, inputGender, inputAvatar, inputPhone, inputWechatWorkId, inputStatus, editingStaff } = this.data;
 			const name = inputName.trim();
 			const phone = inputPhone.trim();
+			const wechatWorkId = inputWechatWorkId.trim();
 
 			if (!name) {
 				wx.showToast({ title: '请输入员工姓名', icon: 'none' });
@@ -409,6 +417,11 @@ Page({
 				return;
 			}
 
+			if (!wechatWorkId) {
+				wx.showToast({ title: '请输入企业微信ID', icon: 'none' });
+				return;
+			}
+
 			wx.showLoading({ title: '保存中...' });
 
 			if (editingStaff) {
@@ -417,6 +430,7 @@ Page({
 					gender: inputGender,
 					avatar: inputAvatar,
 					phone,
+					wechatWorkId,
 					status: inputStatus,
 				});
 
@@ -435,6 +449,7 @@ Page({
 					gender: inputGender,
 					avatar: inputAvatar,
 					phone,
+					wechatWorkId,
 					status: 'active',
 				}));
 

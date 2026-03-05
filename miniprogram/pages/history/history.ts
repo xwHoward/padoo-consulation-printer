@@ -3,6 +3,7 @@ import { COUPON_PLATFORMS, GENDERS, MASSAGE_STRENGTHS } from "../../utils/consta
 import { loadingService, LockKeys } from '../../utils/loading-service';
 import { hasButtonPermission } from '../../utils/permission';
 import { formatTime, getCurrentDate, getPreviousDate, getNextDate } from "../../utils/util";
+import { formatMention } from '../../utils/wechat-work';
 
 // 扩展记录类型，添加折叠状态
 interface DisplayRecord extends ConsultationRecord {
@@ -599,7 +600,7 @@ Page({
 
       let technicianMention = '';
       if (staff && staff.phone) {
-        technicianMention = `<@${staff.phone}>`;
+        technicianMention =formatMention(staff);
       }
 
       const updatedRecord = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, record._id) as ConsultationRecord | null;
@@ -609,7 +610,7 @@ Page({
       const message = `【⏰ 加钟提醒】
 顾客：${record.surname}${genderText}
 项目：${typeText}(${inputValue})
-技师：${record.technician}${technicianMention}
+技师：${technicianMention}
 房间：${record.room}
 时间：${originalEndTime} - ${newEndTime}`;
 

@@ -1,5 +1,6 @@
 // push.handler.ts - 推送消息处理器
 import { hasButtonPermission } from '../../../utils/permission';
+import { formatMention } from '../../../utils/wechat-work';
 import type { CashierPage } from '../cashier.types';
 
 const app = getApp<IAppOption>();
@@ -14,7 +15,7 @@ export class PushHandler {
 	/**
 	 * 获取预约类型文本
 	 */
-	getReservationTypeText(technicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }>): string {
+	getReservationTypeText(technicians: Array<{ _id: string; name: string; phone: string; wechatWorkId?: string; isClockIn: boolean }>): string {
 		if (technicians.length === 0) {
 			return '排钟';
 		}
@@ -58,7 +59,7 @@ export class PushHandler {
 			const genderLabel = reservationData.gender === 'male' ? '先生' : '女士';
 			const customerInfo = `${reservationData.customerName}${genderLabel}`;
 			const technicianMentions = reservationData.technicians
-				.map(t => t.phone ? `<@${t.phone}>` : t.name)
+				.map(t => formatMention(t))
 				.join(' ');
 			const technicianNames = reservationData.technicians
 				.map(t => t.name)
@@ -212,17 +213,17 @@ ${rotationLines}
 			const staffMap = new Map(staffList.map(s => [s._id, s]));
 
 			// 提取技师姓名和手机号（去重）
-			const uniqueTechnicians = new Map<string, { name: string; phone?: string }>();
+			const uniqueTechnicians = new Map<string, Pick<StaffInfo, 'name'|'phone'|'wechatWorkId'>>();
 			reservations.forEach(r => {
 				const staff = r.technicianId ? staffMap.get(r.technicianId) : null;
 				const key = r.technicianId || r.technicianName;
-				if (key && !uniqueTechnicians.has(key)) {
-					uniqueTechnicians.set(key, { name: r.technicianName || '', phone: staff?.phone });
+				if (staff&&key && !uniqueTechnicians.has(key)) {
+					uniqueTechnicians.set(key, { ...staff });
 				}
 			});
 
 			const technicianMentions = Array.from(uniqueTechnicians.values())
-				.map(t => t.phone ? `${t.name}<@${t.phone}>` : t.name)
+				.map(t => formatMention(t))
 				.join(' ');
 
 			const message = `【🏃 到店通知】
@@ -284,14 +285,12 @@ ${customerInfo} 已到店
 			const genderLabel = updated.gender === 'male' ? '先生' : '女士';
 			const customerInfo = `${updated.customerName}${genderLabel}`;
 
-			// 获取技师手机号
-			let technicianMention = '';
+			// 获取技师信息
+			let staffInfo: StaffInfo | null = null;
 			if (updated.technicianId) {
-				const staff = await app.getStaff(updated.technicianId);
-				if (staff && staff.phone) {
-					technicianMention = `<@${staff.phone}>`;
-				}
+				staffInfo = await app.getStaff(updated.technicianId);
 			}
+			const technicianMention = staffInfo ? formatMention(staffInfo) : '';
 			const technicianName = updated.technicianName || '待定';
 			const message = `【📝 预约变更通知】
 

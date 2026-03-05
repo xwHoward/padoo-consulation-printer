@@ -1,70 +1,35 @@
 <!-- staff.wxml -->
-<navigation-bar
-  title="员工管理"
-  back="{{true}}"
-  color="black"
-  background="#FFF"
->
-  <view
-    slot="right"
-    bindtap="onAddStaff"
-    class="nav-btn"
-  >
-    <text class="nav-btn-text">添加</text>
+<navigation-bar title="员工管理" back="{{true}}" color="black" background="#FFF">
+  <view slot="right" bindtap="onAddStaff" class="nav-btn">
+    <view class="nav-btn-text">添加</view>
   </view>
 </navigation-bar>
-<scroll-view
-  class="scrollarea"
-  scroll-y
-  type="list"
->
+<scroll-view class="scrollarea" scroll-y type="list">
   <view class="container">
     <!-- 排班表 -->
     <view class="schedule-section">
       <view class="section-header">
-        <text class="section-title">员工排班</text>
-        <text class="today-text">当前日期: {{today}}</text>
+        <view class="section-title">员工排班</view>
+        <view class="today-text">当前日期: {{today}}</view>
       </view>
-      <scroll-view
-        class="table-scroll-view"
-        scroll-x="{{true}}"
-        scroll-y="{{false}}"
-      >
+      <scroll-view class="table-scroll-view" scroll-x="{{true}}" scroll-y="{{false}}">
         <view class="schedule-table">
           <!-- 表头: 日期 -->
           <view class="table-row header-row">
             <view class="table-cell sticky-col header-cell">员工</view>
-            <view
-              class="table-cell header-cell {{item.isToday ? 'is-today' : ''}}"
-              wx:for="{{dates}}"
-              wx:key="date"
-            >
+            <view class="table-cell header-cell {{item.isToday ? 'is-today' : ''}}" wx:for="{{dates}}" wx:key="date">
               <view class="date-num">{{item.dayNum}}</view>
               <view class="date-week">{{item.weekDay}}</view>
             </view>
           </view>
           <!-- 表体: 员工排班 -->
-          <view
-            class="table-row"
-            wx:for="{{staffList}}"
-            wx:for-item="staff"
-            wx:key="_id"
-          >
+          <view class="table-row" wx:for="{{staffList}}" wx:for-item="staff" wx:key="_id">
             <view class="table-cell sticky-col staff-cell">{{staff.name}}</view>
-            <view
-              class="table-cell shift-cell"
-              wx:for="{{dates}}"
-              wx:for-item="dateObj"
-              wx:key="date"
-            >
-              <picker
-                bindchange="onShiftChange"
-                data-staff-id="{{staff._id}}"
-                data-date="{{dateObj.date}}"
-                value="{{scheduleMap[staff._id][dateObj.date].index}}"
-                range="{{shiftNames}}"
-              >
-                <view class="shift-tag {{scheduleMap[staff._id][dateObj.date].type}}">{{scheduleMap[staff._id][dateObj.date].label}}</view>
+            <view class="table-cell shift-cell" wx:for="{{dates}}" wx:for-item="dateObj" wx:key="date">
+              <picker bindchange="onShiftChange" data-staff-id="{{staff._id}}" data-date="{{dateObj.date}}" value="{{scheduleMap[staff._id][dateObj.date].index}}" range="{{shiftNames}}">
+                <view class="shift-tag {{scheduleMap[staff._id][dateObj.date].type}}">
+                  {{scheduleMap[staff._id][dateObj.date].label}}
+                </view>
               </picker>
             </view>
           </view>
@@ -73,75 +38,52 @@
       <!-- 图例说明 -->
       <view class="legend">
         <view class="legend-item">
-          <view class="dot morning">
-          </view>
+          <view class="dot morning"></view>
           早班
         </view>
         <view class="legend-item">
-          <view class="dot evening">
-          </view>
+          <view class="dot evening"></view>
           晚班
         </view>
         <view class="legend-item">
-          <view class="dot off">
-          </view>
+          <view class="dot off"></view>
           休息
         </view>
         <view class="legend-item">
-          <view class="dot leave">
-          </view>
+          <view class="dot leave"></view>
           请假
         </view>
       </view>
     </view>
     <!-- 员工列表 -->
     <view class="staff-list" wx:if="{{staffList.length > 0}}">
-      <view
-        class="staff-item {{item.status === 'disabled' ? 'disabled' : ''}}"
-        wx:for="{{staffList}}"
-        wx:key="_id"
-      >
+      <view class="staff-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{staffList}}" wx:key="_id">
         <view class="staff-avatar">
-          <image
-            class="avatar-img"
-            src="{{item.avatar || '/assets/default-avatar.jpg'}}"
-            mode="aspectFill"
-          />
+          <image class="avatar-img" src="{{item.avatar || '/assets/default-avatar.jpg'}}" mode="aspectFill" />
         </view>
-        <view
-          class="staff-info"
-          bindtap="onEditStaff"
-          data-id="{{item._id}}"
-        >
-          <text class="staff-name">{{item.name}}</text>
-          <text class="staff-gender">{{item.gender === 'male' ? '先生' : '女士'}}</text>
-          <text class="staff-status {{item.status}}">{{item.status === 'active' ? '正常' : '禁用'}}</text>
+        <view class="staff-info" bindtap="onEditStaff" data-id="{{item._id}}">
+          <view class="staff-name">{{item.name}}</view>
+          <view class="staff-gender">{{item.gender === 'male' ? '先生' : '女士'}}</view>
+          <view class="staff-status {{item.status}}">
+            {{item.status === 'active' ? '正常' : '禁用'}}
+          </view>
         </view>
         <view class="staff-actions">
-          <view
-            class="action-btn toggle-btn"
-            bindtap="onToggleStatus"
-            data-id="{{item._id}}"
-          >
-            <text>{{item.status === 'active' ? '禁用' : '启用'}}</text>
+          <view class="action-btn toggle-btn" bindtap="onToggleStatus" data-id="{{item._id}}">
+            <view>{{item.status === 'active' ? '禁用' : '启用'}}</view>
           </view>
-          <view
-            class="action-btn delete-btn"
-            bindtap="onDeleteStaff"
-            data-id="{{item._id}}"
-          >
-            <text>删除</text>
+          <view class="action-btn delete-btn" bindtap="onDeleteStaff" data-id="{{item._id}}">
+            <view>删除</view>
           </view>
         </view>
       </view>
     </view>
     <!-- 空状态 -->
     <view class="empty-hint" wx:else>
-      <text>暂无员工，点击右上角添加</text>
+      <view>暂无员工，点击右上角添加</view>
     </view>
   </view>
 </scroll-view>
-
 <!-- Loading 遮罩 -->
 <view class="loading-mask" wx:if="{{loading}}">
   <view class="loading-content">
@@ -149,90 +91,52 @@
     <view class="loading-text">加载中...</view>
   </view>
 </view>
-
 <!-- 添加/编辑弹窗 -->
-<view
-  class="modal-mask"
-  wx:if="{{showModal}}"
-  bindtap="onCloseModal"
->
-</view>
+<view class="modal-mask" wx:if="{{showModal}}" bindtap="onCloseModal"></view>
 <view class="modal-container" wx:if="{{showModal}}">
   <view class="modal-title">{{editingStaff ? '编辑员工' : '添加员工'}}</view>
   <view class="modal-content">
     <view class="form-item">
-      <text class="form-label">姓名</text>
-      <input
-        class="form-input"
-        placeholder="请输入员工姓名"
-        value="{{inputName}}"
-        bindinput="onNameInput"
-        focus="{{showModal}}" />
+      <view class="form-label">姓名</view>
+      <input class="form-input" placeholder="请输入员工姓名" value="{{inputName}}" bindinput="onNameInput" focus="{{showModal}}" />
     </view>
-
     <view class="form-item">
-      <text class="form-label">性别</text>
+      <view class="form-label">性别</view>
       <view class="gender-selector">
-        <view
-          class="gender-option {{inputGender === 'male' ? 'selected' : ''}}"
-          bindtap="onGenderSelect"
-          data-gender="male"
-        >
-          <text>先生</text>
+        <view class="gender-option {{inputGender === 'male' ? 'selected' : ''}}" bindtap="onGenderSelect" data-gender="male">
+          <view>先生</view>
         </view>
-        <view
-          class="gender-option {{inputGender === 'female' ? 'selected' : ''}}"
-          bindtap="onGenderSelect"
-          data-gender="female"
-        >
-          <text>女士</text>
+        <view class="gender-option {{inputGender === 'female' ? 'selected' : ''}}" bindtap="onGenderSelect" data-gender="female">
+          <view>女士</view>
         </view>
       </view>
     </view>
-
     <view class="form-item">
-      <text class="form-label">手机号 *</text>
-      <input
-        class="form-input"
-        placeholder="请输入手机号"
-        value="{{inputPhone}}"
-        bindinput="onPhoneInput"
-        type="number"
-        maxlength="11" />
+      <view class="form-label">手机号 *</view>
+      <input class="form-input" placeholder="请输入手机号" value="{{inputPhone}}" bindinput="onPhoneInput" type="number" maxlength="11" />
     </view>
-
     <view class="form-item">
-      <text class="form-label">照片</text>
+      <view class="form-label">照片</view>
       <view class="avatar-uploader" bindtap="onChooseAvatar">
-        <image
-          class="avatar-preview"
-          src="{{inputAvatar || '/assets/default-avatar.pn'}}"
-          mode="aspectFill"
-          wx:if="{{inputAvatar}}"
-        />
+        <image class="avatar-preview" src="{{inputAvatar || '/assets/default-avatar.pn'}}" mode="aspectFill" wx:if="{{inputAvatar}}" />
         <view class="avatar-placeholder" wx:if="{{!inputAvatar}}">
-          <text class="placeholder-icon">+</text>
-          <text class="placeholder-text">上传照片</text>
+          <view class="placeholder-icon">+</view>
+          <view class="placeholder-text">上传照片</view>
         </view>
       </view>
     </view>
-
+    <view class="form-item">
+      <view class="form-label">企业微信ID *</view>
+      <input class="form-input" placeholder="请输入企业微信ID" value="{{inputWechatWorkId}}" bindinput="onWechatWorkIdInput" maxlength="64" />
+    </view>
     <view class="form-item" wx:if="{{editingStaff}}">
-      <text class="form-label">状态</text>
+      <view class="form-label">状态</view>
       <view class="status-selector">
-        <view
-          class="status-option {{inputStatus === 'active' ? 'selected' : ''}}"
-          bindtap="onStatusSelect"
-          data-status="active"
-        >
-          <text>正常</text>
+        <view class="status-option {{inputStatus === 'active' ? 'selected' : ''}}" bindtap="onStatusSelect" data-status="active">
+          <view>正常</view>
         </view>
-        <view
-          class="status-option {{inputStatus === 'disabled' ? 'selected' : ''}}"
-          bindtap="onStatusSelect"
-          data-status="disabled"
-        >
-          <text>禁用</text>
+        <view class="status-option {{inputStatus === 'disabled' ? 'selected' : ''}}" bindtap="onStatusSelect" data-status="disabled">
+          <view>禁用</view>
         </view>
       </view>
     </view>

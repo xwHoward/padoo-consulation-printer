@@ -93,6 +93,7 @@ interface StaffInfo extends BaseRecord {
   gender: StaffGender;
   avatar: string;
   phone: string;
+  wechatWorkId: string;
 }
 
 // 班次类型
@@ -244,6 +245,7 @@ interface StaffAvailability {
   _id: string;
   name: string;
   phone: string;
+  wechatWorkId?: string;
   isOccupied: boolean;
   occupiedReason?: string;
   isClockIn?: boolean; // 点钟标记

@@ -191,8 +191,8 @@
       </view>
     </view>
     <view class="modal-footer">
-      <button class="btn-cancel" bindtap="closeReserveModal">取消</button>
-      <button class="btn-confirm" bindtap="confirmReserve">确定</button>
+      <view class="btn btn-cancel" bindtap="closeReserveModal">取消</view>
+      <view class="btn btn-confirm" bindtap="confirmReserve">确定</view>
     </view>
   </view>
 </view>
@@ -273,7 +273,7 @@
           <view class="preview-label">技师：</view>
           <view class="preview-value">
             <block wx:for="{{pushModal.reservationData.technicians}}" wx:key="_id" wx:for-item="tech">
-              {{tech.name}}{{tech.phone ? '<@' + tech.phone + '>' : ''}}{{tech.isClockIn ? '[点]' : ''}}
+              @{{tech.name}}{{tech.isClockIn ? '[点]' : ''}}
             </block>
           </view>
         </view>

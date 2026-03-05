@@ -276,7 +276,8 @@ export class ReservationHandler {
 			selectedTechnicians.splice(existingIndex, 1);
 		} else {
 			// 未选中，添加
-			selectedTechnicians.push({ _id, name, phone, isClockIn: false });
+			const staff = this.page.data.staffAvailability.find(s => s._id === _id);
+			selectedTechnicians.push({ _id, name, phone, wechatWorkId: staff?.wechatWorkId, isClockIn: false });
 		}
 
 		// 更新 staffAvailability 的 isSelected 状态
@@ -490,7 +491,7 @@ export class ReservationHandler {
 						const staffList = await app.getActiveStaffs();
 						const staffMap = new Map(staffList.map(s => [s._id, s]));
 
-						const techniciansForPush: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }> = [];
+						const techniciansForPush: Array<{ _id: string; name: string; phone: string; wechatWorkId?: string; isClockIn: boolean }> = [];
 						for (const r of toCancel) {
 							if (r.technicianId) {
 								const staff = staffMap.get(r.technicianId);
@@ -499,6 +500,7 @@ export class ReservationHandler {
 										_id: r.technicianId,
 										name: r.technicianName || '',
 										phone: staff.phone,
+										wechatWorkId: staff.wechatWorkId,
 										isClockIn: r.isClockIn || false
 									});
 								}

@@ -104,6 +104,7 @@ exports.main = async (event, context) => {
                 name: staff.name,
                 gender: staff.gender,
                 phone: staff.phone || '',
+                wechatWorkId: staff.wechatWorkId || '',
                 isOccupied: hasConflict,
                 occupiedReason,
                 position: position
@@ -262,7 +263,8 @@ async function getTechnicianAvailability(date) {
                 name: staff.name,
                 avatar: staff.avatar,
                 gender: staff.gender,
-                phone: staff.phone,
+                phone: staff.phone || '',
+                wechatWorkId: staff.wechatWorkId || '',
                 latestAppointment,
                 availableMinutes,
                 status,

@@ -1,5 +1,3 @@
-// cashier.types.ts - Cashier页面共享类型定义
-
 export interface PaymentMethodItem {
 	key: string;
 	label: string;
@@ -23,7 +21,7 @@ export interface ReserveForm {
 	project: string;
 	phone: string;
 	requirementType: 'specific' | 'gender';
-	selectedTechnicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }>;
+	selectedTechnicians: Array<{ _id: string; name: string; phone: string; wechatWorkId?: string; isClockIn: boolean }>;
 	genderRequirement: { male: number; female: number };
 	startTime: string;
 	technicianId: string;
@@ -41,7 +39,7 @@ export interface PushModalState {
 		startTime: string;
 		endTime: string;
 		project: string;
-		technicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }>;
+		technicians: Array<{ _id: string; name: string; phone: string; wechatWorkId: string; isClockIn: boolean }>;
 	} | null;
 }
 
@@ -97,7 +95,7 @@ export interface CashierPage {
 	calculateTotalAmount: (paymentMethods: PaymentMethodItem[]) => void;
 	closeSettlementModal: () => void;
 	// 推送方法
-	getReservationTypeText: (technicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }>) => string;
+	getReservationTypeText: (technicians: Array<{ _id: string; name: string; phone: string; wechatWorkId: string; isClockIn: boolean }>) => string;
 	// 辅助方法
 	sendReservationModificationNotification: (original: ReservationRecord | null, updated: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
 }
