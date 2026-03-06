@@ -166,23 +166,15 @@ Page({
 		}
 	},
 
-	async loadTimelineData() {
-		if (dataLoader) {
-			await dataLoader.loadTimelineData();
-		}
-	},
-
 	// ========== 日期选择 ==========
 	async onDateChange(e: WechatMiniprogram.CustomEvent) {
 		const date = e.detail.date;
 		this.setData({ selectedDate: date });
-		await this.loadInitialData();
 	},
 
 	onDatePickerChange(e: WechatMiniprogram.CustomEvent) {
 		const date = e.detail.date;
 		this.setData({ selectedDate: date });
-		this.loadInitialData();
 	},
 
 	// ========== 轮牌相关 ==========

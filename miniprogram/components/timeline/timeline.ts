@@ -1,5 +1,6 @@
 import { cloudDb, Collections } from '../../utils/cloud-db';
 import { SHIFT_END_TIME, SHIFT_START_TIME, ShiftType } from '../../utils/constants';
+import { loadingService, LockKeys } from '../../utils/loading-service';
 import { getCurrentDate } from '../../utils/util';
 
 const app = getApp<IAppOption>();
@@ -11,6 +12,7 @@ interface TimelineData {
 	currentTimePosition: string
 	scrollLeft: number
 	loading: boolean
+	loadingText: string
 }
 
 interface StaffTimelineItem {
@@ -29,6 +31,7 @@ interface TimeBlock {
 	left: string
 	width: string
 	customerName: string
+	gender: 'male' | 'female';
 	room: string
 	project: string
 	isReservation: boolean
@@ -69,7 +72,8 @@ Component({
 		showCurrentTimeLine: false,
 		currentTimePosition: '0%',
 		scrollLeft: 0,
-		loading: false
+		loading: false,
+		loadingText: '加载数据...',
 	} as TimelineData,
 
 	observers: {
@@ -86,10 +90,8 @@ Component({
 	},
 
 	methods: {
-		async loadAllStaffTimelineData(highlightStaffId?: string) {
-			this.setData({ loading: true });
-
-			try {
+		loadAllStaffTimelineData(highlightStaffId?: string) {
+			loadingService.withLoading(this, async () => {
 				const today = this.properties.selectedDate || getCurrentDate();
 				const todayStr = getCurrentDate();
 				const isToday = today === todayStr;
@@ -157,6 +159,7 @@ Component({
 						return {
 							_id: r._id,
 							customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
+							gender: r.gender,
 							startTime: r.startTime,
 							endTime: r.endTime,
 							project: r.project,
@@ -202,12 +205,11 @@ Component({
 					showCurrentTimeLine,
 					currentTimePosition,
 				});
-
-			} catch (error) {
-				this.triggerEvent('error', { error });
-			} finally {
-				this.setData({ loading: false });
-			}
+			}, {
+				loadingText: '加载数据...',
+				lockKey: LockKeys.LOAD_TIMELINE_DATA,
+				errorText: '加载数据失败'
+			});
 		},
 
 		calculateAvailableSlotsBetweenBlocks(blocks: TimeBlock[], shift: ShiftType): AvailableSlot[] {

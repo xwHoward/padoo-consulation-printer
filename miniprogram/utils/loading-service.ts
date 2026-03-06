@@ -278,4 +278,7 @@ export const LockKeys = {
   SAVE_MEMBERSHIP: 'membership:save',
   TOGGLE_MEMBERSHIP_STATUS: 'membership:toggleStatus',
   DELETE_MEMBERSHIP: 'membership:delete',
+  
+  // timeline 页面
+  LOAD_TIMELINE_DATA: 'timeline:loadData',
 } as const;

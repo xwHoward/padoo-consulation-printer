@@ -132,10 +132,10 @@
 	position: absolute;
 	top: 5px;
 	bottom: 5px;
-	background: @primary-color;
+	// 绿色
+	background: #52c41a;
 	border-radius: 4px;
 	overflow: hidden;
-	box-shadow: 0 2px 4px rgba(255, 107, 0, 0.2);
 	z-index: 1;
 
 	&.readonly {
@@ -143,9 +143,18 @@
 	}
 
 	&.reservation {
-		background: #4A90E2;
 		box-shadow: 0 2px 4px rgba(74, 144, 226, 0.2);
 		opacity: 0.9;
+		&.male {
+			background-color: #1890ff;
+		}
+
+		&.female {
+			background-color: #ff69b4;
+		}
+	}
+	&.in-progress {
+		background-color: @primary-color;
 	}
 
 	&.settled {

@@ -158,6 +158,6 @@
   bind:confirm="onSummaryModalConfirm"
   loading="{{summaryModal.loading}}"
   loading-text="推送中...">
-  <textarea class="summary-textarea" value="{{summaryModal.content}}" bindinput="onSummaryContentInput" placeholder="请输入每日总结内容" maxlength="2000" auto-height show-confirm-bar="{{false}}" />
+  <textarea class="summary-textarea" value="{{summaryModal.content}}" bindinput="onSummaryContentInput" placeholder="请输入每日总结内容" maxlength="2000"  show-confirm-bar="{{false}}" />
   <text class="char-count">{{summaryModal.content.length}}/2000</text>
 </modal>

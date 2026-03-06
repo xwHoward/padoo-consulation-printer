@@ -37,7 +37,7 @@ interface SettlementInfo {
 // 定义咨询单数据结构
 interface ConsultationInfo extends BaseRecord {
   surname: string;
-  gender: "male" | "female" | "";
+  gender: "male" | "female";
   project: string;
   technician: string;
   room: string;
@@ -418,7 +418,8 @@ type CashierPage = WechatMiniprogram.Page.Instance<{
         _id: string,
         name: string,
         phone: string,
-        isClockIn: boolean
+        isClockIn: boolean;
+        wechatWorkId: string;
       }[]
     } | null;
   };

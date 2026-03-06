@@ -17,7 +17,7 @@
         <!-- 日期快速导航 -->
         <date-picker initialDate="{{dateSelector.selectedDate}}" bind:change="onDatePickerChange" />
         <view class="reserve-btn" wx:if="{{canCreateReservation}}" bindtap="openReserveModal">
-          新增预约
+          +预约
         </view>
       </view>
       <timeline selectedDate="{{selectedDate}}" readonly="{{false}}" refreshTrigger="{{timelineRefreshTrigger}}" bind:blockclick="onBlockClick" />
@@ -43,10 +43,10 @@
       <view class="section-header">
         <view class="section-title">今日轮牌</view>
         <view class="push-rotation-btn" bindtap="resetRotation" wx:if="{{canPushRotation}}">
-          重置轮牌
+          重置
         </view>
         <view class="push-rotation-btn" bindtap="openRotationPushModal" wx:if="{{rotationList.length > 0 && canPushRotation}}">
-          推送轮牌
+          推送
         </view>
       </view>
       <view class="rotation-list" wx:if="{{rotationList.length > 0}}">

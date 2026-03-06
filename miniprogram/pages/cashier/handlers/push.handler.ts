@@ -61,9 +61,6 @@ export class PushHandler {
 			const technicianMentions = reservationData.technicians
 				.map(t => formatMention(t))
 				.join(' ');
-			const technicianNames = reservationData.technicians
-				.map(t => t.name)
-				.join('、');
 
 			const reservationType = this.getReservationTypeText(reservationData.technicians);
 
@@ -74,12 +71,10 @@ export class PushHandler {
 
 顾客：${customerInfo}
 日期：${reservationData.date}
-时间：${reservationData.startTime} - ${reservationData.endTime}
+时间：**${reservationData.startTime} - ${reservationData.endTime}**
 项目：${reservationData.project}
 类型：${reservationType}
-技师：${technicianNames}
-
-${technicianMentions}`;
+技师：**${technicianMentions}**`;
 			} else {
 				message = `【⏰ 新预约提醒】
 
@@ -88,9 +83,7 @@ ${technicianMentions}`;
 时间：**${reservationData.startTime} - ${reservationData.endTime}**
 项目：${reservationData.project}
 类型：${reservationType}
-技师：**${technicianNames}**
-
-${technicianMentions}`;
+技师：**${technicianMentions}**`;
 			}
 
 			const res = await wx.cloud.callFunction({

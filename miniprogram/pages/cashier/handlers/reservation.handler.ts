@@ -872,7 +872,8 @@ export class ReservationHandler {
 				_id: t._id,
 				name: t.name,
 				phone: staffMapNew.get(t._id)?.phone || '',
-				isClockIn: t.isClockIn || false
+				isClockIn: t.isClockIn || false,
+				wechatWorkId: staffMapNew.get(t._id)?.wechatWorkId || ''
 			}));
 
 			// 显示推送确认弹窗
