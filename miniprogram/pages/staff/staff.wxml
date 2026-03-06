@@ -92,57 +92,53 @@
   </view>
 </view>
 <!-- 添加/编辑弹窗 -->
-<view class="modal-mask" wx:if="{{showModal}}" bindtap="onCloseModal"></view>
-<view class="modal-container" wx:if="{{showModal}}">
-  <view class="modal-title">{{editingStaff ? '编辑员工' : '添加员工'}}</view>
-  <view class="modal-content">
-    <view class="form-item">
-      <view class="form-label">姓名</view>
-      <input class="form-input" placeholder="请输入员工姓名" value="{{inputName}}" bindinput="onNameInput" focus="{{showModal}}" />
-    </view>
-    <view class="form-item">
-      <view class="form-label">性别</view>
-      <view class="gender-selector">
-        <view class="gender-option {{inputGender === 'male' ? 'selected' : ''}}" bindtap="onGenderSelect" data-gender="male">
-          <view>先生</view>
-        </view>
-        <view class="gender-option {{inputGender === 'female' ? 'selected' : ''}}" bindtap="onGenderSelect" data-gender="female">
-          <view>女士</view>
-        </view>
+<modal
+  show="{{showModal}}"
+  title="{{editingStaff ? '编辑员工' : '添加员工'}}"
+  bind:cancel="onCloseModal"
+  bind:confirm="onConfirmModal">
+  <view class="form-item">
+    <view class="form-label">姓名</view>
+    <input class="form-input" placeholder="请输入员工姓名" value="{{inputName}}" bindinput="onNameInput" focus="{{showModal}}" />
+  </view>
+  <view class="form-item">
+    <view class="form-label">性别</view>
+    <view class="gender-selector">
+      <view class="gender-option {{inputGender === 'male' ? 'selected' : ''}}" bindtap="onGenderSelect" data-gender="male">
+        <view>先生</view>
       </view>
-    </view>
-    <view class="form-item">
-      <view class="form-label">手机号 *</view>
-      <input class="form-input" placeholder="请输入手机号" value="{{inputPhone}}" bindinput="onPhoneInput" type="number" maxlength="11" />
-    </view>
-    <view class="form-item">
-      <view class="form-label">照片</view>
-      <view class="avatar-uploader" bindtap="onChooseAvatar">
-        <image class="avatar-preview" src="{{inputAvatar || '/assets/default-avatar.pn'}}" mode="aspectFill" wx:if="{{inputAvatar}}" />
-        <view class="avatar-placeholder" wx:if="{{!inputAvatar}}">
-          <view class="placeholder-icon">+</view>
-          <view class="placeholder-text">上传照片</view>
-        </view>
-      </view>
-    </view>
-    <view class="form-item">
-      <view class="form-label">企业微信ID *</view>
-      <input class="form-input" placeholder="请输入企业微信ID" value="{{inputWechatWorkId}}" bindinput="onWechatWorkIdInput" maxlength="64" />
-    </view>
-    <view class="form-item" wx:if="{{editingStaff}}">
-      <view class="form-label">状态</view>
-      <view class="status-selector">
-        <view class="status-option {{inputStatus === 'active' ? 'selected' : ''}}" bindtap="onStatusSelect" data-status="active">
-          <view>正常</view>
-        </view>
-        <view class="status-option {{inputStatus === 'disabled' ? 'selected' : ''}}" bindtap="onStatusSelect" data-status="disabled">
-          <view>禁用</view>
-        </view>
+      <view class="gender-option {{inputGender === 'female' ? 'selected' : ''}}" bindtap="onGenderSelect" data-gender="female">
+        <view>女士</view>
       </view>
     </view>
   </view>
-  <view class="modal-footer">
-    <view class="modal-btn cancel-btn" bindtap="onCloseModal">取消</view>
-    <view class="modal-btn confirm-btn" bindtap="onConfirmModal">确定</view>
+  <view class="form-item">
+    <view class="form-label">手机号 *</view>
+    <input class="form-input" placeholder="请输入手机号" value="{{inputPhone}}" bindinput="onPhoneInput" type="number" maxlength="11" />
   </view>
-</view>
+  <view class="form-item">
+    <view class="form-label">照片</view>
+    <view class="avatar-uploader" bindtap="onChooseAvatar">
+      <image class="avatar-preview" src="{{inputAvatar || '/assets/default-avatar.pn'}}" mode="aspectFill" wx:if="{{inputAvatar}}" />
+      <view class="avatar-placeholder" wx:if="{{!inputAvatar}}">
+        <view class="placeholder-icon">+</view>
+        <view class="placeholder-text">上传照片</view>
+      </view>
+    </view>
+  </view>
+  <view class="form-item">
+    <view class="form-label">企业微信ID *</view>
+    <input class="form-input" placeholder="请输入企业微信ID" value="{{inputWechatWorkId}}" bindinput="onWechatWorkIdInput" maxlength="64" />
+  </view>
+  <view class="form-item" wx:if="{{editingStaff}}">
+    <view class="form-label">状态</view>
+    <view class="status-selector">
+      <view class="status-option {{inputStatus === 'active' ? 'selected' : ''}}" bindtap="onStatusSelect" data-status="active">
+        <view>正常</view>
+      </view>
+      <view class="status-option {{inputStatus === 'disabled' ? 'selected' : ''}}" bindtap="onStatusSelect" data-status="disabled">
+        <view>禁用</view>
+      </view>
+    </view>
+  </view>
+</modal>

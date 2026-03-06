@@ -57,13 +57,6 @@ async function initRotationQueue(date) {
         date: date
     }).get()
 
-    if (existingQueue.data.length > 0) {
-        return {
-            code: 0,
-            message: '轮牌已存在',
-            data: existingQueue.data[0]
-        }
-    }
 
     const staffRes = await db.collection('staff').where({
         status: 'active',
@@ -84,8 +77,8 @@ async function initRotationQueue(date) {
 
     const staffWithPriority = staffList.map(staff => {
         const yesterdaySchedule = yesterdaySchedules.find(s => s.staffId === staff._id)
-        const wasOnDutyYesterday = yesterdaySchedule && 
-            yesterdaySchedule.shift !== 'leave' && 
+        const wasOnDutyYesterday = yesterdaySchedule &&
+            yesterdaySchedule.shift !== 'leave' &&
             yesterdaySchedule.shift !== 'off'
 
         const todaySchedule = schedules.find(s => s.staffId === staff._id)
@@ -126,23 +119,36 @@ async function initRotationQueue(date) {
         ...staff,
         position: index
     }))
-
-    const result = await db.collection('rotation_queue').add({
-        data: {
-            date: date,
-            staffList: staffListWithOrder,
-            currentIndex: 0,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+    if (existingQueue.data.length > 0) {
+        await db.collection('rotation_queue').doc(existingQueue.data[0]._id).update({
+            data: {
+                staffList: staffListWithOrder,
+                currentIndex: 0,
+                updatedAt: new Date().toISOString()
+            }
+        })
+        const queue = await db.collection('rotation_queue').doc(existingQueue.data[0]._id).get()
+        return {
+            code: 0,
+            message: '轮牌初始化成功',
+            data: queue.data
         }
-    })
-
-    const queue = await db.collection('rotation_queue').doc(result._id).get()
-
-    return {
-        code: 0,
-        message: '轮牌初始化成功',
-        data: queue.data
+    } else {
+        const result = await db.collection('rotation_queue').add({
+            data: {
+                date: date,
+                staffList: staffListWithOrder,
+                currentIndex: 0,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            }
+        })
+        const queue = await db.collection('rotation_queue').doc(result._id).get()
+        return {
+            code: 0,
+            message: '轮牌初始化成功',
+            data: queue.data
+        }
     }
 }
 

@@ -8,14 +8,7 @@
 <view class="customers-page">
   <view class="search-bar">
     <view class="search-input-wrapper">
-      <input 
-        class="search-input" 
-        type="text" 
-        placeholder="搜索顾客姓名或手机号" 
-        value="{{searchKeyword}}"
-        bindinput="onSearchInput"
-        bindconfirm="onSearchConfirm"
-      />
+      <input class="search-input" type="text" placeholder="搜索顾客姓名或手机号" value="{{searchKeyword}}" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
       <view wx:if="{{searchKeyword}}" class="clear-icon" bindtap="onClearSearch">✕</view>
     </view>
     <view class="search-btn" bindtap="onSearchConfirm">搜索</view>
@@ -58,19 +51,15 @@
       </view>
     </view>
   </view>
-  
   <view wx:if="{{hasMore}}" class="load-more-btn" bindtap="onLoadMore">
     <text>{{loading ? '加载中...' : '加载更多'}}</text>
   </view>
-  
   <view wx:if="{{customerList.length === 0 && !loading}}" class="empty-state">
     <view class="empty-icon">📋</view>
     <view class="empty-text">{{searchKeyword ? '未找到匹配的顾客' : '暂无顾客记录'}}</view>
   </view>
 </view>
-<view class="modal-mask" wx:if="{{showEditModal}}" bindtap="onModalCancel"></view>
-<view class="modal-container" wx:if="{{showEditModal}}">
-  <view class="modal-title">{{modalTitle}}</view>
+<modal show="{{showEditModal}}" title="{{modalTitle}}" bind:cancel="onModalCancel" bind:confirm="onModalConfirm">
   <view class="form-group">
     <text class="form-label">姓名</text>
     <input class="form-input" type="text" placeholder="选填" bindinput="onNameInput" value="{{formName}}" />
@@ -104,14 +93,8 @@
     <text class="form-label">备注</text>
     <input class="form-input" type="text" placeholder="选填" bindinput="onRemarksInput" value="{{formRemarks}}" />
   </view>
-  <view class="modal-footer">
-    <view class="modal-btn cancel-btn" bindtap="onModalCancel">取消</view>
-    <view class="modal-btn confirm-btn" bindtap="onModalConfirm">确定</view>
-  </view>
-</view>
-<view class="modal-mask" wx:if="{{showOpenCardModal}}" bindtap="onOpenCardCancel"></view>
-<view class="modal-container large" wx:if="{{showOpenCardModal}}">
-  <view class="modal-title">开卡</view>
+</modal>
+<modal show="{{showOpenCardModal}}" title="开卡" size="large" bind:cancel="onOpenCardCancel" bind:confirm="onOpenCardConfirm">
   <view class="customer-info-display">
     <view class="info-row">
       <text class="info-label">顾客:</text>
@@ -171,114 +154,102 @@
     <text class="form-label">备注</text>
     <input class="form-input" placeholder="选填" bindinput="onCardRemarksInput" value="{{formCardRemarks}}" />
   </view>
-  <view class="modal-footer">
-    <view class="modal-btn cancel-btn" bindtap="onOpenCardCancel">取消</view>
-    <view class="modal-btn confirm-btn" bindtap="onOpenCardConfirm">确定</view>
-  </view>
-</view>
-<view class="modal-mask" wx:if="{{showDetailModal}}" bindtap="closeDetailModal"></view>
-<view class="detail-modal-container" wx:if="{{showDetailModal}}">
-  <view class="detail-header">
-    <view class="detail-title">顾客详情</view>
-    <view class="detail-close" bindtap="closeDetailModal">×</view>
-  </view>
-  <view class="detail-content">
-    <view class="detail-info">
-      <view class="detail-row">
-        <text class="detail-label">姓名:</text>
-        <text class="detail-value">
-          {{selectedCustomer.name}}{{selectedCustomer.gender === 'male' ? '先生' : (selectedCustomer.gender === 'female' ? '女士' : '')}}
-        </text>
-      </view>
-      <view wx:if="{{selectedCustomer.phone}}" class="detail-row">
-        <text class="detail-label">手机号:</text>
-        <text class="detail-value">{{selectedCustomer.phone}}</text>
-      </view>
-      <view wx:if="{{selectedCustomer.responsibleTechnician}}" class="detail-row">
-        <text class="detail-label">责任技师:</text>
-        <text class="detail-value">{{selectedCustomer.responsibleTechnician}}</text>
-      </view>
-      <view wx:if="{{selectedCustomer.licensePlate}}" class="detail-row">
-        <text class="detail-label">车牌号:</text>
-        <text class="detail-value">{{selectedCustomer.licensePlate}}</text>
-      </view>
-      <view wx:if="{{selectedCustomer.remarks}}" class="detail-row">
-        <text class="detail-label">备注:</text>
-        <text class="detail-value">{{selectedCustomer.remarks}}</text>
+</modal>
+<modal show="{{showDetailModal}}" show-footer="{{false}}" title="顾客详情" bind:cancel="closeDetailModal" bind:confirm="onModalConfirm">
+  <view class="detail-info">
+    <view class="detail-row">
+      <view class="detail-label">姓名:</view>
+      <view class="detail-value">
+        {{selectedCustomer.name}}{{selectedCustomer.gender === 'male' ? '先生' : (selectedCustomer.gender === 'female' ? '女士' : '')}}
       </view>
     </view>
-    <view class="membership-cards-section">
-      <view class="history-title">会员卡</view>
-      <view wx:if="{{customerMemberships.length === 0}}" class="empty-history">暂无会员卡</view>
-      <view wx:else class="membership-cards-list">
-        <view wx:for="{{customerMemberships}}" wx:key="_id" class="membership-card-item {{item.status === 'disabled' ? 'disabled' : ''}}">
-          <view class="card-header">
-            <view class="card-name">{{item.cardName}}</view>
-            <view class="card-status {{item.status === 'active' ? 'active' : 'disabled'}}">
-              {{item.status === 'active' ? '启用' : '禁用'}}
-            </view>
-          </view>
-          <view class="card-body">
-            <view class="card-row">
-              <text class="card-label">项目:</text>
-              <text class="card-value">{{item.project}}</text>
-            </view>
-            <view class="card-row">
-              <text class="card-label">剩余次数:</text>
-              <text class="card-value highlight">{{item.remainingTimes}}次</text>
-            </view>
-            <view class="card-row">
-              <text class="card-label">原价:</text>
-              <text class="card-value">¥{{item.originalPrice}}</text>
-            </view>
-            <view class="card-row">
-              <text class="card-label">实付:</text>
-              <text class="card-value">¥{{item.paidAmount}}</text>
-            </view>
-            <view class="card-row">
-              <text class="card-label">销售:</text>
-              <text class="card-value">{{item.salesStaff}}</text>
-            </view>
-            <view wx:if="{{item.remarks}}" class="card-row">
-              <text class="card-label">备注:</text>
-              <text class="card-value">{{item.remarks}}</text>
-            </view>
+    <view wx:if="{{selectedCustomer.phone}}" class="detail-row">
+      <view class="detail-label">手机号:</view>
+      <view class="detail-value">{{selectedCustomer.phone}}</view>
+    </view>
+    <view wx:if="{{selectedCustomer.responsibleTechnician}}" class="detail-row">
+      <view class="detail-label">责任技师:</view>
+      <view class="detail-value">{{selectedCustomer.responsibleTechnician}}</view>
+    </view>
+    <view wx:if="{{selectedCustomer.licensePlate}}" class="detail-row">
+      <view class="detail-label">车牌号:</view>
+      <view class="detail-value">{{selectedCustomer.licensePlate}}</view>
+    </view>
+    <view wx:if="{{selectedCustomer.remarks}}" class="detail-row">
+      <view class="detail-label">备注:</view>
+      <view class="detail-value">{{selectedCustomer.remarks}}</view>
+    </view>
+  </view>
+  <view class="membership-cards-section">
+    <view class="history-title">会员卡</view>
+    <view wx:if="{{customerMemberships.length === 0}}" class="empty-history">暂无会员卡</view>
+    <view wx:else class="membership-cards-list">
+      <view wx:for="{{customerMemberships}}" wx:key="_id" class="membership-card-item {{item.status === 'disabled' ? 'disabled' : ''}}">
+        <view class="card-header">
+          <view class="card-name">{{item.cardName}}</view>
+          <view class="card-status {{item.status === 'active' ? 'active' : 'disabled'}}">
+            {{item.status === 'active' ? '启用' : '禁用'}}
           </view>
         </view>
-      </view>
-    </view>
-    <view class="visit-history">
-      <view class="history-title">消费记录</view>
-      <view wx:if="{{visitRecords.length === 0}}" class="empty-history">暂无消费记录</view>
-      <view wx:else class="history-list">
-        <view wx:for="{{visitRecords}}" wx:key="_id" wx:for-index="visitIndex" class="history-item">
-          <view class="history-header">
-            <view class="history-date">{{item.date}}</view>
+        <view class="card-body">
+          <view class="card-row">
+            <text class="card-label">项目:</text>
+            <text class="card-value">{{item.project}}</text>
           </view>
-          <view class="history-body" bindtap="goToConsultationDetail">
-            <view class="history-details">
-              <view class="history-detail">
-                <text class="detail-label">项目:</text>
-                <text>{{item.project}}</text>
-              </view>
-              <view class="history-detail">
-                <text class="detail-label">技师:</text>
-                <text>{{item.technician}}</text>
-              </view>
-              <view class="history-detail">
-                <text class="detail-label">房间:</text>
-                <text>{{item.room}}</text>
-              </view>
-              <view wx:if="{{item.isClockIn}}" class="history-tag clock-in">点钟</view>
-            </view>
-            <view class="view-detail-hint">点击查看详情</view>
+          <view class="card-row">
+            <text class="card-label">剩余次数:</text>
+            <text class="card-value highlight">{{item.remainingTimes}}次</text>
+          </view>
+          <view class="card-row">
+            <text class="card-label">原价:</text>
+            <text class="card-value">¥{{item.originalPrice}}</text>
+          </view>
+          <view class="card-row">
+            <text class="card-label">实付:</text>
+            <text class="card-value">¥{{item.paidAmount}}</text>
+          </view>
+          <view class="card-row">
+            <text class="card-label">销售:</text>
+            <text class="card-value">{{item.salesStaff}}</text>
+          </view>
+          <view wx:if="{{item.remarks}}" class="card-row">
+            <text class="card-label">备注:</text>
+            <text class="card-value">{{item.remarks}}</text>
           </view>
         </view>
       </view>
     </view>
   </view>
-</view>
-
+  <view class="visit-history">
+    <view class="history-title">消费记录</view>
+    <view wx:if="{{visitRecords.length === 0}}" class="empty-history">暂无消费记录</view>
+    <view wx:else class="history-list">
+      <view wx:for="{{visitRecords}}" wx:key="_id" wx:for-index="visitIndex" class="history-item">
+        <view class="history-header">
+          <view class="history-date">{{item.date}}</view>
+        </view>
+        <view class="history-body" bindtap="goToConsultationDetail">
+          <view class="history-details">
+            <view class="history-detail">
+              <text class="detail-label">项目:</text>
+              <text>{{item.project}}</text>
+            </view>
+            <view class="history-detail">
+              <text class="detail-label">技师:</text>
+              <text>{{item.technician}}</text>
+              <text wx:if="{{item.isClockIn}}">[点]</text>
+            </view>
+            <view class="history-detail">
+              <text class="detail-label">房间:</text>
+              <text>{{item.room}}</text>
+            </view>
+          </view>
+          <view class="view-detail-hint">点击查看详情</view>
+        </view>
+      </view>
+    </view>
+  </view>
+</modal>
 <!-- Loading 遮罩 -->
 <view class="loading-mask" wx:if="{{loading}}">
   <view class="loading-content">

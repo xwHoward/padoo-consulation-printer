@@ -297,7 +297,7 @@ ${customerInfo} 已到店
 顾客：${customerInfo}
 ${changes.join('\n')}
 
-请${technicianName}${technicianMention || technicianName}知悉，做好准备`;
+请${technicianMention || technicianName}知悉，做好准备`;
 
 			await wx.cloud.callFunction({
 				name: 'sendWechatMessage',

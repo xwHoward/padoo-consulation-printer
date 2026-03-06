@@ -420,37 +420,6 @@ page {
   margin-top: 8px;
 }
 
-.modal-footer {
-  display: flex;
-  border-top: 1px solid @border-color-light;
-}
-
-.modal-btn {
-  flex: 1;
-  text-align: center;
-  padding: 15px 0;
-  font-size: 16px;
-  transition: background-color 0.2s ease;
-}
-
-.cancel-btn {
-  color: @text-color-secondary;
-  border-right: 1px solid @border-color-light;
-}
-
-.cancel-btn:active {
-  background-color: @bg-color-light;
-}
-
-.confirm-btn {
-  color: @primary-color;
-  font-weight: 500;
-}
-
-.confirm-btn:active {
-  background-color: rgba(255, 107, 0, 0.1);
-}
-
 /* 结算信息区域 */
 .settlement-info {
   margin: 8px 0;
@@ -521,47 +490,12 @@ page {
   font-size: 11px;
 }
 
-/* 每日总结推送弹窗 */
-.summary-modal {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: @bg-color;
-  border-radius: 16px 16px 0 0;
-  z-index: 1000;
-  overflow: hidden;
-  animation: slideUp 0.3s ease;
-}
-
-.summary-modal .modal-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid @border-color-light;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.summary-modal .modal-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: @text-color;
-}
-
-.summary-modal .modal-close {
-  font-size: 24px;
+.char-count {
+  position: absolute;
+  bottom: 55px;
+  right: 20px;
+  font-size: 11px;
   color: @text-color-secondary;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.summary-modal .modal-body {
-  padding: 20px;
-  position: relative;
 }
 
 .summary-textarea {
@@ -580,44 +514,4 @@ page {
 
 .summary-textarea::placeholder {
   color: @text-color-secondary;
-}
-
-.summary-modal .modal-footer {
-  display: flex;
-  border-top: 1px solid @border-color-light;
-}
-
-.summary-modal .modal-btn {
-  flex: 1;
-  padding: 16px 0;
-  font-size: 16px;
-  border: none;
-  background: none;
-  border-radius: 0;
-  line-height: 1;
-  min-height: 0;
-}
-
-.summary-modal .modal-btn.cancel-btn {
-  color: @text-color-secondary;
-  border-right: 1px solid @border-color-light;
-}
-
-.summary-modal .modal-btn.cancel-btn:active {
-  background-color: @bg-color-light;
-}
-
-.summary-modal .modal-btn.confirm-btn {
-  color: @primary-color;
-  font-weight: 500;
-}
-
-.summary-modal .modal-btn.confirm-btn:active {
-  background-color: rgba(255, 107, 0, 0.1);
-}
-
-.summary-modal .modal-btn[disabled] {
-  color: #ccc;
-  background-color: @bg-color;
-  cursor: not-allowed;
 }

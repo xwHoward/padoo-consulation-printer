@@ -437,58 +437,6 @@ page {
   object-fit: cover;
 }
 
-/* 时间选择器弹窗 - .modal-mask 通用样式由 app.less 提供 */
-
-.time-picker-modal {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: @bg-color;
-  border-radius: 16px 16px 0 0;
-  z-index: 1000;
-  overflow: hidden;
-  animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-  }
-
-  to {
-    transform: translateY(0);
-  }
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid @border-color-light;
-}
-
-.modal-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: @text-color;
-}
-
-.modal-close {
-  font-size: 24px;
-  color: @text-color-secondary;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.modal-body {
-  padding: 24px 20px;
-}
 
 .time-picker-display {
   display: flex;
@@ -515,49 +463,6 @@ page {
   margin-top: 8px;
 }
 
-.modal-footer {
-  display: flex;
-  border-top: 1px solid @border-color-light;
-}
-
-.modal-btn {
-  flex: 1;
-  padding: 16px 0;
-  font-size: 16px;
-  border: none;
-  background: none;
-  border-radius: 0;
-  line-height: 1;
-  min-height: 0;
-}
-
-.cancel-btn {
-  color: @text-color-secondary;
-  border-right: 1px solid @border-color-light;
-}
-
-.cancel-btn:active {
-  background-color: @bg-color-light;
-}
-
-.confirm-btn {
-  color: @primary-color;
-  font-weight: 500;
-}
-
-.confirm-btn:active {
-  background-color: rgba(255, 107, 0, 0.1);
-}
-
-/* 通用按钮样式 */
-.btn {
-  padding: 8px 16px;
-  font-size: 14px;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
 
 /* 停车表单样式 */
 .parking-form {
@@ -657,31 +562,6 @@ page {
   animation: slideUp 0.3s ease;
 }
 
-.clockin-modal .modal-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid @border-color-light;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.clockin-modal .modal-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: @text-color;
-}
-
-.clockin-modal .modal-close {
-  font-size: 24px;
-  color: @text-color-secondary;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
 .clockin-modal .modal-body {
   padding: 20px;
   position: relative;
@@ -707,48 +587,8 @@ page {
 
 .char-count {
   position: absolute;
-  bottom: 10px;
+  bottom: 55px;
   right: 20px;
   font-size: 11px;
   color: @text-color-secondary;
-}
-
-.clockin-modal .modal-footer {
-  display: flex;
-  border-top: 1px solid @border-color-light;
-}
-
-.clockin-modal .modal-btn {
-  flex: 1;
-  padding: 16px 0;
-  font-size: 16px;
-  border: none;
-  background: none;
-  border-radius: 0;
-  line-height: 1;
-  min-height: 0;
-}
-
-.clockin-modal .modal-btn.cancel-btn {
-  color: @text-color-secondary;
-  border-right: 1px solid @border-color-light;
-}
-
-.clockin-modal .modal-btn.cancel-btn:active {
-  background-color: @bg-color-light;
-}
-
-.clockin-modal .modal-btn.confirm-btn {
-  color: @primary-color;
-  font-weight: 500;
-}
-
-.clockin-modal .modal-btn.confirm-btn:active {
-  background-color: rgba(255, 107, 0, 0.1);
-}
-
-.clockin-modal .modal-btn[disabled] {
-  color: #ccc;
-  background-color: @bg-color;
-  cursor: not-allowed;
 }

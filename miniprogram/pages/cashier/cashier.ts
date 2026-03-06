@@ -2,7 +2,7 @@
 import { checkLogin } from '../../utils/auth';
 import { loadingService, LockKeys } from '../../utils/loading-service';
 import { hasButtonPermission, requirePagePermission } from '../../utils/permission';
-import { getCurrentDate } from '../../utils/util';
+import { formatDate, getCurrentDate } from '../../utils/util';
 import type { PaymentMethodItem } from './cashier.types';
 import { ReservationHandler } from './handlers/reservation.handler';
 import { SettlementHandler } from './handlers/settlement.handler';
@@ -346,6 +346,28 @@ Page({
 
 	openRotationPushModal() {
 		if (pushHandler) pushHandler.openRotationPushModal();
+	},
+
+	async resetRotation() {
+		try {
+			await loadingService.withLoading(this, async () => {
+			 await wx.cloud.callFunction({
+				name: 'manageRotation',
+				data: {
+					action: 'init',
+					date:formatDate(new Date())
+				}
+			});
+			await app.loadGlobalData();
+			}, {
+				loadingText: '调整中...',
+				lockKey: LockKeys.ADJUST_ROTATION,
+				errorText: '调整失败'
+			});
+		} catch (error) {
+			wx.showToast({ title: '重置失败', icon: 'none' });
+		}
+
 	},
 
 	onRotationPushModalCancel() {

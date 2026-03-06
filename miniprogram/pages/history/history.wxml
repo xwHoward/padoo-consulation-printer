@@ -106,71 +106,58 @@
   </view>
 </scroll-view>
 <!-- 数字输入弹窗 -->
-<view class="modal-mask" wx:if="{{numberInputModal.show}}" bindtap="onModalCancel"></view>
-<view class="modal-container" wx:if="{{numberInputModal.show}}">
-  <view class="modal-title">设置{{numberInputModal.title}}数</view>
-  <view class="modal-content">
-    <view class="number-input-wrapper">
-      <view class="step-btn minus-btn {{numberInputModal.inputValue <= 0 ? 'disabled' : ''}}" bindtap="onStepMinus">
-        <text>-</text>
-      </view>
-      <input class="number-input" type="number" value="{{numberInputModal.inputValue}}" bindinput="onNumberInput" />
-      <view class="step-btn plus-btn" bindtap="onStepPlus">
-        <text>+</text>
-      </view>
+<modal
+  show="{{numberInputModal.show}}"
+  title="设置{{numberInputModal.title}}数"
+  size="small"
+  bind:cancel="onModalCancel"
+  bind:confirm="onModalConfirm">
+  <view class="number-input-wrapper">
+    <view class="step-btn minus-btn {{numberInputModal.inputValue <= 0 ? 'disabled' : ''}}" bindtap="onStepMinus">
+      <text>-</text>
     </view>
-    <view class="modal-unit">单位：半小时</view>
+    <input class="number-input" type="number" value="{{numberInputModal.inputValue}}" bindinput="onNumberInput" />
+    <view class="step-btn plus-btn" bindtap="onStepPlus">
+      <text>+</text>
+    </view>
   </view>
-  <view class="modal-footer">
-    <view class="modal-btn cancel-btn" bindtap="onModalCancel">取消</view>
-    <view class="modal-btn confirm-btn" bindtap="onModalConfirm">确定</view>
-  </view>
-</view>
+  <view class="modal-unit">单位：半小时</view>
+</modal>
   <!-- 提前下钟确认弹窗 -->
-<view class="modal-mask" wx:if="{{earlyFinishModal.show}}" bindtap="onEarlyFinishModalCancel"></view>
-<view class="modal-container" wx:if="{{earlyFinishModal.show}}">
-  <view class="modal-title">提前下钟</view>
-  <view class="modal-body">
-    <view class="early-finish-info">
-      <view class="info-row">
-        <view class="info-label">技师：</view>
-        <view class="info-value">{{earlyFinishModal.technician}}</view>
-      </view>
-      <view class="info-row">
-        <view class="info-label">房间：</view>
-        <view class="info-value">{{earlyFinishModal.room}}</view>
-      </view>
-      <view class="info-row">
-        <view class="info-label">操作：</view>
-        <view class="info-value">将结束时间更新为当前时间</view>
-      </view>
+<modal
+  show="{{earlyFinishModal.show}}"
+  title="提前下钟"
+  bind:cancel="onEarlyFinishModalCancel"
+  bind:confirm="onEarlyFinishModalConfirm">
+  <view class="early-finish-info">
+    <view class="info-row">
+      <view class="info-label">技师：</view>
+      <view class="info-value">{{earlyFinishModal.technician}}</view>
+    </view>
+    <view class="info-row">
+      <view class="info-label">房间：</view>
+      <view class="info-value">{{earlyFinishModal.room}}</view>
+    </view>
+    <view class="info-row">
+      <view class="info-label">操作：</view>
+      <view class="info-value">将结束时间更新为当前时间</view>
     </view>
   </view>
-  <view class="modal-footer">
-    <view class="modal-btn cancel-btn" bindtap="onEarlyFinishModalCancel">取消</view>
-    <view class="modal-btn confirm-btn" bindtap="onEarlyFinishModalConfirm">确定</view>
-  </view>
-</view>
+</modal>
 <!-- loading遮罩 -->
 <view class="loading-mask" wx:if="{{loading}}">
   <view class="loading-spinner"></view>
   <view class="loading-text">{{loadingText}}</view>
 </view>
 <!-- 每日总结推送确认弹窗 -->
-<view class="modal-mask" wx:if="{{summaryModal.show}}" bindtap="onSummaryModalCancel"></view>
-<view class="summary-modal" wx:if="{{summaryModal.show}}">
-  <view class="modal-header">
-    <text class="modal-title">确认每日总结</text>
-    <text class="modal-close" bindtap="onSummaryModalCancel">✕</text>
-  </view>
-  <view class="modal-body">
-    <textarea class="summary-textarea" value="{{summaryModal.content}}" bindinput="onSummaryContentInput" placeholder="请输入每日总结内容" maxlength="2000" auto-height show-confirm-bar="{{false}}" />
-    <text class="char-count">{{summaryModal.content.length}}/2000</text>
-  </view>
-  <view class="modal-footer">
-    <button class="modal-btn cancel-btn" bindtap="onSummaryModalCancel">取消</button>
-    <button class="modal-btn confirm-btn" bindtap="onSummaryModalConfirm" disabled="{{summaryModal.loading}}">
-      {{summaryModal.loading ? '推送中...' : '确认推送'}}
-    </button>
-  </view>
-</view>
+<modal
+  show="{{summaryModal.show}}"
+  title="确认每日总结"
+  show-close="{{true}}"
+  bind:cancel="onSummaryModalCancel"
+  bind:confirm="onSummaryModalConfirm"
+  loading="{{summaryModal.loading}}"
+  loading-text="推送中...">
+  <textarea class="summary-textarea" value="{{summaryModal.content}}" bindinput="onSummaryContentInput" placeholder="请输入每日总结内容" maxlength="2000" auto-height show-confirm-bar="{{false}}" />
+  <text class="char-count">{{summaryModal.content.length}}/2000</text>
+</modal>

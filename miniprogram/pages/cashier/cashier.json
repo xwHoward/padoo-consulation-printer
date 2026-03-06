@@ -6,6 +6,7 @@
 		"technician-selector": "/components/technician-selector/technician-selector",
 		"gender-selector": "/components/gender-selector/gender-selector",
 		"date-picker": "/components/date-picker/date-picker",
-		"timeline": "/components/timeline/timeline"
+		"timeline": "/components/timeline/timeline",
+		"modal": "/components/modal/modal"
 	}
 }

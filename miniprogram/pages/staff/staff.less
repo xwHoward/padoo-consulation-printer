@@ -330,33 +330,6 @@ page {
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-/* 弹窗样式 - .modal-mask 通用样式由 app.less 提供 */
-
-.modal-container {
-	position: fixed;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
-	width: 85%;
-	max-width: 400px;
-	background-color: @bg-color;
-	border-radius: 12px;
-	z-index: 1001;
-	overflow: hidden;
-	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-}
-
-.modal-title {
-	text-align: center;
-	font-size: 17px;
-	font-weight: 600;
-	color: @text-color;
-	padding: 20px 15px 10px;
-}
-
-.modal-content {
-	padding: 10px 20px 20px;
-}
 
 .form-item {
 	margin-bottom: 15px;
@@ -476,34 +449,3 @@ page {
 	margin-top: 4px;
 }
 
-/* 弹窗底部按钮 */
-.modal-footer {
-	display: flex;
-	border-top: 1px solid @border-color-light;
-}
-
-.modal-btn {
-	flex: 1;
-	text-align: center;
-	padding: 15px 0;
-	font-size: 16px;
-	transition: background-color 0.2s ease;
-}
-
-.cancel-btn {
-	color: @text-color-secondary;
-	border-right: 1px solid @border-color-light;
-}
-
-.cancel-btn:active {
-	background-color: @bg-color-light;
-}
-
-.confirm-btn {
-	color: @primary-color;
-	font-weight: 500;
-}
-
-.confirm-btn:active {
-	background-color: rgba(255, 107, 0, 0.1);
-}

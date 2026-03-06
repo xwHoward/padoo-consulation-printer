@@ -244,7 +244,7 @@ Page({
           throw new Error('获取顾客历史失败');
         }
 
-        const { code, data, message } = res.result as any;
+        const { code, data } = res.result;
 
         if (code === 0 && data) {
           data.visitRecords.forEach((record: CustomerVisit) => {
@@ -278,8 +278,8 @@ Page({
         loading: false
       });
     } catch (error) {
-      this.setData({ loading: false });
     }
+    this.setData({ loading: false });
   },
 
   closeDetailModal() {

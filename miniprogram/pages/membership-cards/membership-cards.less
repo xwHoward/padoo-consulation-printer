@@ -21,7 +21,7 @@ page {
 }
 
 .card-item {
-  flex: 0 1 45%;
+  flex: 1 0 45%;
   background-color: @bg-color;
   border-radius: 8px;
   padding: 15px;
@@ -135,6 +135,7 @@ page {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .action-btn.toggle {
@@ -182,34 +183,6 @@ page {
 .empty-text {
   font-size: 14px;
   color: #999999;
-}
-
-/* .modal-mask 通用样式由 app.less 提供 */
-
-.modal-container {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
-  background-color: @bg-color;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  z-index: 1001;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: @text-color;
-  text-align: center;
-  padding: 15px;
-  border-bottom: 1px solid @border-color-light;
 }
 
 .form-group {
@@ -261,41 +234,4 @@ page {
 .form-input:focus {
   border-color: @primary-color;
   outline: none;
-}
-
-.modal-footer {
-  display: flex;
-  padding: 15px;
-  border-top: 1px solid @border-color-light;
-  gap: 10px;
-}
-
-.modal-btn {
-  flex: 1;
-  text-align: center;
-  padding: 10px 15px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.cancel-btn {
-  background-color: @bg-color-light;
-  color: @text-color-secondary;
-  border: 1px solid @border-color;
-}
-
-.cancel-btn:active {
-  background-color: @border-color;
-}
-
-.confirm-btn {
-  background-color: @primary-color;
-  color: #ffffff;
-}
-
-.confirm-btn:active {
-  background-color: @primary-color-dark;
 }
