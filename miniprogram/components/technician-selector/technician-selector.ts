@@ -23,8 +23,8 @@ Component({
 	},
 	methods: {
 		onTechnicianTap(e: WechatMiniprogram.CustomEvent) {
-			const { technician, id, occupied, reason, phone, isClockIn } = e.currentTarget.dataset;
-			this.triggerEvent('change', { technician, _id: id, occupied, reason, phone, isClockIn });
+			const { technician, id, occupied, reason, phone, isClockIn, hasNonClockInConflict } = e.currentTarget.dataset;
+			this.triggerEvent('change', { technician, _id: id, occupied, reason, phone, isClockIn, hasNonClockInConflict });
 		},
 
 		toggleClockIn(e: WechatMiniprogram.CustomEvent) {

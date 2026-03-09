@@ -166,6 +166,12 @@ Page({
 		}
 	},
 
+	async loadTimelineData() {
+		if (dataLoader) {
+			await dataLoader.loadTimelineData();
+		}
+	},
+
 	// ========== 日期选择 ==========
 	async onDateChange(e: WechatMiniprogram.CustomEvent) {
 		const date = e.detail.date;
@@ -343,14 +349,14 @@ Page({
 	async resetRotation() {
 		try {
 			await loadingService.withLoading(this, async () => {
-			 await wx.cloud.callFunction({
-				name: 'manageRotation',
-				data: {
-					action: 'init',
-					date:formatDate(new Date())
-				}
-			});
-			await app.loadGlobalData();
+				await wx.cloud.callFunction({
+					name: 'manageRotation',
+					data: {
+						action: 'init',
+						date: formatDate(new Date())
+					}
+				});
+				await app.loadGlobalData();
 			}, {
 				loadingText: '调整中...',
 				lockKey: LockKeys.ADJUST_ROTATION,

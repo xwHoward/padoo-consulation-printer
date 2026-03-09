@@ -1,8 +1,9 @@
 <view class="technician-selector">
-  <view wx:for="{{technicianList}}" wx:key="_id" class="technician-option {{(!multi ? selectedTechnician === item.name : item.isSelected) ? 'selected' : ''}} {{item.isOccupied ? 'occupied' : ''}}" bindtap="onTechnicianTap" data-id="{{item._id}}" data-technician="{{item.name}}" data-occupied="{{item.isOccupied}}" data-reason="{{item.occupiedReason}}" data-phone="{{item.phone}}" data-is-clock-in="{{item.isClockIn}}">
+  <view wx:for="{{technicianList}}" wx:key="_id" class="technician-option {{(!multi ? selectedTechnician === item.name : item.isSelected) ? 'selected' : ''}} {{item.isOccupied ? 'occupied' : ''}} {{item.hasNonClockInConflict ? 'has-conflict' : ''}}" bindtap="onTechnicianTap" data-id="{{item._id}}" data-technician="{{item.name}}" data-occupied="{{item.isOccupied}}" data-reason="{{item.occupiedReason}}" data-phone="{{item.phone}}" data-is-clock-in="{{item.isClockIn}}" data-has-non-clock-in-conflict="{{item.hasNonClockInConflict}}">
     <view class="tech-info">
       <text class="tech-name">{{item.name}}</text>
       <text class="tech-reason" wx:if="{{item.isOccupied}}">{{item.occupiedReason}}</text>
+      <text class="tech-conflict-hint" wx:elif="{{item.hasNonClockInConflict}}">有预约冲突</text>
     </view>
     <view wx:if="{{showClockInBadge}}" class="clockin-badge {{item.isClockIn ? 'clocked-in' : ''}}" catch:tap="toggleClockIn" data-id="{{item._id}}" data-is-clock-in="{{item.isClockIn}}">
       <text class="clockin-icon">点</text>

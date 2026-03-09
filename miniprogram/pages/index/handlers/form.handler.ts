@@ -55,11 +55,15 @@ export class FormHandler {
   }
 
   onTechnicianSelect(e: WechatMiniprogram.CustomEvent) {
-    const { technician, occupied, reason } = e.detail.technician ? e.detail : e.currentTarget.dataset;
+    const { technician, occupied, reason, hasNonClockInConflict } = e.detail.technician ? e.detail : e.currentTarget.dataset;
+    
+    // 新建咨询场景下，即使有占用也允许选择，只显示提示
     if (occupied) {
-      wx.showToast({ title: reason || '该技师当前时段已有安排', icon: 'none', duration: 2500 });
-      return;
+      wx.showToast({ title: reason || '该技师当前时段已有安排，请注意协调', icon: 'none', duration: 2500 });
+    } else if (hasNonClockInConflict) {
+      wx.showToast({ title: '该技师有非点钟预约冲突，请注意协调', icon: 'none', duration: 2500 });
     }
+    
     const { isDualMode, activeGuest } = this.page.data;
     if (isDualMode) {
       const key = activeGuest === 1 ? 'guest1Info.technician' : 'guest2Info.technician';

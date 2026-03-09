@@ -248,7 +248,9 @@ interface StaffAvailability {
   wechatWorkId?: string;
   isOccupied: boolean;
   occupiedReason?: string;
+  hasNonClockInConflict?: boolean; // 非点钟预约冲突标记
   isClockIn?: boolean; // 点钟标记
+  isSelected?: boolean; // 多选时的选中状态
   gender: 'male' | 'female'; // 性别
 }
 

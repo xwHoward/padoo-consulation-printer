@@ -258,13 +258,16 @@ export class ReservationHandler {
 	}
 
 	/**
-	 * 选择技师
+	 * 选择技师（预约场景）
 	 */
 	selectReserveTechnician(e: WechatMiniprogram.CustomEvent): void {
-		const { _id, technician: name, occupied, reason, phone } = e.detail;
+		const { _id, technician: name, occupied, reason, phone, hasNonClockInConflict } = e.detail;
+		
+		// 预约场景下，即使有占用也允许选择，只显示提示
 		if (occupied) {
-			wx.showToast({ title: reason || '该技师在此时段已有安排', icon: 'none', duration: 2500 });
-			return;
+			wx.showToast({ title: reason || '该技师在此时段已有安排，请注意协调', icon: 'none', duration: 2500 });
+		} else if (hasNonClockInConflict) {
+			wx.showToast({ title: '该技师有非点钟预约冲突，请注意协调', icon: 'none', duration: 2500 });
 		}
 
 		// 多选逻辑：切换选中状态

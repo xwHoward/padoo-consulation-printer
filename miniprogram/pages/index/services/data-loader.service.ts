@@ -73,7 +73,7 @@ export class DataLoaderService {
     }
   }
 
-  async loadEditData(editId: string, ensureConsultationInfoCompatibility: EnsureConsultationInfoCompatibilityFn) {
+  async loadEditData(editId: string, ensureConsultationInfoCompatibilityFn: EnsureConsultationInfoCompatibilityFn) {
     this.page.setData({ loading: true, loadingText: '加载中...' });
 
     try {
@@ -84,7 +84,7 @@ export class DataLoaderService {
         const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
 
         const updateData: Record<string, unknown> = {
-          consultationInfo: ensureConsultationInfoCompatibility(foundRecord, this.page.data.projects),
+          consultationInfo: ensureConsultationInfoCompatibilityFn(foundRecord, this.page.data.projects),
           editId: editId,
           currentProjectIsEssentialOilOnly: isEssentialOilOnly,
           currentProjectNeedEssentialOil: selectedProject?.needEssentialOil || false,
@@ -92,20 +92,27 @@ export class DataLoaderService {
           matchedCustomerApplied: false
         };
 
-        if (foundRecord.licensePlate) {
-          updateData.licensePlate = foundRecord.licensePlate;
+        const licensePlate = foundRecord.licensePlate || '';
+        updateData.licensePlate = licensePlate;
 
-          const isNewEnergyVehicle = foundRecord.licensePlate.length === 8;
-          const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
-          const plateNumber = Array(maxPlateLength).fill('');
-          const plateChars = foundRecord.licensePlate.split('');
+        const isNoPlate = licensePlate.startsWith('临');
+        updateData.isNoPlate = isNoPlate;
+
+        const isNewEnergyVehicle = licensePlate.length === 8;
+        updateData.isNewEnergyVehicle = isNewEnergyVehicle;
+        const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
+        const plateNumber = Array(maxPlateLength).fill('');
+        
+        if (licensePlate) {
+          const plateChars = licensePlate.split('');
           plateChars.forEach((char: string, index: number) => {
             if (index < maxPlateLength) {
               plateNumber[index] = char;
             }
           });
-          updateData.plateNumber = plateNumber;
         }
+
+        updateData.plateNumber = plateNumber;
 
         this.page.setData(updateData);
         await this.loadTechnicianList();

@@ -69,7 +69,10 @@ exports.main = async (event, context) => {
 
         const technicians = activeStaff.map(staff => {
             let occupiedReason = ''
-            const hasConflict = [...filteredRecords, ...filteredReservations].some(r => {
+            
+            // 只考虑咨询记录和点钟预约（isClockIn: true）来判断占用
+            const clockInReservations = filteredReservations.filter(r => r.isClockIn === true)
+            const hasConflict = [...filteredRecords, ...clockInReservations].some(r => {
                 const rName = r.technician || r.technicianName
                 if (rName !== staff.name) return false
                 const rStartMinutes = parseTimeToMinutes(r.startTime)
@@ -79,7 +82,7 @@ exports.main = async (event, context) => {
             })
 
             if (hasConflict) {
-                const conflictTask = [...filteredRecords, ...filteredReservations].find(r => {
+                const conflictTask = [...filteredRecords, ...clockInReservations].find(r => {
                     const rName = r.technician || r.technicianName
                     if (rName !== staff.name) return false
 
@@ -97,6 +100,17 @@ exports.main = async (event, context) => {
                 }
             }
 
+            // 检查是否有非点钟预约冲突（仅用于提示）
+            const nonClockInReservations = filteredReservations.filter(r => r.isClockIn !== true)
+            const hasNonClockInConflict = nonClockInReservations.some(r => {
+                const rName = r.technicianName
+                if (rName !== staff.name) return false
+                const rStartMinutes = parseTimeToMinutes(r.startTime)
+                const rEndMinutes = parseTimeToMinutes(r.endTime)
+
+                return currentMinutes < rEndMinutes && proposedEndTimeMinutes > rStartMinutes
+            })
+
             const position = staffPositionMap.has(staff._id) ? staffPositionMap.get(staff._id) : 999
 
             return {
@@ -107,6 +121,7 @@ exports.main = async (event, context) => {
                 wechatWorkId: staff.wechatWorkId || '',
                 isOccupied: hasConflict,
                 occupiedReason,
+                hasNonClockInConflict,
                 position: position
             }
         })

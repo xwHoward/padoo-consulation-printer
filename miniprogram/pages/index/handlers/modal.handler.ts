@@ -98,10 +98,23 @@ export class ModalHandler {
 
   onPlateConfirm(e: WechatMiniprogram.CustomEvent) {
     const { value } = e.detail;
+    const isNewEnergyVehicle = value.length === 8;
+    const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
+    const plateNumber = Array(maxPlateLength).fill('');
+    
+    if (value) {
+      const plateChars = value.split('');
+      plateChars.forEach((char: string, index: number) => {
+        if (index < maxPlateLength) {
+          plateNumber[index] = char;
+        }
+      });
+    }
+    
     this.page.setData({
       licensePlateInputVisible: false,
       licensePlate: value,
-      plateNumber: value.split('')
+      plateNumber: plateNumber
     });
   }
 
