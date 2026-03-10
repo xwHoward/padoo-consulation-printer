@@ -211,3 +211,18 @@
   <textarea class="clockin-textarea" value="{{clockInModal.content}}" bindinput="onClockInContentInput" placeholder="请输入报钟内容" maxlength="1000" auto-height show-confirm-bar="{{false}}" />
   <text class="char-count">{{clockInModal.content.length}}/1000</text>
 </modal>
+
+<!-- 车牌号录入提醒弹窗 -->
+<modal
+  show="{{plateReminderModal.show}}"
+  title="车牌号录入提醒"
+  show-close="{{false}}"
+  show-cancel="{{false}}"
+  bind:confirm="onPlateReminderConfirm"
+  confirm-text="已录入">
+  <view class="plate-reminder-content">
+    <view class="reminder-icon">⚠️</view>
+    <view class="reminder-text">请在系统中及时为顾客录入车牌！</view>
+    <view class="plate-display">车牌号：{{plateReminderModal.licensePlate}}</view>
+  </view>
+</modal>

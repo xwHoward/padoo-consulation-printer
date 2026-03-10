@@ -111,7 +111,12 @@ Page({
       content: '',
       loading: false
     },
-    clockInSubmitting: false
+    clockInSubmitting: false,
+    // 车牌号提醒弹窗
+    plateReminderModal: {
+      show: false,
+      licensePlate: ''
+    }
   },
   printContentBuilder: null as PrintContentBuilder | null,
   formHandler: null as FormHandler | null,
@@ -730,5 +735,12 @@ ${clockInInfo2}`;
     } catch (error) {
       return false;
     }
+  },
+  onPlateReminderConfirm() {
+    this.setData({
+      'plateReminderModal.show': false,
+      'plateReminderModal.licensePlate': ''
+    });
+    this.resetForm();
   }
 });

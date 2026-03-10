@@ -41,9 +41,9 @@ export class ModalHandler {
         const endTimeDate = new Date(startTimeDate.getTime() + totalDuration * 60 * 1000);
         const endTime = formatTime(endTimeDate, false);
         const updatedInfo = {
-          ...consultationInfo, 
-          startTime: selectedTime, 
-          licensePlate: licensePlate || '', 
+          ...consultationInfo,
+          startTime: selectedTime,
+          licensePlate: licensePlate || '',
           isNewEnergyVehicle: licensePlate?.length === 8 || false,
           date: editId ? consultationInfo.date : formatDate(new Date()),
           endTime,
@@ -101,7 +101,7 @@ export class ModalHandler {
     const isNewEnergyVehicle = value.length === 8;
     const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
     const plateNumber = Array(maxPlateLength).fill('');
-    
+
     if (value) {
       const plateChars = value.split('');
       plateChars.forEach((char: string, index: number) => {
@@ -110,7 +110,7 @@ export class ModalHandler {
         }
       });
     }
-    
+
     this.page.setData({
       licensePlateInputVisible: false,
       licensePlate: value,
@@ -119,7 +119,7 @@ export class ModalHandler {
   }
 
   onClockInModalCancel() {
-    const { editId } = this.page.data;
+    const { editId, licensePlate } = this.page.data;
 
     this.page.setData({
       'clockInModal.show': false,
@@ -127,10 +127,18 @@ export class ModalHandler {
       clockInSubmitting: false
     });
 
-    if (editId) {
-      wx.navigateBack();
+    // 如果是新增且有车牌号，显示车牌号录入提醒
+    if (!editId && licensePlate && licensePlate.trim()) {
+      this.page.setData({
+        'plateReminderModal.show': true,
+        'plateReminderModal.licensePlate': licensePlate
+      });
     } else {
-      this.page.resetForm();
+      if (editId) {
+        wx.navigateBack();
+      } else {
+        this.page.resetForm();
+      }
     }
   }
 
@@ -143,7 +151,7 @@ export class ModalHandler {
 
   async onClockInModalConfirm() {
     const { content } = this.page.data.clockInModal;
-    const { editId } = this.page.data;
+    const { editId, licensePlate } = this.page.data;
 
     this.page.setData({ 'clockInModal.loading': true });
 
@@ -162,10 +170,18 @@ export class ModalHandler {
             clockInSubmitting: false
           });
 
-          if (editId) {
-            wx.navigateBack();
+          // 如果是新增且有车牌号，显示车牌号录入提醒
+          if (!editId && licensePlate && licensePlate.trim()) {
+            this.page.setData({
+              'plateReminderModal.show': true,
+              'plateReminderModal.licensePlate': licensePlate
+            });
           } else {
-            this.page.resetForm();
+            if (editId) {
+              wx.navigateBack();
+            } else {
+              this.page.resetForm();
+            }
           }
         }, 1500);
       } else {

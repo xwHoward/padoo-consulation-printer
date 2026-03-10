@@ -16,6 +16,10 @@ Component({
       type: Boolean,
       value: true
     },
+    showCancel: {
+      type: Boolean,
+      value: true
+    },
     showFooter: {
       type: Boolean,
       value: true
