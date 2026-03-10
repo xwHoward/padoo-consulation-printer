@@ -7,7 +7,8 @@ Page({
 		projects: [] as Project[],
 		rooms: [] as Room[],
 		essentialOils: [] as EssentialOil[],
-		editingItem: null as Project | Room | EssentialOil | null,
+		prizes: [] as LotteryPrize[],
+		editingItem: null as Project | Room | EssentialOil | LotteryPrize | null,
 		showModal: false,
 		modalType: '',
 		formData: {
@@ -18,7 +19,12 @@ Page({
 			effect: '',
 			status: 'normal' as ItemStatus,
 			isEssentialOilOnly: false,
-			needEssentialOil: false
+			needEssentialOil: false,
+			type: 'product' as LotteryPrize['type'],
+			value: 0,
+			probability: 0,
+			color: '#FF6B00',
+			description: ''
 		}
 	},
 
@@ -41,6 +47,9 @@ Page({
 			} else if (tab === 'oils') {
 				const oils = await cloudDb.getAll<EssentialOil>(Collections.ESSENTIAL_OILS);
 				this.setData({ essentialOils: oils, loading: false });
+			} else if (tab === 'lottery') {
+				const prizes = await cloudDb.getAll<LotteryPrize>(Collections.LOTTERY_PRIZES);
+				this.setData({ prizes, loading: false });
 			}
 		} catch (error) {
 			this.setData({ loading: false });
@@ -64,7 +73,12 @@ Page({
 				effect: '',
 				status: 'normal',
 				isEssentialOilOnly: false,
-				needEssentialOil: false
+				needEssentialOil: false,
+				type: 'product',
+				value: 0,
+				probability: 0,
+				color: '#FF6B00',
+				description: ''
 			}
 		});
 	},
@@ -72,7 +86,7 @@ Page({
 	openEditModal(e: WechatMiniprogram.CustomEvent) {
 		const { type, index } = e.currentTarget.dataset;
 		const tab = this.data.activeTab;
-		let item: Project | Room | EssentialOil | null = null;
+		let item: Project | Room | EssentialOil | LotteryPrize | null = null;
 
 		if (tab === 'projects' && this.data.projects[index]) {
 			item = this.data.projects[index];
@@ -80,6 +94,8 @@ Page({
 			item = this.data.rooms[index];
 		} else if (tab === 'oils' && this.data.essentialOils[index]) {
 			item = this.data.essentialOils[index];
+		} else if (tab === 'lottery' && this.data.prizes[index]) {
+			item = this.data.prizes[index];
 		}
 
 		if (item) {
@@ -95,7 +111,12 @@ Page({
 					effect: (item as EssentialOil).effect || '',
 					status: item.status || 'normal',
 					isEssentialOilOnly: (item as Project).isEssentialOilOnly || false,
-					needEssentialOil: (item as Project).needEssentialOil || false
+					needEssentialOil: (item as Project).needEssentialOil || false,
+					type: (item as LotteryPrize).type || 'product',
+					value: (item as LotteryPrize).value || 0,
+					probability: (item as LotteryPrize).probability || 0,
+					color: (item as LotteryPrize).color || '#FF6B00',
+					description: (item as LotteryPrize).description || ''
 				}
 			});
 		}
@@ -156,6 +177,17 @@ Page({
 				return;
 			}
 
+			if (modalType === 'prize') {
+				if (formData.probability < 0 || formData.probability > 100) {
+					wx.showToast({ title: '概率必须在0-100之间', icon: 'none' });
+					return;
+				}
+				if (!formData.color.trim()) {
+					wx.showToast({ title: '颜色不能为空', icon: 'none' });
+					return;
+				}
+			}
+
 			this.setData({ loading: true });
 			if (activeTab === 'projects') {
 				const projectData: Update<Project> = {
@@ -200,6 +232,24 @@ Page({
 					wx.showToast({ title: '更新成功', icon: 'success' });
 				} else {
 					await cloudDb.insert<EssentialOil>(Collections.ESSENTIAL_OILS, oilData);
+					wx.showToast({ title: '添加成功', icon: 'success' });
+				}
+			} else if (activeTab === 'lottery') {
+				const prizeData: Add<LotteryPrize> = {
+					name: formData.name,
+					type: formData.type,
+					value: formData.value,
+					probability: formData.probability,
+					color: formData.color,
+					description: formData.description,
+					status: formData.status
+				};
+
+				if (editingItem) {
+					await cloudDb.updateById<LotteryPrize>(Collections.LOTTERY_PRIZES, editingItem._id, prizeData);
+					wx.showToast({ title: '更新成功', icon: 'success' });
+				} else {
+					await cloudDb.insert<LotteryPrize>(Collections.LOTTERY_PRIZES, prizeData);
 					wx.showToast({ title: '添加成功', icon: 'success' });
 				}
 			}
@@ -289,6 +339,96 @@ Page({
 
 	onAddOil() {
 		this.openAddModal('oil');
+	},
+
+	onAddPrize() {
+		this.setData({
+			showModal: true,
+			modalType: 'prize',
+			editingItem: null,
+			formData: {
+				name: '',
+				duration: 60,
+				price: 0,
+				commission: 0,
+				effect: '',
+				status: 'normal',
+				isEssentialOilOnly: false,
+				needEssentialOil: false,
+				type: 'product',
+				value: 0,
+				probability: 0,
+				color: '#FF6B00',
+				description: ''
+			}
+		});
+	},
+
+	async handleDeletePrize(e: WechatMiniprogram.CustomEvent) {
+		const { index } = e.currentTarget.dataset;
+		const prize = this.data.prizes[index];
+
+		if (!prize || !prize._id) return;
+
+		wx.showModal({
+			title: '确认删除',
+			content: '确定要删除此奖品吗？',
+			confirmText: '删除',
+			confirmColor: '#ff0000',
+			success: async (res) => {
+				if (res.confirm) {
+					this.setData({ loading: true });
+					try {
+						await cloudDb.deleteById(Collections.LOTTERY_PRIZES, prize._id);
+						wx.showToast({ title: '删除成功', icon: 'success' });
+						await this.loadData();
+					} catch (error) {
+						wx.showToast({ title: '删除失败', icon: 'none' });
+					}
+					this.setData({ loading: false });
+				}
+			}
+		});
+	},
+
+	async handleTogglePrizeStatus(e: WechatMiniprogram.CustomEvent) {
+		const { index } = e.currentTarget.dataset;
+		const prize = this.data.prizes[index];
+
+		if (!prize || !prize._id) return;
+
+		try {
+			this.setData({ loading: true });
+			const newStatus = prize.status === 'normal' ? 'disabled' : 'normal';
+			await cloudDb.updateById<LotteryPrize>(Collections.LOTTERY_PRIZES, prize._id, { status: newStatus });
+			this.setData({ [`prizes[${index}].status`]: newStatus, loading: false });
+		} catch (error) {
+			wx.showToast({ title: '更新失败', icon: 'none' });
+			this.setData({ loading: false });
+		}
+	},
+
+	onPrizeTypeChange(e: WechatMiniprogram.CustomEvent) {
+		const value = e.currentTarget.dataset.value as LotteryPrize['type'];
+		this.setData({ 'formData.type': value });
+	},
+
+	onPrizeValueInput(e: WechatMiniprogram.CustomEvent) {
+		const value = parseFloat(e.detail.value) || 0;
+		this.setData({ 'formData.value': value });
+	},
+
+	onPrizeProbabilityInput(e: WechatMiniprogram.CustomEvent) {
+		const value = parseFloat(e.detail.value) || 0;
+		this.setData({ 'formData.probability': value });
+	},
+
+	onPrizeColorInput(e: WechatMiniprogram.CustomEvent) {
+		this.setData({ 'formData.color': e.detail.value });
+	},
+
+	onPrizeDescriptionInput(e: WechatMiniprogram.CustomEvent) {
+		this.setData({ 'formData.description': e.detail.value });
 	},
 
 	onLoad() {

@@ -23,11 +23,18 @@
         "miniprogram": {
             "list": [
                 {
-                    "name": "profile",
-                    "pathName": "pages/profile/profile",
+                    "name": "lottery",
+                    "pathName": "pages/lottery/lottery",
                     "query": "",
                     "scene": null,
                     "launchMode": "default"
+                },
+                {
+                    "name": "profile",
+                    "pathName": "pages/profile/profile",
+                    "query": "",
+                    "launchMode": "default",
+                    "scene": null
                 },
                 {
                     "name": "calculator",

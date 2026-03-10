@@ -439,3 +439,24 @@ type CashierPage = WechatMiniprogram.Page.Instance<{
   //   setData: (data: Record<string, any>) => void;
   checkStaffAvailability: () => undefined | Promise<void>;
 }>
+
+interface LotteryPrize extends BaseRecord {
+  name: string;
+  type: 'product' | 'discount' | 'coupon' | 'service';
+  value: number;
+  probability: number;
+  color: string;
+  icon?: string;
+  description?: string;
+  stock?: number;
+  status: ItemStatus;
+}
+
+interface LotteryRecord extends BaseRecord {
+  prizeId: string;
+  prizeName: string;
+  prizeType: string;
+  prizeValue: number;
+  userId?: string;
+  userName?: string;
+}

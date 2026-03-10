@@ -1,0 +1,83 @@
+<navigation-bar title="幸运大转盘" back="{{true}}" color="white" background="{{primaryColor}}" />
+
+<view class="lottery-container">
+	<view class="lottery-header">
+		<view class="title">🎰 趴岛Padoo幸运大转盘 🎰</view>
+		<view class="title">🎰 100%中奖率 🎰</view>
+		<view class="subtitle">✨ 转动轮盘，赢取精美奖品！ ✨</view>
+	</view>
+
+	<view class="wheel-container">
+		<view class="wheel-outer-ring">
+			<view class="ring-light light-1"></view>
+			<view class="ring-light light-2"></view>
+			<view class="ring-light light-3"></view>
+			<view class="ring-light light-4"></view>
+			<view class="ring-light light-5"></view>
+			<view class="ring-light light-6"></view>
+			<view class="ring-light light-7"></view>
+			<view class="ring-light light-8"></view>
+		</view>
+		
+		<view class="wheel-pointer" bindtap="startLottery">
+			<view class="pointer-shadow"></view>
+			<view class="pointer-icon">🎯</view>
+		</view>
+		
+		<view class="wheel-wrapper">
+			<view 
+				class="wheel {{isSpinning ? 'spinning' : ''}}" 
+				style="transform: rotate({{wheelRotation}}deg);"
+			>
+				<view 
+					class="wheel-item" 
+					wx:for="{{prizes}}" 
+					wx:key="_id"
+					style="transform: rotate({{index * 360 / prizes.length}}deg); background-color: {{item.color}};"
+				>
+					<view class="wheel-item-bg"></view>
+					<view class="prize-content">
+						<view class="prize-emoji">{{item.type === 'product' ? '🎁' : item.type === 'discount' ? '💰' : item.type === 'coupon' ? '🎫' : '💆'}}</view>
+						<view class="prize-name">{{item.name}}</view>
+						<!-- <view class="prize-probability" wx:if="{{item.probability > 0}}">{{item.probability}}%</view> -->
+					</view>
+				</view>
+			</view>
+		</view>
+		
+		<view class="center-circle">
+			<view class="center-star">⭐</view>
+		</view>
+		
+		<view class="wheel-decoration">
+			<view class="decoration-star star-1">✨</view>
+			<view class="decoration-star star-2">✨</view>
+			<view class="decoration-star star-3">✨</view>
+		</view>
+	</view>
+
+	<view class="lottery-actions">
+		<button class="action-btn primary-btn" bindtap="startLottery" disabled="{{isSpinning}}">
+			{{isSpinning ? '🎡 抽奖中...' : '🎲 开始抽奖'}}
+		</button>
+	</view>
+</view>
+
+<modal
+	show="{{showResultModal}}"
+	title="🎉 恭喜您！"
+	show-close="{{false}}"
+	show-cancel="{{false}}"
+	bind:confirm="onResultModalClose"
+	confirm-text="太棒了">
+	<view class="result-content">
+		<view class="result-icon">🎁</view>
+		<view class="result-text">您抽中了</view>
+		<view class="result-prize" style="color: {{winningPrize.color}};">
+			<view class="result-emoji">{{winningPrize.type === 'product' ? '🎁' : winningPrize.type === 'discount' ? '💰' : winningPrize.type === 'coupon' ? '🎫' : '💆'}}</view>
+			{{winningPrize.name}}
+		</view>
+		<view class="result-value" wx:if="{{winningPrize.value > 0}}">💎 价值：{{winningPrize.value}}</view>
+		<view class="result-description" wx:if="{{winningPrize.description}}">{{winningPrize.description}}</view>
+	</view>
+</modal>

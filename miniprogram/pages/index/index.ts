@@ -685,6 +685,14 @@ ${clockInInfo2}`;
       url: "/pages/store-config/store-config",
     });
   },
+
+  // 跳转到抽奖页面
+  goToLottery() {
+    wx.navigateTo({
+      url: "/pages/lottery/lottery",
+    });
+  },
+
   onScreensaver() {
     wx.navigateTo({
       url: "/pages/screensaver/screensaver",

@@ -1,5 +1,7 @@
 {
   "component": true,
-  "usingComponents": {},
+  "usingComponents": {
+    "modal": "/components/modal/modal"
+  },
   "navigationStyle": "default"
 }
