@@ -36,10 +36,20 @@ export class PushHandler {
 	onPushModalCancel(): void {
 		this.page.setData({
 			'pushModal.show': false,
-			'pushModal.reservationData': null
+			'pushModal.reservationData': null,
+			'pushModal.loading': false,
+			pushModalLocked: false
 		});
-		this.page.closeReserveModal();
-		this.page.loadTimelineData();
+	}
+
+	/**
+	 * 推送弹窗 - 消息内容变更
+	 */
+	onPushMessageChange(e: WechatMiniprogram.CustomEvent): void {
+		const value = e.detail.value;
+		this.page.setData({
+			'pushModal.message': value
+		});
 	}
 
 	/**
@@ -47,45 +57,15 @@ export class PushHandler {
 	 */
 	async onPushModalConfirm(): Promise<void> {
 		const { pushModal } = this.page.data;
-		const { reservationData, type } = pushModal;
+		const { message, reservationData } = pushModal;
 
-		if (!reservationData) {
+		if (!reservationData || !message) {
 			return;
 		}
 
 		this.page.setData({ 'pushModal.loading': true });
 
 		try {
-			const genderLabel = reservationData.gender === 'male' ? '先生' : '女士';
-			const customerInfo = `${reservationData.customerName}${genderLabel}`;
-			const technicianMentions = reservationData.technicians
-				.map(t => formatMention(t))
-				.join(' ');
-
-			const reservationType = this.getReservationTypeText(reservationData.technicians);
-
-			let message: string;
-
-			if (type === 'cancel') {
-				message = `【🚫 预约**取消**提醒】
-
-顾客：${customerInfo}
-日期：${reservationData.date}
-时间：**${reservationData.startTime} - ${reservationData.endTime}**
-项目：${reservationData.project}
-类型：${reservationType}
-技师：**${technicianMentions}**`;
-			} else {
-				message = `【⏰ 新预约提醒】
-
-顾客：${customerInfo}
-日期：${reservationData.date}
-时间：**${reservationData.startTime} - ${reservationData.endTime}**
-项目：${reservationData.project}
-类型：${reservationType}
-技师：**${technicianMentions}**`;
-			}
-
 			const res = await wx.cloud.callFunction({
 				name: 'sendWechatMessage',
 				data: {

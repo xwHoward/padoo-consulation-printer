@@ -16,6 +16,7 @@ class PrinterService {
   };
 
   private connectingPromise: Promise<boolean> | null = null;
+  private connectionStateListenersAttached = false;
 
   getState(): PrinterState {
     return { ...this.state };
@@ -28,7 +29,27 @@ class PrinterService {
       !!this.state.printerCharacteristicId;
   }
 
+  private attachConnectionStateListeners() {
+    if (this.connectionStateListenersAttached) {
+      return;
+    }
+
+    wx.onBLEConnectionStateChange((res) => {
+      if (res.deviceId === this.state.printerDeviceId && !res.connected) {
+        this.state.isPrinterConnected = false;
+        this.state.printerDeviceId = "";
+        this.state.printerServiceId = "";
+        this.state.printerCharacteristicId = "";
+        this.connectingPromise = null;
+      }
+    });
+
+    this.connectionStateListenersAttached = true;
+  }
+
   async connectBluetooth(): Promise<boolean> {
+    this.attachConnectionStateListeners();
+    
     return new Promise((resolve) => {
       wx.showLoading({
         title: "正在搜索打印机...",
@@ -220,6 +241,10 @@ class PrinterService {
     for (let i = 0; i < contents.length; i++) {
       const success = await this.printContent(contents[i]);
       if (!success) {
+        wx.showToast({
+          title: "打印失败，请重试",
+          icon: "none",
+        });
         return false;
       }
       if (i < contents.length - 1) {
@@ -258,7 +283,14 @@ class PrinterService {
             setTimeout(writeNextChunk, 20);
           },
           fail: (err) => {
-            wx.showToast({ title: '打印失败', icon: 'none' });
+            wx.showToast({ title: '打印失败，请重试', icon: 'none' });
+            
+            this.state.isPrinterConnected = false;
+            this.state.printerDeviceId = "";
+            this.state.printerServiceId = "";
+            this.state.printerCharacteristicId = "";
+            this.connectingPromise = null;
+            
             resolve(false);
           },
         });

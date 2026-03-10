@@ -654,8 +654,8 @@ Page({
 
     if (success1 && success2) {
       const [clockInInfo1, clockInInfo2] = await Promise.all([
-        ClockInUtils.formatClockInInfo(info1, this.data.editId),
-        ClockInUtils.formatClockInInfo(info2, this.data.editId)
+        ClockInUtils.formatClockInInfo(info1, this.data.editId, false),
+        ClockInUtils.formatClockInInfo(info2, this.data.editId, false)
       ]);
       const combinedInfo = `【顾客1】
 ${clockInInfo1}

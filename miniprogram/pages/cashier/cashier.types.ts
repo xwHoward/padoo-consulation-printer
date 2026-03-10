@@ -31,8 +31,12 @@ export interface ReserveForm {
 export interface PushModalState {
 	show: boolean;
 	loading: boolean;
-	type: 'create' | 'cancel';
+	type: 'create' | 'cancel' | 'edit';
+	message: string;
+	mentions: Array<{ _id: string; name: string; phone: string; wechatWorkId?: string }>;
 	reservationData: {
+		original?: ReservationRecord;
+		updated?: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>;
 		customerName: string;
 		gender: 'male' | 'female';
 		date: string;
@@ -77,6 +81,7 @@ export interface CashierPageData {
 	matchedCustomerApplied: boolean;
 	pushModal: PushModalState;
 	rotationPushModal: RotationPushModalState;
+	pushModalLocked: boolean;
 }
 
 // 页面实例类型（用于 handler 类）

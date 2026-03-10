@@ -2,6 +2,7 @@
 import { cloudDb, Collections } from '../../../utils/cloud-db';
 import { getCurrentDate, formatTime, parseProjectDuration } from '../../../utils/util';
 import { hasButtonPermission } from '../../../utils/permission';
+import { formatMention } from '../../../utils/wechat-work';
 import type { CashierPage } from '../cashier.types';
 import { PushHandler } from './push.handler';
 
@@ -494,7 +495,7 @@ export class ReservationHandler {
 						const staffList = await app.getActiveStaffs();
 						const staffMap = new Map(staffList.map(s => [s._id, s]));
 
-						const techniciansForPush: Array<{ _id: string; name: string; phone: string; wechatWorkId?: string; isClockIn: boolean }> = [];
+						const techniciansForPush: Array<{ _id: string; name: string; phone: string; wechatWorkId: string; isClockIn: boolean }> = [];
 						for (const r of toCancel) {
 							if (r.technicianId) {
 								const staff = staffMap.get(r.technicianId);
@@ -511,9 +512,22 @@ export class ReservationHandler {
 						}
 
 						if (techniciansForPush.length > 0) {
+							const genderLabel = reservation.gender === 'male' ? '先生' : '女士';
+							const customerInfo = `${reservation.customerName}${genderLabel}`;
+							const technicianMentions = techniciansForPush.map(t => formatMention(t)).join(' ');
+							
+							const cancelMessage = `【🚫 预约**取消**提醒】
+
+顾客：${customerInfo}
+日期：${reservation.date}
+时间：**${reservation.startTime} - ${reservation.endTime}**
+项目：${reservation.project}
+技师：**${technicianMentions}**`;
+
 							this.page.setData({
 								'pushModal.show': true,
 								'pushModal.type': 'cancel',
+								'pushModal.message': cancelMessage,
 								'pushModal.reservationData': {
 									customerName: reservation.customerName,
 									gender: reservation.gender,
@@ -655,13 +669,99 @@ export class ReservationHandler {
 
 		const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
 		if (success) {
-			await this.pushHandler.sendReservationModificationNotification(originalReservation, record);
-			wx.showToast({ title: '更新成功', icon: 'success' });
+			wx.showToast({ title: '保存成功', icon: 'success' });
+			// 关闭预约弹窗
 			this.closeReserveModal();
+			
+			// 移除loading锁，显示推送确认弹窗
+			this.page.setData({ loading: false });
+			await this.showPushConfirmModal(originalReservation, record);
+			
+			// 立即刷新时间轴数据
 			await this.page.loadTimelineData();
 		} else {
 			wx.showToast({ title: '保存失败', icon: 'none' });
 		}
+	}
+
+	/**
+	 * 显示推送确认弹窗（编辑预约后）
+	 */
+	private async showPushConfirmModal(
+		original: ReservationRecord | null,
+		updated: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>
+	): Promise<void> {
+		if (!original) {
+			return;
+		}
+
+		// 对比变更内容
+		const changes: string[] = [];
+
+		if (original.date !== updated.date) {
+			changes.push(`📅 日期：${original.date} → ${updated.date}`);
+		}
+		if (original.startTime !== updated.startTime) {
+			changes.push(`⏰ 时间：${original.startTime} → ${updated.startTime}`);
+		}
+		if (original.project !== updated.project) {
+			changes.push(`💆 项目：${original.project} → ${updated.project}`);
+		}
+		if (original.technicianId !== updated.technicianId || original.technicianName !== updated.technicianName || (original.isClockIn || false) !== (updated.isClockIn || false)) {
+			changes.push(`👨‍💼 技师：${original.technicianName}${original.isClockIn ? '[点]' : ''} → ${updated.technicianName}${updated.isClockIn ? '[点]' : ''}`);
+		}
+		if (original.customerName !== updated.customerName) {
+			changes.push(`👤 顾客：${original.customerName} → ${updated.customerName}`);
+		}
+		if (original.phone !== updated.phone) {
+			changes.push(`📱 电话：${original.phone} → ${updated.phone}`);
+		}
+
+		const genderLabel = updated.gender === 'male' ? '先生' : '女士';
+		const customerInfo = `${updated.customerName}${genderLabel}`;
+
+		// 获取技师信息
+		let staffInfo: StaffInfo | null = null;
+		if (updated.technicianId) {
+			staffInfo = await app.getStaff(updated.technicianId);
+		}
+		const technicianMention = staffInfo ? formatMention(staffInfo) : '';
+		const technicianName = updated.technicianName || '待定';
+
+		// 构建默认消息
+		const defaultMessage = `【📝 预约变更通知】
+
+顾客：${customerInfo}
+${changes.join('\n')}
+
+请${technicianMention || technicianName}知悉，做好准备`;
+
+		// 显示推送确认弹窗
+		this.page.setData({
+			'pushModal.show': true,
+			'pushModal.loading': false,
+			'pushModal.type': 'edit',
+			'pushModal.message': defaultMessage,
+			'pushModal.mentions': staffInfo ? [staffInfo] : [],
+			pushModalLocked: true,
+			'pushModal.reservationData': {
+				original,
+				updated,
+				customerName: updated.customerName,
+				gender: updated.gender,
+				date: updated.date,
+				startTime: updated.startTime,
+				endTime: updated.endTime,
+				project: updated.project,
+				technicians: staffInfo ? [{
+					_id: staffInfo._id,
+					name: staffInfo.name,
+					phone: staffInfo.phone || '',
+					wechatWorkId: staffInfo.wechatWorkId || '',
+					isClockIn: updated.isClockIn || false
+				}] : []
+			}
+		});
 	}
 
 	/**
@@ -725,13 +825,33 @@ export class ReservationHandler {
 				_id: t._id,
 				name: t.name,
 				phone: staffMap.get(t._id)?.phone || '',
+				wechatWorkId: staffMap.get(t._id)?.wechatWorkId || '',
 				isClockIn: t.isClockIn || false
 			}));
 
+			// 构建推送消息
+			const genderLabel = reserveForm.gender === 'male' ? '先生' : '女士';
+			const customerInfo = `${reserveForm.customerName || ''}${genderLabel}`;
+			const technicianMentions = techniciansWithPhone.map(t => formatMention(t)).join(' ');
+			const reservationType = this.pushHandler.getReservationTypeText(techniciansWithPhone);
+
+			const createMessage = `【⏰ 新预约提醒】
+
+顾客：${customerInfo}
+日期：${reserveForm.date}
+时间：**${reserveForm.startTime} - ${endTime}**
+项目：${reserveForm.project || '待定'}
+类型：${reservationType}
+技师：**${technicianMentions}**`;
+
+			// 先关闭预约弹窗
+			this.closeReserveModal();
+			
 			// 显示推送确认弹窗
 			this.page.setData({
 				'pushModal.show': true,
 				'pushModal.type': 'create',
+				'pushModal.message': createMessage,
 				'pushModal.reservationData': {
 					customerName: reserveForm.customerName || '',
 					gender: reserveForm.gender,
@@ -875,14 +995,32 @@ export class ReservationHandler {
 				_id: t._id,
 				name: t.name,
 				phone: staffMapNew.get(t._id)?.phone || '',
-				isClockIn: t.isClockIn || false,
-				wechatWorkId: staffMapNew.get(t._id)?.wechatWorkId || ''
+				wechatWorkId: staffMapNew.get(t._id)?.wechatWorkId || '',
+				isClockIn: t.isClockIn || false
 			}));
 
+			// 构建推送消息
+			const genderLabel = reserveForm.gender === 'male' ? '先生' : '女士';
+			const customerInfo = `${reserveForm.customerName || ''}${genderLabel}`;
+			const technicianMentions = techniciansWithPhone.map(t => formatMention(t)).join(' ');
+
+			const createMessage = `【⏰ 新预约提醒】
+
+顾客：${customerInfo}
+日期：${reserveForm.date}
+时间：**${reserveForm.startTime} - ${endTime}**
+项目：${reserveForm.project || '待定'}
+类型：轮钟
+技师：**${technicianMentions}**`;
+
+			// 先关闭预约弹窗
+			this.closeReserveModal();
+			
 			// 显示推送确认弹窗
 			this.page.setData({
 				'pushModal.show': true,
 				'pushModal.type': 'create',
+				'pushModal.message': createMessage,
 				'pushModal.reservationData': {
 					customerName: reserveForm.customerName || '',
 					gender: reserveForm.gender,

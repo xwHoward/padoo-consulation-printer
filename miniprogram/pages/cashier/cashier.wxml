@@ -140,7 +140,7 @@
         </label>
         <label class="requirement-type-option">
           <radio value="gender" checked="{{reserveForm.requirementType === 'gender'}}" />
-          <text>仅指定性别</text>
+          <text>轮钟</text>
         </label>
       </radio-group>
     </view>
@@ -232,40 +232,13 @@
   </view>
 </modal>
 <!-- 预约推送确认弹窗 -->
-<modal show="{{pushModal.show}}" title="{{pushModal.type === 'cancel' ? '推送取消提醒' : '推送预约提醒'}}" bind:cancel="onPushModalCancel" bind:confirm="onPushModalConfirm" loading="{{pushModal.loading}}" loading-text="推送中...">
+<modal show="{{pushModal.show}}" title="确认推送内容" bind:cancel="onPushModalCancel" bind:confirm="onPushModalConfirm" loading="{{pushModal.loading}}" loading-text="推送中...">
   <view class="push-preview">
-    <view class="preview-header">{{pushModal.type === 'cancel' ? '【预约取消提醒】' : '【新预约提醒】'}}</view>
-    <view class="preview-row">
-      <view class="preview-label">顾客：</view>
-      <view class="preview-value">
-        {{pushModal.reservationData.customerName}}{{pushModal.reservationData.gender === 'male' ? '先生' : '女士'}}
-      </view>
-    </view>
-    <view class="preview-row">
-      <view class="preview-label">日期：</view>
-      <view class="preview-value">{{pushModal.reservationData.date}}</view>
-    </view>
-    <view class="preview-row">
-      <view class="preview-label">时间：</view>
-      <view class="preview-value">
-        {{pushModal.reservationData.startTime}} - {{pushModal.reservationData.endTime}}
-      </view>
-    </view>
-    <view class="preview-row">
-      <view class="preview-label">项目：</view>
-      <view class="preview-value">{{pushModal.reservationData.project}}</view>
-    </view>
-    <view class="preview-row">
-      <view class="preview-label">技师：</view>
-      <view class="preview-value">
-        <block wx:for="{{pushModal.reservationData.technicians}}" wx:key="_id" wx:for-item="tech">
-          @{{tech.name}}{{tech.isClockIn ? '[点]' : ''}}
-        </block>
-      </view>
-    </view>
+    <textarea class="push-textarea" value="{{pushModal.message}}" bindinput="onPushMessageChange" placeholder="请输入推送内容" maxlength="1000" auto-height show-confirm-bar="{{false}}" />
+    <text class="char-count">{{pushModal.message.length}}/1000</text>
   </view>
   <view class="push-tips">
-    <text class="tips-text">ℹ️确认后将推送到企业微信群聊并@对应技师</text>
+    <text class="tips-text">ℹ️确认后将推送到企业微信群聊</text>
   </view>
 </modal>
 <!-- 轮牌推送确认弹窗 -->

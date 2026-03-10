@@ -118,22 +118,36 @@ export class CashierDataLoaderService {
 	}
 
 	async loadTimelineData(): Promise<void> {
-		const today = this.page.data.selectedDate || getCurrentDate();
-		const dateSelector = {
-			selectedDate: today,
-			previousDate: getPreviousDate(today),
-			nextDate: getNextDate(today),
-			isToday: today === getCurrentDate()
-		};
+		const { pushModalLocked, pushModal } = this.page.data;
+		
+		// 只有在非推送确认弹窗状态下才显示loading
+		const shouldShowLoading = !pushModalLocked && !pushModal?.show;
+		if (shouldShowLoading) {
+			this.page.setData({ loading: true, loadingText: '加载中...' });
+		}
+		
+		try {
+			const today = this.page.data.selectedDate || getCurrentDate();
+			const dateSelector = {
+				selectedDate: today,
+				previousDate: getPreviousDate(today),
+				nextDate: getNextDate(today),
+				isToday: today === getCurrentDate()
+			};
 
-		// 更新轮牌列表
-		const rotationList = await this.prepareRotationList(today);
+			// 更新轮牌列表
+			const rotationList = await this.prepareRotationList(today);
 
-		this.page.setData({
-			dateSelector,
-			rotationList,
-			timelineRefreshTrigger: this.page.data.timelineRefreshTrigger + 1
-		});
+			this.page.setData({
+				dateSelector,
+				rotationList,
+				timelineRefreshTrigger: this.page.data.timelineRefreshTrigger + 1
+			});
+		} finally {
+			if (shouldShowLoading) {
+				this.page.setData({ loading: false });
+			}
+		}
 	}
 
 	async prepareRotationList(today: string): Promise<RotationItem[]> {

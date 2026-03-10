@@ -84,17 +84,22 @@ Page({
 		pushModal: {
 			show: false,
 			loading: false,
-			type: 'create' as 'create' | 'cancel',
+			type: 'create' as 'create' | 'cancel' | 'edit',
+			message: '',
+			mentions: [] as Array<{ _id: string; name: string; phone: string; wechatWorkId?: string }>,
 			reservationData: null as {
+				original?: ReservationRecord;
+				updated?: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>;
 				customerName: string;
 				gender: 'male' | 'female';
 				date: string;
 				startTime: string;
 				endTime: string;
 				project: string;
-				technicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }>;
+				technicians: Array<{ _id: string; name: string; phone: string; wechatWorkId: string; isClockIn: boolean }>;
 			} | null
 		},
+		pushModalLocked: false,
 		// 轮牌推送确认弹窗
 		rotationPushModal: {
 			show: false,

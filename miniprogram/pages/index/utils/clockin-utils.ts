@@ -47,7 +47,11 @@ export class ClockInUtils {
     }
   }
 
-  static async formatClockInInfo(info: Add<ConsultationInfo>, editId?: string): Promise<string> {
+  static async formatClockInInfo(
+    info: Add<ConsultationInfo>, 
+    editId?: string,
+    isBeforeSave: boolean = true
+  ): Promise<string> {
     let dailyCount = 1;
 
     if (info.date && info.startTime && info.technician) {
@@ -69,9 +73,11 @@ export class ClockInUtils {
         }
       } else {
         const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(info.date) as ConsultationRecord[];
-        dailyCount = records.filter(
+        const existingCount = records.filter(
           (record: ConsultationRecord) => record.technician === info.technician && !record.isVoided
-        ).length + 1;
+        ).length;
+        
+        dailyCount = isBeforeSave ? existingCount + 1 : existingCount;
       }
     }
 
