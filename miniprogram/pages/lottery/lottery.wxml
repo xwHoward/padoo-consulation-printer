@@ -3,7 +3,7 @@
 <view class="lottery-container">
 	<view class="lottery-header">
 		<view class="title">🎰 趴岛Padoo幸运大转盘 🎰</view>
-		<view class="title">🎰 100%中奖率 🎰</view>
+		<view class="title">✨ 100%中奖率 ✨</view>
 		<view class="subtitle">✨ 转动轮盘，赢取精美奖品！ ✨</view>
 	</view>
 
@@ -33,7 +33,7 @@
 					class="wheel-item" 
 					wx:for="{{prizes}}" 
 					wx:key="_id"
-					style="transform: rotate({{index * 360 / prizes.length}}deg); background-color: {{item.color}};"
+					style="transform: rotate({{index * 360 / prizes.length}}deg);"
 				>
 					<view class="wheel-item-bg"></view>
 					<view class="prize-content">
