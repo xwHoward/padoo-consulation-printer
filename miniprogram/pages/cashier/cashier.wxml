@@ -5,11 +5,6 @@
 </navigation-bar>
 <scroll-view class="scrollarea" scroll-y type="list">
   <view class="container">
-    <!-- loading遮罩 -->
-    <view class="loading-mask" wx:if="{{loading}}">
-      <view class="loading-spinner"></view>
-      <view class="loading-text">{{loadingText}}</view>
-    </view>
     <!-- 员工排钟表 -->
     <view class="section timeline-section">
       <view class="section-header">
@@ -78,6 +73,11 @@
     </view>
   </view>
 </scroll-view>
+<!-- loading遮罩 -->
+<view class="loading-mask" wx:if="{{loading}}">
+  <view class="loading-spinner"></view>
+  <view class="loading-text">{{loadingText}}</view>
+</view>
 <!-- 预约弹窗 -->
 <modal show="{{showReserveModal}}" title="{{reserveForm._id ? '编辑预约' : '新增预约'}}" size="large" bind:cancel="closeReserveModal" bind:confirm="confirmReserve">
   <view class="reservation-modal">

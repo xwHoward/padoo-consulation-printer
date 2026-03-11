@@ -18,7 +18,7 @@ interface TimelineData {
 interface StaffTimelineItem {
 	_id: string
 	name: string
-	shift: 'morning' | 'evening'
+	shift: ShiftType
 	blocks: TimeBlock[]
 	availableSlots: AvailableSlot[]
 	highlighted?: boolean
@@ -113,7 +113,7 @@ Component({
 					const schedule = allSchedules.find(s => s.date === today && s.staffId === staff._id);
 					const shift = schedule ? schedule.shift : 'morning';
 
-					if (shift !== 'morning' && shift !== 'evening') {
+					if (shift !== 'morning' && shift !== 'evening' && shift !== 'overtime') {
 						continue;
 					}
 

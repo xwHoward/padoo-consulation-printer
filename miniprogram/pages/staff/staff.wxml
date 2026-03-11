@@ -46,6 +46,10 @@
           晚班
         </view>
         <view class="legend-item">
+          <view class="dot overtime"></view>
+          加班
+        </view>
+        <view class="legend-item">
           <view class="dot off"></view>
           休息
         </view>

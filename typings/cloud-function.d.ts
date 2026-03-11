@@ -45,8 +45,9 @@ interface TechnicianStats {
   clockInCount: number;
   extraTimeTotal: number;
   extraTimeCount: number;
-  overtimeTotal: number;
-  projects:Record<string, number>;
+  overtimeHours: number;
+  shift: string;
+  projects: Record<string, number>;
 }
 
 interface MonthlyScoreRanking {

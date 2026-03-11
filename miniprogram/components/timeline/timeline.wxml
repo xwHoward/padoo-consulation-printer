@@ -13,7 +13,7 @@
         <view class="staff-name-col">
           <view>{{item.name}}</view>
           <view class="shift-mini-tag {{item.shift}}">
-            {{item.shift === 'morning' ? '早' : '晚'}}
+            {{item.shift === 'morning' ? '早' : item.shift === 'evening' ? '晚' : '加'}}
           </view>
         </view>
         <view class="timeline-track">

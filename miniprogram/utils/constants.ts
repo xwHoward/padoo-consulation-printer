@@ -21,12 +21,13 @@ export const COUPON_PLATFORMS = [
 	{ _id: 'membership', name: '卡', },
 ];
 
-export const SHIFT_TYPES = ['morning', 'evening', 'off', 'leave'] as const;
+export const SHIFT_TYPES = ['morning', 'evening', 'overtime', 'off', 'leave'] as const;
 export type ShiftType = typeof SHIFT_TYPES[number];
 
 export const SHIFT_NAMES: Record<ShiftType, string> = {
 	morning: '早班',
 	evening: '晚班',
+	overtime: '加班',
 	off: '休息',
 	leave: '请假'
 };
@@ -34,6 +35,7 @@ export const SHIFT_NAMES: Record<ShiftType, string> = {
 export const SHIFT_START_TIME: Record<ShiftType, string> = {
 	morning: '12:00',
 	evening: '13:00',
+	overtime: '00:00',
 	off: '',
 	leave: ''
 };
@@ -41,8 +43,24 @@ export const SHIFT_START_TIME: Record<ShiftType, string> = {
 export const SHIFT_END_TIME: Record<ShiftType, string> = {
 	morning: '22:00',
 	evening: '23:00',
+	overtime: '23:59',
 	off: '',
 	leave: ''
 };
 
 export const DEFAULT_SHIFT: ShiftType = 'evening';
+
+export const OVERTIME_DURATION_MAP: Record<number, number> = {
+	60: 1,
+	70: 1,
+	80: 1,
+	90: 1.5,
+	120: 2
+};
+
+export function calculateOvertimeHours(duration: number): number {
+	if (OVERTIME_DURATION_MAP[duration] !== undefined) {
+		return OVERTIME_DURATION_MAP[duration];
+	}
+	return Math.round(duration / 60 * 10) / 10;
+}

@@ -97,7 +97,7 @@ interface StaffInfo extends BaseRecord {
 }
 
 // 班次类型
-type ShiftType = "morning" | "evening" | "off" | "leave";
+type ShiftType = "morning" | "evening" | "off" | "leave" | "overtime";
 
 // 排班数据结构
 interface ScheduleRecord extends BaseRecord {

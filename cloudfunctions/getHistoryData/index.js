@@ -6,6 +6,21 @@ cloud.init({
 
 const db = cloud.database();
 
+const OVERTIME_DURATION_MAP = {
+  60: 1,
+  70: 1,
+  80: 1,
+  90: 1.5,
+  120: 2
+};
+
+function calculateOvertimeHours(duration) {
+  if (OVERTIME_DURATION_MAP[duration] !== undefined) {
+    return OVERTIME_DURATION_MAP[duration];
+  }
+  return Math.round(duration / 60 * 10) / 10;
+}
+
 function isToday(date) {
   const now = new Date();
   const utcNow = new Date(now.getTime() + (8 * 60 * 60 * 1000));
@@ -257,11 +272,23 @@ exports.main = async (event) => {
         };
       }
 
-      const recordsResult = await db.collection('consultation_records').where({
-        date: targetDate
-      }).get();
+      const [recordsResult, schedulesResult, staffResult] = await Promise.all([
+        db.collection('consultation_records').where({ date: targetDate }).get(),
+        db.collection('schedule').where({ date: targetDate }).get(),
+        db.collection('staff').where({ status: 'active' }).get()
+      ]);
 
       const records = recordsResult.data;
+      const scheduleMap = {};
+      schedulesResult.data.forEach(s => {
+        scheduleMap[s.staffId] = s.shift;
+      });
+
+      const staffIdMap = {};
+      staffResult.data.forEach(s => {
+        staffIdMap[s.name] = s._id;
+      });
+
       const technicianStats = {};
 
       records.forEach(record => {
@@ -275,7 +302,8 @@ exports.main = async (event) => {
               totalCount: 0,
               extraTimeCount: 0,
               extraTimeTotal: 0,
-              overtimeTotal: 0
+              overtimeHours: 0,
+              shift: ''
             };
           }
 
@@ -293,8 +321,14 @@ exports.main = async (event) => {
             technicianStats[technician].extraTimeTotal += record.extraTime;
           }
 
-          if (record.overtime && record.overtime > 0) {
-            technicianStats[technician].overtimeTotal = record.overtime;
+          const staffId = staffIdMap[technician];
+          const shift = staffId ? scheduleMap[staffId] : null;
+          
+          if (shift === 'overtime') {
+            technicianStats[technician].shift = 'overtime';
+            const projectDuration = parseProjectDuration(record.project);
+            const overtimeHours = calculateOvertimeHours(projectDuration);
+            technicianStats[technician].overtimeHours += overtimeHours;
           }
 
           technicianStats[technician].totalCount++;

@@ -442,9 +442,8 @@ Page({
           summaryText += `加钟: ${stats.extraTimeCount}\n`;
         }
 
-        if (stats.overtimeTotal > 0) {
-          const overtimeHours = (stats.overtimeTotal * 0.5).toFixed(1);
-          summaryText += `加班: ${stats.overtimeTotal} (${overtimeHours}小时)\n`;
+        if (stats.overtimeHours > 0) {
+          summaryText += `加班: ${stats.overtimeHours.toFixed(1)}小时\n`;
         }
 
         summaryText += `项目统计:\n`;
@@ -459,7 +458,7 @@ Page({
       const totalRecords = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.totalCount, 0);
       const totalClockIn = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.clockInCount, 0);
       const totalExtraTime = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.extraTimeTotal, 0);
-      const totalOvertime = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.overtimeTotal, 0);
+      const totalOvertimeHours = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.overtimeHours, 0);
 
       summaryText += `# 总计\n`;
       summaryText += `总单数: **${totalRecords}**\n`;
@@ -468,8 +467,8 @@ Page({
       if (totalExtraTime > 0) {
         summaryText += `总加钟: **${(totalExtraTime)}**\n`;
       }
-      if (totalOvertime > 0) {
-        summaryText += `总加班: **${(totalOvertime)}**\n`;
+      if (totalOvertimeHours > 0) {
+        summaryText += `总加班: **${totalOvertimeHours.toFixed(1)}小时**\n`;
       }
 
       if (monthlyScoreRanking && monthlyScoreRanking.rankings) {

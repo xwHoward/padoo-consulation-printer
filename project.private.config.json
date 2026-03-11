@@ -23,11 +23,18 @@
         "miniprogram": {
             "list": [
                 {
-                    "name": "lottery",
-                    "pathName": "pages/lottery/lottery",
+                    "name": "history",
+                    "pathName": "pages/history/history",
                     "query": "",
                     "scene": null,
                     "launchMode": "default"
+                },
+                {
+                    "name": "lottery",
+                    "pathName": "pages/lottery/lottery",
+                    "query": "",
+                    "launchMode": "default",
+                    "scene": null
                 },
                 {
                     "name": "profile",
@@ -67,13 +74,6 @@
                 {
                     "name": "login",
                     "pathName": "pages/login/login",
-                    "query": "",
-                    "launchMode": "default",
-                    "scene": null
-                },
-                {
-                    "name": "单据",
-                    "pathName": "pages/history/history",
                     "query": "",
                     "launchMode": "default",
                     "scene": null

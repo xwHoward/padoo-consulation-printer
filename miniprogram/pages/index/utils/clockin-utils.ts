@@ -1,6 +1,6 @@
 import { cloudDb, Collections } from "../../../utils/cloud-db";
 import { formatDate, formatTime, parseProjectDuration } from "../../../utils/util";
-import { SHIFT_START_TIME, SHIFT_END_TIME } from "../../../utils/constants";
+import { SHIFT_START_TIME, SHIFT_END_TIME, calculateOvertimeHours } from "../../../utils/constants";
 
 const app = getApp<IAppOption>();
 const SPARE_TIME = 15;
@@ -20,6 +20,11 @@ export class ClockInUtils {
       const schedule = schedules.find(s => s.staffId === staff._id);
       if (!schedule) {
         return 0;
+      }
+
+      if (schedule.shift === 'overtime') {
+        const projectDuration = parseProjectDuration(record.project);
+        return calculateOvertimeHours(projectDuration);
       }
 
       const { startTime, endTime } = record;
