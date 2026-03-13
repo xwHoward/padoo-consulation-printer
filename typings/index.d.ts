@@ -460,3 +460,29 @@ interface LotteryRecord extends BaseRecord {
   userId?: string;
   userName?: string;
 }
+
+type ExpenseCategory = 'utilities' | 'supplies' | 'rent' | 'salary' | 'maintenance' | 'other';
+
+interface StoreExpense extends BaseRecord {
+  category: ExpenseCategory;
+  content: string;
+  amount: number;
+  date: string;
+  remarks?: string;
+}
+
+interface TechnicianSalary {
+  technicianId: string;
+  technicianName: string;
+  year: number;
+  month: number;
+  commission: number;
+  overtime: number;
+  attendanceBonus: number;
+  mealAllowance: number;
+  salesCommission: number;
+  totalSalary: number;
+  workDays: number;
+  offDays: number;
+  leaveDays: number;
+}

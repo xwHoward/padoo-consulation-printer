@@ -1,0 +1,320 @@
+@import "../../app.less";
+
+page {
+	height: 100vh;
+	display: flex;
+	flex-direction: column;
+	background-color: @bg-color-light;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	padding-top: env(safe-area-inset-top);
+	padding-top: constant(safe-area-inset-top);
+	padding-bottom: env(safe-area-inset-bottom);
+	padding-bottom: constant(safe-area-inset-bottom);
+	box-sizing: border-box;
+}
+
+.scrollarea {
+	flex: 1;
+	width: 100%;
+	overflow-y: hidden;
+}
+
+.container {
+	padding: 15px;
+	box-sizing: border-box;
+}
+
+.nav-btn {
+	height: 100%;
+	display: flex;
+	margin-right: 8px;
+	align-items: center;
+	white-space: nowrap;
+
+	.nav-btn-text {
+		color: @primary-color;
+		font-size: 16px;
+	}
+}
+
+.month-selector {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 15px;
+}
+
+.picker-btn {
+	background-color: @bg-color;
+	padding: 10px 20px;
+	border-radius: 8px;
+	font-size: 14px;
+	color: @text-color;
+	border: 1px solid @border-color;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.section {
+	background-color: @bg-color;
+	border-radius: 12px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+	overflow: hidden;
+	margin-bottom: 15px;
+}
+
+.section-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 15px;
+	background-color: @bg-color-light;
+	border-bottom: 1px solid @border-color-light;
+}
+
+.section-title {
+	font-size: 16px;
+	font-weight: 600;
+	color: @text-color;
+}
+
+.section-total {
+	font-size: 16px;
+	font-weight: 600;
+	color: @primary-color;
+}
+
+.expense-list {
+	background-color: @bg-color;
+}
+
+.expense-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 15px;
+	border-bottom: 1px solid @border-color-light;
+	transition: background-color 0.3s ease;
+
+	&:last-child {
+		border-bottom: none;
+	}
+
+	&:active {
+		background-color: @bg-color-light;
+	}
+}
+
+.expense-main {
+	flex: 1;
+	min-width: 0;
+}
+
+.expense-category {
+	display: inline-block;
+	font-size: 12px;
+	color: @primary-color;
+	background-color: rgba(255, 107, 0, 0.1);
+	padding: 2px 8px;
+	border-radius: 4px;
+	margin-bottom: 6px;
+}
+
+.expense-content {
+	font-size: 15px;
+	color: @text-color;
+	font-weight: 500;
+	margin-bottom: 4px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.expense-date {
+	font-size: 12px;
+	color: @text-color-light;
+}
+
+.expense-right {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 8px;
+}
+
+.expense-amount {
+	font-size: 16px;
+	font-weight: 600;
+	color: @danger-color;
+}
+
+.expense-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.action-btn {
+	font-size: 12px;
+	padding: 4px 10px;
+	border-radius: 4px;
+	transition: all 0.3s ease;
+
+	&.edit-btn {
+		color: @info-color;
+		background-color: rgba(24, 144, 255, 0.1);
+	}
+
+	&.delete-btn {
+		color: @danger-color;
+		background-color: rgba(255, 77, 79, 0.1);
+	}
+}
+
+.empty-hint {
+	text-align: center;
+	padding: 30px 20px;
+	color: @text-color-secondary;
+	font-size: 14px;
+}
+
+.salary-table-wrapper {
+	overflow: hidden;
+}
+
+.table-scroll-view {
+	width: 100%;
+	overflow-x: auto;
+	white-space: nowrap;
+}
+
+.salary-table {
+	display: inline-block;
+	min-width: 100%;
+	background-color: @bg-color;
+}
+
+.table-header {
+	background-color: @bg-color-light;
+}
+
+.table-row {
+	display: flex;
+	border-bottom: 1px solid @border-color-light;
+
+	&:last-child {
+		border-bottom: none;
+	}
+}
+
+.table-cell {
+	flex-shrink: 0;
+	min-width: 70px;
+	padding: 12px 8px;
+	font-size: 13px;
+	color: @text-color;
+	text-align: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	&.name-cell {
+		position: sticky;
+		left: 0;
+		z-index: 10;
+		min-width: 70px;
+		font-weight: 500;
+		justify-content: flex-start;
+		padding-left: 15px;
+		background-color: @bg-color;
+		box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+	}
+
+	&.total-cell {
+		font-weight: 600;
+		color: @primary-color;
+	}
+}
+
+.table-header .table-cell {
+	font-weight: 500;
+	color: @text-color-secondary;
+	font-size: 12px;
+
+	&.name-cell {
+		background-color: @bg-color-light;
+	}
+}
+
+.salary-legend {
+	padding: 15px;
+	border-top: 1px solid @border-color-light;
+}
+
+.legend-title {
+	font-size: 14px;
+	font-weight: 500;
+	color: @text-color;
+	margin-bottom: 10px;
+}
+
+.legend-item {
+	font-size: 12px;
+	color: @text-color-secondary;
+	line-height: 1.8;
+}
+
+.form-item {
+	margin-bottom: 15px;
+	display: flex;
+	align-items: center;
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+}
+
+.form-label {
+	flex: none;
+	margin-right: 10px;
+	font-size: 14px;
+	color: @text-color;
+}
+
+.form-input {
+	flex: 1;
+	padding: 10px 12px;
+	font-size: 15px;
+	color: @text-color;
+	border: 1px solid @border-color;
+	border-radius: 8px;
+	width: 100%;
+}
+
+.form-picker {
+	flex: 1;
+	padding: 10px 12px;
+	font-size: 15px;
+	color: @text-color;
+	border: 1px solid @border-color;
+	border-radius: 8px;
+	background-color: @bg-color;
+}
+
+.category-selector {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.category-option {
+	padding: 8px 14px;
+	border-radius: 6px;
+	border: 1px solid @border-color;
+	font-size: 13px;
+	color: @text-color;
+	transition: all 0.3s ease;
+
+	&.selected {
+		border-color: @primary-color;
+		background-color: rgba(255, 107, 0, 0.1);
+		color: @primary-color;
+	}
+}

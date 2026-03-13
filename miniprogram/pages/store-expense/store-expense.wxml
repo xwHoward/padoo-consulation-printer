@@ -1,0 +1,135 @@
+<navigation-bar title="店内收支" back="{{true}}" color="black" background="#FFF">
+  <view slot="right" bindtap="onAddExpense" class="nav-btn">
+    <view class="nav-btn-text">新增支出</view>
+  </view>
+</navigation-bar>
+
+<scroll-view class="scrollarea" scroll-y type="list">
+  <view class="container">
+    <view class="month-selector">
+      <picker mode="selector" range="{{monthSelector.years}}" bindchange="onYearChange" value="{{monthSelector.years.indexOf(monthSelector.selectedYear)}}">
+        <view class="picker-btn">{{monthSelector.selectedYear}}年</view>
+      </picker>
+      <picker mode="selector" range="{{monthSelector.months}}" bindchange="onMonthChange" value="{{monthSelector.selectedMonth - 1}}">
+        <view class="picker-btn">{{monthSelector.selectedMonth}}月</view>
+      </picker>
+    </view>
+
+    <view class="section">
+      <view class="section-header">
+        <view class="section-title">门店支出</view>
+        <view class="section-total">¥{{totalExpense}}</view>
+      </view>
+      <view class="expense-list" wx:if="{{expenseList.length > 0}}">
+        <view class="expense-item" wx:for="{{expenseList}}" wx:key="_id">
+          <view class="expense-main" bindtap="onEditExpense" data-expense="{{item}}">
+            <view class="expense-category">{{item.category === 'utilities' ? '水电费' : item.category === 'supplies' ? '物料采购' : item.category === 'rent' ? '房租' : item.category === 'salary' ? '工资' : item.category === 'maintenance' ? '维修费' : '其他'}}</view>
+            <view class="expense-content">{{item.content}}</view>
+            <view class="expense-date">{{item.date}}</view>
+          </view>
+          <view class="expense-right">
+            <view class="expense-amount">¥{{item.amount}}</view>
+            <view class="expense-actions">
+              <view class="action-btn edit-btn" catchtap="onEditExpense" data-expense="{{item}}">编辑</view>
+              <view class="action-btn delete-btn" catchtap="onDeleteExpense" data-expense="{{item}}">删除</view>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="empty-hint" wx:else>
+        <view>暂无支出记录</view>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-header">
+        <view class="section-title">工资计算</view>
+        <view class="section-total">¥{{totalSalary}}</view>
+      </view>
+      <view class="salary-table-wrapper" wx:if="{{salaryList.length > 0}}">
+        <scroll-view class="table-scroll-view" scroll-x="{{true}}" scroll-y="{{false}}">
+          <view class="salary-table">
+            <view class="table-header">
+              <view class="table-row">
+                <view class="table-cell name-cell sticky-col">技师</view>
+                <view class="table-cell">手工提成</view>
+                <view class="table-cell">加班工资</view>
+                <view class="table-cell">全勤奖</view>
+                <view class="table-cell">餐补</view>
+                <view class="table-cell">售卡提成</view>
+                <view class="table-cell">合计</view>
+              </view>
+            </view>
+            <view class="table-body">
+              <view class="table-row" wx:for="{{salaryList}}" wx:key="technicianId">
+                <view class="table-cell name-cell sticky-col">{{item.technicianName}}</view>
+                <view class="table-cell">{{item.commission}}</view>
+                <view class="table-cell">{{item.overtime}}</view>
+                <view class="table-cell">{{item.attendanceBonus}}</view>
+                <view class="table-cell">{{item.mealAllowance}}</view>
+                <view class="table-cell">{{item.salesCommission}}</view>
+                <view class="table-cell total-cell">{{item.totalSalary}}</view>
+              </view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+      <view class="empty-hint" wx:else>
+        <view>暂无技师数据</view>
+      </view>
+      <view class="salary-legend" wx:if="{{salaryList.length > 0}}">
+        <view class="legend-title">计算说明：</view>
+        <view class="legend-item">• 手工提成：按项目固定金额计算</view>
+        <view class="legend-item">• 加班工资：加班时长 × 7.5元/半小时</view>
+        <view class="legend-item">• 全勤奖：休息+请假≤4天得200元</view>
+        <view class="legend-item">• 餐补：600÷26×实际上班天数</view>
+        <view class="legend-item">• 售卡提成：售卡金额×4%</view>
+      </view>
+    </view>
+  </view>
+</scroll-view>
+
+<view class="loading-mask" wx:if="{{loading}}">
+  <view class="loading-content">
+    <view class="loading-spinner"></view>
+    <view class="loading-text">{{loadingText}}</view>
+  </view>
+</view>
+
+<modal
+  show="{{showExpenseModal}}"
+  title="{{editingExpense ? '编辑支出' : '新增支出'}}"
+  bind:cancel="onExpenseModalCancel"
+  bind:confirm="onExpenseModalConfirm">
+  <view class="form-item">
+    <view class="form-label">分类</view>
+    <view class="category-selector">
+      <view 
+        class="category-option {{expenseForm.category === item.key ? 'selected' : ''}}" 
+        wx:for="{{expenseCategories}}" 
+        wx:key="key"
+        bindtap="onCategorySelect"
+        data-category="{{item.key}}">
+        <view>{{item.name}}</view>
+      </view>
+    </view>
+  </view>
+  <view class="form-item">
+    <view class="form-label">内容</view>
+    <input class="form-input" placeholder="请输入支出内容" value="{{expenseForm.content}}" bindinput="onContentInput" />
+  </view>
+  <view class="form-item">
+    <view class="form-label">金额</view>
+    <input class="form-input" placeholder="请输入金额" value="{{expenseForm.amount}}" bindinput="onAmountInput" type="digit" />
+  </view>
+  <view class="form-item">
+    <view class="form-label">日期</view>
+    <picker mode="date" value="{{expenseForm.date}}" bindchange="onDateChange">
+      <view class="form-picker">{{expenseForm.date || '请选择日期'}}</view>
+    </picker>
+  </view>
+  <view class="form-item">
+    <view class="form-label">备注</view>
+    <input class="form-input" placeholder="选填" value="{{expenseForm.remarks}}" bindinput="onRemarksInput" />
+  </view>
+</modal>

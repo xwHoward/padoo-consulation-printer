@@ -56,6 +56,9 @@ Page({
 			case 'calculator':
 				wx.navigateTo({ url: '/pages/calculator/index' });
 				break;
+			case 'store-expense':
+				wx.navigateTo({ url: '/pages/store-expense/store-expense' });
+				break;
 			default:
 				wx.showToast({ title: '功能开发中', icon: 'none' });
 		}
