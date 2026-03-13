@@ -84,6 +84,78 @@ page {
 	border-left: 4px solid @primary-color;
 }
 
+/* 快速预约 */
+.quick-reservation-section {
+	.quick-reservation-grid {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 10px;
+	}
+
+	.quick-reservation-slot {
+		background-color: @bg-color-light;
+		border-radius: 8px;
+		padding: 12px;
+		text-align: center;
+		transition: all 0.3s ease;
+		position: relative;
+
+		&.available {
+			background-color: rgba(255, 107, 0, 0.05);
+			border: 1px solid rgba(255, 107, 0, 0.2);
+		}
+
+		&.unavailable {
+			background-color: rgba(0, 0, 0, 0.03);
+			border: 1px solid @border-color-light;
+			opacity: 0.6;
+		}
+
+		.slot-label {
+			font-size: 13px;
+			color: @text-color-secondary;
+			margin-bottom: 6px;
+		}
+
+		.slot-time {
+			font-size: 14px;
+			font-weight: 600;
+			color: @text-color;
+
+			.available & {
+				color: @primary-color;
+			}
+
+			.unavailable & {
+				color: @text-color-light;
+				font-size: 12px;
+				font-weight: 400;
+			}
+		}
+
+		.slot-copy {
+			position: absolute;
+			top: 6px;
+			right: 6px;
+			font-size: 14px;
+			padding: 4px;
+			cursor: pointer;
+			opacity: 0.6;
+			transition: all 0.2s ease;
+			user-select: none;
+			color: @primary-color;
+
+			&:active {
+				transform: scale(0.9);
+			}
+
+			&:hover {
+				opacity: 1;
+			}
+		}
+	}
+}
+
 /* 房间网格 */
 .room-grid {
 	display: flex;

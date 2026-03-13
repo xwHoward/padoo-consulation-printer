@@ -111,6 +111,13 @@ Page({
 			customerName: '',
 			project: '',
 			technicianName: ''
+		},
+		// 快速预约时段
+		quickReservationSlots: {
+			oneMale: null as string | null,
+			oneFemale: null as string | null,
+			twoMale: null as string | null,
+			twoFemale: null as string | null
 		}
 	},
 
@@ -193,6 +200,40 @@ Page({
 	onDatePickerChange(e: WechatMiniprogram.CustomEvent) {
 		const date = e.detail.date;
 		this.setData({ selectedDate: date });
+	},
+
+	copyReservationSlot(e: WechatMiniprogram.CustomEvent) {
+		const { type, text } = e.currentTarget.dataset;
+		
+		const typeLabels: Record<string, string> = {
+			oneMale: '1位男技师',
+			oneFemale: '1位女技师',
+			twoMale: '2位男技师',
+			twoFemale: '2位女技师'
+		};
+
+		const timeRange = text.match(/^(\d{2}:\d{2}-\d{2}:\d{2})/)?.[1] || text;
+		const label = typeLabels[type] || '';
+
+		const message = `您好，目前${label}可预约时段为${timeRange}哦，你可以告诉小趴到店时间，小趴给您保留预约哦~`;
+
+		wx.setClipboardData({
+			data: message,
+			success: () => {
+				wx.showToast({
+					title: '已复制到剪贴板',
+					icon: 'success',
+					duration: 2000
+				});
+			},
+			fail: () => {
+				wx.showToast({
+					title: '复制失败',
+					icon: 'error',
+					duration: 2000
+				});
+			}
+		});
 	},
 
 	// ========== 轮牌相关 ==========

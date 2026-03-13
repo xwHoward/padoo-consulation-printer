@@ -315,6 +315,7 @@ interface LoginResponse {
 interface RotationItem {
   _id: string;
   name: string;
+  gender: 'male' | 'female';
   shift: ShiftType;
   availableSlots?: string; // 可约时段
 }

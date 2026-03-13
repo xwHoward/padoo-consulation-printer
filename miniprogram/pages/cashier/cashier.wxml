@@ -17,6 +17,35 @@
       </view>
       <timeline selectedDate="{{selectedDate}}" readonly="{{false}}" refreshTrigger="{{timelineRefreshTrigger}}" bind:blockclick="onBlockClick" />
     </view>
+
+    <!-- 快速预约 -->
+    <view class="section quick-reservation-section">
+      <view class="section-header">
+        <view class="section-title">快速预约</view>
+      </view>
+      <view class="quick-reservation-grid">
+        <view class="quick-reservation-slot {{quickReservationSlots.oneMale ? 'available' : 'unavailable'}}">
+          <view class="slot-label">1位男技师</view>
+          <view class="slot-time">{{quickReservationSlots.oneMale || '暂无可约时段'}}</view>
+          <view class="slot-copy" wx:if="{{quickReservationSlots.oneMale}}" bindtap="copyReservationSlot" data-type="oneMale" data-text="{{quickReservationSlots.oneMale}}">复制</view>
+        </view>
+        <view class="quick-reservation-slot {{quickReservationSlots.oneFemale ? 'available' : 'unavailable'}}">
+          <view class="slot-label">1位女技师</view>
+          <view class="slot-time">{{quickReservationSlots.oneFemale || '暂无可约时段'}}</view>
+          <view class="slot-copy" wx:if="{{quickReservationSlots.oneFemale}}" bindtap="copyReservationSlot" data-type="oneFemale" data-text="{{quickReservationSlots.oneFemale}}">复制</view>
+        </view>
+        <view class="quick-reservation-slot {{quickReservationSlots.twoMale ? 'available' : 'unavailable'}}">
+          <view class="slot-label">2位男技师</view>
+          <view class="slot-time">{{quickReservationSlots.twoMale || '暂无可约时段'}}</view>
+          <view class="slot-copy" wx:if="{{quickReservationSlots.twoMale}}" bindtap="copyReservationSlot" data-type="twoMale" data-text="{{quickReservationSlots.twoMale}}">复制</view>
+        </view>
+        <view class="quick-reservation-slot {{quickReservationSlots.twoFemale ? 'available' : 'unavailable'}}">
+          <view class="slot-label">2位女技师</view>
+          <view class="slot-time">{{quickReservationSlots.twoFemale || '暂无可约时段'}}</view>
+          <view class="slot-copy" wx:if="{{quickReservationSlots.twoFemale}}" bindtap="copyReservationSlot" data-type="twoFemale" data-text="{{quickReservationSlots.twoFemale}}">复制</view>
+        </view>
+      </view>
+    </view>
     <!-- 房间状态 -->
     <view class="section">
       <view class="section-title">房间状态</view>

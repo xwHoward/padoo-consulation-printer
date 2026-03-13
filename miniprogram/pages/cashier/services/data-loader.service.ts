@@ -100,7 +100,7 @@ export class CashierDataLoaderService {
 			};
 
 			// 获取当前日期的轮牌数据
-			const rotationList = await this.prepareRotationList(today);
+			const { rotationList, quickReservationSlots } = await this.prepareRotationList(today);
 
 			this.page.setData({
 				rooms,
@@ -108,6 +108,7 @@ export class CashierDataLoaderService {
 				staffAvailability,
 				dateSelector,
 				rotationList,
+				quickReservationSlots,
 				timelineRefreshTrigger: this.page.data.timelineRefreshTrigger + 1
 			});
 		}, {
@@ -135,12 +136,13 @@ export class CashierDataLoaderService {
 				isToday: today === getCurrentDate()
 			};
 
-			// 更新轮牌列表
-			const rotationList = await this.prepareRotationList(today);
+			// 更新轮牌列表并计算快速预约时段
+			const { rotationList, quickReservationSlots } = await this.prepareRotationList(today);
 
 			this.page.setData({
 				dateSelector,
 				rotationList,
+				quickReservationSlots,
 				timelineRefreshTrigger: this.page.data.timelineRefreshTrigger + 1
 			});
 		} finally {
@@ -150,10 +152,10 @@ export class CashierDataLoaderService {
 		}
 	}
 
-	async prepareRotationList(today: string): Promise<RotationItem[]> {
+	async prepareRotationList(today: string): Promise<{ rotationList: RotationItem[]; quickReservationSlots: { oneMale: string | null; oneFemale: string | null; twoMale: string | null; twoFemale: string | null } }> {
 		const rotation = await app.getRotationQueue(today);
 		if (!rotation || !rotation.staffList || rotation.staffList.length === 0) {
-			return [];
+			return { rotationList: [], quickReservationSlots: { oneMale: null, oneFemale: null, twoMale: null, twoFemale: null } };
 		}
 
 		const staffList = await app.getStaffs();
@@ -168,7 +170,7 @@ export class CashierDataLoaderService {
 
 		const activeReservations = reservations.filter(r => r.date === today && r.status === 'active');
 
-		return rotation.staffList.map((item, index) => {
+		const rotationList = rotation.staffList.map((item, index) => {
 			const staff = staffMap.get(item.staffId);
 			if (!staff || staff.status !== 'active') {
 				return null;
@@ -209,6 +211,11 @@ export class CashierDataLoaderService {
 				reservationCount: staffReservations.length
 			} as RotationItem;
 		}).filter(Boolean) as RotationItem[];
+
+		// 计算快速预约时段
+		const quickReservationSlots = this.calculateQuickReservationSlots(rotationList, consultations, activeReservations, today);
+
+		return { rotationList, quickReservationSlots };
 	}
 
 	private calculateAvailableSlots(
@@ -326,5 +333,161 @@ export class CashierDataLoaderService {
 		} catch (error) {
 			return [];
 		}
+	}
+
+	private calculateQuickReservationSlots(
+		rotationList: RotationItem[],
+		allConsultations: ConsultationRecord[],
+		allReservations: ReservationRecord[],
+		selectedDate: string
+	): { oneMale: string | null; oneFemale: string | null; twoMale: string | null; twoFemale: string | null } {
+		const now = new Date();
+		const currentMinutes = now.getHours() * 60 + now.getMinutes();
+		const todayStr = getCurrentDate();
+		const isToday = selectedDate === todayStr;
+
+		const defaultProject = this.page.data.projects.length > 0 ? this.page.data.projects[0] : null;
+		const defaultDuration = defaultProject ? (defaultProject.duration || 60) : 60;
+
+		const staffByGender: { male: RotationItem[]; female: RotationItem[] } = { male: [], female: [] };
+		rotationList.forEach(staff => {
+			if (staff.gender === 'male') {
+				staffByGender.male.push(staff);
+			} else if (staff.gender === 'female') {
+				staffByGender.female.push(staff);
+			}
+		});
+
+		const staffOccupiedSlots = new Map<string, Array<{ start: number; end: number }>>();
+
+		rotationList.forEach(staff => {
+			const shift = staff.shift;
+			const shiftStart = SHIFT_START_TIME[shift];
+			const shiftEnd = SHIFT_END_TIME[shift];
+
+			if (!shiftStart || !shiftEnd) {
+				staffOccupiedSlots.set(staff._id, []);
+				return;
+			}
+
+			const [startHour, startMinute] = shiftStart.split(':').map(Number);
+			const [endHour, endMinute] = shiftEnd.split(':').map(Number);
+			const shiftStartMinutes = startHour * 60 + startMinute;
+			const shiftEndMinutes = endHour * 60 + endMinute;
+
+			const occupiedSlots: Array<{ start: number; end: number }> = [];
+
+			const staffConsultations = allConsultations.filter(c => c.technician === staff.name && !c.isVoided);
+			const staffReservations = allReservations.filter(r => r.technicianId === staff._id || r.technicianName === staff.name);
+
+			staffConsultations.forEach(record => {
+				if (record.startTime && record.endTime) {
+					const [sHour, sMinute] = record.startTime.split(':').map(Number);
+					const [eHour, eMinute] = record.endTime.split(':').map(Number);
+					occupiedSlots.push({
+						start: sHour * 60 + sMinute,
+						end: eHour * 60 + eMinute
+					});
+				}
+			});
+
+			staffReservations.forEach(reservation => {
+				const [sHour, sMinute] = reservation.startTime.split(':').map(Number);
+				const [eHour, eMinute] = reservation.endTime.split(':').map(Number);
+				occupiedSlots.push({
+					start: sHour * 60 + sMinute,
+					end: eHour * 60 + eMinute
+				});
+			});
+
+			occupiedSlots.sort((a, b) => a.start - b.start);
+			staffOccupiedSlots.set(staff._id, occupiedSlots);
+		});
+
+		const findEarliestSlot = (staffList: RotationItem[], requiredCount: number): string | null => {
+			if (staffList.length < requiredCount) {
+				return null;
+			}
+
+			let earliestShiftStart = Infinity;
+			let latestShiftEnd = -Infinity;
+
+			staffList.forEach(staff => {
+				const shift = staff.shift;
+				const shiftStart = SHIFT_START_TIME[shift];
+				const shiftEnd = SHIFT_END_TIME[shift];
+
+				if (shiftStart && shiftEnd) {
+					const [startHour, startMinute] = shiftStart.split(':').map(Number);
+					const [endHour, endMinute] = shiftEnd.split(':').map(Number);
+					const shiftStartMinutes = startHour * 60 + startMinute;
+					const shiftEndMinutes = endHour * 60 + endMinute;
+
+					earliestShiftStart = Math.min(earliestShiftStart, shiftStartMinutes);
+					latestShiftEnd = Math.max(latestShiftEnd, shiftEndMinutes);
+				}
+			});
+
+			if (earliestShiftStart === Infinity || latestShiftEnd === -Infinity) {
+				return null;
+			}
+
+			let searchStart = earliestShiftStart;
+			if (isToday) {
+				searchStart = Math.max(currentMinutes, earliestShiftStart);
+			}
+
+			for (let time = searchStart; time <= latestShiftEnd - 60; time += 5) {
+				const availableStaff = staffList.filter(staff => {
+					const slots = staffOccupiedSlots.get(staff._id) || [];
+					
+					return !slots.some(slot => {
+						return !(time >= slot.end);
+					});
+				});
+
+				if (availableStaff.length >= requiredCount) {
+					let earliestEnd = latestShiftEnd;
+
+					availableStaff.forEach(staff => {
+						const shift = staff.shift;
+						const shiftEnd = SHIFT_END_TIME[shift];
+						if (shiftEnd) {
+							const [endHour, endMinute] = shiftEnd.split(':').map(Number);
+							const shiftEndMinutes = endHour * 60 + endMinute;
+							
+							const slots = staffOccupiedSlots.get(staff._id) || [];
+							const nextOccupied = slots.find(slot => slot.start > time);
+							
+							if (nextOccupied) {
+								earliestEnd = Math.min(earliestEnd, nextOccupied.start);
+							} else {
+								earliestEnd = Math.min(earliestEnd, shiftEndMinutes);
+							}
+						}
+					});
+
+					const maxDuration = earliestEnd - time;
+
+					if (maxDuration >= 60) {
+						const startHour = Math.floor(time / 60);
+						const startMinute = time % 60;
+						const endHour = Math.floor(earliestEnd / 60);
+						const endMinute = earliestEnd % 60;
+
+						return `${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}-${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}(${maxDuration}分钟)`;
+					}
+				}
+			}
+
+			return null;
+		};
+
+		return {
+			oneMale: findEarliestSlot(staffByGender.male, 1),
+			oneFemale: findEarliestSlot(staffByGender.female, 1),
+			twoMale: findEarliestSlot(staffByGender.male, 2),
+			twoFemale: findEarliestSlot(staffByGender.female, 2)
+		};
 	}
 }

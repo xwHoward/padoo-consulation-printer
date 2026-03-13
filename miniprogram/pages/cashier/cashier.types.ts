@@ -91,6 +91,12 @@ export interface CashierPageData {
 	rotationPushModal: RotationPushModalState;
 	pushModalLocked: boolean;
 	arrivalConfirmModal: ArrivalConfirmModalState;
+	quickReservationSlots: {
+		oneMale: string | null;
+		oneFemale: string | null;
+		twoMale: string | null;
+		twoFemale: string | null;
+	};
 }
 
 // 页面实例类型（用于 handler 类）
