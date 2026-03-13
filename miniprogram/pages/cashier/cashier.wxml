@@ -261,3 +261,25 @@
     <text class="tips-text">ℹ️确认后将推送到企业微信群聊</text>
   </view>
 </modal>
+<modal show="{{arrivalConfirmModal.show}}" show-footer="{{false}}" title="确认到店">
+  <view class="arrival-confirm-content">
+    <view class="arrival-info">
+      <view class="arrival-info-row">
+        <view class="arrival-info-label">顾客</view>
+        <view class="arrival-info-value">{{arrivalConfirmModal.customerName}}</view>
+      </view>
+      <view class="arrival-info-row">
+        <view class="arrival-info-label">项目</view>
+        <view class="arrival-info-value">{{arrivalConfirmModal.project}}</view>
+      </view>
+      <view class="arrival-info-row">
+        <view class="arrival-info-label">技师</view>
+        <view class="arrival-info-value">{{arrivalConfirmModal.technicianName}}</view>
+      </view>
+    </view>
+    <view class="arrival-actions">
+      <view class="arrival-btn skip-btn" bindtap="onArrivalConfirmSkip">不推送，直接到店</view>
+      <view class="arrival-btn push-btn" bindtap="onArrivalConfirmPush">推送到店通知</view>
+    </view>
+  </view>
+</modal>

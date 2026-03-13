@@ -7,18 +7,19 @@ cloud.init({
 const db = cloud.database();
 
 const OVERTIME_DURATION_MAP = {
-  60: 1,
-  70: 1,
-  80: 1,
-  90: 1.5,
-  120: 2
+  45: 1,
+  60: 2,
+  70: 2,
+  80: 2,
+  90: 3,
+  120: 4
 };
 
-function calculateOvertimeHours(duration) {
+function calculateOvertime(duration) {
   if (OVERTIME_DURATION_MAP[duration] !== undefined) {
     return OVERTIME_DURATION_MAP[duration];
   }
-  return Math.round(duration / 60 * 10) / 10;
+  return Math.floor(duration / 30);
 }
 
 function isToday(date) {
@@ -302,7 +303,7 @@ exports.main = async (event) => {
               totalCount: 0,
               extraTimeCount: 0,
               extraTimeTotal: 0,
-              overtimeHours: 0,
+              overtime: 0,
               shift: ''
             };
           }
@@ -323,12 +324,16 @@ exports.main = async (event) => {
 
           const staffId = staffIdMap[technician];
           const shift = staffId ? scheduleMap[staffId] : null;
-          
+
           if (shift === 'overtime') {
             technicianStats[technician].shift = 'overtime';
             const projectDuration = parseProjectDuration(record.project);
-            const overtimeHours = calculateOvertimeHours(projectDuration);
-            technicianStats[technician].overtimeHours += overtimeHours;
+            const overtime = calculateOvertime(projectDuration);
+            technicianStats[technician].overtime += overtime;
+          } else {
+            if (record.overtime) {
+              technicianStats[technician].overtime += record.overtime;
+            }
           }
 
           technicianStats[technician].totalCount++;
@@ -359,7 +364,7 @@ exports.main = async (event) => {
             membershipSales[salesStaff] = 0;
           }
           // TODO: 使用更准确的方式判断次卡数量
-          membershipSales[salesStaff]+=parseInt(membership.cardName);
+          membershipSales[salesStaff] += parseInt(membership.cardName);
         }
       });
 
@@ -395,7 +400,7 @@ exports.main = async (event) => {
         const salesCount = membershipSales[technician] || 0;
         const clockInCount = clockInCounts[technician] || 0;
         const totalScore = salesCount + clockInCount;
-        
+
         monthlyScores.push({
           technician,
           salesCount,

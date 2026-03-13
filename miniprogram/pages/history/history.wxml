@@ -46,7 +46,7 @@
                     <view class="text-info">{{record.startTime}} - {{record.endTime}}</view>
                     <view wx:if="{{record.phone}}" class="text-info">{{record.phone}}</view>
                     <view class="text-info" wx:if="{{!record.isVoided}}">
-                      加班{{record.overtime ? '(' + record.overtime + ')' : '(0)'}}
+                      加班{{record.overtime ? '(' + record.overtime*0.5 + 'h)' : '(0)'}}
                     </view>
                     <view wx:if="{{record.couponPlatform}}" class="text-info">
                       {{platforms[record.couponPlatform]}} {{record.couponCode}}
@@ -106,12 +106,7 @@
   </view>
 </scroll-view>
 <!-- 数字输入弹窗 -->
-<modal
-  show="{{numberInputModal.show}}"
-  title="设置{{numberInputModal.title}}数"
-  size="small"
-  bind:cancel="onModalCancel"
-  bind:confirm="onModalConfirm">
+<modal show="{{numberInputModal.show}}" title="设置{{numberInputModal.title}}数" size="small" bind:cancel="onModalCancel" bind:confirm="onModalConfirm">
   <view class="number-input-wrapper">
     <view class="step-btn minus-btn {{numberInputModal.inputValue <= 0 ? 'disabled' : ''}}" bindtap="onStepMinus">
       <text>-</text>
@@ -123,12 +118,8 @@
   </view>
   <view class="modal-unit">单位：半小时</view>
 </modal>
-  <!-- 提前下钟确认弹窗 -->
-<modal
-  show="{{earlyFinishModal.show}}"
-  title="提前下钟"
-  bind:cancel="onEarlyFinishModalCancel"
-  bind:confirm="onEarlyFinishModalConfirm">
+<!-- 提前下钟确认弹窗 -->
+<modal show="{{earlyFinishModal.show}}" title="提前下钟" bind:cancel="onEarlyFinishModalCancel" bind:confirm="onEarlyFinishModalConfirm">
   <view class="early-finish-info">
     <view class="info-row">
       <view class="info-label">技师：</view>
@@ -150,14 +141,7 @@
   <view class="loading-text">{{loadingText}}</view>
 </view>
 <!-- 每日总结推送确认弹窗 -->
-<modal
-  show="{{summaryModal.show}}"
-  title="确认每日总结"
-  show-close="{{true}}"
-  bind:cancel="onSummaryModalCancel"
-  bind:confirm="onSummaryModalConfirm"
-  loading="{{summaryModal.loading}}"
-  loading-text="推送中...">
-  <textarea class="summary-textarea" value="{{summaryModal.content}}" bindinput="onSummaryContentInput" placeholder="请输入每日总结内容" maxlength="2000"  show-confirm-bar="{{false}}" />
+<modal show="{{summaryModal.show}}" title="确认每日总结" show-close="{{true}}" bind:cancel="onSummaryModalCancel" bind:confirm="onSummaryModalConfirm" loading="{{summaryModal.loading}}" loading-text="推送中...">
+  <textarea class="summary-textarea" value="{{summaryModal.content}}" bindinput="onSummaryContentInput" placeholder="请输入每日总结内容" maxlength="2000" show-confirm-bar="{{false}}" />
   <text class="char-count">{{summaryModal.content.length}}/2000</text>
 </modal>

@@ -73,7 +73,7 @@
               <view wx:if="{{record.isClockIn}}" class="tag">点</view>
               <view class="tag">{{record.project}}</view>
               <view class="tag" wx:if="{{!record.isVoided&&record.overtime}}">
-                加班{{record.overtime}}
+                加班{{record.overtime*0.5}}h
               </view>
             </view>
           </view>

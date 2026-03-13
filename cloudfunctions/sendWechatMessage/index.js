@@ -39,7 +39,7 @@ exports.main = async (event, context) => {
         return {
             code: 0,
             message: '发送成功',
-            data: response
+            data: null
         }
         const response = await request(options)
 

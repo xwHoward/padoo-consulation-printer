@@ -340,10 +340,44 @@ export class ReservationHandler {
 	}
 
 	/**
-	 * 处理到店操作
+	 * 处理到店操作 - 显示确认弹窗
 	 */
 	async handleArrival(reserveId: string): Promise<void> {
 		this.page.setData({ loading: true, loadingText: '加载中...' });
+		try {
+			const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
+			if (!record) {
+				wx.showToast({ title: '预约不存在', icon: 'none' });
+				this.page.setData({ loading: false });
+				return;
+			}
+
+			if (record.status === 'cancelled') {
+				wx.showToast({ title: '该预约已取消', icon: 'none' });
+				this.page.setData({ loading: false });
+				return;
+			}
+
+			this.page.setData({ loading: false });
+
+			this.page.setData({
+				'arrivalConfirmModal.show': true,
+				'arrivalConfirmModal.reserveId': reserveId,
+				'arrivalConfirmModal.customerName': record.customerName + (record.gender === 'male' ? '先生' : '女士'),
+				'arrivalConfirmModal.project': record.project,
+				'arrivalConfirmModal.technicianName': record.technicianName || '未指定'
+			});
+		} catch (error) {
+			wx.showToast({ title: '加载失败', icon: 'none' });
+			this.page.setData({ loading: false });
+		}
+	}
+
+	/**
+	 * 处理到店操作 - 实际执行
+	 */
+	async processArrival(reserveId: string, shouldPushNotification: boolean): Promise<void> {
+		this.page.setData({ loading: true, loadingText: '处理中...' });
 		try {
 			const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
 			if (!record) {
@@ -366,12 +400,12 @@ export class ReservationHandler {
 				status: 'active',
 			});
 
-			// 发送到店通知
-			await this.pushHandler.sendArrivalNotification(reservations);
+			if (shouldPushNotification) {
+				await this.pushHandler.sendArrivalNotification(reservations);
+			}
 
 			this.page.setData({ loading: false });
 
-			// 跳转到服务页面，带上预约ID列表
 			if (reservations.length > 1) {
 				const reserveIds = reservations.map(r => r._id).join(',');
 				wx.navigateTo({ url: `/pages/index/index?reserveIds=${reserveIds}` });
@@ -379,7 +413,7 @@ export class ReservationHandler {
 				wx.navigateTo({ url: `/pages/index/index?reserveId=${reserveId}` });
 			}
 		} catch (error) {
-			wx.showToast({ title: '加载失败', icon: 'none' });
+			wx.showToast({ title: '处理失败', icon: 'none' });
 			this.page.setData({ loading: false });
 		}
 	}

@@ -397,7 +397,7 @@ Page({
 
     this.setData({ loading: true, loadingText: '生成统计中...' });
     try {
-      const res= await wx.cloud.callFunction({
+      const res = await wx.cloud.callFunction({
         name: 'getHistoryData',
         data: {
           action: 'getDailySummary',
@@ -418,8 +418,8 @@ Page({
       }
 
       const { technicianStats, monthlyScoreRanking } = res.result.data as { technicianStats: Record<string, TechnicianStats>; monthlyScoreRanking: MonthlyScoreRanking } || {
-        technicianStats:{},
-        monthlyScoreRanking:[]
+        technicianStats: {},
+        monthlyScoreRanking: []
       };
 
       if (Object.keys(technicianStats).length === 0) {
@@ -442,8 +442,8 @@ Page({
           summaryText += `加钟: ${stats.extraTimeCount}\n`;
         }
 
-        if (stats.overtimeHours > 0) {
-          summaryText += `加班: ${stats.overtimeHours.toFixed(1)}小时\n`;
+        if (stats.overtime > 0) {
+          summaryText += `加班: ${stats.overtime * 0.5}小时\n`;
         }
 
         summaryText += `项目统计:\n`;
@@ -458,7 +458,7 @@ Page({
       const totalRecords = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.totalCount, 0);
       const totalClockIn = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.clockInCount, 0);
       const totalExtraTime = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.extraTimeTotal, 0);
-      const totalOvertimeHours = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.overtimeHours, 0);
+      const totalOvertime = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.overtime, 0);
 
       summaryText += `# 总计\n`;
       summaryText += `总单数: **${totalRecords}**\n`;
@@ -467,8 +467,8 @@ Page({
       if (totalExtraTime > 0) {
         summaryText += `总加钟: **${(totalExtraTime)}**\n`;
       }
-      if (totalOvertimeHours > 0) {
-        summaryText += `总加班: **${totalOvertimeHours.toFixed(1)}小时**\n`;
+      if (totalOvertime > 0) {
+        summaryText += `总加班: **${totalOvertime * 0.5}小时**\n`;
       }
 
       if (monthlyScoreRanking && monthlyScoreRanking.rankings) {
@@ -599,7 +599,7 @@ Page({
 
       let technicianMention = '';
       if (staff && staff.phone) {
-        technicianMention =formatMention(staff);
+        technicianMention = formatMention(staff);
       }
 
       const updatedRecord = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, record._id) as ConsultationRecord | null;

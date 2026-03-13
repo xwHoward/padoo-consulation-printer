@@ -45,7 +45,7 @@ interface TechnicianStats {
   clockInCount: number;
   extraTimeTotal: number;
   extraTimeCount: number;
-  overtimeHours: number;
+  overtime: number;
   shift: string;
   projects: Record<string, number>;
 }

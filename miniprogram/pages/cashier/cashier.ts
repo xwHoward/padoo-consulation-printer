@@ -104,6 +104,13 @@ Page({
 		rotationPushModal: {
 			show: false,
 			loading: false
+		},
+		arrivalConfirmModal: {
+			show: false,
+			reserveId: '',
+			customerName: '',
+			project: '',
+			technicianName: ''
 		}
 	},
 
@@ -281,6 +288,22 @@ Page({
 
 	async handleEarlyFinish(recordId: string) {
 		if (reservationHandler) await reservationHandler.handleEarlyFinish(recordId);
+	},
+
+	async onArrivalConfirmPush() {
+		const { reserveId } = this.data.arrivalConfirmModal;
+		this.setData({
+			'arrivalConfirmModal.show': false
+		});
+		if (reservationHandler) await reservationHandler.processArrival(reserveId, true);
+	},
+
+	async onArrivalConfirmSkip() {
+		const { reserveId } = this.data.arrivalConfirmModal;
+		this.setData({
+			'arrivalConfirmModal.show': false
+		});
+		if (reservationHandler) await reservationHandler.processArrival(reserveId, false);
 	},
 
 	// ========== 顾客匹配（委托给 utils） ==========

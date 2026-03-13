@@ -52,6 +52,14 @@ export interface RotationPushModalState {
 	loading: boolean;
 }
 
+export interface ArrivalConfirmModalState {
+	show: boolean;
+	reserveId: string;
+	customerName: string;
+	project: string;
+	technicianName: string;
+}
+
 export interface CashierPageData {
 	isLandscape: boolean;
 	selectedDate: string;
@@ -82,6 +90,7 @@ export interface CashierPageData {
 	pushModal: PushModalState;
 	rotationPushModal: RotationPushModalState;
 	pushModalLocked: boolean;
+	arrivalConfirmModal: ArrivalConfirmModalState;
 }
 
 // 页面实例类型（用于 handler 类）

@@ -119,7 +119,7 @@ export class ModalHandler {
   }
 
   onClockInModalCancel() {
-    const { editId, licensePlate } = this.page.data;
+    const { editId, licensePlate, currentReservationIds } = this.page.data;
 
     this.page.setData({
       'clockInModal.show': false,
@@ -134,7 +134,7 @@ export class ModalHandler {
         'plateReminderModal.licensePlate': licensePlate
       });
     } else {
-      if (editId) {
+      if (editId || currentReservationIds.length > 0) {
         wx.navigateBack();
       } else {
         this.page.resetForm();
@@ -151,7 +151,7 @@ export class ModalHandler {
 
   async onClockInModalConfirm() {
     const { content } = this.page.data.clockInModal;
-    const { editId, licensePlate } = this.page.data;
+    const { editId, licensePlate, currentReservationIds } = this.page.data;
 
     this.page.setData({ 'clockInModal.loading': true });
 
@@ -177,7 +177,7 @@ export class ModalHandler {
               'plateReminderModal.licensePlate': licensePlate
             });
           } else {
-            if (editId) {
+            if (editId || currentReservationIds.length > 0) {
               wx.navigateBack();
             } else {
               this.page.resetForm();
