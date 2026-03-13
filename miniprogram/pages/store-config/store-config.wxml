@@ -59,7 +59,7 @@
         </view>
         <text class="grid-label">计算器</text>
       </view>
-      <view class="grid-item" bindtap="onModuleTap" data-module="store-expense">
+      <view wx:if="{{hasCalculatorAuth}}" class="grid-item" bindtap="onModuleTap" data-module="store-expense">
         <view class="grid-icon store-icon">
           <text class="icon-text">🔢</text>
         </view>

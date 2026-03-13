@@ -241,6 +241,8 @@ page {
   border-radius: 4px;
   font-size: 12px;
   line-height: 1.5;
+  white-space: nowrap;
+  word-break: keep-all;
   min-height: 0;
   height: auto;
   display: inline-flex;
@@ -269,6 +271,27 @@ page {
 
 .extra-btn:active {
   background-color: rgba(24, 144, 255, 0.1);
+}
+
+.extra-btn.active {
+  background-color: #1890ff;
+  color: #fff;
+}
+
+/* 刮痧按钮 */
+.guasha-btn {
+  color: #13c2c2;
+  background-color: transparent;
+  border: 1px solid #13c2c2;
+}
+
+.guasha-btn:active {
+  background-color: rgba(19, 194, 194, 0.1);
+}
+
+.guasha-btn.active {
+  background-color: #13c2c2;
+  color: #fff;
 }
 
 /* 加班按钮 */

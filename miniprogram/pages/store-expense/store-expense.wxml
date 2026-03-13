@@ -53,6 +53,7 @@
               <view class="table-row">
                 <view class="table-cell name-cell sticky-col">技师</view>
                 <view class="table-cell">手工提成</view>
+                <view class="table-cell">刮痧</view>
                 <view class="table-cell">加班工资</view>
                 <view class="table-cell">全勤奖</view>
                 <view class="table-cell">餐补</view>
@@ -64,6 +65,7 @@
               <view class="table-row" wx:for="{{salaryList}}" wx:key="technicianId">
                 <view class="table-cell name-cell sticky-col">{{item.technicianName}}</view>
                 <view class="table-cell">{{item.commission}}</view>
+                <view class="table-cell">{{item.guashaCommission}}</view>
                 <view class="table-cell">{{item.overtime}}</view>
                 <view class="table-cell">{{item.attendanceBonus}}</view>
                 <view class="table-cell">{{item.mealAllowance}}</view>
@@ -80,6 +82,7 @@
       <view class="salary-legend" wx:if="{{salaryList.length > 0}}">
         <view class="legend-title">计算说明：</view>
         <view class="legend-item">• 手工提成：按项目固定金额计算</view>
+        <view class="legend-item">• 刮痧提成：10元/次</view>
         <view class="legend-item">• 加班工资：加班时长 × 7.5元/半小时</view>
         <view class="legend-item">• 全勤奖：休息+请假≤4天得200元</view>
         <view class="legend-item">• 餐补：600÷26×实际上班天数</view>

@@ -354,6 +354,7 @@ Page({
 
 			let commission = 0;
 			let overtime = 0;
+			let guashaCount = 0;
 
 			staffConsultations.forEach(c => {
 				commission += projectCommissionMap[c.project] || 0;
@@ -361,15 +362,20 @@ Page({
 				if (c.overtime && c.overtime > 0) {
 					overtime += c.overtime;
 				}
+
+				if (c.guasha) {
+					guashaCount++;
+				}
 			});
 
+			const guashaCommission = guashaCount * 10;
 			const attendanceBonus = (offDays + leaveDays) <= 4 ? 200 : 0;
 
 			const mealAllowance = Math.round(600 / 26 * workDays);
 
 			const salesCommission = Math.round((salesByStaff[staff._id] || 0) * 0.04);
 
-			const totalSalary = commission + overtime * OVERTIME_RATE + attendanceBonus + mealAllowance + salesCommission;
+			const totalSalary = commission + guashaCommission + overtime * OVERTIME_RATE + attendanceBonus + mealAllowance + salesCommission;
 
 			salaryList.push({
 				technicianId: staff._id,
@@ -377,6 +383,7 @@ Page({
 				year: selectedYear,
 				month: selectedMonth,
 				commission,
+				guashaCommission,
 				overtime: overtime * OVERTIME_RATE,
 				attendanceBonus,
 				mealAllowance,

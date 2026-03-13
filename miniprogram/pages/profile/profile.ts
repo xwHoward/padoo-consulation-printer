@@ -25,6 +25,7 @@ interface ProfileData {
 		totalCommission: number
 		clockInCount: number
 		overtimeCount: number
+		guashaCount: number
 		projectStats: Array<{ project: string; count: number; amount: number }>
 	}
 	paymentPlatformLabels: Record<string, string>
@@ -50,6 +51,7 @@ Page({
 			totalCommission: 0,
 			clockInCount: 0,
 			overtimeCount: 0,
+			guashaCount: 0,
 			projectStats: []
 		},
 		paymentPlatformLabels: {
@@ -188,6 +190,7 @@ Page({
 			let totalCommission = 0;
 			let clockInCount = 0;
 			let overtimeCount = 0;
+			let guashaCount = 0;
 
 			records.forEach(record => {
 				const project = record.project;
@@ -208,10 +211,19 @@ Page({
 					commission += overtimeCommission;
 				}
 
+				if (record.guasha) {
+					guashaCount += 1;
+					totalCommission += 10;
+				}
+
 				projectStats[project].amount += commission;
 				totalCommission += commission;
 				totalAmount += record.settlement?.totalAmount || 0;
 			});
+
+			if (guashaCount > 0) {
+				projectStats['刮痧'] = { count: guashaCount, amount: guashaCount * 10 };
+			}
 
 			const projectStatsArray = Object.entries(projectStats).map(([project, stats]) => ({
 				project,
@@ -227,6 +239,7 @@ Page({
 					totalCommission: totalCommission,
 					clockInCount: clockInCount,
 					overtimeCount: overtimeCount,
+					guashaCount: guashaCount,
 					projectStats: projectStatsArray
 				}
 			});

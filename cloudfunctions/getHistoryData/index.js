@@ -304,6 +304,7 @@ exports.main = async (event) => {
               extraTimeCount: 0,
               extraTimeTotal: 0,
               overtime: 0,
+              guashaCount: 0,
               shift: ''
             };
           }
@@ -320,6 +321,10 @@ exports.main = async (event) => {
           if (record.extraTime && record.extraTime > 0) {
             technicianStats[technician].extraTimeCount++;
             technicianStats[technician].extraTimeTotal += record.extraTime;
+          }
+
+          if (record.guasha) {
+            technicianStats[technician].guashaCount++;
           }
 
           const staffId = staffIdMap[technician];

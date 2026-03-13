@@ -446,6 +446,10 @@ Page({
           summaryText += `加班: ${stats.overtime * 0.5}小时\n`;
         }
 
+        if (stats.guashaCount > 0) {
+          summaryText += `刮痧: ${stats.guashaCount}\n`;
+        }
+
         summaryText += `项目统计:\n`;
 
         Object.keys(stats.projects).forEach(project => {
@@ -674,6 +678,55 @@ Page({
 
       await cloudDb.updateById(Collections.CONSULTATION, recordId, updateData);
 
+      await this.loadHistoryData(date);
+    } catch (error) {
+      wx.showToast({
+        title: '更新失败',
+        icon: 'error'
+      });
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  // 刮痧操作
+  async onGuasha(e: WechatMiniprogram.TouchEvent) {
+    const { record, date } = e.currentTarget.dataset;
+    const currentGuasha = record.guasha || false;
+    const newGuasha = !currentGuasha;
+
+    this.setData({ loading: true, loadingText: '更新中...' });
+
+    try {
+      const updateData: { guasha: boolean; guashaTime?: number; endTime?: string } = { guasha: newGuasha };
+
+      if (newGuasha) {
+        updateData.guashaTime = 15;
+
+        const [hours, minutes] = record.endTime.split(':').map(Number);
+        const endDate = new Date();
+        endDate.setHours(hours, minutes, 0, 0);
+
+        const newEndDate = new Date(endDate.getTime() + 15 * 60 * 1000);
+        updateData.endTime = formatTime(newEndDate, false);
+      } else {
+        updateData.guashaTime = undefined;
+
+        if (record.guashaTime) {
+          const [hours, minutes] = record.endTime.split(':').map(Number);
+          const endDate = new Date();
+          endDate.setHours(hours, minutes, 0, 0);
+
+          const newEndDate = new Date(endDate.getTime() - 15 * 60 * 1000);
+          updateData.endTime = formatTime(newEndDate, false);
+        }
+      }
+
+      await cloudDb.updateById(Collections.CONSULTATION, record._id, updateData);
+      wx.showToast({
+        title: newGuasha ? '已添加刮痧' : '已取消刮痧',
+        icon: 'success'
+      });
       await this.loadHistoryData(date);
     } catch (error) {
       wx.showToast({

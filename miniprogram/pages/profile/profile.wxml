@@ -48,6 +48,10 @@
           <view class="stat-value">{{performanceStats.overtimeCount*7.5}}</view>
           <view class="stat-label">加班</view>
         </view>
+        <!-- <view class="stat-card">
+          <view class="stat-value">{{performanceStats.guashaCount}}</view>
+          <view class="stat-label">刮痧</view>
+        </view> -->
       </view>
       <view class="project-stats" wx:if="{{performanceStats.projectStats.length > 0}}">
         <view class="section-subtitle">项目统计</view>

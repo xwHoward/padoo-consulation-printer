@@ -48,6 +48,7 @@ interface TechnicianStats {
   overtime: number;
   shift: string;
   projects: Record<string, number>;
+  guashaCount: number;
 }
 
 interface MonthlyScoreRanking {

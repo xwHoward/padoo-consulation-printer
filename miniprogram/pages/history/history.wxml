@@ -48,6 +48,9 @@
                     <view class="text-info" wx:if="{{!record.isVoided}}">
                       加班{{record.overtime ? '(' + record.overtime*0.5 + 'h)' : '(0)'}}
                     </view>
+                    <view class="text-info" wx:if="{{record.guasha}}">
+                      刮痧
+                    </view>
                     <view wx:if="{{record.couponPlatform}}" class="text-info">
                       {{platforms[record.couponPlatform]}} {{record.couponCode}}
                     </view>
@@ -85,8 +88,11 @@
                   <button class="action-btn early-finish-btn" bindtap="onEarlyFinish" data-record="{{record}}" wx:if="{{record.isInProgress && !record.isVoided}}">
                     提前下钟
                   </button>
-                  <button class="action-btn extra-btn" bindtap="onExtraTime" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
+                  <button class="action-btn extra-btn {{record.extraTime ? 'active' : ''}}" bindtap="onExtraTime" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
                     加钟{{record.extraTime ? '(' + record.extraTime + ')' : ''}}
+                  </button>
+                  <button class="action-btn guasha-btn {{record.guasha ? 'active' : ''}}" bindtap="onGuasha" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
+                    刮痧{{record.guasha ? '(1)' : '(0)'}}
                   </button>
                   <button class="action-btn void-btn" bindtap="voidConsultation" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
                     作废

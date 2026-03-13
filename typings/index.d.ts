@@ -75,6 +75,8 @@ interface ConsultationRecord extends ConsultationInfo {
   isVoided: boolean; // 是否作废
   extraTime: number; // 加钟数（单位：半小时）
   overtime: number; // 加班数（单位：半小时）
+  guasha: boolean; // 是否刮痧
+  guashaTime?: number; // 刮痧时长（单位：分钟）
   startTime: string; // 报钟时间（格式 HH:MM）
   endTime: string; // 结束时间（格式 HH:MM）
   settlement?: SettlementInfo; // 结算信息（选填）
@@ -477,6 +479,7 @@ interface TechnicianSalary {
   year: number;
   month: number;
   commission: number;
+  guashaCommission: number;
   overtime: number;
   attendanceBonus: number;
   mealAllowance: number;
