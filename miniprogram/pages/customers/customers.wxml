@@ -143,10 +143,10 @@
     <input class="form-input" type="digit" placeholder="请输入实付金额" bindinput="onPaidAmountInput" value="{{formPaidAmount}}" />
   </view>
   <view class="form-group">
-    <text class="form-label">销售员工</text>
+    <view class="form-label">销售员工（可多选）</view>
     <view class="technician-selector">
-      <label wx:for="{{technicianList}}" wx:key="_id" wx:for-item="tech" class="technician-option {{formSalesStaff === tech.name ? 'selected' : ''}}" bindtap="onSalesStaffSelect" data-staff="{{tech.name}}">
-        <text>{{tech.name}}</text>
+      <label wx:for="{{technicianListWithSelection}}" wx:key="_id" wx:for-item="tech" class="technician-option {{tech.selected ? 'selected' : ''}}" bindtap="onSalesStaffSelect" data-staff="{{tech.name}}">
+        {{tech.name}}
       </label>
     </view>
   </view>
@@ -210,7 +210,9 @@
           </view>
           <view class="card-row">
             <text class="card-label">销售:</text>
-            <text class="card-value">{{item.salesStaff}}</text>
+            <text class="card-value" wx:for="{{item.salesStaff}}" wx:for-item="staff" wx:key="staff">
+              {{staff}}
+            </text>
           </view>
           <view wx:if="{{item.remarks}}" class="card-row">
             <text class="card-label">备注:</text>

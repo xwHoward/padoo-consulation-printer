@@ -1,9 +1,9 @@
-import { Collections, cloudDb } from '../../utils/cloud-db';
-import { COUPON_PLATFORMS, GENDERS, MASSAGE_STRENGTHS } from "../../utils/constants";
-import { loadingService, LockKeys } from '../../utils/loading-service';
-import { hasButtonPermission } from '../../utils/permission';
-import { formatTime, getCurrentDate, getPreviousDate, getNextDate } from "../../utils/util";
-import { formatMention } from '../../utils/wechat-work';
+import {Collections, cloudDb} from '../../utils/cloud-db';
+import {COUPON_PLATFORMS, GENDERS, MASSAGE_STRENGTHS} from "../../utils/constants";
+import {loadingService, LockKeys} from '../../utils/loading-service';
+import {hasButtonPermission} from '../../utils/permission';
+import {formatTime, getCurrentDate, getPreviousDate, getNextDate} from "../../utils/util";
+import {formatMention} from '../../utils/wechat-work';
 
 // 扩展记录类型，添加折叠状态
 interface DisplayRecord extends ConsultationRecord {
@@ -35,8 +35,8 @@ const app = getApp<IAppOption>();
 Page({
   data: {
     historyData: [] as DailyGroup[], // 按天分组的历史记录
-    platforms: COUPON_PLATFORMS.reduce((acc, p) => ({ ...acc, [p._id]: p.name }), {}),
-    genders: GENDERS.reduce((acc, g) => ({ ...acc, [g._id]: g.name }), {}),
+    platforms: COUPON_PLATFORMS.reduce((acc, p) => ({...acc, [p._id]: p.name}), {}),
+    genders: GENDERS.reduce((acc, g) => ({...acc, [g._id]: g.name}), {}),
     paymentPlatformLabels: {
       meituan: '美团',
       dianping: '大众点评',
@@ -136,7 +136,7 @@ Page({
       }
 
       if (res.result.code === 0) {
-        const { historyData } = res.result.data;
+        const {historyData} = res.result.data;
 
         this.setData({
           historyData,
@@ -168,7 +168,7 @@ Page({
       }
 
       if (res.result.code === 0) {
-        const { selectedDate, historyData } = res.result.data;
+        const {selectedDate, historyData} = res.result.data;
         const currentDate = getCurrentDate();
         const previousDate = getPreviousDate(selectedDate);
         const nextDate = getNextDate(selectedDate, currentDate);
@@ -194,25 +194,25 @@ Page({
 
   // 显示咨询单详情
   showConsultationDetail(e: WechatMiniprogram.TouchEvent) {
-    const { record } = e.currentTarget.dataset;
+    const {record} = e.currentTarget.dataset;
 
     // 格式化咨询单详情文本
     const genderObj = GENDERS.find(g => g._id === record.gender);
     const genderText = genderObj ? genderObj.name : '';
-    let detailText = `客户姓名: ${record.surname} ${genderText}\n`;
-    detailText += `项目: ${record.project}\n`;
-    detailText += `技师: ${record.technician}${record.dailyCount && !record.isVoided ? `(${record.dailyCount})` : ''}\n`;
-    detailText += `房间: ${record.room}\n`;
-    detailText += `按摩力度: ${this.getMassageStrengthText(record.massageStrength)}\n`;
-    detailText += `精油选择: ${this.getEssentialOilText(record.essentialOil) || '无'}\n`;
+    let detailText = `客户姓名: ${ record.surname } ${ genderText }\n`;
+    detailText += `项目: ${ record.project }\n`;
+    detailText += `技师: ${ record.technician }${ record.dailyCount && !record.isVoided ? `(${ record.dailyCount })` : '' }\n`;
+    detailText += `房间: ${ record.room }\n`;
+    detailText += `按摩力度: ${ this.getMassageStrengthText(record.massageStrength) }\n`;
+    detailText += `精油选择: ${ this.getEssentialOilText(record.essentialOil) || '无' }\n`;
 
     // 处理加强部位
     const selectedParts = Object.keys(record.selectedParts).filter(part => record.selectedParts[part]);
-    detailText += `加强部位: ${selectedParts.length > 0 ? selectedParts.map(part => this.getPartName(part)).join(', ') : '无'}\n\n`;
+    detailText += `加强部位: ${ selectedParts.length > 0 ? selectedParts.map(part => this.getPartName(part)).join(', ') : '无' }\n\n`;
 
-    detailText += `创建时间: ${formatTime(new Date(record.createdAt))}\n`;
-    detailText += `更新时间: ${formatTime(new Date(record.updatedAt))}\n`;
-    detailText += `状态: ${record.isVoided ? '已作废' : '正常'}`;
+    detailText += `创建时间: ${ formatTime(new Date(record.createdAt)) }\n`;
+    detailText += `更新时间: ${ formatTime(new Date(record.updatedAt)) }\n`;
+    detailText += `状态: ${ record.isVoided ? '已作废' : '正常' }`;
 
     // 显示详情
     wx.showModal({
@@ -225,17 +225,17 @@ Page({
 
   // 修改咨询单
   editConsultation(e: WechatMiniprogram.TouchEvent) {
-    const { record } = e.currentTarget.dataset;
+    const {record} = e.currentTarget.dataset;
 
     // 跳转到主页面，并传递要编辑的记录ID
     wx.navigateTo({
-      url: `/pages/index/index?editId=${record._id}`
+      url: `/pages/index/index?editId=${ record._id }`
     });
   },
 
   // 作废咨询单
   voidConsultation(e: WechatMiniprogram.TouchEvent) {
-    const { record } = e.currentTarget.dataset;
+    const {record} = e.currentTarget.dataset;
 
     wx.showModal({
       title: '确认作废',
@@ -246,7 +246,7 @@ Page({
             const updated = await cloudDb.updateById(
               Collections.CONSULTATION,
               record._id,
-              { isVoided: true }
+              {isVoided: true}
             );
 
             if (updated) {
@@ -270,7 +270,7 @@ Page({
 
   // 提前下钟操作
   onEarlyFinish(e: WechatMiniprogram.TouchEvent) {
-    const { record } = e.currentTarget.dataset;
+    const {record} = e.currentTarget.dataset;
 
     this.setData({
       'earlyFinishModal.show': true,
@@ -289,13 +289,13 @@ Page({
 
   // 提前下钟确认弹窗 - 确认
   async onEarlyFinishModalConfirm() {
-    const { recordId } = this.data.earlyFinishModal;
+    const {recordId} = this.data.earlyFinishModal;
 
     if (!recordId) {
       return;
     }
 
-    this.setData({ loading: true, loadingText: '更新中...' });
+    this.setData({loading: true, loadingText: '更新中...'});
 
     try {
       const now = new Date();
@@ -326,7 +326,7 @@ Page({
         icon: 'none'
       });
     } finally {
-      this.setData({ loading: false });
+      this.setData({loading: false});
     }
   },
 
@@ -336,7 +336,7 @@ Page({
       return;
     }
 
-    const { record } = e.currentTarget.dataset;
+    const {record} = e.currentTarget.dataset;
 
     wx.showModal({
       title: '确认删除',
@@ -345,7 +345,7 @@ Page({
       confirmColor: '#ff4d4f',
       success: async (res) => {
         if (res.confirm) {
-          this.setData({ loading: true, loadingText: '删除中...' });
+          this.setData({loading: true, loadingText: '删除中...'});
           try {
             const success = await cloudDb.deleteById(Collections.CONSULTATION, record._id);
 
@@ -367,7 +367,7 @@ Page({
               icon: 'error'
             });
           } finally {
-            this.setData({ loading: false });
+            this.setData({loading: false});
           }
         }
       }
@@ -393,9 +393,9 @@ Page({
 
   // 生成当日总结
   async onGenerateSummary(e: WechatMiniprogram.TouchEvent) {
-    const { date } = e.currentTarget.dataset;
+    const {date} = e.currentTarget.dataset;
 
-    this.setData({ loading: true, loadingText: '生成统计中...' });
+    this.setData({loading: true, loadingText: '生成统计中...'});
     try {
       const res = await wx.cloud.callFunction({
         name: 'getHistoryData',
@@ -417,7 +417,7 @@ Page({
         return;
       }
 
-      const { technicianStats, monthlyScoreRanking } = res.result.data as { technicianStats: Record<string, TechnicianStats>; monthlyScoreRanking: MonthlyScoreRanking } || {
+      const {technicianStats, monthlyScoreRanking} = res.result.data as {technicianStats: Record<string, TechnicianStats>; monthlyScoreRanking: MonthlyScoreRanking;} || {
         technicianStats: {},
         monthlyScoreRanking: []
       };
@@ -430,30 +430,30 @@ Page({
         return;
       }
 
-      let summaryText = `# ${date} 每日总结\n\n`;
+      let summaryText = `# ${ date } 每日总结\n\n`;
 
       Object.keys(technicianStats).forEach(technician => {
         const stats = technicianStats[technician];
-        summaryText += `技师: **${technician}**\n`;
-        summaryText += `总单数: ${stats.totalCount}\n`;
-        summaryText += `点钟数: ${stats.clockInCount}\n`;
+        summaryText += `技师: **${ technician }**\n`;
+        summaryText += `总单数: ${ stats.totalCount }\n`;
+        summaryText += `点钟数: ${ stats.clockInCount }\n`;
 
         if (stats.extraTimeTotal > 0) {
-          summaryText += `加钟: ${stats.extraTimeCount}\n`;
+          summaryText += `加钟: ${ stats.extraTimeCount }\n`;
         }
 
         if (stats.overtime > 0) {
-          summaryText += `加班: ${stats.overtime * 0.5}小时\n`;
+          summaryText += `加班: ${ stats.overtime * 0.5 }小时\n`;
         }
 
         if (stats.guashaCount > 0) {
-          summaryText += `刮痧: ${stats.guashaCount}\n`;
+          summaryText += `刮痧: ${ stats.guashaCount }\n`;
         }
 
         summaryText += `项目统计:\n`;
 
         Object.keys(stats.projects).forEach(project => {
-          summaryText += `-  ${project}: ${stats.projects[project]}\n`;
+          summaryText += `-  ${ project }: ${ stats.projects[project] }\n`;
         });
 
         summaryText += `\n\n`;
@@ -465,23 +465,23 @@ Page({
       const totalOvertime = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.overtime, 0);
 
       summaryText += `# 总计\n`;
-      summaryText += `总单数: **${totalRecords}**\n`;
-      summaryText += `总点钟数: **${totalClockIn}**\n`;
+      summaryText += `总单数: **${ totalRecords }**\n`;
+      summaryText += `总点钟数: **${ totalClockIn }**\n`;
 
       if (totalExtraTime > 0) {
-        summaryText += `总加钟: **${(totalExtraTime)}**\n`;
+        summaryText += `总加钟: **${ (totalExtraTime) }**\n`;
       }
       if (totalOvertime > 0) {
-        summaryText += `总加班: **${totalOvertime * 0.5}小时**\n`;
+        summaryText += `总加班: **${ totalOvertime * 0.5 }小时**\n`;
       }
 
       if (monthlyScoreRanking && monthlyScoreRanking.rankings) {
-        summaryText += `\n## 🏆 ${monthlyScoreRanking.period.month}月积分排名\n\n`;
+        summaryText += `\n\n## 🏆 ${ monthlyScoreRanking.period.month }月积分排名\n\n`;
 
         monthlyScoreRanking.rankings.forEach((item) => {
-          const rankEmoji = item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : item.rank === 3 ? '🥉' : `${item.rank}.`;
-          summaryText += `${rankEmoji} **${item.technician}**: ${item.totalScore}分 `;
-          summaryText += `(${item.salesCount}次卡 | 点钟${item.clockInCount}次)\n`;
+          const rankEmoji = item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : item.rank === 3 ? '🥉' : `${ item.rank }.`;
+          summaryText += `${ rankEmoji } **${ item.technician }**: ${ item.totalScore }分 `;
+          summaryText += `(${ item.salesCount }次卡 | 点钟${ item.clockInCount }次)\n`;
         });
 
         summaryText += `\n`;
@@ -498,14 +498,14 @@ Page({
         icon: 'error'
       });
     } finally {
-      this.setData({ loading: false });
+      this.setData({loading: false});
     }
   },
 
   // 切换记录的折叠状态
   toggleCollapse(e: WechatMiniprogram.TouchEvent) {
-    const { groupIndex, recordIndex } = e.currentTarget.dataset;
-    const key = `historyData[${groupIndex}].records[${recordIndex}].collapsed`;
+    const {groupIndex, recordIndex} = e.currentTarget.dataset;
+    const key = `historyData[${ groupIndex }].records[${ recordIndex }].collapsed`;
     const currentValue = this.data.historyData[groupIndex].records[recordIndex].collapsed;
 
     this.setData({
@@ -520,7 +520,7 @@ Page({
 
   // 加钟操作 - 显示弹窗
   onExtraTime(e: WechatMiniprogram.TouchEvent) {
-    const { record, date } = e.currentTarget.dataset;
+    const {record, date} = e.currentTarget.dataset;
     const currentValue = record.extraTime || 0;
 
     this.setData({
@@ -576,7 +576,7 @@ Page({
 
   // 弹窗确认
   async onModalConfirm() {
-    const { inputValue, record, date } = this.data.numberInputModal;
+    const {inputValue, record, date} = this.data.numberInputModal;
 
     if (!record || inputValue < 0) {
       wx.showToast({
@@ -611,11 +611,11 @@ Page({
       const newEndTime = updatedRecord?.endTime || record.endTime;
 
       const message = `【⏰ 加钟提醒】
-顾客：${record.surname}${genderText}
-项目：${typeText}(${inputValue})
-技师：${technicianMention}
-房间：${record.room}
-时间：${originalEndTime} - ${newEndTime}`;
+顾客：${ record.surname }${ genderText }
+项目：${ typeText }(${ inputValue })
+技师：${ technicianMention }
+房间：${ record.room }
+时间：${ originalEndTime } - ${ newEndTime }`;
 
       try {
         const res = await wx.cloud.callFunction({
@@ -626,7 +626,7 @@ Page({
         });
 
         if (res.result && typeof res.result === 'object') {
-          const result = res.result as { code: number; message?: string };
+          const result = res.result as {code: number; message?: string;};
           if (result.code === 0) {
             wx.showToast({
               title: '推送成功',
@@ -660,9 +660,9 @@ Page({
 
   // 更新加钟或加班数值
   async updateExtraTimeOrOvertime(recordId: string, date: string, value: number) {
-    this.setData({ loading: true, loadingText: '更新中...' });
+    this.setData({loading: true, loadingText: '更新中...'});
     try {
-      const updateData: { extraTime: number; endTime?: string } = { extraTime: value };
+      const updateData: {extraTime: number; endTime?: string;} = {extraTime: value};
 
       if (value > 0) {
         const record = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, recordId) as ConsultationRecord | null;
@@ -685,20 +685,20 @@ Page({
         icon: 'error'
       });
     } finally {
-      this.setData({ loading: false });
+      this.setData({loading: false});
     }
   },
 
   // 刮痧操作
   async onGuasha(e: WechatMiniprogram.TouchEvent) {
-    const { record, date } = e.currentTarget.dataset;
+    const {record, date} = e.currentTarget.dataset;
     const currentGuasha = record.guasha || false;
     const newGuasha = !currentGuasha;
 
-    this.setData({ loading: true, loadingText: '更新中...' });
+    this.setData({loading: true, loadingText: '更新中...'});
 
     try {
-      const updateData: { guasha: boolean; guashaTime?: number; endTime?: string } = { guasha: newGuasha };
+      const updateData: {guasha: boolean; guashaTime?: number; endTime?: string;} = {guasha: newGuasha};
 
       if (newGuasha) {
         updateData.guashaTime = 15;
@@ -734,7 +734,7 @@ Page({
         icon: 'error'
       });
     } finally {
-      this.setData({ loading: false });
+      this.setData({loading: false});
     }
   },
 
@@ -756,14 +756,14 @@ Page({
 
   // 每日总结弹窗 - 确认推送到企业微信
   async onSummaryModalConfirm() {
-    const { content } = this.data.summaryModal;
+    const {content} = this.data.summaryModal;
 
     if (!content || content.trim() === '') {
-      wx.showToast({ title: '总结内容不能为空', icon: 'none' });
+      wx.showToast({title: '总结内容不能为空', icon: 'none'});
       return;
     }
 
-    this.setData({ 'summaryModal.loading': true });
+    this.setData({'summaryModal.loading': true});
 
     try {
 
@@ -775,22 +775,22 @@ Page({
       });
 
       if (res.result && typeof res.result === 'object') {
-        const result = res.result as { code: number; message?: string };
+        const result = res.result as {code: number; message?: string;};
         if (result.code === 0) {
-          wx.showToast({ title: '推送成功', icon: 'success', duration: 2000 });
+          wx.showToast({title: '推送成功', icon: 'success', duration: 2000});
           setTimeout(() => {
             this.onSummaryModalCancel();
           }, 1500);
         } else {
-          wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+          wx.showToast({title: '推送失败，请重试', icon: 'none'});
         }
       } else {
-        wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+        wx.showToast({title: '推送失败，请重试', icon: 'none'});
       }
     } catch (error) {
-      wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+      wx.showToast({title: '推送失败，请重试', icon: 'none'});
     } finally {
-      this.setData({ 'summaryModal.loading': false });
+      this.setData({'summaryModal.loading': false});
     }
   },
 

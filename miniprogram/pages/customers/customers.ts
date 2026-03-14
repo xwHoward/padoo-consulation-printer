@@ -1,4 +1,4 @@
-import { cloudDb, Collections } from '../../utils/cloud-db';
+import {cloudDb, Collections} from '../../utils/cloud-db';
 
 const app = getApp<IAppOption>();
 
@@ -25,8 +25,9 @@ Page({
     selectedCardId: '',
     selectedCardInfo: null as MembershipCard | null,
     formPaidAmount: '',
-    formSalesStaff: '',
+    formSalesStaff: [] as string[],
     formCardRemarks: '',
+    technicianListWithSelection: [] as (StaffInfo & {selected: boolean;})[],
     customerMemberships: [] as CustomerMembership[],
     searchKeyword: '',
     currentPage: 1,
@@ -46,7 +47,14 @@ Page({
   async loadTechnicianList() {
     try {
       const staffList = await app.getActiveStaffs();
-      this.setData({ technicianList: staffList });
+      const staffListWithSelection = staffList.map(staff => ({
+        ...staff,
+        selected: false
+      }));
+      this.setData({
+        technicianList: staffList,
+        technicianListWithSelection: staffListWithSelection
+      });
     } catch (error) {
     }
   },
@@ -60,10 +68,10 @@ Page({
           customerList: []
         });
       } else {
-        this.setData({ loading: true });
+        this.setData({loading: true});
       }
 
-      const { searchKeyword, currentPage, pageSize } = this.data;
+      const {searchKeyword, currentPage, pageSize} = this.data;
 
       const result = await cloudDb.findWithPage<CustomerRecord>(
         Collections.CUSTOMERS,
@@ -78,7 +86,7 @@ Page({
         },
         currentPage,
         pageSize,
-        { field: 'createdAt', direction: 'desc' }
+        {field: 'createdAt', direction: 'desc'}
       );
 
       const newList = resetPage ? result.data : [...this.data.customerList, ...result.data];
@@ -90,7 +98,7 @@ Page({
         loading: false
       });
     } catch (error) {
-      this.setData({ loading: false });
+      this.setData({loading: false});
       wx.showToast({
         title: '加载失败',
         icon: 'error'
@@ -141,7 +149,7 @@ Page({
   },
 
   async onModalConfirm() {
-    const { editCustomer, formPhone, formName, formGender, formResponsibleTechnician, formLicensePlate, formRemarks } = this.data;
+    const {editCustomer, formPhone, formName, formGender, formResponsibleTechnician, formLicensePlate, formRemarks} = this.data;
 
     if (!formPhone && !formName) {
       wx.showToast({
@@ -152,7 +160,7 @@ Page({
     }
 
     try {
-      this.setData({ loading: true });
+      this.setData({loading: true});
       if (editCustomer) {
         await cloudDb.updateById<CustomerRecord>(Collections.CUSTOMERS, editCustomer._id, {
           phone: formPhone,
@@ -191,7 +199,7 @@ Page({
 
       await this.loadCustomerList();
     } catch (error) {
-      this.setData({ loading: false });
+      this.setData({loading: false});
       wx.showToast({
         title: '保存失败',
         icon: 'error'
@@ -200,34 +208,34 @@ Page({
   },
 
   onPhoneInput(e: WechatMiniprogram.CustomEvent) {
-    this.setData({ formPhone: e.detail.value });
+    this.setData({formPhone: e.detail.value});
   },
 
   onNameInput(e: WechatMiniprogram.CustomEvent) {
-    this.setData({ formName: e.detail.value });
+    this.setData({formName: e.detail.value});
   },
 
   onGenderChange(e: WechatMiniprogram.CustomEvent) {
     const gender = e.currentTarget.dataset.gender;
-    this.setData({ formGender: gender });
+    this.setData({formGender: gender});
   },
 
   onTechnicianSelect(e: WechatMiniprogram.CustomEvent) {
     const technician = e.currentTarget.dataset.technician;
-    this.setData({ formResponsibleTechnician: technician });
+    this.setData({formResponsibleTechnician: technician});
   },
 
   onLicensePlateInput(e: WechatMiniprogram.CustomEvent) {
-    this.setData({ formLicensePlate: e.detail.value });
+    this.setData({formLicensePlate: e.detail.value});
   },
 
   onRemarksInput(e: WechatMiniprogram.CustomEvent) {
-    this.setData({ formRemarks: e.detail.value });
+    this.setData({formRemarks: e.detail.value});
   },
 
   async loadCustomerVisits(e: WechatMiniprogram.CustomEvent) {
     try {
-      this.setData({ loading: true });
+      this.setData({loading: true});
       const customer = e.currentTarget.dataset.customer as CustomerRecord;
       const visitRecords: CustomerVisit[] = [];
       let customerMemberships: CustomerMembership[] = [];
@@ -244,7 +252,7 @@ Page({
           throw new Error('获取顾客历史失败');
         }
 
-        const { code, data } = res.result;
+        const {code, data} = res.result;
 
         if (code === 0 && data) {
           data.visitRecords.forEach((record: CustomerVisit) => {
@@ -279,7 +287,7 @@ Page({
       });
     } catch (error) {
     }
-    this.setData({ loading: false });
+    this.setData({loading: false});
   },
 
   closeDetailModal() {
@@ -294,18 +302,18 @@ Page({
   goToConsultationDetail() {
     const selectedCustomer = this.data.selectedCustomer!;
     wx.navigateTo({
-      url: `/pages/history/history?customerPhone=${selectedCustomer.phone}&customerId=${selectedCustomer.phone || selectedCustomer._id}&readonly=true`
+      url: `/pages/history/history?customerPhone=${ selectedCustomer.phone }&customerId=${ selectedCustomer.phone || selectedCustomer._id }&readonly=true`
     });
   },
 
   async loadMembershipCards() {
     try {
-      this.setData({ loading: true });
+      this.setData({loading: true});
       const cards = await cloudDb.getAll<MembershipCard>(Collections.MEMBERSHIP);
       const activeCards = cards.filter(card => card.status === 'active');
-      this.setData({ membershipCards: activeCards, loading: false });
+      this.setData({membershipCards: activeCards, loading: false});
     } catch (error) {
-      this.setData({ loading: false });
+      this.setData({loading: false});
       wx.showToast({
         title: '加载会员卡失败',
         icon: 'error'
@@ -316,15 +324,17 @@ Page({
   showOpenCardModal(e: WechatMiniprogram.CustomEvent) {
     const customer = e.currentTarget.dataset.customer as CustomerRecord;
     this.loadMembershipCards();
+    const initialSalesStaff: string[] = [];
     this.setData({
       showOpenCardModal: true,
       selectedCustomerForCard: customer,
       selectedCardId: '',
       selectedCardInfo: null,
       formPaidAmount: '',
-      formSalesStaff: '',
+      formSalesStaff: initialSalesStaff,
       formCardRemarks: ''
     });
+    this.updateTechnicianSelection(initialSalesStaff);
   },
 
   onOpenCardCancel() {
@@ -334,9 +344,10 @@ Page({
       selectedCardId: '',
       selectedCardInfo: null,
       formPaidAmount: '',
-      formSalesStaff: '',
+      formSalesStaff: [],
       formCardRemarks: ''
     });
+    this.updateTechnicianSelection([]);
   },
 
   onCardSelect(e: WechatMiniprogram.CustomEvent) {
@@ -348,20 +359,46 @@ Page({
   },
 
   onPaidAmountInput(e: WechatMiniprogram.CustomEvent) {
-    this.setData({ formPaidAmount: e.detail.value });
+    this.setData({formPaidAmount: e.detail.value});
   },
 
   onSalesStaffSelect(e: WechatMiniprogram.CustomEvent) {
-    const staff = e.currentTarget.dataset.staff;
-    this.setData({ formSalesStaff: staff });
+    const staff = e.currentTarget.dataset.staff as string;
+    const {formSalesStaff} = this.data;
+    const index = formSalesStaff.indexOf(staff);
+
+    let newSalesStaff: string[];
+    if (index === -1) {
+      newSalesStaff = [...formSalesStaff, staff];
+    } else {
+      const newStaffList = [...formSalesStaff];
+      newStaffList.splice(index, 1);
+      newSalesStaff = newStaffList;
+    }
+
+    this.setData({
+      formSalesStaff: newSalesStaff
+    });
+    this.updateTechnicianSelection(newSalesStaff);
   },
 
   onCardRemarksInput(e: WechatMiniprogram.CustomEvent) {
-    this.setData({ formCardRemarks: e.detail.value });
+    this.setData({formCardRemarks: e.detail.value});
+  },
+
+  updateTechnicianSelection(selectedStaff: string[]) {
+    const {technicianList} = this.data;
+    const updatedList = technicianList.map(tech => ({
+      ...tech,
+      selected: selectedStaff.includes(tech.name)
+    }));
+    this.setData({
+      technicianListWithSelection: updatedList
+    });
   },
 
   async onOpenCardConfirm() {
-    const { selectedCustomerForCard, selectedCardInfo, formPaidAmount, formSalesStaff, formCardRemarks } = this.data;
+    const {selectedCustomerForCard, selectedCardInfo, formPaidAmount, formSalesStaff, formCardRemarks} = this.data;
 
     if (!selectedCustomerForCard) {
       wx.showToast({
@@ -387,7 +424,7 @@ Page({
       return;
     }
 
-    if (!formSalesStaff.trim()) {
+    if (formSalesStaff.length === 0) {
       wx.showToast({
         title: '请选择销售员工',
         icon: 'none'
@@ -405,7 +442,7 @@ Page({
     }
 
     try {
-      this.setData({ loading: true });
+      this.setData({loading: true});
       await cloudDb.insert(Collections.CUSTOMER_MEMBERSHIP, {
         customerId: selectedCustomerForCard._id,
         customerName: selectedCustomerForCard.name,
@@ -427,17 +464,18 @@ Page({
         selectedCardId: '',
         selectedCardInfo: null,
         formPaidAmount: '',
-        formSalesStaff: '',
+        formSalesStaff: [],
         formCardRemarks: '',
         loading: false
       });
+      this.updateTechnicianSelection([]);
 
       wx.showToast({
         title: '开卡成功',
         icon: 'success'
       });
     } catch (error) {
-      this.setData({ loading: false });
+      this.setData({loading: false});
       wx.showToast({
         title: '开卡失败',
         icon: 'error'
@@ -446,7 +484,7 @@ Page({
   },
 
   onSearchInput(e: WechatMiniprogram.CustomEvent) {
-    this.setData({ searchKeyword: e.detail.value });
+    this.setData({searchKeyword: e.detail.value});
   },
 
   onSearchConfirm() {
@@ -454,18 +492,18 @@ Page({
   },
 
   onClearSearch() {
-    this.setData({ searchKeyword: '' });
+    this.setData({searchKeyword: ''});
     this.loadCustomerList(true);
   },
 
   onLoadMore() {
-    const { hasMore, loading } = this.data;
+    const {hasMore, loading} = this.data;
     if (!hasMore || loading) {
       return;
     }
 
     const nextPage = this.data.currentPage + 1;
-    this.setData({ currentPage: nextPage });
+    this.setData({currentPage: nextPage});
     this.loadCustomerList(false);
   },
 });

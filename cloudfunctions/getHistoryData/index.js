@@ -16,8 +16,8 @@ const OVERTIME_DURATION_MAP = {
 };
 
 function calculateOvertime(duration) {
-  if (OVERTIME_DURATION_MAP[duration] !== undefined) {
-    return OVERTIME_DURATION_MAP[duration];
+  if (OVERTIME_DURATION_MAP[ duration ] !== undefined) {
+    return OVERTIME_DURATION_MAP[ duration ];
   }
   return Math.floor(duration / 30);
 }
@@ -34,7 +34,7 @@ function isToday(date) {
 
 function parseProjectDuration(project) {
   const match = project.match(/(\d+)min/);
-  return match ? parseInt(match[1], 10) : 60;
+  return match ? parseInt(match[ 1 ], 10) : 60;
 }
 
 function formatTime(date) {
@@ -43,7 +43,7 @@ function formatTime(date) {
   const day = String(date.getDate()).padStart(2, '0');
   const hour = String(date.getHours()).padStart(2, '0');
   const minute = String(date.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day} ${hour}:${minute}`;
+  return `${ year }-${ month }-${ day } ${ hour }:${ minute }`;
 }
 
 async function getDailyRecordsWithCount(date) {
@@ -58,12 +58,12 @@ async function getDailyRecordsWithCount(date) {
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   const processedRecords = records.map(record => {
-    if (!technicianCounts[record.technician]) {
-      technicianCounts[record.technician] = 0;
+    if (!technicianCounts[ record.technician ]) {
+      technicianCounts[ record.technician ] = 0;
     }
 
     if (!record.isVoided) {
-      technicianCounts[record.technician]++;
+      technicianCounts[ record.technician ]++;
     }
 
     let startTimeStr = record.startTime;
@@ -79,8 +79,8 @@ async function getDailyRecordsWithCount(date) {
       endTimeStr = formatTime(endDate);
     }
 
-    const [startHour, startMinute] = startTimeStr.split(':').map(Number);
-    const [endHour, endMinute] = endTimeStr.split(':').map(Number);
+    const [ startHour, startMinute ] = startTimeStr.split(':').map(Number);
+    const [ endHour, endMinute ] = endTimeStr.split(':').map(Number);
     const startMinutes = startHour * 60 + startMinute;
     const endMinutes = endHour * 60 + endMinute;
 
@@ -88,7 +88,7 @@ async function getDailyRecordsWithCount(date) {
 
     return {
       ...record,
-      dailyCount: record.isVoided ? 0 : technicianCounts[record.technician],
+      dailyCount: record.isVoided ? 0 : technicianCounts[ record.technician ],
       startTime: startTimeStr,
       endTime: endTimeStr,
       collapsed: record.isVoided,
@@ -114,10 +114,10 @@ exports.main = async (event) => {
       }
 
       const records = await getDailyRecordsWithCount(targetDate);
-      const historyData = [{
+      const historyData = [ {
         date: targetDate,
         records: records
-      }];
+      } ];
 
       return {
         code: 0,
@@ -135,23 +135,23 @@ exports.main = async (event) => {
       const dateMap = {};
       allRecordsResult.data.forEach(record => {
         const date = record.date || record.createdAt.substring(0, 10);
-        if (!dateMap[date]) {
-          dateMap[date] = 0;
+        if (!dateMap[ date ]) {
+          dateMap[ date ] = 0;
         }
-        dateMap[date]++;
+        dateMap[ date ]++;
       });
 
       const allDates = Object.keys(dateMap).sort((a, b) => new Date(b) - new Date(a));
 
-      const selectedDate = targetDate || allDates[0];
+      const selectedDate = targetDate || allDates[ 0 ];
       let historyData = [];
 
       if (selectedDate) {
         const records = await getDailyRecordsWithCount(selectedDate);
-        historyData = [{
+        historyData = [ {
           date: selectedDate,
           records: records
-        }];
+        } ];
       }
 
       return {
@@ -178,17 +178,17 @@ exports.main = async (event) => {
       const consultationHistory = {};
       allRecordsResult.data.forEach(record => {
         const date = record.createdAt.substring(0, 10);
-        if (!consultationHistory[date]) {
-          consultationHistory[date] = [];
+        if (!consultationHistory[ date ]) {
+          consultationHistory[ date ] = [];
         }
-        consultationHistory[date].push(record);
+        consultationHistory[ date ].push(record);
       });
 
       const historyData = [];
       const datesToProcess = Object.keys(consultationHistory).sort((a, b) => new Date(b) - new Date(a));
 
       for (const date of datesToProcess) {
-        const records = consultationHistory[date];
+        const records = consultationHistory[ date ];
         const customerRecords = records.filter(record => {
           const recordKey = record.phone || record._id;
           return recordKey === customerId && !record.isVoided;
@@ -215,12 +215,12 @@ exports.main = async (event) => {
           });
 
           sortedByTime.forEach(record => {
-            if (!technicianCounts[record.technician]) {
-              technicianCounts[record.technician] = 0;
+            if (!technicianCounts[ record.technician ]) {
+              technicianCounts[ record.technician ] = 0;
             }
 
             if (!record.isVoided) {
-              technicianCounts[record.technician]++;
+              technicianCounts[ record.technician ]++;
             }
 
             let startTimeStr = record.startTime;
@@ -238,7 +238,7 @@ exports.main = async (event) => {
 
             processedRecords.push({
               ...record,
-              dailyCount: technicianCounts[record.technician],
+              dailyCount: technicianCounts[ record.technician ],
               startTime: startTimeStr,
               endTime: endTimeStr,
               collapsed: record.isVoided
@@ -273,7 +273,7 @@ exports.main = async (event) => {
         };
       }
 
-      const [recordsResult, schedulesResult, staffResult] = await Promise.all([
+      const [ recordsResult, schedulesResult, staffResult ] = await Promise.all([
         db.collection('consultation_records').where({ date: targetDate }).get(),
         db.collection('schedule').where({ date: targetDate }).get(),
         db.collection('staff').where({ status: 'active' }).get()
@@ -282,12 +282,12 @@ exports.main = async (event) => {
       const records = recordsResult.data;
       const scheduleMap = {};
       schedulesResult.data.forEach(s => {
-        scheduleMap[s.staffId] = s.shift;
+        scheduleMap[ s.staffId ] = s.shift;
       });
 
       const staffIdMap = {};
       staffResult.data.forEach(s => {
-        staffIdMap[s.name] = s._id;
+        staffIdMap[ s.name ] = s._id;
       });
 
       const technicianStats = {};
@@ -296,8 +296,8 @@ exports.main = async (event) => {
         if (!record.isVoided) {
           const technician = record.technician;
 
-          if (!technicianStats[technician]) {
-            technicianStats[technician] = {
+          if (!technicianStats[ technician ]) {
+            technicianStats[ technician ] = {
               projects: {},
               clockInCount: 0,
               totalCount: 0,
@@ -309,39 +309,39 @@ exports.main = async (event) => {
             };
           }
 
-          if (!technicianStats[technician].projects[record.project]) {
-            technicianStats[technician].projects[record.project] = 0;
+          if (!technicianStats[ technician ].projects[ record.project ]) {
+            technicianStats[ technician ].projects[ record.project ] = 0;
           }
-          technicianStats[technician].projects[record.project]++;
+          technicianStats[ technician ].projects[ record.project ]++;
 
           if (record.isClockIn) {
-            technicianStats[technician].clockInCount++;
+            technicianStats[ technician ].clockInCount++;
           }
 
           if (record.extraTime && record.extraTime > 0) {
-            technicianStats[technician].extraTimeCount++;
-            technicianStats[technician].extraTimeTotal += record.extraTime;
+            technicianStats[ technician ].extraTimeCount++;
+            technicianStats[ technician ].extraTimeTotal += record.extraTime;
           }
 
           if (record.guasha) {
-            technicianStats[technician].guashaCount++;
+            technicianStats[ technician ].guashaCount++;
           }
 
-          const staffId = staffIdMap[technician];
-          const shift = staffId ? scheduleMap[staffId] : null;
+          const staffId = staffIdMap[ technician ];
+          const shift = staffId ? scheduleMap[ staffId ] : null;
 
           if (shift === 'overtime') {
-            technicianStats[technician].shift = 'overtime';
+            technicianStats[ technician ].shift = 'overtime';
             const projectDuration = parseProjectDuration(record.project);
             const overtime = calculateOvertime(projectDuration);
-            technicianStats[technician].overtime += overtime;
+            technicianStats[ technician ].overtime += overtime;
           } else {
             if (record.overtime) {
-              technicianStats[technician].overtime += record.overtime;
+              technicianStats[ technician ].overtime += record.overtime;
             }
           }
 
-          technicianStats[technician].totalCount++;
+          technicianStats[ technician ].totalCount++;
         }
       });
 
@@ -350,13 +350,13 @@ exports.main = async (event) => {
       const currentMonth = currentDate.getMonth();
       // const monthStart = new Date(currentYear, currentMonth, 1);
       const monthEnd = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
-      const monthStartStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
-      const monthEndStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(monthEnd.getDate()).padStart(2, '0')}`;
+      const monthStartStr = `${ currentYear }-${ String(currentMonth + 1).padStart(2, '0') }-01`;
+      const monthEndStr = `${ currentYear }-${ String(currentMonth + 1).padStart(2, '0') }-${ String(monthEnd.getDate()).padStart(2, '0') }`;
 
       const monthlyMemberships = await db.collection('customer_membership')
         .where({
           createdAt: db.RegExp({
-            regexp: `^(${currentYear}-${String(currentMonth + 1).padStart(2, '0')})`
+            regexp: `^(${ currentYear }-${ String(currentMonth + 1).padStart(2, '0') })`
           })
         })
         .get();
@@ -365,18 +365,27 @@ exports.main = async (event) => {
       monthlyMemberships.data.forEach(membership => {
         const salesStaff = membership.salesStaff;
         if (salesStaff) {
-          if (!membershipSales[salesStaff]) {
-            membershipSales[salesStaff] = 0;
-          }
           // TODO: 使用更准确的方式判断次卡数量
-          membershipSales[salesStaff] += parseInt(membership.cardName);
+          const cardTimes = parseInt(membership.cardName) || 0;
+
+          const staffCount = salesStaff.length;
+          const timesPerStaff = Math.floor(cardTimes / staffCount);
+          salesStaff.forEach(staff => {
+            if (staff) {
+              if (!membershipSales[ staff ]) {
+                membershipSales[ staff ] = 0;
+              }
+              membershipSales[ staff ] += timesPerStaff;
+            }
+          });
+
         }
       });
 
       const monthlyClockIns = await db.collection('consultation_records')
         .where({
           date: db.RegExp({
-            regexp: `^(${currentYear}-${String(currentMonth + 1).padStart(2, '0')})`
+            regexp: `^(${ currentYear }-${ String(currentMonth + 1).padStart(2, '0') })`
           }),
           isClockIn: true,
           isVoided: false
@@ -387,10 +396,10 @@ exports.main = async (event) => {
       monthlyClockIns.data.forEach(record => {
         const technician = record.technician;
         if (technician) {
-          if (!clockInCounts[technician]) {
-            clockInCounts[technician] = 0;
+          if (!clockInCounts[ technician ]) {
+            clockInCounts[ technician ] = 0;
           }
-          clockInCounts[technician]++;
+          clockInCounts[ technician ]++;
         }
       });
 
@@ -402,8 +411,8 @@ exports.main = async (event) => {
 
       const monthlyScores = [];
       allTechnicians.forEach(technician => {
-        const salesCount = membershipSales[technician] || 0;
-        const clockInCount = clockInCounts[technician] || 0;
+        const salesCount = membershipSales[ technician ] || 0;
+        const clockInCount = clockInCounts[ technician ] || 0;
         const totalScore = salesCount + clockInCount;
 
         monthlyScores.push({

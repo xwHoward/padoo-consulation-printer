@@ -169,7 +169,7 @@ interface CustomerMembership extends BaseRecord {
   paidAmount: number; // 实付金额
   remainingTimes: number; // 剩余次数
   project: string; // 项目
-  salesStaff: string; // 销售员工
+  salesStaff: string[]; // 销售员工（单个技师或多个技师）
   remarks: string; // 备注
   status: "active" | "disabled"; // 状态
 }
