@@ -252,6 +252,7 @@ Page({
 				await cloudDb.updateById<StaffInfo>(Collections.STAFF, _id, { status: newStatus });
 
 				await this.loadStaffList();
+				await this.initSchedule();
 
 				this.setData({ loading: false });
 
@@ -295,6 +296,7 @@ Page({
 							this.setData({ loading: true });
 							await cloudDb.deleteById(Collections.STAFF, _id);
 							await this.loadStaffList();
+							await this.initSchedule();
 							wx.showToast({ title: '已删除', icon: 'success' });
 						} catch (error) {
 							this.setData({ loading: false });
@@ -425,6 +427,7 @@ Page({
 			wx.showLoading({ title: '保存中...' });
 
 			if (editingStaff) {
+				const oldStatus = editingStaff.status;
 				await cloudDb.updateById<StaffInfo>(Collections.STAFF, editingStaff._id, {
 					name,
 					gender: inputGender,
@@ -435,6 +438,10 @@ Page({
 				});
 
 				wx.showToast({ title: '修改成功', icon: 'success' });
+
+				if (oldStatus !== inputStatus) {
+					await this.initSchedule();
+				}
 			} else {
 				const exists = await app.getActiveStaffs().then(staffs => staffs.some(s => s.name === name));
 
@@ -455,6 +462,7 @@ Page({
 
 				if (inserted) {
 					wx.showToast({ title: '添加成功', icon: 'success' });
+					await this.initSchedule();
 				} else {
 					wx.showToast({ title: '添加失败', icon: 'none' });
 				}

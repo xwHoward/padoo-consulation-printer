@@ -475,7 +475,7 @@ export class CashierDataLoaderService {
 						const endHour = Math.floor(earliestEnd / 60);
 						const endMinute = earliestEnd % 60;
 
-						return `${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}-${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}(${maxDuration}分钟)`;
+						return `${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}-${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')} (${maxDuration}分钟)`;
 					}
 				}
 			}

@@ -215,7 +215,7 @@ Page({
 		const timeRange = text.match(/^(\d{2}:\d{2}-\d{2}:\d{2})/)?.[1] || text;
 		const label = typeLabels[type] || '';
 
-		const message = `您好，目前${label}可预约时段为${timeRange}哦，你可以告诉小趴到店时间，小趴给您保留预约哦~`;
+		const message = `您好，目前${label}可预约时段为${timeRange}哦，您可以告诉小趴到店时间，小趴给您保留预约哦~`;
 
 		wx.setClipboardData({
 			data: message,
