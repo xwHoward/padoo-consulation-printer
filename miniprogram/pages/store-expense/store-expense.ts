@@ -1,16 +1,16 @@
-import { cloudDb, Collections } from '../../utils/cloud-db';
-import { loadingService, LockKeys } from '../../utils/loading-service';
-import { formatDate } from '../../utils/util';
+import {cloudDb, Collections} from '../../utils/cloud-db';
+import {loadingService, LockKeys} from '../../utils/loading-service';
+import {formatDate} from '../../utils/util';
 
 const app = getApp<IAppOption>();
 
-const EXPENSE_CATEGORIES: { key: ExpenseCategory; name: string }[] = [
-	{ key: 'utilities', name: '水电费' },
-	{ key: 'supplies', name: '物料采购' },
-	{ key: 'rent', name: '房租' },
-	{ key: 'salary', name: '工资' },
-	{ key: 'maintenance', name: '维修费' },
-	{ key: 'other', name: '其他' }
+const EXPENSE_CATEGORIES: {key: ExpenseCategory; name: string;}[] = [
+	{key: 'utilities', name: '水电费'},
+	{key: 'supplies', name: '物料采购'},
+	{key: 'rent', name: '房租'},
+	{key: 'salary', name: '工资'},
+	{key: 'maintenance', name: '维修费'},
+	{key: 'other', name: '其他'}
 ];
 
 const OVERTIME_RATE = 7.5;
@@ -95,8 +95,8 @@ Page({
 	},
 
 	async loadExpenseListByMonth() {
-		const { selectedYear, selectedMonth } = this.data.monthSelector;
-		const monthStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+		const {selectedYear, selectedMonth} = this.data.monthSelector;
+		const monthStr = `${ selectedYear }-${ String(selectedMonth).padStart(2, '0') }`;
 
 		const expenses = await cloudDb.find<StoreExpense>(Collections.STORE_EXPENSE, (item) => {
 			return (typeof item.date === 'string') && item.date.startsWith(monthStr);
@@ -146,14 +146,14 @@ Page({
 
 		wx.showModal({
 			title: '确认删除',
-			content: `确定要删除"${expense.content}"吗？`,
+			content: `确定要删除"${ expense.content }"吗？`,
 			confirmColor: '#ff4d4f',
 			success: async (res) => {
 				if (res.confirm) {
 					await loadingService.withLoading(this, async () => {
 						await cloudDb.deleteById(Collections.STORE_EXPENSE, expense._id);
 						await this.loadExpenseListByMonth();
-						wx.showToast({ title: '已删除', icon: 'success' });
+						wx.showToast({title: '已删除', icon: 'success'});
 					}, {
 						loadingText: '删除中...',
 						lockKey: LockKeys.DELETE_CONSULTATION,
@@ -203,21 +203,21 @@ Page({
 	},
 
 	async onExpenseModalConfirm() {
-		const { expenseForm, editingExpense } = this.data;
+		const {expenseForm, editingExpense} = this.data;
 
 		if (!expenseForm.content.trim()) {
-			wx.showToast({ title: '请输入内容', icon: 'none' });
+			wx.showToast({title: '请输入内容', icon: 'none'});
 			return;
 		}
 
 		const amount = parseFloat(expenseForm.amount);
 		if (isNaN(amount) || amount <= 0) {
-			wx.showToast({ title: '请输入有效金额', icon: 'none' });
+			wx.showToast({title: '请输入有效金额', icon: 'none'});
 			return;
 		}
 
 		if (!expenseForm.date) {
-			wx.showToast({ title: '请选择日期', icon: 'none' });
+			wx.showToast({title: '请选择日期', icon: 'none'});
 			return;
 		}
 
@@ -232,13 +232,13 @@ Page({
 
 			if (editingExpense) {
 				await cloudDb.updateById<StoreExpense>(Collections.STORE_EXPENSE, editingExpense._id, data);
-				wx.showToast({ title: '修改成功', icon: 'success' });
+				wx.showToast({title: '修改成功', icon: 'success'});
 			} else {
 				await cloudDb.insert<StoreExpense>(Collections.STORE_EXPENSE, data);
-				wx.showToast({ title: '添加成功', icon: 'success' });
+				wx.showToast({title: '添加成功', icon: 'success'});
 			}
 
-			this.setData({ showExpenseModal: false, editingExpense: null });
+			this.setData({showExpenseModal: false, editingExpense: null});
 			await this.loadExpenseListByMonth();
 		}, {
 			loadingText: '保存中...',
@@ -248,8 +248,8 @@ Page({
 	},
 
 	async calculateSalaries() {
-		const { selectedYear, selectedMonth } = this.data.monthSelector;
-		const monthStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+		const {selectedYear, selectedMonth} = this.data.monthSelector;
+		const monthStr = `${ selectedYear }-${ String(selectedMonth).padStart(2, '0') }`;
 
 		const staffList = await app.getActiveStaffs();
 		const allProjects = await app.getProjects();
@@ -308,13 +308,15 @@ Page({
 		const salesByStaff: Record<string, number> = {};
 		memberships.forEach(m => {
 			if (m.salesStaff) {
-				const staffId = staffNameToId[m.salesStaff];
-				if (staffId) {
-					if (!salesByStaff[staffId]) {
-						salesByStaff[staffId] = 0;
+				m.salesStaff.forEach(ss => {
+					const staffId = staffNameToId[ss];
+					if (staffId) {
+						if (!salesByStaff[staffId]) {
+							salesByStaff[staffId] = 0;
+						}
+						salesByStaff[staffId] += m.paidAmount || 0;
 					}
-					salesByStaff[staffId] += m.paidAmount || 0;
-				}
+				});
 			}
 		});
 
@@ -330,7 +332,7 @@ Page({
 			let leaveDays = 0;
 
 			for (let day = 1; day <= daysInMonth; day++) {
-				const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+				const dateStr = `${ selectedYear }-${ String(selectedMonth).padStart(2, '0') }-${ String(day).padStart(2, '0') }`;
 				const schedule = staffSchedules.find(s => s.date === dateStr);
 
 				if (schedule) {
