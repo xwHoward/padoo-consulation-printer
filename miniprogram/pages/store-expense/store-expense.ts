@@ -1,19 +1,31 @@
-import {cloudDb, Collections} from '../../utils/cloud-db';
-import {loadingService, LockKeys} from '../../utils/loading-service';
-import {formatDate} from '../../utils/util';
+import { cloudDb, Collections } from '../../utils/cloud-db';
+import { loadingService, LockKeys } from '../../utils/loading-service';
+import { formatDate } from '../../utils/util';
 
 const app = getApp<IAppOption>();
 
-const EXPENSE_CATEGORIES: {key: ExpenseCategory; name: string;}[] = [
-	{key: 'utilities', name: '水电费'},
-	{key: 'supplies', name: '物料采购'},
-	{key: 'rent', name: '房租'},
-	{key: 'salary', name: '工资'},
-	{key: 'maintenance', name: '维修费'},
-	{key: 'other', name: '其他'}
+const EXPENSE_CATEGORIES: { key: ExpenseCategory; name: string; }[] = [
+	{ key: 'utilities', name: '水电费' },
+	{ key: 'supplies', name: '物料采购' },
+	{ key: 'rent', name: '房租' },
+	{ key: 'salary', name: '工资' },
+	{ key: 'maintenance', name: '维修费' },
+	{ key: 'other', name: '其他' }
 ];
 
 const OVERTIME_RATE = 7.5;
+const EXTRA_TIME_RATE = 25;
+
+
+
+interface ExpenseGroup {
+	category: ExpenseCategory;
+	categoryName: string;
+	totalAmount: number;
+	count: number;
+	expanded: boolean;
+	items: StoreExpense[];
+}
 
 Page({
 	data: {
@@ -26,6 +38,7 @@ Page({
 			months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 		},
 		expenseList: [] as StoreExpense[],
+		expenseGroups: [] as ExpenseGroup[],
 		showExpenseModal: false,
 		editingExpense: null as StoreExpense | null,
 		expenseForm: {
@@ -95,8 +108,8 @@ Page({
 	},
 
 	async loadExpenseListByMonth() {
-		const {selectedYear, selectedMonth} = this.data.monthSelector;
-		const monthStr = `${ selectedYear }-${ String(selectedMonth).padStart(2, '0') }`;
+		const { selectedYear, selectedMonth } = this.data.monthSelector;
+		const monthStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
 
 		const expenses = await cloudDb.find<StoreExpense>(Collections.STORE_EXPENSE, (item) => {
 			return (typeof item.date === 'string') && item.date.startsWith(monthStr);
@@ -106,8 +119,35 @@ Page({
 
 		const totalExpense = expenses.reduce((sum, item) => sum + item.amount, 0);
 
+		const groupMap: Record<string, ExpenseGroup> = {};
+
+		EXPENSE_CATEGORIES.forEach(cat => {
+			groupMap[cat.key] = {
+				category: cat.key,
+				categoryName: cat.name,
+				totalAmount: 0,
+				count: 0,
+				expanded: false,
+				items: []
+			};
+		});
+
+		expenses.forEach(expense => {
+			const group = groupMap[expense.category];
+			if (group) {
+				group.totalAmount += expense.amount;
+				group.count += 1;
+				group.items.push(expense);
+			}
+		});
+
+		const expenseGroups = Object.values(groupMap).filter(g => g.count > 0);
+
+		expenseGroups.sort((a, b) => b.totalAmount - a.totalAmount);
+
 		this.setData({
 			expenseList: expenses,
+			expenseGroups,
 			totalExpense
 		});
 	},
@@ -124,6 +164,21 @@ Page({
 				remarks: ''
 			}
 		});
+	},
+
+	toggleExpenseGroup(e: WechatMiniprogram.TouchEvent) {
+		const category = e.currentTarget.dataset.category as ExpenseCategory;
+		const expenseGroups = this.data.expenseGroups.map(group => {
+			if (group.category === category) {
+				return {
+					...group,
+					expanded: !group.expanded
+				};
+			}
+			return group;
+		});
+
+		this.setData({ expenseGroups });
 	},
 
 	onEditExpense(e: WechatMiniprogram.TouchEvent) {
@@ -146,14 +201,14 @@ Page({
 
 		wx.showModal({
 			title: '确认删除',
-			content: `确定要删除"${ expense.content }"吗？`,
+			content: `确定要删除"${expense.content}"吗？`,
 			confirmColor: '#ff4d4f',
 			success: async (res) => {
 				if (res.confirm) {
 					await loadingService.withLoading(this, async () => {
 						await cloudDb.deleteById(Collections.STORE_EXPENSE, expense._id);
 						await this.loadExpenseListByMonth();
-						wx.showToast({title: '已删除', icon: 'success'});
+						wx.showToast({ title: '已删除', icon: 'success' });
 					}, {
 						loadingText: '删除中...',
 						lockKey: LockKeys.DELETE_CONSULTATION,
@@ -203,21 +258,21 @@ Page({
 	},
 
 	async onExpenseModalConfirm() {
-		const {expenseForm, editingExpense} = this.data;
+		const { expenseForm, editingExpense } = this.data;
 
 		if (!expenseForm.content.trim()) {
-			wx.showToast({title: '请输入内容', icon: 'none'});
+			wx.showToast({ title: '请输入内容', icon: 'none' });
 			return;
 		}
 
 		const amount = parseFloat(expenseForm.amount);
 		if (isNaN(amount) || amount <= 0) {
-			wx.showToast({title: '请输入有效金额', icon: 'none'});
+			wx.showToast({ title: '请输入有效金额', icon: 'none' });
 			return;
 		}
 
 		if (!expenseForm.date) {
-			wx.showToast({title: '请选择日期', icon: 'none'});
+			wx.showToast({ title: '请选择日期', icon: 'none' });
 			return;
 		}
 
@@ -232,13 +287,13 @@ Page({
 
 			if (editingExpense) {
 				await cloudDb.updateById<StoreExpense>(Collections.STORE_EXPENSE, editingExpense._id, data);
-				wx.showToast({title: '修改成功', icon: 'success'});
+				wx.showToast({ title: '修改成功', icon: 'success' });
 			} else {
 				await cloudDb.insert<StoreExpense>(Collections.STORE_EXPENSE, data);
-				wx.showToast({title: '添加成功', icon: 'success'});
+				wx.showToast({ title: '添加成功', icon: 'success' });
 			}
 
-			this.setData({showExpenseModal: false, editingExpense: null});
+			this.setData({ showExpenseModal: false, editingExpense: null });
 			await this.loadExpenseListByMonth();
 		}, {
 			loadingText: '保存中...',
@@ -248,8 +303,8 @@ Page({
 	},
 
 	async calculateSalaries() {
-		const {selectedYear, selectedMonth} = this.data.monthSelector;
-		const monthStr = `${ selectedYear }-${ String(selectedMonth).padStart(2, '0') }`;
+		const { selectedYear, selectedMonth } = this.data.monthSelector;
+		const monthStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
 
 		const staffList = await app.getActiveStaffs();
 		const allProjects = await app.getProjects();
@@ -332,7 +387,7 @@ Page({
 			let leaveDays = 0;
 
 			for (let day = 1; day <= daysInMonth; day++) {
-				const dateStr = `${ selectedYear }-${ String(selectedMonth).padStart(2, '0') }-${ String(day).padStart(2, '0') }`;
+				const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 				const schedule = staffSchedules.find(s => s.date === dateStr);
 
 				if (schedule) {
@@ -356,38 +411,66 @@ Page({
 
 			let commission = 0;
 			let overtime = 0;
+			let extraTime = 0; // 加钟
 			let guashaCount = 0;
-
+			let projectCount = 0;
+			let clockIn = 0; // 点钟
 			staffConsultations.forEach(c => {
-				commission += projectCommissionMap[c.project] || 0;
+				let projectCommission = projectCommissionMap[c.project] || 0;
+				projectCount++;
 
 				if (c.overtime && c.overtime > 0) {
 					overtime += c.overtime;
 				}
+				if (c.isClockIn) {
+					clockIn += 1;
+					projectCommission += 5;
+				}
+				if (c.extraTime && c.extraTime > 0) {
+					extraTime += c.extraTime;
+					projectCommission += c.extraTime * EXTRA_TIME_RATE;
+					projectCount += c.extraTime;
+				}
 
 				if (c.guasha) {
 					guashaCount++;
+					projectCount++;
+					projectCommission += 10;
 				}
+				commission += projectCommission;
 			});
 
-			const guashaCommission = guashaCount * 10;
-			const attendanceBonus = (offDays + leaveDays) <= 4 ? 200 : 0;
+			const n = offDays + leaveDays;
+			let mealAllowance = 0;
+			let attendanceBonus = 0;
 
-			const mealAllowance = Math.round(600 / 26 * workDays);
+			if (workDays === 0) {
+				mealAllowance = 0;
+				attendanceBonus = 0;
+			} else if (n > 4) {
+				const calculatedMealAllowance = Math.round(600 - 600 / 26 * n);
+				mealAllowance = Math.max(0, calculatedMealAllowance);
+				attendanceBonus = 0;
+			} else {
+				mealAllowance = 600;
+				attendanceBonus = 200;
+			}
 
 			const salesCommission = Math.round((salesByStaff[staff._id] || 0) * 0.04);
 
-			const totalSalary = commission + guashaCommission + overtime * OVERTIME_RATE + attendanceBonus + mealAllowance + salesCommission;
+			const totalSalary = commission + overtime * OVERTIME_RATE + attendanceBonus + mealAllowance + salesCommission;
 
 			salaryList.push({
 				technicianId: staff._id,
 				technicianName: staff.name,
+				projectCount,
 				year: selectedYear,
 				month: selectedMonth,
 				commission,
-				guashaCommission,
-				overtime: overtime * OVERTIME_RATE,
+				overtime,
+				extraTime,
 				attendanceBonus,
+				clockIn,
 				mealAllowance,
 				salesCommission,
 				totalSalary,

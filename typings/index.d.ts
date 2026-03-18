@@ -477,13 +477,23 @@ interface StoreExpense extends BaseRecord {
 interface TechnicianSalary {
   technicianId: string;
   technicianName: string;
+  /** 项目数，包含加钟、刮痧 */
+  projectCount: number;
   year: number;
   month: number;
+  /** 项目提成 */
   commission: number;
-  guashaCommission: number;
+  /** 加班时长 */
   overtime: number;
+  /** 加钟个数 */
+  extraTime: number;
+  /** 全勤 */
   attendanceBonus: number;
+  /** 点钟数 */
+  clockIn: number;
+  /** 餐补 */
   mealAllowance: number;
+  /** 销售提成 */
   salesCommission: number;
   totalSalary: number;
   workDays: number;

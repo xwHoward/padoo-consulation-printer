@@ -20,18 +20,30 @@
         <view class="section-title">门店支出</view>
         <view class="section-total">¥{{totalExpense}}</view>
       </view>
-      <view class="expense-list" wx:if="{{expenseList.length > 0}}">
-        <view class="expense-item" wx:for="{{expenseList}}" wx:key="_id">
-          <view class="expense-main" bindtap="onEditExpense" data-expense="{{item}}">
-            <view class="expense-category">{{item.category === 'utilities' ? '水电费' : item.category === 'supplies' ? '物料采购' : item.category === 'rent' ? '房租' : item.category === 'salary' ? '工资' : item.category === 'maintenance' ? '维修费' : '其他'}}</view>
-            <view class="expense-content">{{item.content}}</view>
-            <view class="expense-date">{{item.date}}</view>
+      <view class="expense-groups" wx:if="{{expenseGroups.length > 0}}">
+        <view class="expense-group" wx:for="{{expenseGroups}}" wx:key="category">
+          <view class="expense-group-header" bindtap="toggleExpenseGroup" data-category="{{item.category}}">
+            <view class="group-info">
+              <view class="group-icon">{{item.expanded ? '▼' : '▶'}}</view>
+              <view class="group-name">{{item.categoryName}}</view>
+              <view class="group-count">({{item.count}}笔)</view>
+            </view>
+            <view class="group-total">¥{{item.totalAmount}}</view>
           </view>
-          <view class="expense-right">
-            <view class="expense-amount">¥{{item.amount}}</view>
-            <view class="expense-actions">
-              <view class="action-btn edit-btn" catchtap="onEditExpense" data-expense="{{item}}">编辑</view>
-              <view class="action-btn delete-btn" catchtap="onDeleteExpense" data-expense="{{item}}">删除</view>
+          <view class="expense-group-items" wx:if="{{item.expanded}}">
+            <view class="expense-item" wx:for="{{item.items}}" wx:for-item="expense" wx:key="_id">
+              <view class="expense-main" bindtap="onEditExpense" data-expense="{{expense}}">
+                <view class="expense-content">{{expense.content}}</view>
+                <view class="expense-date">{{expense.date}}</view>
+                <view class="expense-remarks" wx:if="{{expense.remarks}}">{{expense.remarks}}</view>
+              </view>
+              <view class="expense-right">
+                <view class="expense-amount">¥{{expense.amount}}</view>
+                <view class="expense-actions">
+                  <view class="action-btn edit-btn" catchtap="onEditExpense" data-expense="{{expense}}">编辑</view>
+                  <view class="action-btn delete-btn" catchtap="onDeleteExpense" data-expense="{{expense}}">删除</view>
+                </view>
+              </view>
             </view>
           </view>
         </view>
@@ -52,11 +64,11 @@
             <view class="table-header">
               <view class="table-row">
                 <view class="table-cell name-cell sticky-col">技师</view>
-                <view class="table-cell">手工提成</view>
-                <view class="table-cell">刮痧</view>
-                <view class="table-cell">加班工资</view>
-                <view class="table-cell">全勤奖</view>
-                <view class="table-cell">餐补</view>
+                <view class="table-cell">项目提成</view>
+                <view class="table-cell">加班</view>
+                <view class="table-cell">加钟</view>
+                <view class="table-cell">点钟</view>
+                <view class="table-cell">餐补+全勤</view>
                 <view class="table-cell">售卡提成</view>
                 <view class="table-cell">合计</view>
               </view>
@@ -64,11 +76,11 @@
             <view class="table-body">
               <view class="table-row" wx:for="{{salaryList}}" wx:key="technicianId">
                 <view class="table-cell name-cell sticky-col">{{item.technicianName}}</view>
-                <view class="table-cell">{{item.commission}}</view>
-                <view class="table-cell">{{item.guashaCommission}}</view>
-                <view class="table-cell">{{item.overtime}}</view>
-                <view class="table-cell">{{item.attendanceBonus}}</view>
-                <view class="table-cell">{{item.mealAllowance}}</view>
+                <view class="table-cell">{{item.commission}} ({{item.projectCount}}项)</view>
+                <view class="table-cell">{{item.overtime*15}} ({{item.overtime}}小时)</view>
+                <view class="table-cell">{{item.extraTime*25}} ({{item.extraTime}}次)</view>
+                <view class="table-cell">{{item.clockIn}}次</view>
+                <view class="table-cell">{{item.mealAllowance}} + {{item.attendanceBonus}}</view>
                 <view class="table-cell">{{item.salesCommission}}</view>
                 <view class="table-cell total-cell">{{item.totalSalary}}</view>
               </view>
@@ -78,15 +90,6 @@
       </view>
       <view class="empty-hint" wx:else>
         <view>暂无技师数据</view>
-      </view>
-      <view class="salary-legend" wx:if="{{salaryList.length > 0}}">
-        <view class="legend-title">计算说明：</view>
-        <view class="legend-item">• 手工提成：按项目固定金额计算</view>
-        <view class="legend-item">• 刮痧提成：10元/次</view>
-        <view class="legend-item">• 加班工资：加班时长 × 7.5元/半小时</view>
-        <view class="legend-item">• 全勤奖：休息+请假≤4天得200元</view>
-        <view class="legend-item">• 餐补：600÷26×实际上班天数</view>
-        <view class="legend-item">• 售卡提成：售卡金额×4%</view>
       </view>
     </view>
   </view>

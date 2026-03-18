@@ -23,7 +23,7 @@
             </view>
           </view>
           <!-- 表体: 员工排班 -->
-          <view class="table-row" wx:for="{{staffList}}" wx:for-item="staff" wx:key="_id">
+          <view class="table-row" wx:for="{{staffList}}" wx:for-item="staff" wx:key="_id" wx:if="{{staff.status === 'active'}}">
             <view class="table-cell sticky-col staff-cell">{{staff.name}}</view>
             <view class="table-cell shift-cell" wx:for="{{dates}}" wx:for-item="dateObj" wx:key="date">
               <picker bindchange="onShiftChange" data-staff-id="{{staff._id}}" data-date="{{dateObj.date}}" value="{{scheduleMap[staff._id][dateObj.date].index}}" range="{{shiftNames}}">

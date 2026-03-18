@@ -35,7 +35,7 @@ exports.main = async (event, context) => {
             }
         }
         // DEV
-        console.log('message: ', data)
+        console.log('message: ', data.markdown.content)
         return {
             code: 0,
             message: '发送成功',

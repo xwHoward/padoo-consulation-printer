@@ -206,7 +206,7 @@ export class ReservationHandler {
 		// 切换时清空选择
 		if (value === 'gender') {
 			reserveForm.selectedTechnicians = [];
-			reserveForm.genderRequirement = { male: 1, female: 0 };
+			reserveForm.genderRequirement = { male: 0, female: 0 };
 		} else {
 			reserveForm.genderRequirement = { male: 0, female: 0 };
 		}
