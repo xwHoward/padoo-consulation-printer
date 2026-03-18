@@ -5,10 +5,11 @@ cloud.init({
     env: cloud.DYNAMIC_CURRENT_ENV
 })
 
-const WEBHOOK_URL = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=a4bb4b18-c95a-49c6-82a8-238ac40f2ede';
+// const WEBHOOK_URL = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=a4bb4b18-c95a-49c6-82a8-238ac40f2ede';
+const WEBHOOK_URL = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=8f499424-252d-4969-864f-d81385456f9c';
 
 exports.main = async (event, context) => {
-    const { content } = event
+    const { content, type = 'markdown', mentions = [] } = event
 
     if (!content) {
         return {
@@ -18,7 +19,13 @@ exports.main = async (event, context) => {
     }
 
     try {
-        const data = {
+        const data = type === 'text' ? {
+            msgtype: 'text',
+            text: {
+                content: content,
+                mentioned_list: mentions
+            }
+        } : {
             msgtype: 'markdown',
             markdown: {
                 content: content
@@ -34,13 +41,13 @@ exports.main = async (event, context) => {
                 'Content-Type': 'application/json'
             }
         }
-        // DEV
-        console.log('message: ', data.markdown.content)
-        return {
-            code: 0,
-            message: '发送成功',
-            data: null
-        }
+        // // DEV
+        console.log('message: ', data[type].content)
+        // return {
+        //     code: 0,
+        //     message: '发送成功',
+        //     data: null
+        // }
         const response = await request(options)
 
         if (response.errcode === 0) {

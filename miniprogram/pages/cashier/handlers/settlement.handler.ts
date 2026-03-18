@@ -2,14 +2,17 @@
 import { cloudDb, Collections } from '../../../utils/cloud-db';
 import { getCurrentDate } from '../../../utils/util';
 import type { CashierPage, PaymentMethodItem } from '../cashier.types';
+import { PushHandler } from './push.handler';
 
 const app = getApp<IAppOption>();
 
 export class SettlementHandler {
 	private page: CashierPage;
+	private pushHandler: PushHandler;
 
-	constructor(page: CashierPage) {
+	constructor(page: CashierPage, pushHandler: PushHandler) {
 		this.page = page;
+		this.pushHandler = pushHandler;
 	}
 
 	/**
@@ -279,6 +282,9 @@ export class SettlementHandler {
 				settlement: settlement,
 				updatedAt: now.toISOString()
 			});
+
+			// 推送结算通知
+			await this.pushHandler.sendSettlementNotification(target);
 
 			wx.showToast({ title: '结算成功', icon: 'success' });
 			this.closeSettlementModal();

@@ -186,11 +186,11 @@ ${rotationLines}
 			const staffMap = new Map(staffList.map(s => [s._id, s]));
 
 			// 提取技师姓名和手机号（去重）
-			const uniqueTechnicians = new Map<string, Pick<StaffInfo, 'name'|'phone'|'wechatWorkId'>>();
+			const uniqueTechnicians = new Map<string, Pick<StaffInfo, 'name' | 'phone' | 'wechatWorkId'>>();
 			reservations.forEach(r => {
 				const staff = r.technicianId ? staffMap.get(r.technicianId) : null;
 				const key = r.technicianId || r.technicianName;
-				if (staff&&key && !uniqueTechnicians.has(key)) {
+				if (staff && key && !uniqueTechnicians.has(key)) {
 					uniqueTechnicians.set(key, { ...staff });
 				}
 			});
@@ -280,6 +280,75 @@ ${changes.join('\n')}
 			});
 		} catch (error) {
 			// 静默失败
+		}
+	}
+
+	/**
+	 * 推送结算通知
+	 */
+	async sendSettlementNotification(record: ConsultationRecord): Promise<void> {
+		try {
+			if (!record.settlement) {
+				return;
+			}
+
+			const genderLabel = record.gender === 'male' ? '先生' : '女士';
+			const customerPhone = record.phone || '';
+
+			// 构建单据信息行
+			const itemLines: string[] = [];
+
+			const projectType = record.isClockIn ? '点钟' : '轮钟';
+
+			// 获取支付方式显示名称
+			const getPaymentMethodName = (method: PaymentMethod): string => {
+				const methodMap: Record<PaymentMethod, string> = {
+					meituan: '美团',
+					dianping: '大众点评',
+					douyin: '抖音支付',
+					gaode: '现金',
+					wechat: '现金',
+					alipay: '现金',
+					cash: '现金',
+					free: '免单',
+					membership: '会员卡'
+				};
+				return methodMap[method] || method;
+			};
+
+			// 格式化支付信息
+			const paymentInfo = record.settlement.payments
+				.map(p => {
+					const couponCode = p.couponCode || '无';
+					const amount = p.method === 'membership' || p.method === 'free' ? '0.00' : p.amount.toFixed(2);
+					return `  【支付方式】：${getPaymentMethodName(p.method)} - ${amount} - ${couponCode}`;
+				})
+				.join('\n');
+
+			// 如果是会员卡支付，计算总次数
+			// const membershipPayment = record.settlement.payments.find(p => p.method === 'membership');
+			// const actualPayment = membershipPayment ? membershipPayment.amount : record.settlement.totalAmount;
+
+			itemLines.push(`【项目】：${record.project}
+【技师】：${record.technician}
+【上钟类型】：${projectType}
+${paymentInfo}`);
+
+			const message = `<@结算助手><@aibAZLKBDWbYnXLEJmwBpwXTnVlmzVRbSE7>【结算通知】
+【顾客名称】：${record.surname || '散客'}
+【顾客性别】：${genderLabel}
+【顾客电话】：${customerPhone}
+【房间】：${record.room || '无'}
+${itemLines.join('\n')}`;
+			await wx.cloud.callFunction({
+				name: 'sendWechatMessage',
+				data: {
+					content: message, type: 'markdown'
+				}
+			});
+		} catch (error) {
+			// 静默失败
+			console.error('sendSettlementNotification error:', error);
 		}
 	}
 }

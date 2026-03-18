@@ -3,7 +3,7 @@ import { checkLogin } from '../../utils/auth';
 import { loadingService, LockKeys } from '../../utils/loading-service';
 import { hasButtonPermission, requirePagePermission } from '../../utils/permission';
 import { formatDate, getCurrentDate } from '../../utils/util';
-import type { PaymentMethodItem } from './cashier.types';
+import type { CashierPage, PaymentMethodItem } from './cashier.types';
 import { ReservationHandler } from './handlers/reservation.handler';
 import { SettlementHandler } from './handlers/settlement.handler';
 import { PushHandler } from './handlers/push.handler';
@@ -153,10 +153,10 @@ Page({
 
 	// ========== 初始化 ==========
 	initHandlers() {
-		reservationHandler = new ReservationHandler(this as any);
-		settlementHandler = new SettlementHandler(this as any);
-		pushHandler = new PushHandler(this as any);
-		dataLoader = new CashierDataLoaderService(this as any);
+		pushHandler = new PushHandler(this as CashierPage);
+		reservationHandler = new ReservationHandler(this as CashierPage);
+		settlementHandler = new SettlementHandler(this as CashierPage, pushHandler);
+		dataLoader = new CashierDataLoaderService(this as CashierPage);
 	},
 
 	// ========== 切换横屏/竖屏 ==========
