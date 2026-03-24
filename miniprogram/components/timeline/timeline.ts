@@ -37,6 +37,8 @@ interface TimeBlock {
 	isReservation: boolean
 	isSettled: boolean
 	isInProgress: boolean
+	isClockIn: boolean
+	extraTime: number
 	technician: string
 	genderRequirement?: 'male' | 'female'
 }
@@ -130,6 +132,8 @@ Component({
 							room: '预约',
 							startTime: r.startTime,
 							endTime: r.endTime,
+							extraTime: 0,
+							isClockIn: r.isClockIn || false,
 							isReservation: true,
 							technician: r.technicianName,
 							genderRequirement: r.genderRequirement // 新增：性别需求
@@ -169,6 +173,8 @@ Component({
 							isReservation: r.isReservation,
 							isSettled,
 							isInProgress,
+							isClockIn: r.isClockIn || false,
+							extraTime: (r as ConsultationRecord).extraTime || 0,
 							technician: r.technician!,
 							genderRequirement: (r as any).genderRequirement
 						};

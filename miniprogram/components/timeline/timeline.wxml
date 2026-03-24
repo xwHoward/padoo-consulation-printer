@@ -25,7 +25,12 @@
           <view wx:for="{{item.blocks}}" wx:for-item="block" wx:key="startTime" class="time-block {{block.isReservation ? 'reservation' : ''}} {{block.gender}} {{block.isInProgress ? 'in-progress' : ''}} {{block.isSettled ? 'settled' : ''}}" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block._id}}" data-reservation="{{block.isReservation}}" data-settled="{{block.isSettled}}" data-inprogress="{{block.isInProgress}}">
             <view class="block-content">
               <view class="block-customer">{{block.customerName}} | {{block.room}}</view>
-              <view class="block-time">{{block.startTime}}-{{block.endTime}}</view>
+              <view class="block-time">
+                {{block.startTime}}-{{block.endTime}}
+                <text wx:if="{{block.isClockIn}}">[点]</text>
+                <text wx:else>[轮]</text>
+                <text wx:if="{{block.extraTime > 0}}">[加钟]</text>
+              </view>
               <view class="block-info">{{block.project}}</view>
             </view>
           </view>
