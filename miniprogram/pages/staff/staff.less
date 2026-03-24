@@ -342,18 +342,47 @@ page {
 
 
 .form-item {
-	margin-bottom: 15px;
-}
+	display: flex;
+	align-items: center;
+	margin-bottom: 12px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid @border-color-light;
 
-.form-item:last-child {
-	margin-bottom: 0;
+	&:last-child {
+		border-bottom: none;
+		margin-bottom: 0;
+		padding-bottom: 0;
+	}
+
+	.form-label {
+		flex: none;
+		margin-right: 12px;
+		font-size: 13px;
+		color: @text-color;
+	}
+
+
+	.picker-val,
+	.form-input {
+		flex: 1;
+		font-size: 13px;
+		color: @text-color;
+		padding: 5px 0;
+		border: none;
+		border-bottom: 1px solid @border-color;
+	}
+
+	.picker-val {
+		font-size: 16px;
+		font-weight: bold;
+		color: @primary-color;
+	}
 }
 
 .form-label {
 	display: block;
 	font-size: 14px;
 	color: @text-color;
-	margin-bottom: 8px;
 }
 
 .form-input {
@@ -459,3 +488,67 @@ page {
 	margin-top: 4px;
 }
 
+/* 推送排班按钮 */
+.push-schedule-btn {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 8px 15px;
+	margin: 10px 15px;
+	background: @primary-color;
+	border-radius: 8px;
+	color: white;
+	font-weight: 500;
+	transition: all 0.3s ease;
+	box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+
+	&:active {
+		transform: scale(0.98);
+		box-shadow: 0 1px 4px rgba(102, 126, 234, 0.3);
+	}
+
+	.btn-text {
+		font-size: 15px;
+	}
+}
+
+/* 只读模式样式 */
+.shift-cell.readonly {
+	.shift-tag {
+		opacity: 0.7;
+		cursor: not-allowed;
+
+		&.readonly {
+			background-color: rgba(0, 0, 0, 0.03);
+		}
+	}
+}
+
+/* 推送提示 */
+.push-hint {
+	padding: 15px;
+	background-color: rgba(102, 126, 234, 0.05);
+	border-radius: 8px;
+	margin-top: 10px;
+	font-size: 13px;
+	color: @text-color-secondary;
+	line-height: 1.8;
+
+	view {
+		margin-bottom: 4px;
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+}
+
+.form-picker {
+	flex: 1;
+	padding: 10px 12px;
+	font-size: 15px;
+	color: @text-color;
+	border: 1px solid @border-color;
+	border-radius: 8px;
+	background-color: @bg-color;
+}

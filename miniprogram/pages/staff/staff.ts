@@ -26,6 +26,11 @@ Page({
 		dates: [] as DateInfo[],
 		scheduleMap: {} as Record<string, Record<string, { label: string; type: ShiftType; index: number }>>,
 		shiftNames: Object.values(SHIFT_NAMES),
+		// 推送排班相关
+		showSchedulePushModal: false,
+		pushStartDate: '',
+		pushEndDate: '',
+		pushLoading: false
 	},
 
 	onShow() {
@@ -307,10 +312,144 @@ Page({
 			});
 		} catch (error) {
 			this.setData({ loading: false });
-			wx.showToast({
-				title: '操作失败',
-				icon: 'none'
+			wx.showToast({ title: '操作失败', icon: 'none' });
+		}
+	},
+
+	// ========== 推送排班 ==========
+	openSchedulePushModal() {
+
+		const today = new Date();
+		const pushStartDate = formatDate(today);
+		today.setDate(today.getDate() + 7);
+		const pushEndDate = formatDate(today);
+		this.setData({
+			showSchedulePushModal: true,
+			pushStartDate: pushStartDate,
+			pushEndDate: pushEndDate
+		});
+	},
+
+	onSchedulePushModalCancel() {
+		this.setData({
+			showSchedulePushModal: false,
+			pushStartDate: '',
+			pushEndDate: '',
+			pushLoading: false
+		});
+	},
+
+	onPushStartDateChange(e: WechatMiniprogram.CustomEvent) {
+		this.setData({ pushStartDate: e.detail.value });
+	},
+
+	onPushEndDateChange(e: WechatMiniprogram.CustomEvent) {
+		this.setData({ pushEndDate: e.detail.value });
+	},
+
+	async onSchedulePushModalConfirm() {
+		const { pushStartDate, pushEndDate } = this.data;
+
+		if (!pushStartDate || !pushEndDate) {
+			wx.showToast({ title: '请选择起止日期', icon: 'none' });
+			return;
+		}
+
+		if (pushStartDate > pushEndDate) {
+			wx.showToast({ title: '开始日期不能晚于结束日期', icon: 'none' });
+			return;
+		}
+
+		this.setData({ pushLoading: true });
+
+		try {
+			const staffList = await app.getActiveStaffs();
+
+			const startDate = pushStartDate;
+			const endDate = pushEndDate;
+
+			const allSchedules = await cloudDb.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
+				return item.date >= startDate && item.date <= endDate;
 			});
+
+			if (allSchedules.length === 0) {
+				wx.showToast({ title: '所选时间段暂无排班', icon: 'none' });
+				this.setData({ pushLoading: false });
+				return;
+			}
+
+			const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+
+			const dateList: string[] = [];
+			const start = new Date(startDate);
+			const end = new Date(endDate);
+			const current = new Date(start);
+
+			while (current <= end) {
+				dateList.push(formatDate(current));
+				current.setDate(current.getDate() + 1);
+			}
+
+			const messageLines: string[] = [];
+			messageLines.push('# 员工排班表');
+			messageLines.push('');
+			messageLines.push(`**日期：** ${startDate.slice(5, 10)} ~ ${endDate.slice(5, 10)}`);
+			messageLines.push('');
+
+			const tableHeader = ['日期'];
+			dateList.forEach(d => {
+				const date = new Date(d);
+				const day = String(date.getDate()).padStart(2, '0');
+				tableHeader.push(`${day}`);
+			});
+			const weekHeader = ['技师'];
+			dateList.forEach(d => {
+				const date = new Date(d);
+				const weekDay = weekDays[date.getDay()];
+				weekHeader.push(`${weekDay}`);
+			});
+
+			messageLines.push('|' + tableHeader.join('|') + '|');
+			messageLines.push('|' + weekHeader.join('|') + '|');
+
+			const scheduleMap: Record<string, Record<string, ShiftType>> = {};
+			allSchedules.forEach(s => {
+				if (!scheduleMap[s.staffId]) {
+					scheduleMap[s.staffId] = {};
+				}
+				scheduleMap[s.staffId][s.date] = s.shift;
+			});
+
+			staffList.forEach(staff => {
+				const staffSchedules = allSchedules.filter(s => s.staffId === staff._id);
+				if (staffSchedules.length === 0) {
+					return;
+				}
+
+				const row = [staff.name];
+				dateList.forEach(d => {
+					const shift = scheduleMap[staff._id]?.[d];
+					row.push(shift ? SHIFT_NAMES[shift].substring(0, 1) : '无');
+				});
+
+				messageLines.push('|' + row.join('|') + '|');
+			});
+
+			const message = messageLines.join('\n');
+
+			await wx.cloud.callFunction({
+				name: 'sendWechatMessage',
+				data: { content: message }
+			});
+
+			wx.showToast({ title: '推送成功', icon: 'success' });
+			setTimeout(() => {
+				this.onSchedulePushModalCancel();
+			}, 1500);
+		} catch (error) {
+			wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+		} finally {
+			this.setData({ pushLoading: false });
 		}
 	},
 

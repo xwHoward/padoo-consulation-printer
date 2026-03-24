@@ -11,6 +11,9 @@
       <view class="section-header">
         <view class="section-title">员工排班</view>
         <view class="today-text">当前日期: {{today}}</view>
+        <view class="push-schedule-btn" bindtap="openSchedulePushModal">
+          <view class="btn-text">推送排班</view>
+        </view>
       </view>
       <scroll-view class="table-scroll-view" scroll-x="{{true}}" scroll-y="{{false}}">
         <view class="schedule-table">
@@ -25,12 +28,15 @@
           <!-- 表体: 员工排班 -->
           <view class="table-row" wx:for="{{staffList}}" wx:for-item="staff" wx:key="_id" wx:if="{{staff.status === 'active'}}">
             <view class="table-cell sticky-col staff-cell">{{staff.name}}</view>
-            <view class="table-cell shift-cell" wx:for="{{dates}}" wx:for-item="dateObj" wx:key="date">
-              <picker bindchange="onShiftChange" data-staff-id="{{staff._id}}" data-date="{{dateObj.date}}" value="{{scheduleMap[staff._id][dateObj.date].index}}" range="{{shiftNames}}">
+            <view class="table-cell shift-cell {{dateObj.date < today ? 'readonly' : ''}}" wx:for="{{dates}}" wx:for-item="dateObj" wx:key="date">
+              <picker wx:if="{{dateObj.date >= today}}" bindchange="onShiftChange" data-staff-id="{{staff._id}}" data-date="{{dateObj.date}}" value="{{scheduleMap[staff._id][dateObj.date].index}}" range="{{shiftNames}}">
                 <view class="shift-tag {{scheduleMap[staff._id][dateObj.date].type}}">
                   {{scheduleMap[staff._id][dateObj.date].label}}
                 </view>
               </picker>
+              <view wx:else class="shift-tag {{scheduleMap[staff._id][dateObj.date].type}} readonly">
+                {{scheduleMap[staff._id][dateObj.date].label}}
+              </view>
             </view>
           </view>
         </view>
@@ -96,11 +102,7 @@
   </view>
 </view>
 <!-- 添加/编辑弹窗 -->
-<modal
-  show="{{showModal}}"
-  title="{{editingStaff ? '编辑员工' : '添加员工'}}"
-  bind:cancel="onCloseModal"
-  bind:confirm="onConfirmModal">
+<modal show="{{showModal}}" title="{{editingStaff ? '编辑员工' : '添加员工'}}" bind:cancel="onCloseModal" bind:confirm="onConfirmModal">
   <view class="form-item">
     <view class="form-label">姓名</view>
     <input class="form-input" placeholder="请输入员工姓名" value="{{inputName}}" bindinput="onNameInput" focus="{{showModal}}" />
@@ -144,5 +146,23 @@
         <view>禁用</view>
       </view>
     </view>
+  </view>
+</modal>
+<!-- 推送排班弹窗 -->
+<modal show="{{showSchedulePushModal}}" title="推送排班表" bind:cancel="onSchedulePushModalCancel" bind:confirm="onSchedulePushModalConfirm">
+  <view class="form-item">
+    <view class="form-label">开始日期</view>
+    <picker mode="date" value="{{pushStartDate}}" bindchange="onPushStartDateChange">
+      <view class="form-picker">{{pushStartDate || '请选择开始日期'}}</view>
+    </picker>
+    <view class="form-label" style="margin-left: auto">结束日期</view>
+    <picker mode="date" value="{{pushEndDate}}" bindchange="onPushEndDateChange">
+      <view class="form-picker">{{pushEndDate || '请选择结束日期'}}</view>
+    </picker>
+  </view>
+  <view class="push-hint">
+    <view>提示：</view>
+    <view>• 将推送所选时间段内所有员工的排班信息</view>
+    <view>• 按技师分组显示班次信息</view>
   </view>
 </modal>
