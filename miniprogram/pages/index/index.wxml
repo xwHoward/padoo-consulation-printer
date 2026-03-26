@@ -198,7 +198,7 @@
 <!-- 车牌号输入弹窗 -->
 <license-plate-input visible="{{licensePlateInputVisible}}" value="{{licensePlate}}" bind:cancel="hidePlateInputModal" bind:confirm="onPlateConfirm" />
 <!-- 报钟推送确认弹窗 -->
-<modal show="{{clockInModal.show}}" title="确认报钟信息" show-close="{{true}}" bind:cancel="onClockInModalCancel" bind:confirm="onClockInModalConfirm" loading="{{clockInModal.loading}}" loading-text="推送中...">
+<modal show="{{clockInModal.show}}" title="确认报钟信息" show-close="{{true}}" bind:cancel="onClockInModalCancel" bind:confirm="onClockInModalConfirm" loading="{{clockInModal.loading}}" loading-text="推送中..." cancel-text="不推送">
   <textarea class="clockin-textarea" value="{{clockInModal.content}}" bindinput="onClockInContentInput" placeholder="请输入报钟内容" maxlength="1000" auto-height show-confirm-bar="{{false}}" />
   <text class="char-count">{{clockInModal.content.length}}/1000</text>
 </modal>

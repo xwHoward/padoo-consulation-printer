@@ -286,8 +286,10 @@ exports.main = async (event) => {
       });
 
       const staffIdMap = {};
+      const activeStaffNames = new Set();
       staffResult.data.forEach(s => {
         staffIdMap[ s.name ] = s._id;
+        activeStaffNames.add(s.name);
       });
 
       const technicianStats = {};
@@ -295,6 +297,10 @@ exports.main = async (event) => {
       records.forEach(record => {
         if (!record.isVoided) {
           const technician = record.technician;
+          
+          if (!activeStaffNames.has(technician)) {
+            return;
+          }
 
           if (!technicianStats[ technician ]) {
             technicianStats[ technician ] = {
@@ -411,6 +417,10 @@ exports.main = async (event) => {
 
       const monthlyScores = [];
       allTechnicians.forEach(technician => {
+        if (!activeStaffNames.has(technician)) {
+          return;
+        }
+        
         const salesCount = membershipSales[ technician ] || 0;
         const clockInCount = clockInCounts[ technician ] || 0;
         const totalScore = salesCount + clockInCount;

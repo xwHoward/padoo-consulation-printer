@@ -147,7 +147,7 @@
   <view class="loading-text">{{loadingText}}</view>
 </view>
 <!-- 每日总结推送确认弹窗 -->
-<modal show="{{summaryModal.show}}" title="确认每日总结" show-close="{{true}}" bind:cancel="onSummaryModalCancel" bind:confirm="onSummaryModalConfirm" loading="{{summaryModal.loading}}" loading-text="推送中...">
+<modal show="{{summaryModal.show}}" title="确认每日总结" show-close="{{true}}" bind:cancel="onSummaryModalCancel" bind:confirm="onSummaryModalConfirm" loading="{{summaryModal.loading}}" loading-text="推送中..." cancel-text="不推送">
   <textarea class="summary-textarea" value="{{summaryModal.content}}" bindinput="onSummaryContentInput" placeholder="请输入每日总结内容" maxlength="2000" show-confirm-bar="{{false}}" />
   <text class="char-count">{{summaryModal.content.length}}/2000</text>
 </modal>

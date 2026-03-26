@@ -24,6 +24,8 @@ export class AuthManager {
 			const tokenStr = wx.getStorageSync(STORAGE_KEY_TOKEN);
 			if (userStr) {
 				this.currentUser = JSON.parse(userStr);
+				// DEV
+				// this.currentUser!.role = 'brand';
 			}
 			if (tokenStr) {
 				this.token = tokenStr;
@@ -114,7 +116,7 @@ export class AuthManager {
 			}
 
 			const loginResponse = data as LoginResponse;
-
+			console.log('登录响应:', loginResponse);
 			this.currentUser = loginResponse.user;
 			this.token = loginResponse.token;
 			this.saveToStorage();

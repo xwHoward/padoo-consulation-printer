@@ -5,6 +5,8 @@ import { getCurrentDate } from '../../utils/util';
 
 const app = getApp<IAppOption>();
 
+const TIMELINE_HOUR_WIDTH = 90;
+
 interface TimelineData {
 	timeLabels: string[]
 	staffTimeline: StaffTimelineItem[]
@@ -18,6 +20,7 @@ interface TimelineData {
 interface StaffTimelineItem {
 	_id: string
 	name: string
+	gender: 'male' | 'female';
 	shift: ShiftType
 	blocks: TimeBlock[]
 	availableSlots: AvailableSlot[]
@@ -31,6 +34,7 @@ interface TimeBlock {
 	left: string
 	width: string
 	customerName: string
+	phone: string
 	gender: 'male' | 'female';
 	room: string
 	project: string
@@ -76,6 +80,7 @@ Component({
 		scrollLeft: 0,
 		loading: false,
 		loadingText: '加载数据...',
+		TIMELINE_HOUR_WIDTH
 	} as TimelineData,
 
 	observers: {
@@ -109,7 +114,7 @@ Component({
 				const activeStaffList = activeStaff.filter(s => scheduledStaff.includes(s._id));
 
 				const staffTimeline: StaffTimelineItem[] = [];
-				const timelineWidth = this.data.timeLabels.length * 60;
+				const timelineWidth = (this.data.timeLabels.length) * TIMELINE_HOUR_WIDTH;
 
 				for (const staff of activeStaffList) {
 					const schedule = allSchedules.find(s => s.date === today && s.staffId === staff._id);
@@ -127,6 +132,7 @@ Component({
 						...staffReservations.map(r => ({
 							_id: r._id,
 							surname: r.customerName,
+							phone: r.phone || '',
 							gender: r.gender,
 							project: r.project,
 							room: '预约',
@@ -163,13 +169,14 @@ Component({
 						return {
 							_id: r._id,
 							customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
+							phone: r.phone || '',
 							gender: r.gender,
 							startTime: r.startTime,
 							endTime: r.endTime,
 							project: r.project,
 							room: r.room,
-							left: (startMinutes / timelineWidth * 100) + '%',
-							width: (duration / timelineWidth * 100) + '%',
+							left: (startMinutes / this.data.timeLabels.length / 60 * 100) + '%',
+							width: (duration / this.data.timeLabels.length / 60 * 100) + '%',
 							isReservation: r.isReservation,
 							isSettled,
 							isInProgress,
@@ -185,12 +192,14 @@ Component({
 					staffTimeline.push({
 						_id: staff._id,
 						name: staff.name,
+						gender: staff.gender,
 						shift,
 						blocks,
 						availableSlots,
 						highlighted: highlightStaffId === staff._id
 					});
 				}
+				staffTimeline.sort((a) => a.gender === 'male' ? 1 : -1);
 
 				let currentTimePosition = '0%';
 				let showCurrentTimeLine = false;
@@ -200,7 +209,7 @@ Component({
 					const startHour = parseInt(this.data.timeLabels[0]);
 					const timeInTimeline = nowMinutes - startHour * 60;
 					if (timeInTimeline >= 0 && timeInTimeline <= timelineWidth) {
-						currentTimePosition = (timeInTimeline / timelineWidth * 100) + '%';
+						currentTimePosition = (timeInTimeline / this.data.timeLabels.length / 60 * 100) + '%';
 						showCurrentTimeLine = true;
 					}
 					this.setData({ scrollLeft: timeInTimeline });
@@ -221,7 +230,6 @@ Component({
 		calculateAvailableSlotsBetweenBlocks(blocks: TimeBlock[], shift: ShiftType): AvailableSlot[] {
 			const availableSlots: AvailableSlot[] = [];
 
-			const timelineWidth = this.data.timeLabels.length * 60;
 			const timelineStartHour = parseInt(this.data.timeLabels[0]);
 
 			const now = new Date();
@@ -253,8 +261,8 @@ Component({
 						const gapMinutes = firstStartMinutes - shiftStartMinutes;
 						const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
 
-						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-						const width = (gapMinutes / timelineWidth * 100) + '%';
+						const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 						availableSlots.push({
 							left,
@@ -280,8 +288,8 @@ Component({
 					if (gapMinutes > 0) {
 						const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
 
-						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-						const width = (gapMinutes / timelineWidth * 100) + '%';
+						const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 						availableSlots.push({
 							left,
@@ -301,8 +309,8 @@ Component({
 						const gapMinutes = shiftEndMinutes - lastEndMinutes;
 						const gapStartMinutesFromTimelineStart = (lastEndH - timelineStartHour) * 60 + lastEndM;
 
-						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-						const width = (gapMinutes / timelineWidth * 100) + '%';
+						const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 						availableSlots.push({
 							left,
@@ -349,8 +357,8 @@ Component({
 					if (gapMinutes > 0) {
 						const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
 
-						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-						const width = (gapMinutes / timelineWidth * 100) + '%';
+						const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 						availableSlots.push({
 							left,
@@ -364,8 +372,8 @@ Component({
 						const gapMinutes = shiftEndMinutes - currentEndMinutes;
 						const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
 
-						const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-						const width = (gapMinutes / timelineWidth * 100) + '%';
+						const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 						availableSlots.push({
 							left,
@@ -398,8 +406,8 @@ Component({
 							const gapMinutes = nextStartMinutes - shiftStartMinutes;
 							const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
 
-							const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-							const width = (gapMinutes / timelineWidth * 100) + '%';
+							const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 							availableSlots.push({
 								left,
@@ -413,8 +421,8 @@ Component({
 							const gapMinutes = shiftEndMinutes - shiftStartMinutes;
 							const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
 
-							const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-							const width = (gapMinutes / timelineWidth * 100) + '%';
+							const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 							availableSlots.push({
 								left,
@@ -434,8 +442,8 @@ Component({
 							const gapMinutes = nextStartMinutes - nowMinutes;
 							const gapStartMinutesFromTimelineStart = (Math.floor(nowMinutes / 60) - timelineStartHour) * 60 + (nowMinutes % 60);
 
-							const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-							const width = (gapMinutes / timelineWidth * 100) + '%';
+							const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 							availableSlots.push({
 								left,
@@ -449,8 +457,8 @@ Component({
 							const gapMinutes = shiftEndMinutes - nowMinutes;
 							const gapStartMinutesFromTimelineStart = (Math.floor(nowMinutes / 60) - timelineStartHour) * 60 + (nowMinutes % 60);
 
-							const left = (gapStartMinutesFromTimelineStart / timelineWidth * 100) + '%';
-							const width = (gapMinutes / timelineWidth * 100) + '%';
+							const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 							availableSlots.push({
 								left,

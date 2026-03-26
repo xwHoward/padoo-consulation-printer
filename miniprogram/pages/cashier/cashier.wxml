@@ -24,25 +24,45 @@
         <view class="section-title">快速预约</view>
       </view>
       <view class="quick-reservation-grid">
-        <view class="quick-reservation-slot {{quickReservationSlots.oneMale ? 'available' : 'unavailable'}}">
+        <view class="quick-reservation-slot {{quickReservationSlots.oneMale.length > 0 ? 'available' : 'unavailable'}}">
           <view class="slot-label">1位男技师</view>
-          <view class="slot-time">{{quickReservationSlots.oneMale || '暂无可约时段'}}</view>
-          <view class="slot-copy" wx:if="{{quickReservationSlots.oneMale}}" bindtap="copyReservationSlot" data-type="oneMale" data-text="{{quickReservationSlots.oneMale}}">复制</view>
+          <view class="slot-time-list">
+            <view class="slot-time-item" wx:for="{{quickReservationSlots.oneMale}}" wx:key="time" bindtap="copyReservationSlot" data-type="oneMale" data-text="{{item.time}}">
+              <view class="slot-time-text">{{item.time}}</view>
+              <view class="slot-staff-names">{{item.staffNames}}</view>
+            </view>
+            <view class="slot-time-item empty" wx:if="{{quickReservationSlots.oneMale.length === 0}}">暂无可约时段</view>
+          </view>
         </view>
-        <view class="quick-reservation-slot {{quickReservationSlots.oneFemale ? 'available' : 'unavailable'}}">
+        <view class="quick-reservation-slot {{quickReservationSlots.oneFemale.length > 0 ? 'available' : 'unavailable'}}">
           <view class="slot-label">1位女技师</view>
-          <view class="slot-time">{{quickReservationSlots.oneFemale || '暂无可约时段'}}</view>
-          <view class="slot-copy" wx:if="{{quickReservationSlots.oneFemale}}" bindtap="copyReservationSlot" data-type="oneFemale" data-text="{{quickReservationSlots.oneFemale}}">复制</view>
+          <view class="slot-time-list">
+            <view class="slot-time-item" wx:for="{{quickReservationSlots.oneFemale}}" wx:key="time" bindtap="copyReservationSlot" data-type="oneFemale" data-text="{{item.time}}">
+              <view class="slot-time-text">{{item.time}}</view>
+              <view class="slot-staff-names">{{item.staffNames}}</view>
+            </view>
+            <view class="slot-time-item empty" wx:if="{{quickReservationSlots.oneFemale.length === 0}}">暂无可约时段</view>
+          </view>
         </view>
-        <view class="quick-reservation-slot {{quickReservationSlots.twoMale ? 'available' : 'unavailable'}}">
+        <view class="quick-reservation-slot {{quickReservationSlots.twoMale.length > 0 ? 'available' : 'unavailable'}}">
           <view class="slot-label">2位男技师</view>
-          <view class="slot-time">{{quickReservationSlots.twoMale || '暂无可约时段'}}</view>
-          <view class="slot-copy" wx:if="{{quickReservationSlots.twoMale}}" bindtap="copyReservationSlot" data-type="twoMale" data-text="{{quickReservationSlots.twoMale}}">复制</view>
+          <view class="slot-time-list">
+            <view class="slot-time-item" wx:for="{{quickReservationSlots.twoMale}}" wx:key="time" bindtap="copyReservationSlot" data-type="twoMale" data-text="{{item.time}}">
+              <view class="slot-time-text">{{item.time}}</view>
+              <view class="slot-staff-names">{{item.staffNames}}</view>
+            </view>
+            <view class="slot-time-item empty" wx:if="{{quickReservationSlots.twoMale.length === 0}}">暂无可约时段</view>
+          </view>
         </view>
-        <view class="quick-reservation-slot {{quickReservationSlots.twoFemale ? 'available' : 'unavailable'}}">
+        <view class="quick-reservation-slot {{quickReservationSlots.twoFemale.length > 0 ? 'available' : 'unavailable'}}">
           <view class="slot-label">2位女技师</view>
-          <view class="slot-time">{{quickReservationSlots.twoFemale || '暂无可约时段'}}</view>
-          <view class="slot-copy" wx:if="{{quickReservationSlots.twoFemale}}" bindtap="copyReservationSlot" data-type="twoFemale" data-text="{{quickReservationSlots.twoFemale}}">复制</view>
+          <view class="slot-time-list">
+            <view class="slot-time-item" wx:for="{{quickReservationSlots.twoFemale}}" wx:key="time" bindtap="copyReservationSlot" data-type="twoFemale" data-text="{{item.time}}">
+              <view class="slot-time-text">{{item.time}}</view>
+              <view class="slot-staff-names">{{item.staffNames}}</view>
+            </view>
+            <view class="slot-time-item empty" wx:if="{{quickReservationSlots.twoFemale.length === 0}}">暂无可约时段</view>
+          </view>
         </view>
       </view>
     </view>
@@ -261,7 +281,7 @@
   </view>
 </modal>
 <!-- 预约推送确认弹窗 -->
-<modal show="{{pushModal.show}}" title="确认推送内容" bind:cancel="onPushModalCancel" bind:confirm="onPushModalConfirm" loading="{{pushModal.loading}}" loading-text="推送中...">
+<modal show="{{pushModal.show}}" title="确认推送内容" bind:cancel="onPushModalCancel" bind:confirm="onPushModalConfirm" loading="{{pushModal.loading}}" loading-text="推送中..." cancel-text="不推送">
   <view class="push-preview">
     <textarea class="push-textarea" value="{{pushModal.message}}" bindinput="onPushMessageChange" placeholder="请输入推送内容" maxlength="1000" auto-height show-confirm-bar="{{false}}" />
     <text class="char-count">{{pushModal.message.length}}/1000</text>

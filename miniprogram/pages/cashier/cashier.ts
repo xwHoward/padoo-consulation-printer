@@ -114,10 +114,10 @@ Page({
 		},
 		// 快速预约时段
 		quickReservationSlots: {
-			oneMale: null as string | null,
-			oneFemale: null as string | null,
-			twoMale: null as string | null,
-			twoFemale: null as string | null
+			oneMale: [] as QuickReservation[],
+			oneFemale: [] as QuickReservation[],
+			twoMale: [] as QuickReservation[],
+			twoFemale: [] as QuickReservation[]
 		}
 	},
 

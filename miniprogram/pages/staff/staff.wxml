@@ -149,7 +149,7 @@
   </view>
 </modal>
 <!-- 推送排班弹窗 -->
-<modal show="{{showSchedulePushModal}}" title="推送排班表" bind:cancel="onSchedulePushModalCancel" bind:confirm="onSchedulePushModalConfirm">
+<modal show="{{showSchedulePushModal}}" title="推送排班表" bind:cancel="onSchedulePushModalCancel" bind:confirm="onSchedulePushModalConfirm" loading="{{schedulePushModal.loading}}" loading-text="推送中..." cancel-text="不推送">
   <view class="form-item">
     <view class="form-label">开始日期</view>
     <picker mode="date" value="{{pushStartDate}}" bindchange="onPushStartDateChange">

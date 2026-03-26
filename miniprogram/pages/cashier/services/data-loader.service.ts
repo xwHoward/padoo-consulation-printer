@@ -152,10 +152,10 @@ export class CashierDataLoaderService {
 		}
 	}
 
-	async prepareRotationList(today: string): Promise<{ rotationList: RotationItem[]; quickReservationSlots: { oneMale: string | null; oneFemale: string | null; twoMale: string | null; twoFemale: string | null } }> {
+	async prepareRotationList(today: string): Promise<{ rotationList: RotationItem[]; quickReservationSlots: { oneMale: Array<QuickReservation>; oneFemale: Array<QuickReservation>; twoMale: Array<QuickReservation>; twoFemale: Array<QuickReservation> } }> {
 		const rotation = await app.getRotationQueue(today);
 		if (!rotation || !rotation.staffList || rotation.staffList.length === 0) {
-			return { rotationList: [], quickReservationSlots: { oneMale: null, oneFemale: null, twoMale: null, twoFemale: null } };
+			return { rotationList: [], quickReservationSlots: { oneMale: [], oneFemale: [], twoMale: [], twoFemale: [] } };
 		}
 
 		const staffList = await app.getStaffs();
@@ -340,7 +340,7 @@ export class CashierDataLoaderService {
 		allConsultations: ConsultationRecord[],
 		allReservations: ReservationRecord[],
 		selectedDate: string
-	): { oneMale: string | null; oneFemale: string | null; twoMale: string | null; twoFemale: string | null } {
+	): { oneMale: Array<QuickReservation>; oneFemale: Array<QuickReservation>; twoMale: Array<QuickReservation>; twoFemale: Array<QuickReservation> } {
 		const now = new Date();
 		const currentMinutes = now.getHours() * 60 + now.getMinutes();
 		const todayStr = getCurrentDate();
@@ -404,90 +404,131 @@ export class CashierDataLoaderService {
 			staffOccupiedSlots.set(staff._id, occupiedSlots);
 		});
 
-		const findEarliestSlot = (staffList: RotationItem[], requiredCount: number): string | null => {
+		const findAllAvailableSlots = (staffList: RotationItem[], requiredCount: number): Array<QuickReservation> => {
 			if (staffList.length < requiredCount) {
-				return null;
+				return [];
 			}
 
-			let earliestShiftStart = Infinity;
-			let latestShiftEnd = -Infinity;
+			const staffAvailableSlots = new Map<string, Array<{ start: number; end: number; duration: number }>>();
 
 			staffList.forEach(staff => {
 				const shift = staff.shift;
 				const shiftStart = SHIFT_START_TIME[shift];
 				const shiftEnd = SHIFT_END_TIME[shift];
 
-				if (shiftStart && shiftEnd) {
-					const [startHour, startMinute] = shiftStart.split(':').map(Number);
-					const [endHour, endMinute] = shiftEnd.split(':').map(Number);
-					const shiftStartMinutes = startHour * 60 + startMinute;
-					const shiftEndMinutes = endHour * 60 + endMinute;
-
-					earliestShiftStart = Math.min(earliestShiftStart, shiftStartMinutes);
-					latestShiftEnd = Math.max(latestShiftEnd, shiftEndMinutes);
+				if (!shiftStart || !shiftEnd) {
+					staffAvailableSlots.set(staff._id, []);
+					return;
 				}
+
+				const [startHour, startMinute] = shiftStart.split(':').map(Number);
+				const [endHour, endMinute] = shiftEnd.split(':').map(Number);
+				const shiftStartMinutes = startHour * 60 + startMinute;
+				const shiftEndMinutes = endHour * 60 + endMinute;
+
+				let searchStart = shiftStartMinutes;
+				if (isToday) {
+					searchStart = Math.max(currentMinutes, shiftStartMinutes);
+				}
+
+				const occupiedSlots = staffOccupiedSlots.get(staff._id) || [];
+				const availableSlots: Array<{ start: number; end: number; duration: number }> = [];
+
+				let currentTime = searchStart;
+				while (currentTime < shiftEndMinutes) {
+					const nextOccupied = occupiedSlots.find(slot => slot.start >= currentTime && slot.start < shiftEndMinutes);
+					
+					let slotEnd = shiftEndMinutes;
+					if (nextOccupied && nextOccupied.start >= currentTime) {
+						slotEnd = Math.min(shiftEndMinutes, nextOccupied.start);
+					}
+
+					const duration = slotEnd - currentTime;
+					if (duration >= 60) {
+						availableSlots.push({
+							start: currentTime,
+							end: slotEnd,
+							duration
+						});
+					}
+
+					currentTime = slotEnd;
+					if (nextOccupied) {
+						currentTime = Math.max(currentTime, nextOccupied.end);
+					}
+				}
+
+				staffAvailableSlots.set(staff._id, availableSlots);
 			});
 
-			if (earliestShiftStart === Infinity || latestShiftEnd === -Infinity) {
-				return null;
-			}
+			if (requiredCount === 1) {
+				const slotMap = new Map<string, string[]>();
 
-			let searchStart = earliestShiftStart;
-			if (isToday) {
-				searchStart = Math.max(currentMinutes, earliestShiftStart);
-			}
-
-			for (let time = searchStart; time <= latestShiftEnd - 60; time += 5) {
-				const availableStaff = staffList.filter(staff => {
-					const slots = staffOccupiedSlots.get(staff._id) || [];
-					
-					return !slots.some(slot => {
-						return !(time >= slot.end);
+				staffList.forEach(staff => {
+					const slots = staffAvailableSlots.get(staff._id) || [];
+					slots.forEach(slot => {
+						const startHour = Math.floor(slot.start / 60);
+						const startMinute = slot.start % 60;
+						const endHour = Math.floor(slot.end / 60);
+						const endMinute = slot.end % 60;
+						const slotText = `${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}-${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}(${slot.duration}分钟)`;
+						
+						if (!slotMap.has(slotText)) {
+							slotMap.set(slotText, []);
+						}
+						slotMap.get(slotText)!.push(staff.name);
 					});
 				});
 
-				if (availableStaff.length >= requiredCount) {
-					let earliestEnd = latestShiftEnd;
+				const allSlots = Array.from(slotMap.entries())
+					.map(([time, staffNames]) => ({ time, staffNames }))
+					.sort((a, b) => a.time.localeCompare(b.time));
+				
+				return allSlots;
+			}
 
-					availableStaff.forEach(staff => {
-						const shift = staff.shift;
-						const shiftEnd = SHIFT_END_TIME[shift];
-						if (shiftEnd) {
-							const [endHour, endMinute] = shiftEnd.split(':').map(Number);
-							const shiftEndMinutes = endHour * 60 + endMinute;
-							
-							const slots = staffOccupiedSlots.get(staff._id) || [];
-							const nextOccupied = slots.find(slot => slot.start > time);
-							
-							if (nextOccupied) {
-								earliestEnd = Math.min(earliestEnd, nextOccupied.start);
-							} else {
-								earliestEnd = Math.min(earliestEnd, shiftEndMinutes);
+			const commonSlotsMap = new Map<string, string[]>();
+
+			for (let i = 0; i < staffList.length; i++) {
+				for (let j = i + 1; j < staffList.length; j++) {
+					const staff1Slots = staffAvailableSlots.get(staffList[i]._id) || [];
+					const staff2Slots = staffAvailableSlots.get(staffList[j]._id) || [];
+
+					staff1Slots.forEach(slot1 => {
+						staff2Slots.forEach(slot2 => {
+							const overlapStart = Math.max(slot1.start, slot2.start);
+							const overlapEnd = Math.min(slot1.end, slot2.end);
+							const overlapDuration = overlapEnd - overlapStart;
+
+							if (overlapDuration >= 60) {
+								const startHour = Math.floor(overlapStart / 60);
+								const startMinute = overlapStart % 60;
+								const endHour = Math.floor(overlapEnd / 60);
+								const endMinute = overlapEnd % 60;
+								const slotText = `${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}-${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}(${overlapDuration}分钟)`;
+								const staffNames = [staffList[i].name, staffList[j].name];
+
+								if (!commonSlotsMap.has(slotText)) {
+									commonSlotsMap.set(slotText, staffNames);
+								}
 							}
-						}
+						});
 					});
-
-					const maxDuration = earliestEnd - time;
-
-					if (maxDuration >= 60) {
-						const startHour = Math.floor(time / 60);
-						const startMinute = time % 60;
-						const endHour = Math.floor(earliestEnd / 60);
-						const endMinute = earliestEnd % 60;
-
-						return `${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}-${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')} (${maxDuration}分钟)`;
-					}
 				}
 			}
 
-			return null;
+			const commonSlots = Array.from(commonSlotsMap.entries())
+				.map(([time, staffNames]) => ({ time, staffNames }))
+				.sort((a, b) => a.time.localeCompare(b.time));
+			
+			return commonSlots;
 		};
 
 		return {
-			oneMale: findEarliestSlot(staffByGender.male, 1),
-			oneFemale: findEarliestSlot(staffByGender.female, 1),
-			twoMale: findEarliestSlot(staffByGender.male, 2),
-			twoFemale: findEarliestSlot(staffByGender.female, 2)
+			oneMale: findAllAvailableSlots(staffByGender.male, 1),
+			oneFemale: findAllAvailableSlots(staffByGender.female, 1),
+			twoMale: findAllAvailableSlots(staffByGender.male, 2),
+			twoFemale: findAllAvailableSlots(staffByGender.female, 2)
 		};
 	}
 }

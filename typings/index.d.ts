@@ -257,7 +257,7 @@ interface StaffAvailability {
 }
 
 // 用户角色类型
-type UserRole = 'admin' | 'cashier' | 'technician' | 'viewer';
+type UserRole = 'admin' | 'cashier' | 'technician' | 'viewer' | 'brand';
 
 // 用户权限配置
 interface UserPermissions {
@@ -499,4 +499,10 @@ interface TechnicianSalary {
   workDays: number;
   offDays: number;
   leaveDays: number;
+}
+
+
+interface QuickReservation {
+  time: string;
+  staffNames: string[];
 }

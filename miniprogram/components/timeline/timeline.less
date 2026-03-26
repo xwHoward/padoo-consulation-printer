@@ -1,6 +1,8 @@
 /**timeline.less**/
 @import "../../app.less";
 
+@TIMELINE_HOUR_WIDTH: 90px;
+
 .timeline-wrapper {
 	width: 100%;
 }
@@ -22,12 +24,13 @@
 	margin-bottom: 5px;
 
 	.time-axis-spacer {
-		width: 80px;
+		width: @TIMELINE_HOUR_WIDTH;
 		flex-shrink: 0;
 	}
 
 	.time-mark {
-		flex: 1;
+		flex: 0 0 @TIMELINE_HOUR_WIDTH;
+		max-width: @TIMELINE_HOUR_WIDTH;
 		font-size: 12px;
 		color: @text-color-secondary;
 		text-align: left;
@@ -68,7 +71,6 @@
 .staff-name-col {
 	position: sticky;
 	left: 0;
-	width: 80px;
 	flex-shrink: 0;
 	display: flex;
 	flex-direction: column;

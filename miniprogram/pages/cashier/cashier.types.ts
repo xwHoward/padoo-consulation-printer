@@ -92,10 +92,10 @@ export interface CashierPageData {
 	pushModalLocked: boolean;
 	arrivalConfirmModal: ArrivalConfirmModalState;
 	quickReservationSlots: {
-		oneMale: string | null;
-		oneFemale: string | null;
-		twoMale: string | null;
-		twoFemale: string | null;
+		oneMale: Array<QuickReservation>;
+		oneFemale: Array<QuickReservation>;
+		twoMale: Array<QuickReservation>;
+		twoFemale: Array<QuickReservation>;
 	};
 }
 
