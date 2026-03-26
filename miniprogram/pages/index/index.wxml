@@ -14,8 +14,8 @@
     </view>
   </view>
   <view slot="right" class="nav-btns" wx:if="{{!editId&&currentReservationIds.length===0}}">
-    <view bindtap="goToCashier" class="nav-btn" aria-role="button" aria-label="场控收银">
-      <text class="nav-btn-text">场控收银</text>
+    <view bindtap="goToCashier" class="nav-btn" aria-role="button" aria-label="场控">
+      <text class="nav-btn-text">场控</text>
     </view>
     <view bindtap="goToHistory" class="nav-btn" aria-role="button" aria-label="单据">
       <text class="nav-btn-text">单据</text>
