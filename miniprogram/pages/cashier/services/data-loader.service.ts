@@ -401,7 +401,26 @@ export class CashierDataLoaderService {
 			});
 
 			occupiedSlots.sort((a, b) => a.start - b.start);
-			staffOccupiedSlots.set(staff._id, occupiedSlots);
+
+			const mergedSlots: Array<{ start: number; end: number }> = [];
+			let current = occupiedSlots[0];
+
+			for (let i = 1; i < occupiedSlots.length; i++) {
+				const next = occupiedSlots[i];
+				
+				if (next.start <= current.end) {
+					current.end = Math.max(current.end, next.end);
+				} else {
+					mergedSlots.push({ ...current });
+					current = next;
+				}
+			}
+
+			if (current) {
+				mergedSlots.push({ ...current });
+			}
+
+			staffOccupiedSlots.set(staff._id, mergedSlots);
 		});
 
 		const findAllAvailableSlots = (staffList: RotationItem[], requiredCount: number): Array<QuickReservation> => {
@@ -436,10 +455,17 @@ export class CashierDataLoaderService {
 
 				let currentTime = searchStart;
 				while (currentTime < shiftEndMinutes) {
-					const nextOccupied = occupiedSlots.find(slot => slot.start >= currentTime && slot.start < shiftEndMinutes);
+					const activeOccupied = occupiedSlots.find(slot => slot.start <= currentTime && currentTime < slot.end);
+					
+					if (activeOccupied) {
+						currentTime = activeOccupied.end;
+						continue;
+					}
+					
+					const nextOccupied = occupiedSlots.find(slot => slot.start > currentTime && slot.start < shiftEndMinutes);
 					
 					let slotEnd = shiftEndMinutes;
-					if (nextOccupied && nextOccupied.start >= currentTime) {
+					if (nextOccupied) {
 						slotEnd = Math.min(shiftEndMinutes, nextOccupied.start);
 					}
 
@@ -454,7 +480,7 @@ export class CashierDataLoaderService {
 
 					currentTime = slotEnd;
 					if (nextOccupied) {
-						currentTime = Math.max(currentTime, nextOccupied.end);
+						currentTime = nextOccupied.end;
 					}
 				}
 

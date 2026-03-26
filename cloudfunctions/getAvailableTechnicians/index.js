@@ -70,46 +70,49 @@ exports.main = async (event, context) => {
         const technicians = activeStaff.map(staff => {
             let occupiedReason = ''
             
-            // 只考虑咨询记录和点钟预约（isClockIn: true）来判断占用
-            const clockInReservations = filteredReservations.filter(r => r.isClockIn === true)
-            const hasConflict = [...filteredRecords, ...clockInReservations].some(r => {
-                const rName = r.technician || r.technicianName
-                if (rName !== staff.name) return false
-                const rStartMinutes = parseTimeToMinutes(r.startTime)
-                const rEndMinutes = parseTimeToMinutes(r.endTime)
-
-                return currentMinutes < rEndMinutes && proposedEndTimeMinutes > rStartMinutes
-            })
-
-            if (hasConflict) {
-                const conflictTask = [...filteredRecords, ...clockInReservations].find(r => {
-                    const rName = r.technician || r.technicianName
-                    if (rName !== staff.name) return false
-
-                    const rStartMinutes = parseTimeToMinutes(r.startTime)
-                    const rEndMinutes = parseTimeToMinutes(r.endTime)
-
-                    return currentMinutes < rEndMinutes && proposedEndTimeMinutes > rStartMinutes
+            const staffRecords = filteredRecords.filter(r => r.technician === staff.name)
+            const clockInReservations = filteredReservations.filter(r => r.isClockIn === true && r.technicianName === staff.name)
+            
+            const staffAppointments = [...staffRecords, ...clockInReservations]
+            
+            let hasConflict = false
+            
+            if (staffAppointments.length > 0) {
+                const mergedRanges = mergeTimeRanges(staffAppointments)
+                
+                hasConflict = mergedRanges.some(range => {
+                    return currentMinutes < range.end && proposedEndTimeMinutes > range.start
                 })
-
-                if (conflictTask) {
-                    const isReservation = !conflictTask.technician
-                    const customerName = conflictTask.surname || conflictTask.customerName || '顾客'
-                    const gender = conflictTask.gender === 'male' ? '先生' : '女士'
-                    occupiedReason = `${conflictTask.startTime}-${conflictTask.endTime} ${customerName}${gender}${isReservation ? '(预约)' : ''}`
+                
+                if (hasConflict) {
+                    const conflictRange = mergedRanges.find(range => {
+                        return currentMinutes < range.end && proposedEndTimeMinutes > range.start
+                    })
+                    
+                    if (conflictRange) {
+                        const conflictTask = staffAppointments.find(task => {
+                            const taskStart = parseTimeToMinutes(task.startTime)
+                            const taskEnd = parseTimeToMinutes(task.endTime)
+                            return taskStart <= conflictRange.start && taskEnd >= conflictRange.end
+                        }) || staffAppointments[0]
+                        
+                        const isReservation = !conflictTask.technician
+                        const customerName = conflictTask.surname || conflictTask.customerName || '顾客'
+                        const gender = conflictTask.gender === 'male' ? '先生' : '女士'
+                        occupiedReason = `${formatMinutesToTime(conflictRange.start)}-${formatMinutesToTime(conflictRange.end)} ${customerName}${gender}${isReservation ? '(预约)' : ''}`
+                    }
                 }
             }
 
-            // 检查是否有非点钟预约冲突（仅用于提示）
-            const nonClockInReservations = filteredReservations.filter(r => r.isClockIn !== true)
-            const hasNonClockInConflict = nonClockInReservations.some(r => {
-                const rName = r.technicianName
-                if (rName !== staff.name) return false
-                const rStartMinutes = parseTimeToMinutes(r.startTime)
-                const rEndMinutes = parseTimeToMinutes(r.endTime)
-
-                return currentMinutes < rEndMinutes && proposedEndTimeMinutes > rStartMinutes
-            })
+            const nonClockInReservations = filteredReservations.filter(r => r.isClockIn !== true && r.technicianName === staff.name)
+            let hasNonClockInConflict = false
+            
+            if (nonClockInReservations.length > 0) {
+                const nonClockInMergedRanges = mergeTimeRanges(nonClockInReservations)
+                hasNonClockInConflict = nonClockInMergedRanges.some(range => {
+                    return currentMinutes < range.end && proposedEndTimeMinutes > range.start
+                })
+            }
 
             const position = staffPositionMap.has(staff._id) ? staffPositionMap.get(staff._id) : 999
 
@@ -142,6 +145,41 @@ exports.main = async (event, context) => {
 function parseTimeToMinutes(timeStr) {
     const [hours, minutes] = timeStr.split(':').map(Number)
     return hours * 60 + minutes
+}
+
+function mergeTimeRanges(appointments) {
+    if (!appointments || appointments.length === 0) return []
+    
+    const ranges = appointments.map(app => ({
+        start: parseTimeToMinutes(app.startTime),
+        end: parseTimeToMinutes(app.endTime)
+    }))
+    
+    ranges.sort((a, b) => a.start - b.start)
+    
+    const merged = []
+    let current = ranges[0]
+    
+    for (let i = 1; i < ranges.length; i++) {
+        const next = ranges[i]
+        
+        if (next.start <= current.end) {
+            current.end = Math.max(current.end, next.end)
+        } else {
+            merged.push({ ...current })
+            current = next
+        }
+    }
+    
+    merged.push({ ...current })
+    
+    return merged
+}
+
+function formatMinutesToTime(minutes) {
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
 }
 
 async function getTechnicianAvailability(date) {
@@ -238,33 +276,24 @@ async function getTechnicianAvailability(date) {
                 ]
 
                 if (allAppointments.length > 0) {
-                    const activeAppointment = allAppointments.find(appointment => {
-                        const startTimeMinutes = parseTimeToMinutes(appointment.startTime)
-                        const endTimeMinutes = parseTimeToMinutes(appointment.endTime)
-                        return startTimeMinutes <= nowMinutes && nowMinutes < endTimeMinutes
+                    const mergedRanges = mergeTimeRanges(allAppointments)
+                    
+                    const activeRange = mergedRanges.find(range => {
+                        return range.start <= nowMinutes && nowMinutes < range.end
                     })
 
-                    if (activeAppointment) {
-                        latestAppointment = activeAppointment.endTime
-                        const endTimeMinutes = parseTimeToMinutes(activeAppointment.endTime)
-                        availableMinutes = endTimeMinutes - nowMinutes
+                    if (activeRange) {
+                        latestAppointment = formatMinutesToTime(activeRange.end)
+                        availableMinutes = activeRange.end - nowMinutes
                         status = 'busy'
                     } else {
-                        const upcomingAppointments = allAppointments
-                            .filter(appointment => {
-                                const startTimeMinutes = parseTimeToMinutes(appointment.startTime)
-                                return startTimeMinutes > nowMinutes
-                            })
-                            .sort((a, b) => {
-                                const aStart = parseTimeToMinutes(a.startTime)
-                                const bStart = parseTimeToMinutes(b.startTime)
-                                return aStart - bStart
-                            })
+                        const upcomingRanges = mergedRanges
+                            .filter(range => range.start > nowMinutes)
+                            .sort((a, b) => a.start - b.start)
 
-                        if (upcomingAppointments.length > 0) {
-                            const nextAppointment = upcomingAppointments[0]
-                            const nextStartMinutes = parseTimeToMinutes(nextAppointment.startTime)
-                            availableMinutes = nextStartMinutes - nowMinutes
+                        if (upcomingRanges.length > 0) {
+                            const nextRange = upcomingRanges[0]
+                            availableMinutes = nextRange.start - nowMinutes
                             status = 'available'
                         }
                     }
