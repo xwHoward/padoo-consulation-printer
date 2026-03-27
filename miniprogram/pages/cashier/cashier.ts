@@ -349,15 +349,15 @@ Page({
 
 	// ========== 顾客匹配（委托给 utils） ==========
 	async searchCustomer() {
-		await searchCustomer(this as any);
+		await searchCustomer(this as CashierPage);
 	},
 
 	applyMatchedCustomer() {
-		applyMatchedCustomer(this as any);
+		applyMatchedCustomer(this as CashierPage);
 	},
 
 	clearMatchedCustomer() {
-		clearMatchedCustomer(this as any);
+		clearMatchedCustomer(this as CashierPage);
 	},
 
 	// ========== 结算相关（委托给 SettlementHandler） ==========
