@@ -1,9 +1,4 @@
-<navigation-bar title="我的" back="{{false}}" color="black" background="#FFF">
-  <view slot="right" class="user-info" wx:if="{{staffInfo}}">
-    <view class="staff-name">{{staffInfo.name}}</view>
-    <view class="staff-role">技师</view>
-  </view>
-</navigation-bar>
+<navigation-bar title="{{staffInfo.name || '我的'}}" back="{{false}}" color="black" background="#FFF"></navigation-bar>
 <scroll-view class="scrollarea" scroll-y type="list">
   <view class="container">
     <!-- loading遮罩 -->

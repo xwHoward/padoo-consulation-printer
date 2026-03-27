@@ -24,7 +24,10 @@
           <!-- 占用块 -->
           <view wx:for="{{item.blocks}}" wx:for-item="block" wx:key="startTime" class="time-block {{block.isReservation ? 'reservation' : ''}} {{block.gender}} {{block.isInProgress ? 'in-progress' : ''}} {{block.isSettled ? 'settled' : ''}}" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block._id}}" data-reservation="{{block.isReservation}}" data-settled="{{block.isSettled}}" data-inprogress="{{block.isInProgress}}">
             <view class="block-content">
-              <view class="block-customer">{{block.customerName}} <text style="font-size: 10px;font-weight: normal;">| {{block.phone || '无号码'}}</text></view>
+              <view class="block-customer">
+                {{block.customerName}}
+                <text style="font-size: 10px;font-weight: normal;">| {{block.phone || '无号码'}}</text>
+              </view>
               <view class="block-time">
                 {{block.startTime}}-{{block.endTime}}
                 <text wx:if="{{block.isClockIn}}">[点]</text>
@@ -43,8 +46,8 @@
     </view>
   </scroll-view>
 </view>
-<!-- loading遮罩 -->
-<view class="loading-mask" wx:if="{{loading}}">
-  <view class="loading-spinner"></view>
-  <view class="loading-text">{{loadingText}}</view>
-</view>
+  <!-- loading遮罩 -->
+  <view class="loading-mask" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <view class="loading-text">{{loadingText}}</view>
+  </view>
