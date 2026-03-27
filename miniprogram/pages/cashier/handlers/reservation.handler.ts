@@ -88,9 +88,10 @@ export class ReservationHandler {
 
 				const selectedTechnicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }> = [];
 				if (record.technicianId && record.technicianName) {
-					const staff = this.page.data.staffAvailability.find(s => s._id === record.technicianId);
-					if (staff) {
-						selectedTechnicians.push({ _id: staff._id, name: staff.name, phone: staff.phone, isClockIn: record.isClockIn || false });
+					// 从 activeStaffList 获取技师信息（无需依赖尚未刷新的 staffAvailability）
+					const staffInfo = this.page.data.activeStaffList.find(s => s._id === record.technicianId);
+					if (staffInfo) {
+						selectedTechnicians.push({ _id: staffInfo._id, name: staffInfo.name, phone: staffInfo.phone || '', isClockIn: record.isClockIn || false });
 					}
 				}
 
