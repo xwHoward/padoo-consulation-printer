@@ -5,6 +5,8 @@
   "usingComponents": {
     "navigation-bar": "/components/navigation-bar/navigation-bar",
     "date-picker": "/components/date-picker/date-picker",
-    "timeline": "/components/timeline/timeline"
+    "timeline": "/components/timeline/timeline",
+    "reservation-modal": "/components/reservation-modal/reservation-modal",
+    "modal": "/components/modal/modal"
   }
 }

@@ -1,7 +1,20 @@
 // push.handler.ts - 推送消息处理器
 import { hasButtonPermission } from '../../../utils/permission';
 import { formatMention } from '../../../utils/wechat-work';
+import { cloudDb, Collections } from '../../../utils/cloud-db';
 import type { CashierPage } from '../cashier.types';
+
+const BODY_PART_LABELS: Record<string, string> = {
+	head: '头部',
+	neck: '颈部',
+	shoulder: '肩部',
+	back: '后背',
+	arm: '手臂',
+	abdomen: '腹部',
+	waist: '腰部',
+	thigh: '大腿',
+	calf: '小腿'
+};
 
 const app = getApp<IAppOption>();
 
@@ -199,11 +212,17 @@ ${rotationLines}
 				.map(t => formatMention(t))
 				.join(' ');
 
+			// 查询老客历史记录
+			const historyRemark = await this.buildCustomerHistoryRemark(
+				firstReservation.phone,
+				firstReservation.date
+			);
+
 			const message = `【🏃 到店通知】
 
 ${customerInfo} 已到店
 项目：${firstReservation.project}
-请${technicianMentions}准备上钟，工服、口罩穿戴整齐，准备茶点（${teaCount}份）`;
+请${technicianMentions}准备上钟，工服、口罩穿戴整齐，准备茶点（${teaCount}份）${historyRemark}`;
 
 			await wx.cloud.callFunction({
 				name: 'sendWechatMessage',
@@ -213,6 +232,42 @@ ${customerInfo} 已到店
 			});
 		} catch (error) {
 			// 静默失败
+		}
+	}
+
+	/**
+	 * 查询顾客最近一次历史到店记录，返回备注文本
+	 * 若无历史记录或无手机号则返回空字符串
+	 */
+	private async buildCustomerHistoryRemark(phone: string, today: string): Promise<string> {
+		try {
+			if (!phone) return '';
+
+			// 查询该手机号的所有咨询单（前端 DB 默认最多返回 20 条）
+			const records = (await cloudDb.find<ConsultationRecord>(Collections.CONSULTATION, { phone, isVoided: false })).filter(r => r.date < today)
+				.sort((a, b) => b.date.localeCompare(a.date));
+		
+
+			// 过滤：排除今天、排除作废，按日期降序取最近一次
+			const lastRecord = records[0];
+
+			if (!lastRecord) return '';
+
+			// 计算距今天数
+			const diffDays = Math.round(
+				(new Date(today).getTime() - new Date(lastRecord.date).getTime()) / (1000 * 60 * 60 * 24)
+			);
+
+			// 需加强部位（selectedParts 为 true 的部位）
+			const parts = Object.entries(lastRecord.selectedParts || {})
+				.filter(([, active]) => active)
+				.map(([key]) => BODY_PART_LABELS[key] || key)
+				.join('、');
+
+			const partsText = parts || '无';
+			return `\n备注：老客，第${records.length}次消费，上次到店：${diffDays}天前，上次需加强部位：${partsText}，上次服务技师：${lastRecord.technician || '无'}`;
+		} catch {
+			return '';
 		}
 	}
 

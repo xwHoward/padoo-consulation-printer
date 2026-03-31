@@ -93,51 +93,5 @@ export class PrintContentBuilder {
       return 1;
     }
   }
-
-  formatConsultationInfo(info: Add<ConsultationInfo>): string {
-    const strengthMap: Record<string, string> = {
-      standard: "标准",
-      soft: "轻柔",
-      gravity: "重力",
-    };
-
-    const partMap: Record<string, string> = {
-      head: "头部",
-      neck: "颈部",
-      shoulder: "肩部",
-      back: "后背",
-      arm: "手臂",
-      abdomen: "腹部",
-      waist: "腰部",
-      thigh: "大腿",
-      calf: "小腿",
-    };
-
-    let formattedInfo = `姓氏: ${info.surname}\n`;
-    formattedInfo += `性别: ${info.gender === "male" ? "男" : "女"}\n`;
-    formattedInfo += `项目: ${info.project}\n`;
-    formattedInfo += `技师: ${info.technician}${info.isClockIn ? "[点钟]" : ""}\n`;
-    formattedInfo += `房间: ${info.room}\n`;
-    formattedInfo += `力度: ${strengthMap[info.massageStrength] || "未选择"}\n`;
-    formattedInfo += `精油: ${this.oils.find((oil) => oil._id === info.essentialOil)?.name || "未选择"}\n`;
-
-    formattedInfo += "加强部位:";
-    const selectedPartsArray = Object.keys(info.selectedParts).filter(
-      (key) => info.selectedParts[key],
-    );
-    if (selectedPartsArray.length > 0) {
-      selectedPartsArray.forEach((part) => {
-        formattedInfo += `${partMap[part]}  `;
-      });
-    } else {
-      formattedInfo += "无";
-    }
-
-    if (info.remarks) {
-      formattedInfo += `\n备注: ${info.remarks}`;
-    }
-
-    return formattedInfo;
-  }
 }
 

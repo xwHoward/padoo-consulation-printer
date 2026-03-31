@@ -11,6 +11,9 @@
       <view class="section-header">
         <view class="section-title">排钟进度</view>
         <date-picker initialDate="{{selectedDate}}" bind:change="onDatePickerChange" />
+        <view class="reserve-btn" wx:if="{{canCreateReservation}}" bindtap="openReservationModal">
+          +预约
+        </view>
       </view>
       <timeline wx:if="{{staffId}}" staffId="{{staffId}}" selectedDate="{{selectedDate}}" readonly="{{true}}" />
       <view class="empty-timeline" wx:else>
@@ -27,10 +30,6 @@
           <view class="stat-value">{{performanceStats.totalCount}}</view>
           <view class="stat-label">单量</view>
         </view>
-        <!-- <view class="stat-card">
-          <view class="stat-value">¥{{performanceStats.totalAmount}}</view>
-          <view class="stat-label">业绩</view>
-        </view> -->
         <view class="stat-card">
           <view class="stat-value">¥{{performanceStats.totalCommission}}</view>
           <view class="stat-label">提成</view>
@@ -43,10 +42,6 @@
           <view class="stat-value">{{performanceStats.overtimeCount*7.5}}</view>
           <view class="stat-label">加班</view>
         </view>
-        <!-- <view class="stat-card">
-          <view class="stat-value">{{performanceStats.guashaCount}}</view>
-          <view class="stat-label">刮痧</view>
-        </view> -->
       </view>
       <view class="project-stats" wx:if="{{performanceStats.projectStats.length > 0}}">
         <view class="section-subtitle">项目统计</view>
@@ -153,3 +148,15 @@
     </view>
   </view>
 </scroll-view>
+<!-- 预约弹窗 -->
+<reservation-modal show="{{showReservationModal}}" mode="{{reserveForm._id ? 'edit' : 'create'}}" reserveForm="{{reserveForm}}" originalReservation="{{originalReservation}}" projects="{{projects}}" staffAvailability="{{staffAvailability}}" availableMaleCount="{{availableMaleCount}}" availableFemaleCount="{{availableFemaleCount}}" matchedCustomer="{{matchedCustomer}}" matchedCustomerApplied="{{matchedCustomerApplied}}" loading="{{loading}}" loadingText="{{loadingText}}" bind:cancel="closeReservationModal" bind:confirm="confirmReservation" bind:field-change="onReservationFieldChange" bind:gender-change="onReservationGenderChange" bind:project-select="onReservationProjectSelect" bind:requirement-type-change="onRequirementTypeChange" bind:technician-select="onTechnicianSelect" bind:clock-in-toggle="onClockInToggle" bind:gender-count-change="onChangeGenderCount" />
+<!-- 推送确认弹窗 -->
+<modal show="{{pushModal.show}}" title="确认推送内容" bind:cancel="onPushModalCancel" bind:confirm="onPushModalConfirm" loading="{{pushModal.loading}}" loading-text="推送中..." cancel-text="不推送">
+  <view class="push-preview">
+    <textarea class="push-textarea" value="{{pushModal.message}}" bindinput="onPushMessageChange" placeholder="请输入推送内容" maxlength="1000" auto-height show-confirm-bar="{{false}}" />
+    <text class="char-count">{{pushModal.message.length}}/1000</text>
+  </view>
+  <view class="push-tips">
+    <text class="tips-text">ℹ️确认后将推送到企业微信群聊</text>
+  </view>
+</modal>

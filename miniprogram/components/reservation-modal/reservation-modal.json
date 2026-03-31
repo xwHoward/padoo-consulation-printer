@@ -1,0 +1,9 @@
+{
+	"component": true,
+	"usingComponents": {
+		"modal": "../modal/modal",
+		"gender-selector": "../gender-selector/gender-selector",
+		"project-selector": "../project-selector/project-selector",
+		"technician-selector": "../technician-selector/technician-selector"
+	}
+}
