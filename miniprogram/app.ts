@@ -20,8 +20,7 @@ App<IAppOption<AppGlobalData>>({
 			const user = await authManager.silentLogin();
 			this.globalData.currentUser = user;
 			this.globalData.token = authManager.getToken();
-		} catch (error) {
-		}
+		} catch (error) { }
 	},
 
 	onShow() {

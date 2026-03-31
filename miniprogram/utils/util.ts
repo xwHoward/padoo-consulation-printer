@@ -137,3 +137,28 @@ export function getNextDate(dateStr: string, maxDate?: string): string | null {
   
   return nextDate;
 }
+
+export function getDaysFromNow(targetDateStr: string): number {
+  const now = new Date();
+  const targetDate = new Date(targetDateStr);
+  
+  now.setHours(0, 0, 0, 0);
+  targetDate.setHours(0, 0, 0, 0);
+  
+  const diffTime = targetDate.getTime() - now.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  return diffDays;
+}
+
+export function formatDaysFromNow(targetDateStr: string): string {
+  const days = getDaysFromNow(targetDateStr);
+  
+  if (days === 1) {
+    return '（明天）';
+  }  else if (days > 1) {
+    return `（${days}天后）`;
+  } 
+  
+  return '';
+}

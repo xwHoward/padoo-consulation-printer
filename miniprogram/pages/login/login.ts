@@ -113,6 +113,12 @@ Page({
 			return;
 		}
 
+		if (user && user.role === 'admin') {
+			wx.redirectTo({
+				url: '/pages/cashier/cashier'
+			});
+			return;
+		}
 		const hasIndexPermission = hasPagePermission('index');
 		const hasCashierPermission = hasPagePermission('cashier');
 

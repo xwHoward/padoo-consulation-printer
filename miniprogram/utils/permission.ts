@@ -196,23 +196,3 @@ export const requirePagePermission = (page: PagePermission): boolean => {
 	}
 	return true;
 };
-
-export const canAccessPage = (pagePath: string): boolean => {
-	const pageMap: Record<string, PagePermission> = {
-		'/pages/index/index': 'index',
-		'/pages/cashier/cashier': 'cashier',
-		'/pages/history/history': 'history',
-		'/pages/staff/staff': 'staff',
-		'/pages/customers/customers': 'customers',
-		'/pages/membership-cards/membership-cards': 'membership-cards',
-		'/pages/data-management/data-management': 'data-management',
-		'/pages/screensaver/screensaver': 'screensaver',
-		'/pages/analytics/analytics': 'analytics',
-		'/pages/store-config/store-config': 'store-config',
-		'/pages/calculator/calculator': 'calculator'
-	};
-
-	const pageKey = pageMap[pagePath];
-	if (!pageKey) return true;
-	return hasPagePermission(pageKey);
-};

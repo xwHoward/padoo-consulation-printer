@@ -1,6 +1,6 @@
 // reservation.handler.ts - 预约处理器
 import { cloudDb, Collections } from '../../../utils/cloud-db';
-import { getCurrentDate, formatTime, parseProjectDuration } from '../../../utils/util';
+import { getCurrentDate, formatTime, parseProjectDuration, formatDaysFromNow } from '../../../utils/util';
 import { hasButtonPermission } from '../../../utils/permission';
 import { formatMention } from '../../../utils/wechat-work';
 import type { CashierPage } from '../cashier.types';
@@ -550,11 +550,12 @@ export class ReservationHandler {
 							const genderLabel = reservation.gender === 'male' ? '先生' : '女士';
 							const customerInfo = `${reservation.customerName}${genderLabel}`;
 							const technicianMentions = techniciansForPush.map(t => formatMention(t)).join(' ');
+							const daysText = formatDaysFromNow(reservation.date);
 							
 							const cancelMessage = `【🚫 预约**取消**提醒】
 
 顾客：${customerInfo}
-日期：${reservation.date}
+日期：${reservation.date}${daysText}
 时间：**${reservation.startTime} - ${reservation.endTime}**
 项目：${reservation.project}
 技师：**${technicianMentions}**`;
@@ -734,7 +735,9 @@ export class ReservationHandler {
 		const changes: string[] = [];
 
 		if (original.date !== updated.date) {
-			changes.push(`📅 日期：${original.date} → ${updated.date}`);
+			const originalDaysText = formatDaysFromNow(original.date);
+			const updatedDaysText = formatDaysFromNow(updated.date);
+			changes.push(`📅 日期：${original.date}${originalDaysText} → ${updated.date}${updatedDaysText}`);
 		}
 		if (original.startTime !== updated.startTime) {
 			changes.push(`⏰ 时间：${original.startTime} → ${updated.startTime}`);
@@ -763,10 +766,14 @@ export class ReservationHandler {
 		const technicianMention = staffInfo ? formatMention(staffInfo) : '';
 		const technicianName = updated.technicianName || '待定';
 
+		const daysText = formatDaysFromNow(updated.date);
+		const dateInfo = `📅 预约日期：${updated.date}${daysText}`;
+
 		// 构建默认消息
 		const defaultMessage = `【📝 预约变更通知】
 
 顾客：${customerInfo}
+${dateInfo}
 ${changes.join('\n')}
 
 请${technicianMention || technicianName}知悉，做好准备`;
@@ -805,27 +812,7 @@ ${changes.join('\n')}
 	private async handleSpecificReservation(reserveForm: typeof this.page.data.reserveForm, endTime: string): Promise<void> {
 		const technicians = reserveForm.selectedTechnicians;
 		if (technicians.length === 0) {
-			const record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'> = {
-				date: reserveForm.date,
-				customerName: reserveForm.customerName || '',
-				gender: reserveForm.gender,
-				phone: reserveForm.phone,
-				project: reserveForm.project || '待定',
-				technicianId: '',
-				technicianName: '',
-				startTime: reserveForm.startTime,
-				endTime: endTime,
-				isClockIn: false,
-				status: "active"
-			};
-			const success = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
-			if (success) {
-				wx.showToast({ title: '预约成功', icon: 'success' });
-				this.closeReserveModal();
-				await this.page.loadTimelineData();
-			} else {
-				wx.showToast({ title: '保存失败', icon: 'none' });
-			}
+			wx.showToast({ title: '请至少选择一位技师', icon: 'none' });
 			return;
 		}
 
@@ -870,10 +857,11 @@ ${changes.join('\n')}
 			const technicianMentions = techniciansWithPhone.map(t => formatMention(t)).join(' ');
 			const reservationType = this.pushHandler.getReservationTypeText(techniciansWithPhone);
 
+			const daysText = formatDaysFromNow(reserveForm.date);
 			const createMessage = `【⏰ 新预约提醒】
 
 顾客：${customerInfo}
-日期：${reserveForm.date}
+日期：${reserveForm.date}${daysText}
 时间：**${reserveForm.startTime} - ${endTime}**
 项目：${reserveForm.project || '待定'}
 类型：${reservationType}
@@ -1038,11 +1026,12 @@ ${changes.join('\n')}
 			const genderLabel = reserveForm.gender === 'male' ? '先生' : '女士';
 			const customerInfo = `${reserveForm.customerName || ''}${genderLabel}`;
 			const technicianMentions = techniciansWithPhone.map(t => formatMention(t)).join(' ');
+			const daysText = formatDaysFromNow(reserveForm.date);
 
 			const createMessage = `【⏰ 新预约提醒】
 
 顾客：${customerInfo}
-日期：${reserveForm.date}
+日期：${reserveForm.date}${daysText}
 时间：**${reserveForm.startTime} - ${endTime}**
 项目：${reserveForm.project || '待定'}
 类型：轮钟
