@@ -21,7 +21,10 @@ App<IAppOption<AppGlobalData>>({
 			const user = await authManager.silentLogin();
 			this.globalData.currentUser = user;
 			this.globalData.token = authManager.getToken();
-		} catch (error) { }
+		} catch (error) {
+			// 静默登录失败是预期情况（未登录状态），记录日志供调试
+			console.debug('[App] 静默登录失败:', error instanceof Error ? error.message : error);
+		}
 	},
 
 	onShow() {
@@ -98,6 +101,8 @@ App<IAppOption<AppGlobalData>>({
 				this.globalData.staffs = (staff || []) as StaffInfo[];
 				this.globalData.isDataLoaded = true;
 			} catch (error) {
+				// 全局数据加载失败，记录错误供调试
+				console.error('[App] 加载全局数据失败:', error instanceof Error ? error.message : error);
 			} finally {
 				this.globalData.loadPromise = null;
 			}

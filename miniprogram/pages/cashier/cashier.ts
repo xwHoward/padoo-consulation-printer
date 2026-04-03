@@ -25,6 +25,7 @@ Page({
         rooms: [] as Room[],
         rotationList: [] as RotationItem[],
         timelineRefreshTrigger: 0,
+        _isFirstShow: true, // 用于防止首次加载时onLoad和onShow重复请求
         // 日期选择器状态
         dateSelector: {
             selectedDate: '',
@@ -134,6 +135,13 @@ Page({
         const today = getCurrentDate();
         this.setData({ selectedDate: today });
         this.loadProjects();
+        
+        // 首次加载在onLoad中执行，避免与onShow重复
+        this.setData({
+            canCreateReservation: hasButtonPermission('createReservation'),
+            canPushRotation: hasButtonPermission('pushRotation')
+        });
+        this.loadInitialData();
     },
 
     async onShow() {
@@ -142,12 +150,17 @@ Page({
 
         if (!requirePagePermission('cashier')) return;
 
-        // 检查按钮权限
+        // 首次显示时跳过，因为已在onLoad中加载
+        if (this.data._isFirstShow) {
+            this.setData({ _isFirstShow: false });
+            return;
+        }
+
+        // 后续回到页面时重新加载数据
         this.setData({
             canCreateReservation: hasButtonPermission('createReservation'),
             canPushRotation: hasButtonPermission('pushRotation')
         });
-
         this.loadInitialData();
     },
 

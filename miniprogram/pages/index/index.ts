@@ -424,6 +424,7 @@ Page({
         isVoided: false,
         extraTime: 0,
         overtime: 0,
+        guasha: false,
         startTime: startTimeStr,
         endTime: endTimeStr,
       };
@@ -454,6 +455,7 @@ Page({
               await app.loadGlobalData();
             }
           } catch (error) {
+            console.warn('[轮牌] 服务顾客更新轮牌失败:', error);
           }
         }
 
@@ -646,31 +648,35 @@ Page({
       editId
     );
 
-    const [success1, success2] = await Promise.all([
-      this.saveConsultation(info1, editId),
-      this.saveConsultation(info2, editId)
-    ]);
+    // 顺序执行保存，避免并发更新轮牌导致数据不一致
+    const success1 = await this.saveConsultation(info1, editId);
+    if (!success1) {
+      wx.showToast({ title: '保存顾客1失败', icon: 'error' });
+      return;
+    }
 
-    if (success1 && success2) {
-      const [clockInInfo1, clockInInfo2] = await Promise.all([
-        ClockInUtils.formatClockInInfo(info1, this.data.editId, false),
-        ClockInUtils.formatClockInInfo(info2, this.data.editId, false)
-      ]);
-      const combinedInfo = `【顾客1】
+    const success2 = await this.saveConsultation(info2, editId);
+    if (!success2) {
+      wx.showToast({ title: '保存顾客2失败', icon: 'error' });
+      return;
+    }
+
+    const [clockInInfo1, clockInInfo2] = await Promise.all([
+      ClockInUtils.formatClockInInfo(info1, this.data.editId, false),
+      ClockInUtils.formatClockInInfo(info2, this.data.editId, false)
+    ]);
+    const combinedInfo = `【顾客1】
 ${clockInInfo1}
 
 【顾客2】
 ${clockInInfo2}`;
 
-      this.setData({
-        'clockInModal.show': true,
-        'clockInModal.content': combinedInfo,
-        clockInSubmitting: true
-      });
-      await this.dataLoader?.loadTechnicianList();
-    } else {
-      wx.showToast({ title: '保存失败', icon: 'error' });
-    }
+    this.setData({
+      'clockInModal.show': true,
+      'clockInModal.content': combinedInfo,
+      clockInSubmitting: true
+    });
+    await this.dataLoader?.loadTechnicianList();
   },
 
   showPlateInputModal() {

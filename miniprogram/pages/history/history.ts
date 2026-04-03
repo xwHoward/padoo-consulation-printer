@@ -668,8 +668,9 @@ Page({
         const record = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, recordId) as ConsultationRecord | null;
         if (record) {
           const [hours, minutes] = record.endTime.split(':').map(Number);
-          const endDate = new Date();
-          endDate.setHours(hours, minutes, 0, 0);
+          // 使用记录的日期构建Date对象，避免跨日计算错误
+          const [year, month, day] = record.date.split('-').map(Number);
+          const endDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
           const newEndDate = new Date(endDate.getTime() + value * 30 * 60 * 1000);
           updateData.endTime = formatTime(newEndDate, false);
@@ -700,12 +701,14 @@ Page({
     try {
       const updateData: {guasha: boolean; guashaTime?: number; endTime?: string;} = {guasha: newGuasha};
 
+      // 使用记录的日期构建Date对象，避免跨日计算错误
+      const [year, month, day] = record.date.split('-').map(Number);
+
       if (newGuasha) {
         updateData.guashaTime = 15;
 
         const [hours, minutes] = record.endTime.split(':').map(Number);
-        const endDate = new Date();
-        endDate.setHours(hours, minutes, 0, 0);
+        const endDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
         const newEndDate = new Date(endDate.getTime() + 15 * 60 * 1000);
         updateData.endTime = formatTime(newEndDate, false);
@@ -714,8 +717,7 @@ Page({
 
         if (record.guashaTime) {
           const [hours, minutes] = record.endTime.split(':').map(Number);
-          const endDate = new Date();
-          endDate.setHours(hours, minutes, 0, 0);
+          const endDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
           const newEndDate = new Date(endDate.getTime() - 15 * 60 * 1000);
           updateData.endTime = formatTime(newEndDate, false);

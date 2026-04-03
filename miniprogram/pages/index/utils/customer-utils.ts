@@ -1,3 +1,5 @@
+import { matchCustomer as matchCustomerService, parseCustomerName, buildPlateNumberUpdates } from '../../../services/customer.service';
+
 export class CustomerUtils {
   static async searchCustomer(
     consultationInfo: Add<ConsultationInfo>,
@@ -7,7 +9,7 @@ export class CustomerUtils {
     guest2Info: GuestInfo
   ): Promise<CustomerRecord | null> {
     let currentSurname = '';
-    let currentGender = '';
+    let currentGender: 'male' | 'female' | '' = '';
     let currentPhone = '';
 
     if (isDualMode) {
@@ -20,32 +22,14 @@ export class CustomerUtils {
     }
     currentPhone = consultationInfo.phone;
 
-    if (!currentSurname && !currentPhone) {
-      return null;
-    }
+    // 使用统一的服务层
+    const result = await matchCustomerService({
+      surname: currentSurname,
+      gender: currentGender,
+      phone: currentPhone
+    });
 
-    try {
-      const res = await wx.cloud.callFunction({
-        name: 'matchCustomer',
-        data: {
-          surname: currentSurname,
-          gender: currentGender,
-          phone: currentPhone
-        }
-      });
-      
-      if (!res.result || typeof res.result !== 'object') {
-        throw new Error('匹配顾客失败');
-      }
-      
-      if (res.result.code === 0 && res.result.data) {
-        return res.result.data;
-      }
-      
-      return null;
-    } catch (error) {
-      return null;
-    }
+    return result.customer;
   }
 
   static buildCustomerUpdates(
@@ -57,10 +41,11 @@ export class CustomerUtils {
 
     const guestKey = activeGuest === 1 ? 'guest1Info' : 'guest2Info';
     const updates: Record<string, unknown> = {};
+    const { surname, gender } = parseCustomerName(matchedCustomer.name);
 
     if (isDualMode) {
-      updates[`${guestKey}.surname`] = matchedCustomer.name.replace(/先生|女士/g, '');
-      updates[`${guestKey}.gender`] = matchedCustomer.name.endsWith('女士') ? 'female' : 'male';
+      updates[`${guestKey}.surname`] = surname;
+      updates[`${guestKey}.gender`] = gender;
 
       if (matchedCustomer.responsibleTechnician) {
         updates[`${guestKey}.technician`] = matchedCustomer.responsibleTechnician;
@@ -71,12 +56,13 @@ export class CustomerUtils {
       }
 
       if (matchedCustomer.licensePlate) {
-        const plateUpdates = this.buildPlateNumberUpdates(matchedCustomer.licensePlate);
-        Object.assign(updates, plateUpdates);
+        const plateUpdates = buildPlateNumberUpdates(matchedCustomer.licensePlate);
+        updates['licensePlate'] = plateUpdates.licensePlate;
+        updates['plateNumber'] = plateUpdates.plateNumber;
       }
     } else {
-      updates['consultationInfo.surname'] = matchedCustomer.name.replace(/先生|女士/g, '');
-      updates['consultationInfo.gender'] = matchedCustomer.name.endsWith('女士') ? 'female' : 'male';
+      updates['consultationInfo.surname'] = surname;
+      updates['consultationInfo.gender'] = gender;
 
       if (matchedCustomer.phone) {
         updates['consultationInfo.phone'] = matchedCustomer.phone;
@@ -87,33 +73,13 @@ export class CustomerUtils {
       }
 
       if (matchedCustomer.licensePlate) {
-        const plateUpdates = this.buildPlateNumberUpdates(matchedCustomer.licensePlate);
-        Object.assign(updates, plateUpdates);
+        const plateUpdates = buildPlateNumberUpdates(matchedCustomer.licensePlate);
+        updates['licensePlate'] = plateUpdates.licensePlate;
+        updates['plateNumber'] = plateUpdates.plateNumber;
       }
     }
 
     updates.matchedCustomerApplied = true;
-
-    return updates;
-  }
-
-  private static buildPlateNumberUpdates(licensePlate: string): Record<string, unknown> {
-    const updates: Record<string, string | string[]> = {
-      'licensePlate': licensePlate
-    };
-
-    const isNewEnergyVehicle = licensePlate.length === 8;
-    const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
-    const plateNumber = Array(maxPlateLength).fill('');
-    const plateChars = licensePlate.split('');
-    
-    plateChars.forEach((char, index) => {
-      if (index < maxPlateLength) {
-        plateNumber[index] = char;
-      }
-    });
-    
-    updates['plateNumber'] = plateNumber;
 
     return updates;
   }

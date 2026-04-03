@@ -1,5 +1,6 @@
 // customer-match.ts - 顾客匹配工具
 import type { CashierPage } from '../cashier.types';
+import { matchCustomer as matchCustomerService, parseCustomerName } from '../../../services/customer.service';
 
 /**
  * 搜索匹配顾客
@@ -20,38 +21,17 @@ export async function searchCustomer(page: CashierPage): Promise<void> {
 		return;
 	}
 
-	try {
-		const res = await wx.cloud.callFunction({
-			name: 'matchCustomer',
-			data: {
-				surname: currentSurname,
-				gender: currentGender,
-				phone: currentPhone
-			}
-		});
+	// 使用统一的服务层
+	const result = await matchCustomerService({
+		surname: currentSurname,
+		gender: currentGender,
+		phone: currentPhone
+	});
 
-		if (!res.result || typeof res.result !== 'object') {
-			throw new Error('匹配顾客失败');
-		}
-
-		const result = res.result as { code: number; data?: CustomerRecord };
-		if (result.code === 0 && result.data) {
-			page.setData({
-				matchedCustomer: result.data,
-				matchedCustomerApplied: false
-			});
-		} else {
-			page.setData({
-				matchedCustomer: null,
-				matchedCustomerApplied: false
-			});
-		}
-	} catch (error) {
-		page.setData({
-			matchedCustomer: null,
-			matchedCustomerApplied: false
-		});
-	}
+	page.setData({
+		matchedCustomer: result.customer,
+		matchedCustomerApplied: false
+	});
 }
 
 /**
@@ -62,9 +42,10 @@ export function applyMatchedCustomer(page: CashierPage): void {
 
 	if (!matchedCustomer) return;
 
+	const { surname, gender } = parseCustomerName(matchedCustomer.name);
 	const updates: Record<string, unknown> = {
-		'reserveForm.customerName': matchedCustomer.name.replace(/先生|女士/g, ''),
-		'reserveForm.gender': matchedCustomer.name.endsWith('女士') ? 'female' : 'male',
+		'reserveForm.customerName': surname,
+		'reserveForm.gender': gender,
 	};
 
 	if (matchedCustomer.phone) {

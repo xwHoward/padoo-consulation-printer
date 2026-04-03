@@ -1,27 +1,19 @@
 const cloud = require('wx-server-sdk')
+const {
+    SHIFT_START_TIME,
+    SHIFT_END_TIME,
+    parseTimeToMinutes,
+    formatMinutesToTime,
+    getChinaTime,
+    mergeTimeRanges
+} = require('./shared-utils')
+
 cloud.init({
     env: cloud.DYNAMIC_CURRENT_ENV
 })
 
 const db = cloud.database()
 const _ = db.command
-
-// 模块级班次时间常量
-const SHIFT_START_TIME = {
-    'morning': '12:00',
-    'evening': '13:00',
-    'overtime': '00:00',
-    'off': '',
-    'leave': ''
-}
-
-const SHIFT_END_TIME = {
-    'morning': '22:00',
-    'evening': '23:00',
-    'overtime': '23:59',
-    'off': '',
-    'leave': ''
-}
 
 exports.main = async (event, context) => {
     const { date, currentTime, projectDuration, currentReservationIds, currentConsultationId, mode } = event
@@ -160,63 +152,6 @@ exports.main = async (event, context) => {
             code: -1,
             message: '获取失败: ' + error.message
         }
-    }
-}
-
-function parseTimeToMinutes(timeStr) {
-    const [hours, minutes] = timeStr.split(':').map(Number)
-    return hours * 60 + minutes
-}
-
-function mergeTimeRanges(appointments) {
-    if (!appointments || appointments.length === 0) return []
-    
-    const ranges = appointments.map(app => ({
-        start: parseTimeToMinutes(app.startTime),
-        end: parseTimeToMinutes(app.endTime)
-    }))
-    
-    ranges.sort((a, b) => a.start - b.start)
-    
-    const merged = []
-    let current = ranges[0]
-    
-    for (let i = 1; i < ranges.length; i++) {
-        const next = ranges[i]
-        
-        if (next.start <= current.end) {
-            current.end = Math.max(current.end, next.end)
-        } else {
-            merged.push({ ...current })
-            current = next
-        }
-    }
-    
-    merged.push({ ...current })
-    
-    return merged
-}
-
-function formatMinutesToTime(minutes) {
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
-}
-
-/**
- * 获取北京时间（UTC+8）的当前时间信息
- * 统一用 getUTCHours/getUTCMinutes 读取手动偏移后的值，
- * 避免因服务器本地时区不同而导致二次叠加（UTC+8 → UTC+16）
- */
-function getChinaTime() {
-    const chinaTime = new Date(Date.now() + 8 * 60 * 60 * 1000)
-    const hour = chinaTime.getUTCHours()
-    const minute = chinaTime.getUTCMinutes()
-    return {
-        todayStr: chinaTime.toISOString().split('T')[0],
-        currentHour: hour,
-        currentMinute: minute,
-        currentMins: hour * 60 + minute
     }
 }
 

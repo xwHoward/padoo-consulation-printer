@@ -1,4 +1,6 @@
 const cloud = require('wx-server-sdk')
+const { parseTimeToMinutes } = require('./shared-utils')
+
 cloud.init({
     env: cloud.DYNAMIC_CURRENT_ENV
 })
@@ -53,26 +55,22 @@ async function initRotationQueue(date) {
         }
     }
 
-    const existingQueue = await db.collection('rotation_queue').where({
-        date: date
-    }).get()
+    // 并行获取所需数据
+    const [staffRes, yesterdayScheduleRes, yesterdayRotationRes] = await Promise.all([
+        db.collection('staff').where({
+            status: 'active',
+            _id: _.in(onDutyStaffIds)
+        }).get(),
+        db.collection('schedule').where({
+            date: getYesterday(date)
+        }).get(),
+        db.collection('rotation_queue').where({
+            date: getYesterday(date)
+        }).get()
+    ])
 
-
-    const staffRes = await db.collection('staff').where({
-        status: 'active',
-        _id: _.in(onDutyStaffIds)
-    }).get()
     const staffList = staffRes.data || []
-
-    const yesterday = getYesterday(date)
-    const yesterdayScheduleRes = await db.collection('schedule').where({
-        date: yesterday
-    }).get()
     const yesterdaySchedules = yesterdayScheduleRes.data || []
-
-    const yesterdayRotationRes = await db.collection('rotation_queue').where({
-        date: yesterday
-    }).get()
     const yesterdayRotation = yesterdayRotationRes.data[0]
 
     const staffWithPriority = staffList.map(staff => {
@@ -119,36 +117,65 @@ async function initRotationQueue(date) {
         ...staff,
         position: index
     }))
-    if (existingQueue.data.length > 0) {
-        await db.collection('rotation_queue').doc(existingQueue.data[0]._id).update({
-            data: {
-                staffList: staffListWithOrder,
-                currentIndex: 0,
-                updatedAt: new Date().toISOString()
-            }
-        })
-        const queue = await db.collection('rotation_queue').doc(existingQueue.data[0]._id).get()
+
+    // 使用事务防止竞态条件：检查并创建/更新轮牌队列
+    const transaction = await db.startTransaction()
+    try {
+        // 在事务中重新检查是否已存在
+        const existingQueue = await transaction.collection('rotation_queue').where({
+            date: date
+        }).get()
+
+        const now = new Date().toISOString()
+        let queueId
+
+        if (existingQueue.data.length > 0) {
+            // 已存在则更新
+            queueId = existingQueue.data[0]._id
+            await transaction.collection('rotation_queue').doc(queueId).update({
+                data: {
+                    staffList: staffListWithOrder,
+                    currentIndex: 0,
+                    updatedAt: now
+                }
+            })
+        } else {
+            // 不存在则创建
+            const result = await transaction.collection('rotation_queue').add({
+                data: {
+                    date: date,
+                    staffList: staffListWithOrder,
+                    currentIndex: 0,
+                    createdAt: now,
+                    updatedAt: now
+                }
+            })
+            queueId = result._id
+        }
+
+        await transaction.commit()
+
+        // 事务提交后获取最新数据
+        const queue = await db.collection('rotation_queue').doc(queueId).get()
         return {
             code: 0,
             message: '轮牌初始化成功',
             data: queue.data
         }
-    } else {
-        const result = await db.collection('rotation_queue').add({
-            data: {
-                date: date,
-                staffList: staffListWithOrder,
-                currentIndex: 0,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+    } catch (e) {
+        await transaction.rollback()
+        // 事务失败可能是因为并发冲突，尝试返回已存在的数据
+        const existingQueue = await db.collection('rotation_queue').where({
+            date: date
+        }).get()
+        if (existingQueue.data.length > 0) {
+            return {
+                code: 0,
+                message: '轮牌已存在',
+                data: existingQueue.data[0]
             }
-        })
-        const queue = await db.collection('rotation_queue').doc(result._id).get()
-        return {
-            code: 0,
-            message: '轮牌初始化成功',
-            data: queue.data
         }
+        throw e
     }
 }
 
@@ -325,9 +352,4 @@ function getYesterday(date) {
     const d = new Date(date)
     d.setDate(d.getDate() - 1)
     return d.toISOString().split('T')[0]
-}
-
-function parseTimeToMinutes(timeStr) {
-    const [hours, minutes] = timeStr.split(':').map(Number)
-    return hours * 60 + minutes
 }

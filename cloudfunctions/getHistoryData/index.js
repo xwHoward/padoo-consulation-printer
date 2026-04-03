@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk');
+const { formatDateTime: formatTime } = require('./shared-utils');
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
@@ -35,15 +36,6 @@ function isToday(date) {
 function parseProjectDuration(project) {
   const match = project.match(/(\d+)min/);
   return match ? parseInt(match[ 1 ], 10) : 60;
-}
-
-function formatTime(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hour = String(date.getHours()).padStart(2, '0');
-  const minute = String(date.getMinutes()).padStart(2, '0');
-  return `${ year }-${ month }-${ day } ${ hour }:${ minute }`;
 }
 
 async function getDailyRecordsWithCount(date) {

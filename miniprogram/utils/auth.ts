@@ -31,6 +31,7 @@ export class AuthManager {
 				this.token = tokenStr;
 			}
 		} catch (error) {
+			console.warn('[Auth] 从存储加载用户信息失败:', error);
 		}
 	}
 
@@ -47,6 +48,7 @@ export class AuthManager {
 				wx.removeStorageSync(STORAGE_KEY_TOKEN);
 			}
 		} catch (error) {
+			console.warn('[Auth] 保存用户信息到存储失败:', error);
 		}
 	}
 

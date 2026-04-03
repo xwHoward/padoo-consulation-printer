@@ -15,6 +15,7 @@ interface TimelineData {
 	scrollLeft: number
 	loading: boolean
 	loadingText: string
+	_lastLoadKey: string
 }
 
 interface StaffTimelineItem {
@@ -80,26 +81,39 @@ Component({
 		scrollLeft: 0,
 		loading: false,
 		loadingText: '加载数据...',
-		TIMELINE_HOUR_WIDTH
+		TIMELINE_HOUR_WIDTH,
+		_lastLoadKey: '' // 用于防止重复加载
 	} as TimelineData,
 
 	observers: {
 		'selectedDate, staffId': function (selectedDate: string, staffId: string) {
 			if (!selectedDate) return;
-
+			// 防止与pageLifetimes.show重复触发
+			const loadKey = `${selectedDate}-${staffId || ''}`;
+			if (this.data._lastLoadKey === loadKey) return;
 			this.loadAllStaffTimelineData(staffId);
 		}
 	},
 	pageLifetimes: {
 		show: function () {
+			const selectedDate = this.properties.selectedDate;
+			const staffId = this.properties.staffId || '';
+			const loadKey = `${selectedDate}-${staffId}`;
+			// 防止与observers重复触发
+			if (this.data._lastLoadKey === loadKey) return;
 			this.loadAllStaffTimelineData();
 		}
 	},
 
 	methods: {
 		loadAllStaffTimelineData(highlightStaffId?: string) {
+			// 更新加载标识，防止重复请求
+			const selectedDate = this.properties.selectedDate || getCurrentDate();
+			const loadKey = `${selectedDate}-${highlightStaffId || ''}`;
+			this.setData({ _lastLoadKey: loadKey });
+
 			loadingService.withLoading(this, async () => {
-				const today = this.properties.selectedDate || getCurrentDate();
+				const today = selectedDate;
 				const todayStr = getCurrentDate();
 				const isToday = today === todayStr;
 

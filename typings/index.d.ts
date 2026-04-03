@@ -6,13 +6,19 @@ interface BaseRecord {
 }
 
 /**
+ * 可变字段类型，省略系统管理的字段
+ */
+type MutableFields<T extends BaseRecord> = Omit<T, '_id' | 'createdAt' | 'updatedAt'>;
+
+/**
  * 新增数据类型，省略 '_id', 'createdAt', 'updatedAt' 字段
  */
-type Add<T> = T extends BaseRecord ? Omit<T, '_id' | 'createdAt' | 'updatedAt'> : never;
+type Add<T> = T extends BaseRecord ? MutableFields<T> : never;
+
 /**
- * 更新数据类型，省略 'createdAt', 'updatedAt', '_id' 字段
+ * 更新数据类型，与 Add 类型相同
  */
-type Update<T> = T extends BaseRecord ? Omit<T, '_id' | 'createdAt' | 'updatedAt'> : never;
+type Update<T> = Add<T>;
 
 
 // 支付方式类型
@@ -56,18 +62,16 @@ interface ConsultationInfo extends BaseRecord {
   licensePlate?: string; // 车牌号
 }
 
-interface GuestInfo {
-  surname: string;
-  gender: 'male' | 'female';
-  selectedParts: Record<string, boolean>;
-  massageStrength: 'standard' | 'soft' | 'gravity';
-  essentialOil: string;
-  remarks: string;
-  technician: string;
-  isClockIn: boolean;
-  couponCode: string;
-  couponPlatform: PaymentMethod;
-  project: string;
+/**
+ * 双人模式顾客信息，从ConsultationInfo中提取公共字段
+ */
+type GuestInfoFields = Pick<ConsultationInfo, 
+  'surname' | 'gender' | 'selectedParts' | 'essentialOil' | 'remarks' | 
+  'technician' | 'isClockIn' | 'couponCode' | 'couponPlatform' | 'project'
+>;
+
+interface GuestInfo extends GuestInfoFields {
+  massageStrength: 'standard' | 'soft' | 'gravity'; // 双人模式不允许空值
 }
 
 // 定义带ID的咨询单数据结构（用于历史记录）
