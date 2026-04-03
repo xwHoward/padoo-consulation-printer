@@ -362,14 +362,16 @@ Page({
 
 		const salesByStaff: Record<string, number> = {};
 		memberships.forEach(m => {
-			if (m.salesStaff) {
+			if (m.salesStaff && m.salesStaff.length > 0) {
+				const salesCount = m.salesStaff.length;
+				const salesPerStaff = (m.paidAmount || 0) / salesCount;
 				m.salesStaff.forEach(ss => {
 					const staffId = staffNameToId[ss];
 					if (staffId) {
 						if (!salesByStaff[staffId]) {
 							salesByStaff[staffId] = 0;
 						}
-						salesByStaff[staffId] += m.paidAmount || 0;
+						salesByStaff[staffId] += salesPerStaff;
 					}
 				});
 			}
