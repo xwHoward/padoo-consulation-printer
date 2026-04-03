@@ -1,334 +1,393 @@
-<navigation-bar title="场控收银" back="{{true}}" color="black" background="#FFF">
-  <view slot="right" class="landscape-btn" bindtap="toggleLandscape">
-    <text>{{isLandscape ? '竖屏' : '横屏'}}</text>
-  </view>
+<navigation-bar title="" back="{{false}}" color="black"
+    background="#FFF">
+    <view slot="left" class="nav-btns">
+        <view bindtap="goToHome" class="nav-btn" aria-role="button" aria-label="主页">
+            <text class="nav-btn-text">主页</text>
+        </view>
+        <view bindtap="loadInitialData" class="nav-btn" aria-role="button" aria-label="刷新">
+            <text class="nav-btn-text">刷新</text>
+        </view>
+        <view bindtap="goToLottery" class="nav-btn" aria-role="button" aria-label="抽奖">
+            <text class="nav-btn-text">抽奖</text>
+        </view>
+        <view bindtap="onScreensaver" class="nav-btn" aria-role="button" aria-label="无人值守">
+            <text class="nav-btn-text">无人值守</text>
+        </view>
+    </view>
+    <view slot="right" class="nav-btns">
+        <view bindtap="toggleLandscape" class="nav-btn" aria-role="button" aria-label="咨询单">
+            <text class="nav-btn-text">{{isLandscape ? '竖屏' : '横屏'}}</text>
+        </view>
+        <view bindtap="goToIndex" class="nav-btn" aria-role="button" aria-label="咨询单">
+            <text class="nav-btn-text">咨询单</text>
+        </view>
+        <view bindtap="goToHistory" class="nav-btn" aria-role="button" aria-label="单据">
+            <text class="nav-btn-text">单据</text>
+        </view>
+    </view>
 </navigation-bar>
 <scroll-view class="scrollarea" scroll-y type="list">
-  <view class="container">
-    <!-- 员工排钟表 -->
-    <view class="section timeline-section">
-      <view class="section-header">
-        <view class="section-title">排钟进度</view>
-        <!-- 日期快速导航 -->
-        <date-picker initialDate="{{dateSelector.selectedDate}}" bind:change="onDatePickerChange" />
-        <view class="reserve-btn" wx:if="{{canCreateReservation}}" bindtap="openReserveModal">
-          +预约
+    <view class="container">
+        <!-- 员工排钟表 -->
+        <view class="section timeline-section">
+            <view class="section-header">
+                <view class="section-title">排钟进度</view>
+                <!-- 日期快速导航 -->
+                <date-picker initialDate="{{dateSelector.selectedDate}}" bind:change="onDatePickerChange" />
+                <view class="reserve-btn" wx:if="{{canCreateReservation}}" bindtap="openReserveModal">
+                    +预约
+                </view>
+            </view>
+            <timeline selectedDate="{{selectedDate}}" readonly="{{false}}" refreshTrigger="{{timelineRefreshTrigger}}"
+                bind:blockclick="onBlockClick" />
         </view>
-      </view>
-      <timeline selectedDate="{{selectedDate}}" readonly="{{false}}" refreshTrigger="{{timelineRefreshTrigger}}" bind:blockclick="onBlockClick" />
-    </view>
 
-    <!-- 快速预约 -->
-    <view class="section quick-reservation-section">
-      <view class="section-header">
-        <view class="section-title">快速预约</view>
-      </view>
-      <view class="quick-reservation-grid">
-        <view class="quick-reservation-slot {{quickReservationSlots.oneMale.length > 0 ? 'available' : 'unavailable'}}">
-          <view class="slot-label">1位男技师</view>
-          <view class="slot-time-list">
-            <view class="slot-time-item" wx:for="{{quickReservationSlots.oneMale}}" wx:key="time" bindtap="copyReservationSlot" data-type="oneMale" data-text="{{item.time}}">
-              <view class="slot-time-text">{{item.time}}</view>
-              <view class="slot-staff-names">{{item.staffNames}}</view>
+        <!-- 快速预约 -->
+        <view class="section quick-reservation-section">
+            <view class="section-header">
+                <view class="section-title">快速预约</view>
             </view>
-            <view class="slot-time-item empty" wx:if="{{quickReservationSlots.oneMale.length === 0}}">暂无可约时段</view>
-          </view>
-        </view>
-        <view class="quick-reservation-slot {{quickReservationSlots.oneFemale.length > 0 ? 'available' : 'unavailable'}}">
-          <view class="slot-label">1位女技师</view>
-          <view class="slot-time-list">
-            <view class="slot-time-item" wx:for="{{quickReservationSlots.oneFemale}}" wx:key="time" bindtap="copyReservationSlot" data-type="oneFemale" data-text="{{item.time}}">
-              <view class="slot-time-text">{{item.time}}</view>
-              <view class="slot-staff-names">{{item.staffNames}}</view>
+            <view class="quick-reservation-grid">
+                <view
+                    class="quick-reservation-slot {{quickReservationSlots.oneMale.length > 0 ? 'available' : 'unavailable'}}">
+                    <view class="slot-label">1位男技师</view>
+                    <view class="slot-time-list">
+                        <view class="slot-time-item" wx:for="{{quickReservationSlots.oneMale}}" wx:key="time"
+                            bindtap="copyReservationSlot" data-type="oneMale" data-text="{{item.time}}">
+                            <view class="slot-time-text">{{item.time}}</view>
+                            <view class="slot-staff-names">{{item.staffNames}}</view>
+                        </view>
+                        <view class="slot-time-item empty" wx:if="{{quickReservationSlots.oneMale.length === 0}}">暂无可约时段
+                        </view>
+                    </view>
+                </view>
+                <view
+                    class="quick-reservation-slot {{quickReservationSlots.oneFemale.length > 0 ? 'available' : 'unavailable'}}">
+                    <view class="slot-label">1位女技师</view>
+                    <view class="slot-time-list">
+                        <view class="slot-time-item" wx:for="{{quickReservationSlots.oneFemale}}" wx:key="time"
+                            bindtap="copyReservationSlot" data-type="oneFemale" data-text="{{item.time}}">
+                            <view class="slot-time-text">{{item.time}}</view>
+                            <view class="slot-staff-names">{{item.staffNames}}</view>
+                        </view>
+                        <view class="slot-time-item empty" wx:if="{{quickReservationSlots.oneFemale.length === 0}}">
+                            暂无可约时段</view>
+                    </view>
+                </view>
+                <view
+                    class="quick-reservation-slot {{quickReservationSlots.twoMale.length > 0 ? 'available' : 'unavailable'}}">
+                    <view class="slot-label">2位男技师</view>
+                    <view class="slot-time-list">
+                        <view class="slot-time-item" wx:for="{{quickReservationSlots.twoMale}}" wx:key="time"
+                            bindtap="copyReservationSlot" data-type="twoMale" data-text="{{item.time}}">
+                            <view class="slot-time-text">{{item.time}}</view>
+                            <view class="slot-staff-names">{{item.staffNames}}</view>
+                        </view>
+                        <view class="slot-time-item empty" wx:if="{{quickReservationSlots.twoMale.length === 0}}">暂无可约时段
+                        </view>
+                    </view>
+                </view>
+                <view
+                    class="quick-reservation-slot {{quickReservationSlots.twoFemale.length > 0 ? 'available' : 'unavailable'}}">
+                    <view class="slot-label">2位女技师</view>
+                    <view class="slot-time-list">
+                        <view class="slot-time-item" wx:for="{{quickReservationSlots.twoFemale}}" wx:key="time"
+                            bindtap="copyReservationSlot" data-type="twoFemale" data-text="{{item.time}}">
+                            <view class="slot-time-text">{{item.time}}</view>
+                            <view class="slot-staff-names">{{item.staffNames}}</view>
+                        </view>
+                        <view class="slot-time-item empty" wx:if="{{quickReservationSlots.twoFemale.length === 0}}">
+                            暂无可约时段</view>
+                    </view>
+                </view>
             </view>
-            <view class="slot-time-item empty" wx:if="{{quickReservationSlots.oneFemale.length === 0}}">暂无可约时段</view>
-          </view>
         </view>
-        <view class="quick-reservation-slot {{quickReservationSlots.twoMale.length > 0 ? 'available' : 'unavailable'}}">
-          <view class="slot-label">2位男技师</view>
-          <view class="slot-time-list">
-            <view class="slot-time-item" wx:for="{{quickReservationSlots.twoMale}}" wx:key="time" bindtap="copyReservationSlot" data-type="twoMale" data-text="{{item.time}}">
-              <view class="slot-time-text">{{item.time}}</view>
-              <view class="slot-staff-names">{{item.staffNames}}</view>
+        <!-- 房间状态 -->
+        <view class="section">
+            <view class="section-title">房间状态</view>
+            <view class="room-grid">
+                <view class="room-item {{item.isOccupied ? 'occupied' : 'empty'}}" wx:for="{{rooms}}" wx:key="name">
+                    <view class="room-name">{{item.name}}</view>
+                    <view class="room-detail" wx:if="{{item.isOccupied}}">
+                        <view class="occupied-record" wx:for="{{item.occupiedRecords}}" wx:for-item="record"
+                            wx:key="endTime">
+                            <view class="customer-tag">{{record.customerName}}</view>
+                            <view class="staff-tag">{{record.technician}}</view>
+                            <view class="time-tag">{{record.endTime}}下</view>
+                        </view>
+                    </view>
+                </view>
             </view>
-            <view class="slot-time-item empty" wx:if="{{quickReservationSlots.twoMale.length === 0}}">暂无可约时段</view>
-          </view>
         </view>
-        <view class="quick-reservation-slot {{quickReservationSlots.twoFemale.length > 0 ? 'available' : 'unavailable'}}">
-          <view class="slot-label">2位女技师</view>
-          <view class="slot-time-list">
-            <view class="slot-time-item" wx:for="{{quickReservationSlots.twoFemale}}" wx:key="time" bindtap="copyReservationSlot" data-type="twoFemale" data-text="{{item.time}}">
-              <view class="slot-time-text">{{item.time}}</view>
-              <view class="slot-staff-names">{{item.staffNames}}</view>
+        <!-- 员工轮牌 -->
+        <view class="section">
+            <view class="section-header">
+                <view class="section-title">今日轮牌</view>
+                <view class="push-rotation-btn" bindtap="resetRotation" wx:if="{{canPushRotation}}">
+                    重置
+                </view>
+                <view class="push-rotation-btn" bindtap="openRotationPushModal"
+                    wx:if="{{rotationList.length > 0 && canPushRotation}}">
+                    推送
+                </view>
             </view>
-            <view class="slot-time-item empty" wx:if="{{quickReservationSlots.twoFemale.length === 0}}">暂无可约时段</view>
-          </view>
+            <view class="rotation-list" wx:if="{{rotationList.length > 0}}">
+                <view class="rotation-item" wx:for="{{rotationList}}" wx:key="_id">
+                    <view class="rank-num">{{index + 1}}</view>
+                    <view class="staff-info">
+                        <view class="staff-name-row">
+                            <view class="staff-name">{{item.name}}</view>
+                            <view class="shift-tag {{item.shift}}">
+                                {{item.shift === 'morning' ? '早班' : '晚班'}}
+                            </view>
+                        </view>
+                        <view class="available-slots" wx:if="{{item.availableSlots}}">
+                            <view class="slots-label">可约:</view>
+                            <view class="slots-time">{{item.availableSlots}}</view>
+                        </view>
+                    </view>
+                    <view class="action-btns" wx:if="{{canPushRotation}}">
+                        <view class="btn move-up {{index === 0 ? 'disabled' : ''}}" bindtap="moveRotation"
+                            data-index="{{index}}" data-direction="up">
+                            <text>↑</text>
+                        </view>
+                        <view class="btn move-down {{index === rotationList.length - 1 ? 'disabled' : ''}}"
+                            bindtap="moveRotation" data-index="{{index}}" data-direction="down">
+                            <text>↓</text>
+                        </view>
+                    </view>
+                </view>
+            </view>
+            <view class="empty-hint" wx:else>今日暂无上班排班</view>
         </view>
-      </view>
     </view>
-    <!-- 房间状态 -->
-    <view class="section">
-      <view class="section-title">房间状态</view>
-      <view class="room-grid">
-        <view class="room-item {{item.isOccupied ? 'occupied' : 'empty'}}" wx:for="{{rooms}}" wx:key="name">
-          <view class="room-name">{{item.name}}</view>
-          <view class="room-detail" wx:if="{{item.isOccupied}}">
-            <view class="occupied-record" wx:for="{{item.occupiedRecords}}" wx:for-item="record" wx:key="endTime">
-              <view class="customer-tag">{{record.customerName}}</view>
-              <view class="staff-tag">{{record.technician}}</view>
-              <view class="time-tag">{{record.endTime}}下</view>
-            </view>
-          </view>
-        </view>
-      </view>
-    </view>
-    <!-- 员工轮牌 -->
-    <view class="section">
-      <view class="section-header">
-        <view class="section-title">今日轮牌</view>
-        <view class="push-rotation-btn" bindtap="resetRotation" wx:if="{{canPushRotation}}">
-          重置
-        </view>
-        <view class="push-rotation-btn" bindtap="openRotationPushModal" wx:if="{{rotationList.length > 0 && canPushRotation}}">
-          推送
-        </view>
-      </view>
-      <view class="rotation-list" wx:if="{{rotationList.length > 0}}">
-        <view class="rotation-item" wx:for="{{rotationList}}" wx:key="_id">
-          <view class="rank-num">{{index + 1}}</view>
-          <view class="staff-info">
-            <view class="staff-name-row">
-              <view class="staff-name">{{item.name}}</view>
-              <view class="shift-tag {{item.shift}}">
-                {{item.shift === 'morning' ? '早班' : '晚班'}}
-              </view>
-            </view>
-            <view class="available-slots" wx:if="{{item.availableSlots}}">
-              <view class="slots-label">可约:</view>
-              <view class="slots-time">{{item.availableSlots}}</view>
-            </view>
-          </view>
-          <view class="action-btns" wx:if="{{canPushRotation}}">
-            <view class="btn move-up {{index === 0 ? 'disabled' : ''}}" bindtap="moveRotation" data-index="{{index}}" data-direction="up">
-              <text>↑</text>
-            </view>
-            <view class="btn move-down {{index === rotationList.length - 1 ? 'disabled' : ''}}" bindtap="moveRotation" data-index="{{index}}" data-direction="down">
-              <text>↓</text>
-            </view>
-          </view>
-        </view>
-      </view>
-      <view class="empty-hint" wx:else>今日暂无上班排班</view>
-    </view>
-  </view>
 </scroll-view>
 <!-- loading遮罩 -->
 <view class="loading-mask" wx:if="{{loading}}">
-  <view class="loading-spinner"></view>
-  <view class="loading-text">{{loadingText}}</view>
+    <view class="loading-spinner"></view>
+    <view class="loading-text">{{loadingText}}</view>
 </view>
 <!-- 预约弹窗 -->
-<modal show="{{showReserveModal}}" title="{{reserveForm._id ? '编辑预约' : '新增预约'}}" size="large" bind:cancel="closeReserveModal" bind:confirm="confirmReserve">
-  <view class="reservation-modal">
-    <view class="form-item">
-      <view class="form-label">日期</view>
-      <picker mode="date" value="{{reserveForm.date}}" bindchange="onReserveFieldChange" data-field="date">
-        <view class="picker-val">{{reserveForm.date}}</view>
-      </picker>
-      <view class="form-label"></view>
-      <view class="form-label">开始时间</view>
-      <picker mode="time" value="{{reserveForm.startTime}}" bindchange="onReserveFieldChange" data-field="startTime">
-        <view class="picker-val">{{reserveForm.startTime}}</view>
-      </picker>
-    </view>
-    <view class="form-item combined-form-item">
-      <view class="form-field">
-        <view class="form-label">姓名</view>
-        <input class="form-input" placeholder="选填" value="{{reserveForm.customerName}}" bindinput="onReserveFieldChange" data-field="customerName" />
-      </view>
-      <view class="form-field">
-        <gender-selector selectedGender="{{reserveForm.gender}}" bind:change="onReserveGenderChange" />
-      </view>
-    </view>
-    <view class="form-item">
-      <view class="form-label">手机号</view>
-      <input class="form-input" type="number" maxlength="11" placeholder="选填" value="{{reserveForm.phone}}" bindinput="onReserveFieldChange" data-field="phone" />
-    </view>
-    <view class="customer-match-result" wx:if="{{matchedCustomer}}">
-      <view class="match-info">
-        <view class="match-label">匹配顾客：</view>
-        <view class="match-name">
-          {{matchedCustomer.name}}{{matchedCustomer.gender === 'male' ? '先生' : '女士'}}
+<modal show="{{showReserveModal}}" title="{{reserveForm._id ? '编辑预约' : '新增预约'}}" size="large"
+    bind:cancel="closeReserveModal" bind:confirm="confirmReserve">
+    <view class="reservation-modal">
+        <view class="form-item">
+            <view class="form-label">日期</view>
+            <picker mode="date" value="{{reserveForm.date}}" bindchange="onReserveFieldChange" data-field="date">
+                <view class="picker-val">{{reserveForm.date}}</view>
+            </picker>
+            <view class="form-label"></view>
+            <view class="form-label">开始时间</view>
+            <picker mode="time" value="{{reserveForm.startTime}}" bindchange="onReserveFieldChange"
+                data-field="startTime">
+                <view class="picker-val">{{reserveForm.startTime}}</view>
+            </picker>
         </view>
-        <view class="match-phone">{{matchedCustomer.phone || '无手机号'}}</view>
-        <view class="match-tech" wx:if="{{matchedCustomer.responsibleTechnician}}">
-          责任技师：{{matchedCustomer.responsibleTechnician}}
+        <view class="form-item combined-form-item">
+            <view class="form-field">
+                <view class="form-label">姓名</view>
+                <input class="form-input" placeholder="选填" value="{{reserveForm.customerName}}"
+                    bindinput="onReserveFieldChange" data-field="customerName" />
+            </view>
+            <view class="form-field">
+                <gender-selector selectedGender="{{reserveForm.gender}}" bind:change="onReserveGenderChange" />
+            </view>
         </view>
-        <view wx:if="{{matchedCustomer.remark}}" class="match-remark">
-          {{matchedCustomer.remark}}
+        <view class="form-item">
+            <view class="form-label">手机号</view>
+            <input class="form-input" type="number" maxlength="11" placeholder="选填" value="{{reserveForm.phone}}"
+                bindinput="onReserveFieldChange" data-field="phone" />
         </view>
-        <view class="match-actions">
-          <view wx:if="{{!matchedCustomerApplied}}" class="match-btn apply-btn" bindtap="applyMatchedCustomer">
-            应用
-          </view>
-          <view class="match-btn clear-btn" bindtap="clearMatchedCustomer">清除</view>
+        <view class="customer-match-result" wx:if="{{matchedCustomer}}">
+            <view class="match-info">
+                <view class="match-label">匹配顾客：</view>
+                <view class="match-name">
+                    {{matchedCustomer.name}}{{matchedCustomer.gender === 'male' ? '先生' : '女士'}}
+                </view>
+                <view class="match-phone">{{matchedCustomer.phone || '无手机号'}}</view>
+                <view class="match-tech" wx:if="{{matchedCustomer.responsibleTechnician}}">
+                    责任技师：{{matchedCustomer.responsibleTechnician}}
+                </view>
+                <view wx:if="{{matchedCustomer.remark}}" class="match-remark">
+                    {{matchedCustomer.remark}}
+                </view>
+                <view class="match-actions">
+                    <view wx:if="{{!matchedCustomerApplied}}" class="match-btn apply-btn"
+                        bindtap="applyMatchedCustomer">
+                        应用
+                    </view>
+                    <view class="match-btn clear-btn" bindtap="clearMatchedCustomer">清除</view>
+                </view>
+            </view>
         </view>
-      </view>
+        <view class="form-item project-item">
+            <view class="form-label">项目</view>
+            <project-selector selectedProject="{{reserveForm.project}}" bind:change="selectReserveProject" />
+        </view>
+        <!-- 技师需求类型 -->
+        <view class="form-item requirement-type-item">
+            <view class="form-label">技师需求</view>
+            <radio-group class="requirement-type-group" bindchange="onRequirementTypeChange">
+                <label class="requirement-type-option">
+                    <radio value="specific" checked="{{reserveForm.requirementType === 'specific'}}" />
+                    <text>点钟</text>
+                </label>
+                <label class="requirement-type-option">
+                    <radio value="gender" checked="{{reserveForm.requirementType === 'gender'}}" />
+                    <text>轮钟</text>
+                </label>
+            </radio-group>
+        </view>
+        <!-- 指定技师（点钟模式） -->
+        <view class="form-item technician-item" wx:if="{{reserveForm.requirementType === 'specific'}}">
+            <view class="form-label">
+                技师{{reserveForm.selectedTechnicians.length > 0 ? '(' + reserveForm.selectedTechnicians.length + ')' :
+                ''}}
+            </view>
+            <technician-selector multi="{{true}}" technicianList="{{staffAvailability}}" showClockInBadge="{{true}}"
+                bind:change="selectReserveTechnician" bind:toggleClockIn="toggleReserveClockIn" />
+        </view>
+        <!-- 性别需求模式 -->
+        <view class="form-item gender-requirement-item" wx:if="{{reserveForm.requirementType === 'gender'}}">
+            <!-- 男技师数量 -->
+            <view class="gender-counter">
+                <view class="gender-label">男技师</view>
+                <view class="counter-controls">
+                    <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="male" data-action="decrease"
+                        disabled="{{reserveForm.genderRequirement.male <= 0}}">
+                        -
+                    </view>
+                    <view class="counter-value">{{reserveForm.genderRequirement.male}}</view>
+                    <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="male" data-action="increase"
+                        disabled="{{reserveForm.genderRequirement.male >= 2}}">
+                        +
+                    </view>
+                </view>
+            </view>
+            <!-- 女技师数量 -->
+            <view class="gender-counter">
+                <view class="gender-label">女技师</view>
+                <view class="counter-controls">
+                    <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="female" data-action="decrease"
+                        disabled="{{reserveForm.genderRequirement.female <= 0}}">
+                        -
+                    </view>
+                    <view class="counter-value">{{reserveForm.genderRequirement.female}}</view>
+                    <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="female" data-action="increase"
+                        disabled="{{reserveForm.genderRequirement.female >= 2}}">
+                        +
+                    </view>
+                </view>
+            </view>
+            <view class="availability-hint" wx:if="{{staffAvailability.length > 0}}">
+                <view class="hint-item">
+                    <text class="hint-label">可用男技师：</text>
+                    <text class="hint-value">{{availableMaleCount}}位</text>
+                </view>
+                <view class="hint-item">
+                    <text class="hint-label">可用女技师：</text>
+                    <text class="hint-value">{{availableFemaleCount}}位</text>
+                </view>
+            </view>
+        </view>
     </view>
-    <view class="form-item project-item">
-      <view class="form-label">项目</view>
-      <project-selector selectedProject="{{reserveForm.project}}" bind:change="selectReserveProject" />
-    </view>
-    <!-- 技师需求类型 -->
-    <view class="form-item requirement-type-item">
-      <view class="form-label">技师需求</view>
-      <radio-group class="requirement-type-group" bindchange="onRequirementTypeChange">
-        <label class="requirement-type-option">
-          <radio value="specific" checked="{{reserveForm.requirementType === 'specific'}}" />
-          <text>点钟</text>
-        </label>
-        <label class="requirement-type-option">
-          <radio value="gender" checked="{{reserveForm.requirementType === 'gender'}}" />
-          <text>轮钟</text>
-        </label>
-      </radio-group>
-    </view>
-    <!-- 指定技师（点钟模式） -->
-    <view class="form-item technician-item" wx:if="{{reserveForm.requirementType === 'specific'}}">
-      <view class="form-label">
-        技师{{reserveForm.selectedTechnicians.length > 0 ? '(' + reserveForm.selectedTechnicians.length + ')' : ''}}
-      </view>
-      <technician-selector multi="{{true}}" technicianList="{{staffAvailability}}" showClockInBadge="{{true}}" bind:change="selectReserveTechnician" bind:toggleClockIn="toggleReserveClockIn" />
-    </view>
-    <!-- 性别需求模式 -->
-    <view class="form-item gender-requirement-item" wx:if="{{reserveForm.requirementType === 'gender'}}">
-      <!-- 男技师数量 -->
-      <view class="gender-counter">
-        <view class="gender-label">男技师</view>
-        <view class="counter-controls">
-          <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="male" data-action="decrease" disabled="{{reserveForm.genderRequirement.male <= 0}}">
-            -
-          </view>
-          <view class="counter-value">{{reserveForm.genderRequirement.male}}</view>
-          <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="male" data-action="increase" disabled="{{reserveForm.genderRequirement.male >= 2}}">
-            +
-          </view>
-        </view>
-      </view>
-      <!-- 女技师数量 -->
-      <view class="gender-counter">
-        <view class="gender-label">女技师</view>
-        <view class="counter-controls">
-          <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="female" data-action="decrease" disabled="{{reserveForm.genderRequirement.female <= 0}}">
-            -
-          </view>
-          <view class="counter-value">{{reserveForm.genderRequirement.female}}</view>
-          <view class="counter-btn" bindtap="onChangeGenderCount" data-gender="female" data-action="increase" disabled="{{reserveForm.genderRequirement.female >= 2}}">
-            +
-          </view>
-        </view>
-      </view>
-      <view class="availability-hint" wx:if="{{staffAvailability.length > 0}}">
-        <view class="hint-item">
-          <text class="hint-label">可用男技师：</text>
-          <text class="hint-value">{{availableMaleCount}}位</text>
-        </view>
-        <view class="hint-item">
-          <text class="hint-label">可用女技师：</text>
-          <text class="hint-value">{{availableFemaleCount}}位</text>
-        </view>
-      </view>
-    </view>
-  </view>
 </modal>
 <!-- 结算弹窗 -->
-<modal show="{{showSettlementModal}}" title="结算" size="large" bind:cancel="closeSettlementModal" bind:confirm="confirmSettlement">
-  <view class="settlement-modal">
-    <!-- 项目信息 -->
-    <view class="project-info-section">
-      <view class="info-row">
-        <view class="info-label">项目原价</view>
-        <view class="info-value">¥{{projectOriginalPrice}}</view>
-      </view>
-      <view class="info-row total-row">
-        <view class="info-label">实收总额</view>
-        <view class="info-value total-amount">¥{{totalSettlementAmount}}</view>
-      </view>
-    </view>
-    <!-- 支付方式选择 -->
-    <view class="form-item">
-      <view class="form-label">支付方式</view>
-    </view>
-    <view class="payment-methods">
-      <view class="payment-item {{item.selected ? 'selected' : ''}}" wx:for="{{paymentMethods}}" wx:key="key">
-        <view class="payment-header" bindtap="togglePaymentMethod" data-index="{{index}}">
-          <view class="checkbox-wrapper">
-            <view class="checkbox {{item.selected ? 'checked' : ''}}"></view>
-            <view class="payment-label">{{item.label}}</view>
-          </view>
+<modal show="{{showSettlementModal}}" title="结算" size="large" bind:cancel="closeSettlementModal"
+    bind:confirm="confirmSettlement">
+    <view class="settlement-modal">
+        <!-- 项目信息 -->
+        <view class="project-info-section">
+            <view class="info-row">
+                <view class="info-label">项目原价</view>
+                <view class="info-value">¥{{projectOriginalPrice}}</view>
+            </view>
+            <view class="info-row total-row">
+                <view class="info-label">实收总额</view>
+                <view class="info-value total-amount">¥{{totalSettlementAmount}}</view>
+            </view>
         </view>
-        <view class="payment-amount" wx:if="{{item.selected && item.key !== 'free'}}">
-          <view class="amount-label">{{item.key === 'membership' ? '次数：' : '金额：'}}</view>
-          <input class="amount-input" type="{{item.key === 'membership' ? 'number' : 'digit'}}" placeholder="{{item.key === 'membership' ? '请输入扣减次数' : '请输入金额'}}" value="{{item.amount}}" bindinput="onPaymentAmountInput" data-index="{{index}}" />
-          <view class="amount-unit">{{item.key === 'membership' ? '次' : '元'}}</view>
+        <!-- 支付方式选择 -->
+        <view class="form-item">
+            <view class="form-label">支付方式</view>
         </view>
-        <view class="payment-coupon" wx:if="{{item.selected && item.key !== 'free' && item.key !== 'membership'}}">
-          <view class="coupon-label">券码：</view>
-          <input class="coupon-input" type="text" placeholder="选填" value="{{item.couponCode}}" bindinput="onPaymentCouponCodeInput" data-index="{{index}}" />
+        <view class="payment-methods">
+            <view class="payment-item {{item.selected ? 'selected' : ''}}" wx:for="{{paymentMethods}}" wx:key="key">
+                <view class="payment-header" bindtap="togglePaymentMethod" data-index="{{index}}">
+                    <view class="checkbox-wrapper">
+                        <view class="checkbox {{item.selected ? 'checked' : ''}}"></view>
+                        <view class="payment-label">{{item.label}}</view>
+                    </view>
+                </view>
+                <view class="payment-amount" wx:if="{{item.selected && item.key !== 'free'}}">
+                    <view class="amount-label">{{item.key === 'membership' ? '次数：' : '金额：'}}</view>
+                    <input class="amount-input" type="{{item.key === 'membership' ? 'number' : 'digit'}}"
+                        placeholder="{{item.key === 'membership' ? '请输入扣减次数' : '请输入金额'}}" value="{{item.amount}}"
+                        bindinput="onPaymentAmountInput" data-index="{{index}}" />
+                    <view class="amount-unit">{{item.key === 'membership' ? '次' : '元'}}</view>
+                </view>
+                <view class="payment-coupon"
+                    wx:if="{{item.selected && item.key !== 'free' && item.key !== 'membership'}}">
+                    <view class="coupon-label">券码：</view>
+                    <input class="coupon-input" type="text" placeholder="选填" value="{{item.couponCode}}"
+                        bindinput="onPaymentCouponCodeInput" data-index="{{index}}" />
+                </view>
+            </view>
         </view>
-      </view>
     </view>
-  </view>
 </modal>
 <!-- 预约推送确认弹窗 -->
-<modal show="{{pushModal.show}}" title="确认推送内容" bind:cancel="onPushModalCancel" bind:confirm="onPushModalConfirm" loading="{{pushModal.loading}}" loading-text="推送中..." cancel-text="不推送">
-  <view class="push-preview">
-    <textarea class="push-textarea" value="{{pushModal.message}}" bindinput="onPushMessageChange" placeholder="请输入推送内容" maxlength="1000" auto-height show-confirm-bar="{{false}}" />
-    <text class="char-count">{{pushModal.message.length}}/1000</text>
-  </view>
-  <view class="push-tips">
-    <text class="tips-text">ℹ️确认后将推送到企业微信群聊</text>
-  </view>
+<modal show="{{pushModal.show}}" title="确认推送内容" bind:cancel="onPushModalCancel" bind:confirm="onPushModalConfirm"
+    loading="{{pushModal.loading}}" loading-text="推送中..." cancel-text="不推送">
+    <view class="push-preview">
+        <textarea class="push-textarea" value="{{pushModal.message}}" bindinput="onPushMessageChange"
+            placeholder="请输入推送内容" maxlength="1000" auto-height show-confirm-bar="{{false}}" />
+        <text class="char-count">{{pushModal.message.length}}/1000</text>
+    </view>
+    <view class="push-tips">
+        <text class="tips-text">ℹ️确认后将推送到企业微信群聊</text>
+    </view>
 </modal>
 <!-- 轮牌推送确认弹窗 -->
-<modal show="{{rotationPushModal.show}}" title="推送今日轮牌" bind:cancel="onRotationPushModalCancel" bind:confirm="onRotationPushModalConfirm" loading="{{rotationPushModal.loading}}" loading-text="推送中...">
-  <view class="push-preview">
-    <view class="preview-header">【今日轮牌】</view>
-    <view class="preview-row">
-      <text class="preview-label">日期：</text>
-      <text class="preview-value">{{selectedDate}}</text>
+<modal show="{{rotationPushModal.show}}" title="推送今日轮牌" bind:cancel="onRotationPushModalCancel"
+    bind:confirm="onRotationPushModalConfirm" loading="{{rotationPushModal.loading}}" loading-text="推送中...">
+    <view class="push-preview">
+        <view class="preview-header">【今日轮牌】</view>
+        <view class="preview-row">
+            <text class="preview-label">日期：</text>
+            <text class="preview-value">{{selectedDate}}</text>
+        </view>
+        <block wx:for="{{rotationList}}" wx:key="_id" wx:for-index="idx">
+            <view class="preview-row">
+                <text class="preview-value">
+                    {{idx + 1}}. {{item.name}} ({{item.shift === 'morning' ? '早班' : '晚班'}})
+                </text>
+            </view>
+        </block>
     </view>
-    <block wx:for="{{rotationList}}" wx:key="_id" wx:for-index="idx">
-      <view class="preview-row">
-        <text class="preview-value">
-          {{idx + 1}}. {{item.name}} ({{item.shift === 'morning' ? '早班' : '晚班'}})
-        </text>
-      </view>
-    </block>
-  </view>
-  <view class="push-tips">
-    <text class="tips-text">ℹ️确认后将推送到企业微信群聊</text>
-  </view>
+    <view class="push-tips">
+        <text class="tips-text">ℹ️确认后将推送到企业微信群聊</text>
+    </view>
 </modal>
 <modal show="{{arrivalConfirmModal.show}}" show-footer="{{false}}" title="确认到店">
-  <view class="arrival-confirm-content">
-    <view class="arrival-info">
-      <view class="arrival-info-row">
-        <view class="arrival-info-label">顾客</view>
-        <view class="arrival-info-value">{{arrivalConfirmModal.customerName}}</view>
-      </view>
-      <view class="arrival-info-row">
-        <view class="arrival-info-label">项目</view>
-        <view class="arrival-info-value">{{arrivalConfirmModal.project}}</view>
-      </view>
-      <view class="arrival-info-row">
-        <view class="arrival-info-label">技师</view>
-        <view class="arrival-info-value">{{arrivalConfirmModal.technicianName}}</view>
-      </view>
+    <view class="arrival-confirm-content">
+        <view class="arrival-info">
+            <view class="arrival-info-row">
+                <view class="arrival-info-label">顾客</view>
+                <view class="arrival-info-value">{{arrivalConfirmModal.customerName}}</view>
+            </view>
+            <view class="arrival-info-row">
+                <view class="arrival-info-label">项目</view>
+                <view class="arrival-info-value">{{arrivalConfirmModal.project}}</view>
+            </view>
+            <view class="arrival-info-row">
+                <view class="arrival-info-label">技师</view>
+                <view class="arrival-info-value">{{arrivalConfirmModal.technicianName}}</view>
+            </view>
+        </view>
+        <view class="arrival-actions">
+            <view class="arrival-btn skip-btn" bindtap="onArrivalConfirmSkip">不推送，直接到店</view>
+            <view class="arrival-btn push-btn" bindtap="onArrivalConfirmPush">推送到店通知</view>
+        </view>
     </view>
-    <view class="arrival-actions">
-      <view class="arrival-btn skip-btn" bindtap="onArrivalConfirmSkip">不推送，直接到店</view>
-      <view class="arrival-btn push-btn" bindtap="onArrivalConfirmPush">推送到店通知</view>
-    </view>
-  </view>
 </modal>

@@ -229,6 +229,7 @@ interface IAppOption<T extends Record<string, any> = AppGlobalData> {
   onShow?: (options: WechatMiniprogram.App.LaunchShowOption) => void;
   onHide?: () => void;
   onError?: (error: string) => void;
+  checkUpdate: () => void;
   loadGlobalData: () => Promise<void>;
   getProjects: () => Promise<Project[]>;
   getRooms: () => Promise<Room[]>;

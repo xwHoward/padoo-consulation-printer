@@ -501,12 +501,6 @@ Page({
     });
   },
 
-  goToCashier() {
-    wx.navigateTo({
-      url: "/pages/cashier/cashier",
-    });
-  },
-
   // 跳转到门店配置页面
   goToStoreConfig() {
     wx.navigateTo({
@@ -677,26 +671,6 @@ ${clockInInfo2}`;
     } else {
       wx.showToast({ title: '保存失败', icon: 'error' });
     }
-  },
-
-  // 跳转到主页
-  goToHome() {
-    wx.navigateTo({
-      url: "/pages/store-config/store-config",
-    });
-  },
-
-  // 跳转到抽奖页面
-  goToLottery() {
-    wx.navigateTo({
-      url: "/pages/lottery/lottery",
-    });
-  },
-
-  onScreensaver() {
-    wx.navigateTo({
-      url: "/pages/screensaver/screensaver",
-    });
   },
 
   showPlateInputModal() {
