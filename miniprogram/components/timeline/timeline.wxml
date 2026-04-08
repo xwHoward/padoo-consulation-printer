@@ -11,7 +11,10 @@
       <!-- 员工行 -->
       <view class="staff-timeline-row {{item.highlighted ? 'highlighted' : ''}}" wx:for="{{staffTimeline}}" wx:key="_id">
         <view class="staff-name-col" style="width: {{TIMELINE_HOUR_WIDTH}}px;">
-          <view>{{item.name}}</view>
+          <view>
+            {{item.name}}
+            <text class="rotation-count">(轮{{item.rotationCount}})</text>
+          </view>
           <view class="shift-mini-tag {{item.shift}}">
             {{item.shift === 'morning' ? '早' : item.shift === 'evening' ? '晚' : '加'}}
           </view>

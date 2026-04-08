@@ -33,8 +33,9 @@ exports.main = async (event, context) => {
         }
     }
     try {
+        const OVERLAP_TOLERANCE = 10 // 允许首尾10分钟重叠
         const currentMinutes = parseTimeToMinutes(currentTime)
-        const proposedEndTimeMinutes = currentMinutes + projectDuration + 10
+        const proposedEndTimeMinutes = currentMinutes + projectDuration
 
         const reservationsRes = await db.collection('reservations').where({
             date: date,
@@ -93,13 +94,18 @@ exports.main = async (event, context) => {
             if (staffAppointments.length > 0) {
                 const mergedRanges = mergeTimeRanges(staffAppointments)
                 
+                // 允许首尾10分钟重叠：实际检测时段收缩10分钟
                 hasConflict = mergedRanges.some(range => {
-                    return currentMinutes < range.end && proposedEndTimeMinutes > range.start
+                    const effectiveStart = currentMinutes + OVERLAP_TOLERANCE
+                    const effectiveEnd = proposedEndTimeMinutes - OVERLAP_TOLERANCE
+                    return effectiveStart < range.end && effectiveEnd > range.start
                 })
                 
                 if (hasConflict) {
                     const conflictRange = mergedRanges.find(range => {
-                        return currentMinutes < range.end && proposedEndTimeMinutes > range.start
+                        const effectiveStart = currentMinutes + OVERLAP_TOLERANCE
+                        const effectiveEnd = proposedEndTimeMinutes - OVERLAP_TOLERANCE
+                        return effectiveStart < range.end && effectiveEnd > range.start
                     })
                     
                     if (conflictRange) {
@@ -123,7 +129,9 @@ exports.main = async (event, context) => {
             if (nonClockInReservations.length > 0) {
                 const nonClockInMergedRanges = mergeTimeRanges(nonClockInReservations)
                 hasNonClockInConflict = nonClockInMergedRanges.some(range => {
-                    return currentMinutes < range.end && proposedEndTimeMinutes > range.start
+                    const effectiveStart = currentMinutes + OVERLAP_TOLERANCE
+                    const effectiveEnd = proposedEndTimeMinutes - OVERLAP_TOLERANCE
+                    return effectiveStart < range.end && effectiveEnd > range.start
                 })
             }
 

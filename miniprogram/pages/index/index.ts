@@ -371,9 +371,9 @@ Page({
   },
 
   // 删除预约（到店报钟后调用）
-  async deleteReservations() {
+  async markReservationAsArrived() {
     const { currentReservationIds } = this.data;
-    const deletedCount = await ReservationUtils.deleteReservations(currentReservationIds);
+    const deletedCount = await ReservationUtils.markReservationAsArrived(currentReservationIds);
     if (deletedCount > 0) {
       this.setData({ currentReservationIds: [] });
     }
@@ -438,7 +438,7 @@ Page({
       }
 
       if (!editId) {
-        await this.deleteReservations();
+        await this.markReservationAsArrived();
 
         // 更新轮牌系统
         if (consultation.technician) {

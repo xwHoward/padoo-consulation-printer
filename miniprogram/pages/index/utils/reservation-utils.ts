@@ -4,7 +4,7 @@ import { parseProjectDuration } from "../../../utils/util";
 const app = getApp<IAppOption>();
 
 export class ReservationUtils {
-  static async deleteReservations(currentReservationIds: string[]): Promise<number> {
+  static async markReservationAsArrived(currentReservationIds: string[]): Promise<number> {
     if (!currentReservationIds || currentReservationIds.length === 0) {
       return 0;
     }
@@ -81,8 +81,8 @@ export class ReservationUtils {
         }
 
         let bestStaffId: string | null = null;
-        let minReservationCount = Infinity;
 
+        // 按轮钟顺序选择第一个符合性别要求且可用的技师
         for (const rotationItem of rotationStaffList) {
           const staff = rotationItem.staff!;
           const staffId = rotationItem.staffId;
@@ -91,40 +91,36 @@ export class ReservationUtils {
             continue;
           }
 
-          const currentCount = staffReservationCount.get(staffId) || 0;
-
-          if (currentCount < minReservationCount) {
-            const projectDuration = parseProjectDuration(reservation.project) || 60;
-            
-            try {
-              const checkRes = await wx.cloud.callFunction({
-                name: 'getAvailableTechnicians',
-                data: {
-                  date: date,
-                  currentTime: reservation.startTime,
-                  projectDuration: projectDuration,
-                  currentReservationIds: [reservation._id],
-                  currentConsultationId: undefined
-                }
-              });
-
-              let checkAvailable: StaffAvailability[] = [];
-              if (checkRes.result && typeof checkRes.result === 'object') {
-                const result = checkRes.result as GetAvailableTechniciansResult;
-                if (result.code === 0 && result.data) {
-                  checkAvailable = result.data;
-                }
+          const projectDuration = parseProjectDuration(reservation.project) || 60;
+          
+          try {
+            const checkRes = await wx.cloud.callFunction({
+              name: 'getAvailableTechnicians',
+              data: {
+                date: date,
+                currentTime: reservation.startTime,
+                projectDuration: projectDuration,
+                currentReservationIds: [reservation._id],
+                currentConsultationId: undefined
               }
+            });
 
-              const isAvailable = checkAvailable.some(t => t._id === staffId);
-
-              if (isAvailable) {
-                bestStaffId = staffId;
-                minReservationCount = currentCount;
+            let checkAvailable: StaffAvailability[] = [];
+            if (checkRes.result && typeof checkRes.result === 'object') {
+              const result = checkRes.result as GetAvailableTechniciansResult;
+              if (result.code === 0 && result.data) {
+                checkAvailable = result.data;
               }
-            } catch (error) {
-              continue;
             }
+
+            const isAvailable = checkAvailable.some(t => t._id === staffId);
+
+            if (isAvailable) {
+              bestStaffId = staffId;
+              break; // 找到轮钟顺序最靠前的可用技师，退出循环
+            }
+          } catch (error) {
+            continue;
           }
         }
 

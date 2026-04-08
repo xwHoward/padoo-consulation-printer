@@ -26,6 +26,7 @@ interface StaffTimelineItem {
 	blocks: TimeBlock[]
 	availableSlots: AvailableSlot[]
 	highlighted?: boolean
+	rotationCount: number // 当日轮钟数量
 }
 
 interface TimeBlock {
@@ -202,7 +203,10 @@ Component({
 					});
 
 					const availableSlots = this.calculateAvailableSlotsBetweenBlocks(blocks, shift);
-
+					
+					// 计算当日轮钟数量（非点钟且非预约的记录）
+					const rotationCount = blocks.filter(b => !b.isClockIn && !b.isReservation).length;
+					
 					staffTimeline.push({
 						_id: staff._id,
 						name: staff.name,
@@ -210,7 +214,8 @@ Component({
 						shift,
 						blocks,
 						availableSlots,
-						highlighted: highlightStaffId === staff._id
+						highlighted: highlightStaffId === staff._id,
+						rotationCount
 					});
 				}
 				staffTimeline.sort((a) => a.gender === 'male' ? 1 : -1);

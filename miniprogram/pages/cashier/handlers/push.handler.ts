@@ -265,7 +265,7 @@ ${customerInfo} 已到店
 				.join('、');
 
 			const partsText = parts || '无';
-			return `\n备注：老客，第${records.length}次消费，上次到店：${diffDays}天前，上次需加强部位：${partsText}，上次服务技师：${lastRecord.technician || '无'}`;
+			return `\n备注：老客，第${records.length+1}次消费，上次到店：${diffDays}天前，上次需加强部位：${partsText}，上次服务技师：${lastRecord.technician || '无'}`;
 		} catch {
 			return '';
 		}
