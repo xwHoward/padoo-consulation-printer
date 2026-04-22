@@ -1,5 +1,5 @@
-import { cloudDb, Collections } from "../../../utils/cloud-db";
-import { parseProjectDuration } from "../../../utils/util";
+import {cloudDb, Collections} from "../../../utils/cloud-db";
+import {parseProjectDuration} from "../../../utils/util";
 
 const app = getApp<IAppOption>();
 
@@ -30,98 +30,93 @@ export class ReservationUtils {
         status: 'active'
       });
 
-      const futureReservations = allReservations.filter(r => {
-        if (r.isClockIn) {
-          return false;
-        }
-        return r.startTime >= currentTime;
-      });
+      // 仅处理未来的轮钟预约（排除点钟和已过时间）
+      const futureReservations = allReservations.filter(r => !r.isClockIn && r.startTime >= currentTime);
 
-      if (futureReservations.length === 0) {
-        return;
-      }
+      if (futureReservations.length === 0) return;
 
       const rotationData = await app.getRotationQueue(date);
-      if (!rotationData || !rotationData.staffList || rotationData.staffList.length === 0) {
-        return;
-      }
+      if (!rotationData?.staffList?.length) return;
 
       const allStaff = await app.getStaffs();
       const staffMap = new Map(allStaff.map(s => [s._id, s]));
 
-      const rotationStaffList = rotationData.staffList.map(item => ({
-        staffId: item.staffId,
-        position: item.position,
-        staff: staffMap.get(item.staffId)
-      })).filter(item => item.staff && item.staff!.status === 'active');
+      // 严格按轮钟位置排序，过滤掉不在岗的技师
+      const rotationStaffList = rotationData.staffList
+        .map(item => ({
+          staffId: item.staffId,
+          position: item.position,
+          staff: staffMap.get(item.staffId)
+        }))
+        .filter(item => item.staff && item.staff!.status === 'active')
+        .sort((a, b) => a.position - b.position);
 
-      const sortedReservations = [...futureReservations].sort((a, b) => 
+      // 按时间升序处理，保证同组多条预约按顺序分配
+      const sortedReservations = [...futureReservations].sort((a, b) =>
         a.startTime.localeCompare(b.startTime)
       );
 
-      const staffReservationCount = new Map<string, number>();
-      for (const item of rotationStaffList) {
-        staffReservationCount.set(item.staffId, 0);
-      }
+      // 同组预约（同客户同时段同项目）已分配的技师集合，防止双人预约重复分配
+      const groupAssignedStaff = new Map<string, Set<string>>();
+      const getGroupKey = (r: ReservationRecord) =>
+        `${ r.customerName }-${ r.date }-${ r.startTime }-${ r.endTime }-${ r.project }`;
 
       for (const reservation of sortedReservations) {
+        // 规则1：确定性别要求（优先 genderRequirement，否则沿用原技师性别）
         let requiredGender: 'male' | 'female' | undefined;
-        
         if (reservation.genderRequirement) {
           requiredGender = reservation.genderRequirement;
         } else if (reservation.technicianId) {
-          const staff = staffMap.get(reservation.technicianId);
-          if (staff) {
-            requiredGender = staff.gender;
-          }
+          requiredGender = staffMap.get(reservation.technicianId)?.gender;
         }
 
-        if (!requiredGender) {
+        if (!requiredGender) continue;
+
+        // 规则4：初始化本组已分配集合
+        const groupKey = getGroupKey(reservation);
+        if (!groupAssignedStaff.has(groupKey)) {
+          groupAssignedStaff.set(groupKey, new Set());
+        }
+        const assignedInGroup = groupAssignedStaff.get(groupKey)!;
+
+        // 规则3：一次性获取该时间段所有可用技师（含10分钟重叠容差检测）
+        const projectDuration = parseProjectDuration(reservation.project) || 60;
+        let availableTechnicians: StaffAvailability[] = [];
+        try {
+          const checkRes = await wx.cloud.callFunction({
+            name: 'getAvailableTechnicians',
+            data: {
+              date,
+              currentTime: reservation.startTime,
+              projectDuration,
+              currentReservationIds: [reservation._id],
+              currentConsultationId: undefined
+            }
+          });
+          if (checkRes.result && typeof checkRes.result === 'object') {
+            const result = checkRes.result as GetAvailableTechniciansResult;
+            if (result.code === 0 && result.data) {
+              availableTechnicians = result.data;
+            }
+          }
+        } catch {
           continue;
         }
 
-        let bestStaffId: string | null = null;
+        const availableIds = new Set(availableTechnicians.map(t => t._id));
 
-        // 按轮钟顺序选择第一个符合性别要求且可用的技师
+        // 规则2+3+4：按轮钟顺序选出第一个满足「性别匹配 + 时间可用 + 同组未重复」的技师
+        let bestStaffId: string | null = null;
         for (const rotationItem of rotationStaffList) {
           const staff = rotationItem.staff!;
           const staffId = rotationItem.staffId;
 
-          if (staff.gender !== requiredGender) {
-            continue;
-          }
+          if (staff.gender !== requiredGender) continue;  // 规则1：性别不符
+          if (assignedInGroup.has(staffId)) continue;     // 规则4：同组已分配
+          if (!availableIds.has(staffId)) continue;       // 规则3：时间冲突
 
-          const projectDuration = parseProjectDuration(reservation.project) || 60;
-          
-          try {
-            const checkRes = await wx.cloud.callFunction({
-              name: 'getAvailableTechnicians',
-              data: {
-                date: date,
-                currentTime: reservation.startTime,
-                projectDuration: projectDuration,
-                currentReservationIds: [reservation._id],
-                currentConsultationId: undefined
-              }
-            });
-
-            let checkAvailable: StaffAvailability[] = [];
-            if (checkRes.result && typeof checkRes.result === 'object') {
-              const result = checkRes.result as GetAvailableTechniciansResult;
-              if (result.code === 0 && result.data) {
-                checkAvailable = result.data;
-              }
-            }
-
-            const isAvailable = checkAvailable.some(t => t._id === staffId);
-
-            if (isAvailable) {
-              bestStaffId = staffId;
-              break; // 找到轮钟顺序最靠前的可用技师，退出循环
-            }
-          } catch (error) {
-            continue;
-          }
+          bestStaffId = staffId;
+          break;
         }
 
         if (bestStaffId) {
@@ -131,8 +126,7 @@ export class ReservationUtils {
             technicianName: staff.name,
             isClockIn: false
           });
-
-          staffReservationCount.set(bestStaffId, (staffReservationCount.get(bestStaffId) || 0) + 1);
+          assignedInGroup.add(bestStaffId);
         }
       }
     } catch (error) {
@@ -140,12 +134,12 @@ export class ReservationUtils {
     }
   }
 
-  static async saveCustomerInfo(consultation: Add<ConsultationInfo> & { licensePlate?: string }): Promise<void> {
+  static async saveCustomerInfo(consultation: Add<ConsultationInfo> & {licensePlate?: string;}): Promise<void> {
     try {
       const phone = consultation.phone.trim();
       if (!phone) return;
 
-      const existingCustomers = await cloudDb.find<CustomerRecord>(Collections.CUSTOMERS, { phone });
+      const existingCustomers = await cloudDb.find<CustomerRecord>(Collections.CUSTOMERS, {phone});
 
       const customerData: Omit<CustomerRecord, "_id" | "createdAt" | "updatedAt"> = {
         phone: phone,

@@ -661,22 +661,21 @@ Page({
       return;
     }
 
-    const [clockInInfo1, clockInInfo2] = await Promise.all([
-      ClockInUtils.formatClockInInfo(info1, this.data.editId, false),
-      ClockInUtils.formatClockInInfo(info2, this.data.editId, false)
-    ]);
-    const combinedInfo = `【顾客1】
-${clockInInfo1}
-
-【顾客2】
-${clockInInfo2}`;
-
-    this.setData({
-      'clockInModal.show': true,
-      'clockInModal.content': combinedInfo,
-      clockInSubmitting: true
-    });
     await this.dataLoader?.loadTechnicianList();
+    
+    const { licensePlate } = this.data;
+    // 如果是新增且有车牌号，显示车牌号录入提醒
+    if (!editId && licensePlate && licensePlate.trim()) {
+      this.setData({
+        'plateReminderModal.show': true,
+        'plateReminderModal.licensePlate': licensePlate
+      });
+    } else {
+      wx.showToast({ title: '报钟成功', icon: 'success' });
+      setTimeout(() => {
+        wx.navigateBack();
+      }, 1000);
+    }
   },
 
   showPlateInputModal() {

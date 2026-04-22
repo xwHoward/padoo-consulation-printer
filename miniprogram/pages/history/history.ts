@@ -756,7 +756,7 @@ Page({
     });
   },
 
-  // 每日总结弹窗 - 确认推送到企业微信
+  // 每日总结弹窗 - 复制到剪贴板
   async onSummaryModalConfirm() {
     const {content} = this.data.summaryModal;
 
@@ -768,29 +768,16 @@ Page({
     this.setData({'summaryModal.loading': true});
 
     try {
-
-      const res = await wx.cloud.callFunction({
-        name: 'sendWechatMessage',
-        data: {
-          content: content
-        }
+      await wx.setClipboardData({
+        data: content
       });
-
-      if (res.result && typeof res.result === 'object') {
-        const result = res.result as {code: number; message?: string;};
-        if (result.code === 0) {
-          wx.showToast({title: '推送成功', icon: 'success', duration: 2000});
-          setTimeout(() => {
-            this.onSummaryModalCancel();
-          }, 1500);
-        } else {
-          wx.showToast({title: '推送失败，请重试', icon: 'none'});
-        }
-      } else {
-        wx.showToast({title: '推送失败，请重试', icon: 'none'});
-      }
+      
+      wx.showToast({title: '已复制到剪贴板', icon: 'success', duration: 2000});
+      setTimeout(() => {
+        this.onSummaryModalCancel();
+      }, 1500);
     } catch (error) {
-      wx.showToast({title: '推送失败，请重试', icon: 'none'});
+      wx.showToast({title: '复制失败，请重试', icon: 'none'});
     } finally {
       this.setData({'summaryModal.loading': false});
     }

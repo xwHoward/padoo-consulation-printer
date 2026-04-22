@@ -48,17 +48,24 @@ export class ModalHandler {
           date: editId ? consultationInfo.date : formatDate(new Date()),
           endTime,
         };
-        const clockInInfo = await ClockInUtils.formatClockInInfo(updatedInfo, editId);
         const success = await this.page.saveConsultation(updatedInfo, editId);
 
         if (success) {
-          this.page.setData({
-            'clockInModal.show': true,
-            'clockInModal.content': clockInInfo,
-            clockInSubmitting: true
-          });
           if (this.dataLoader) {
             await this.dataLoader.loadTechnicianList();
+          }
+          
+          // 如果是新增且有车牌号，显示车牌号录入提醒
+          if (!editId && licensePlate && licensePlate.trim()) {
+            this.page.setData({
+              'plateReminderModal.show': true,
+              'plateReminderModal.licensePlate': licensePlate
+            });
+          } else {
+            wx.showToast({ title: '报钟成功', icon: 'success' });
+            setTimeout(() => {
+              wx.navigateBack();
+            }, 1000);
           }
         }
       }
