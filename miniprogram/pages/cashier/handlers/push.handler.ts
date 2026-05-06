@@ -143,36 +143,15 @@ export class PushHandler {
 				`${index + 1}. ${staff.name} (${staff.shift === 'morning' ? '早班' : '晚班'})`
 			).join('\n');
 
-			const message = `【📋 今日轮牌】
+			const message = `【📋 今日轮牌】\n\n日期：${selectedDate}\n\n${rotationLines}\n\n请各位同事确认今日轮牌顺序，有问题与店长沟通！`;
 
-日期：${selectedDate}
-
-${rotationLines}
-
-请各位同事确认今日轮牌顺序，有问题与店长沟通！`;
-
-			const res = await wx.cloud.callFunction({
-				name: 'sendWechatMessage',
-				data: {
-					content: message
-				}
-			});
-
-			if (res.result && typeof res.result === 'object') {
-				const result = res.result as { code: number; message?: string };
-				if (result.code === 0) {
-					wx.showToast({ title: '推送成功', icon: 'success', duration: 2000 });
-					setTimeout(() => {
-						this.onRotationPushModalCancel();
-					}, 1500);
-				} else {
-					wx.showToast({ title: '推送失败，请重试', icon: 'none' });
-				}
-			} else {
-				wx.showToast({ title: '推送失败，请重试', icon: 'none' });
-			}
-		} catch (error) {
-			wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+			await wx.setClipboardData({ data: message });
+			wx.showToast({ title: '已复制到剪贴板', icon: 'success', duration: 2000 });
+			setTimeout(() => {
+				this.onRotationPushModalCancel();
+			}, 1500);
+		} catch {
+			wx.showToast({ title: '复制失败，请重试', icon: 'none' });
 		} finally {
 			this.page.setData({ 'rotationPushModal.loading': false });
 		}

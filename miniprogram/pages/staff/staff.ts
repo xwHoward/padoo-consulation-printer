@@ -436,18 +436,15 @@ Page({
 			});
 
 			const message = messageLines.join('\n');
+			// 复制到剪贴板
+			wx.setClipboardData({ data: message });
 
-			await wx.cloud.callFunction({
-				name: 'sendWechatMessage',
-				data: { content: message }
-			});
-
-			wx.showToast({ title: '推送成功', icon: 'success' });
+			wx.showToast({ title: '复制成功', icon: 'success' });
 			setTimeout(() => {
 				this.onSchedulePushModalCancel();
 			}, 1500);
 		} catch (error) {
-			wx.showToast({ title: '推送失败，请重试', icon: 'none' });
+			wx.showToast({ title: '复制失败，请重试', icon: 'none' });
 		} finally {
 			this.setData({ pushLoading: false });
 		}

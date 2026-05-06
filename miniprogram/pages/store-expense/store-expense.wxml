@@ -77,7 +77,7 @@
               <view class="table-row" wx:for="{{salaryList}}" wx:key="technicianId">
                 <view class="table-cell name-cell sticky-col">{{item.technicianName}}</view>
                 <view class="table-cell">{{item.commission}} ({{item.projectCount}}项)</view>
-                <view class="table-cell">{{item.overtime*15}} ({{item.overtime}}小时)</view>
+                <view class="table-cell">{{item.overtime*7.5}} ({{item.overtime/2}}小时)</view>
                 <view class="table-cell">{{item.extraTime*25}} ({{item.extraTime}}次)</view>
                 <view class="table-cell">{{item.clockIn}}次</view>
                 <view class="table-cell">{{item.mealAllowance}} + {{item.attendanceBonus}}</view>

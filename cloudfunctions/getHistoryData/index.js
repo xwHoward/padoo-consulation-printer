@@ -332,7 +332,11 @@ exports.main = async (event) => {
             technicianStats[ technician ].shift = 'overtime';
             const projectDuration = parseProjectDuration(record.project);
             const overtime = calculateOvertime(projectDuration);
-            technicianStats[ technician ].overtime += overtime;
+            // 加班班次只记一次加班（取最大单笔），不随业务笔数累加
+            technicianStats[ technician ].overtime = Math.max(
+              technicianStats[ technician ].overtime,
+              overtime
+            );
           } else {
             if (record.overtime) {
               technicianStats[ technician ].overtime += record.overtime;

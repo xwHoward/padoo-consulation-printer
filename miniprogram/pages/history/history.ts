@@ -430,33 +430,32 @@ Page({
         return;
       }
 
-      let summaryText = `# ${ date } 每日总结\n\n`;
+      let summaryText = `${ date } 每日总结\n${'='.repeat(20)}\n\n`;
 
       Object.keys(technicianStats).forEach(technician => {
         const stats = technicianStats[technician];
-        summaryText += `技师: **${ technician }**\n`;
-        summaryText += `总单数: ${ stats.totalCount }\n`;
-        summaryText += `点钟数: ${ stats.clockInCount }\n`;
+        summaryText += `技师: ${ technician }\n`;
+        summaryText += `  总单数: ${ stats.totalCount }\n`;
+        summaryText += `  点钟数: ${ stats.clockInCount }\n`;
 
         if (stats.extraTimeTotal > 0) {
-          summaryText += `加钟: ${ stats.extraTimeCount }\n`;
+          summaryText += `  加钟: ${ stats.extraTimeCount }\n`;
         }
 
         if (stats.overtime > 0) {
-          summaryText += `加班: ${ stats.overtime * 0.5 }小时\n`;
+          summaryText += `  加班: ${ stats.overtime * 0.5 }小时\n`;
         }
 
         if (stats.guashaCount > 0) {
-          summaryText += `刮痧: ${ stats.guashaCount }\n`;
+          summaryText += `  刮痧: ${ stats.guashaCount }\n`;
         }
 
-        summaryText += `项目统计:\n`;
-
+        summaryText += `  项目统计:\n`;
         Object.keys(stats.projects).forEach(project => {
-          summaryText += `-  ${ project }: ${ stats.projects[project] }\n`;
+          summaryText += `    ${ project }: ${ stats.projects[project] }\n`;
         });
 
-        summaryText += `\n\n`;
+        summaryText += `\n`;
       });
 
       const totalRecords = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.totalCount, 0);
@@ -464,27 +463,27 @@ Page({
       const totalExtraTime = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.extraTimeTotal, 0);
       const totalOvertime = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.overtime, 0);
 
-      summaryText += `# 总计\n`;
-      summaryText += `总单数: **${ totalRecords }**\n`;
-      summaryText += `总点钟数: **${ totalClockIn }**\n`;
+      summaryText += `${'='.repeat(20)}\n`;
+      summaryText += `总计\n`;
+      summaryText += `  总单数: ${ totalRecords }\n`;
+      summaryText += `  总点钟数: ${ totalClockIn }\n`;
 
       if (totalExtraTime > 0) {
-        summaryText += `总加钟: **${ (totalExtraTime) }**\n`;
+        summaryText += `  总加钟: ${ totalExtraTime }\n`;
       }
       if (totalOvertime > 0) {
-        summaryText += `总加班: **${ totalOvertime * 0.5 }小时**\n`;
+        summaryText += `  总加班: ${ totalOvertime * 0.5 }小时\n`;
       }
 
       if (monthlyScoreRanking && monthlyScoreRanking.rankings) {
-        summaryText += `\n\n## 🏆 ${ monthlyScoreRanking.period.month }月积分排名\n\n`;
+        summaryText += `\n${'='.repeat(20)}\n`;
+        summaryText += `${ monthlyScoreRanking.period.month }月排名\n\n`;
 
         monthlyScoreRanking.rankings.forEach((item) => {
-          const rankEmoji = item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : item.rank === 3 ? '🥉' : `${ item.rank }.`;
-          summaryText += `${ rankEmoji } **${ item.technician }**: ${ item.totalScore }分 `;
-          summaryText += `(${ item.salesCount }次卡 | 点钟${ item.clockInCount }次)\n`;
+          const rankLabel = item.rank === 1 ? '第1名' : item.rank === 2 ? '第2名' : item.rank === 3 ? '第3名' : `第${ item.rank }名`;
+          summaryText += `  ${ rankLabel } ${ item.technician }: ${ item.totalScore }分`;
+          summaryText += ` (${ item.salesCount }次卡 | 点钟${ item.clockInCount }次)\n`;
         });
-
-        summaryText += `\n`;
       }
 
       this.setData({

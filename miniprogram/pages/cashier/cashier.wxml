@@ -7,9 +7,9 @@
         <view bindtap="loadInitialData" class="nav-btn" aria-role="button" aria-label="刷新">
             <text class="nav-btn-text">刷新</text>
         </view>
-        <view bindtap="goToLottery" class="nav-btn" aria-role="button" aria-label="抽奖">
+        <!-- <view bindtap="goToLottery" class="nav-btn" aria-role="button" aria-label="抽奖">
             <text class="nav-btn-text">抽奖</text>
-        </view>
+        </view> -->
         <view bindtap="onScreensaver" class="nav-btn" aria-role="button" aria-label="无人值守">
             <text class="nav-btn-text">无人值守</text>
         </view>
@@ -349,8 +349,8 @@
     </view>
 </modal>
 <!-- 轮牌推送确认弹窗 -->
-<modal show="{{rotationPushModal.show}}" title="推送今日轮牌" bind:cancel="onRotationPushModalCancel"
-    bind:confirm="onRotationPushModalConfirm" loading="{{rotationPushModal.loading}}" loading-text="推送中...">
+<modal show="{{rotationPushModal.show}}" title="复制今日轮牌" bind:cancel="onRotationPushModalCancel"
+    bind:confirm="onRotationPushModalConfirm" loading="{{rotationPushModal.loading}}" loading-text="复制中...">
     <view class="push-preview">
         <view class="preview-header">【今日轮牌】</view>
         <view class="preview-row">
@@ -366,7 +366,7 @@
         </block>
     </view>
     <view class="push-tips">
-        <text class="tips-text">ℹ️确认后将推送到企业微信群聊</text>
+        <text class="tips-text">ℹ️确认后将轮牌内容复制到剪贴板</text>
     </view>
 </modal>
 <modal show="{{arrivalConfirmModal.show}}" show-footer="{{false}}" title="确认到店">

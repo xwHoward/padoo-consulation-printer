@@ -12,9 +12,17 @@
 - [miniprogram/utils/cloud-db.ts](file://miniprogram/utils/cloud-db.ts)
 - [miniprogram/utils/constants.ts](file://miniprogram/utils/constants.ts)
 - [miniprogram/utils/util.ts](file://miniprogram/utils/util.ts)
+- [miniprogram/utils/wechat-work.ts](file://miniprogram/utils/wechat-work.ts)
 - [miniprogram/app.ts](file://miniprogram/app.ts)
 - [typings/index.d.ts](file://typings/index.d.ts)
 </cite>
+
+## 更新摘要
+**变更内容**
+- 更新历史页面的日常总结功能实现，从企业微信消息发送改为剪贴板复制操作
+- 移除企业微信集成相关的代码和依赖
+- 更新架构图和业务流程说明
+- 修正权限控制和数据流分析
 
 ## 目录
 1. [简介](#简介)
@@ -31,6 +39,8 @@
 
 历史记录系统是咨询管理系统的核心功能模块，负责展示和管理历史咨询单记录。该系统提供了完整的CRUD操作、实时数据同步、权限控制和企业微信集成等功能。用户可以通过日期筛选查看特定日期的历史记录，支持按技师、项目等维度进行统计分析。
 
+**更新** 系统现已支持多种数据导出方式，包括剪贴板复制和企业微信消息推送，为用户提供更加灵活的数据分享体验。
+
 ## 项目结构
 
 历史记录系统采用前后端分离的架构设计，主要由以下组件构成：
@@ -44,33 +54,34 @@ C[format.wxs - 格式化工具]
 D[cloud-db.ts - 数据访问层]
 E[constants.ts - 常量定义]
 F[util.ts - 工具函数]
+G[wechat-work.ts - 企业微信工具]
 end
 subgraph "云函数"
-G[getHistoryData - 历史数据处理]
-H[getCustomerHistory - 顾客历史查询]
-I[sendWechatMessage - 微信推送]
+H[getHistoryData - 历史数据处理]
+I[getCustomerHistory - 顾客历史查询]
+J[sendWechatMessage - 微信推送]
 end
 subgraph "数据模型"
-J[ConsultationRecord - 咨询单模型]
-K[SettlementInfo - 结算信息]
-L[StaffInfo - 员工信息]
+K[ConsultationRecord - 咨询单模型]
+L[SettlementInfo - 结算信息]
+M[StaffInfo - 员工信息]
 end
-A --> G
 A --> H
 A --> I
-G --> J
-H --> J
-D --> G
+A --> J
+H --> K
+I --> K
 D --> H
+D --> I
 ```
 
 **图表来源**
-- [miniprogram/pages/history/history.ts](file://miniprogram/pages/history/history.ts#L1-L747)
-- [cloudfunctions/getHistoryData/index.js](file://cloudfunctions/getHistoryData/index.js#L1-L411)
+- [miniprogram/pages/history/history.ts:1-787](file://miniprogram/pages/history/history.ts#L1-L787)
+- [cloudfunctions/getHistoryData/index.js:1-466](file://cloudfunctions/getHistoryData/index.js#L1-L466)
 
 **章节来源**
-- [miniprogram/pages/history/history.ts](file://miniprogram/pages/history/history.ts#L1-L747)
-- [miniprogram/pages/history/history.wxml](file://miniprogram/pages/history/history.wxml#L1-L176)
+- [miniprogram/pages/history/history.ts:1-787](file://miniprogram/pages/history/history.ts#L1-L787)
+- [miniprogram/pages/history/history.wxml:1-153](file://miniprogram/pages/history/history.wxml#L1-L153)
 
 ## 核心组件
 
@@ -82,6 +93,9 @@ D --> H
 - **实时数据更新**：监听页面显示事件，确保数据实时性
 - **权限控制**：基于用户角色控制操作按钮的显示和可用性
 - **多语言支持**：支持中英文混合显示，提供友好的用户体验
+- **数据导出功能**：支持剪贴板复制和企业微信消息推送两种导出方式
+
+**更新** 新增了剪贴板复制功能，用户可以将生成的每日总结直接复制到系统剪贴板，无需企业微信集成。
 
 ### 云函数服务
 
@@ -104,10 +118,12 @@ D --> H
 - 自动处理推送状态
 - 提供错误重试机制
 
+**更新** 该云函数仍保持原有功能，为其他模块提供企业微信消息推送服务。
+
 **章节来源**
-- [cloudfunctions/getHistoryData/index.js](file://cloudfunctions/getHistoryData/index.js#L88-L410)
-- [cloudfunctions/getCustomerHistory/index.js](file://cloudfunctions/getCustomerHistory/index.js#L9-L99)
-- [cloudfunctions/sendWechatMessage/index.js](file://cloudfunctions/sendWechatMessage/index.js#L10-L64)
+- [cloudfunctions/getHistoryData/index.js:96-465](file://cloudfunctions/getHistoryData/index.js#L96-L465)
+- [cloudfunctions/getCustomerHistory/index.js:158-258](file://cloudfunctions/getCustomerHistory/index.js#L158-L258)
+- [cloudfunctions/sendWechatMessage/index.js:11-51](file://cloudfunctions/sendWechatMessage/index.js#L11-L51)
 
 ## 架构概览
 
@@ -120,6 +136,7 @@ participant P as 历史页面
 participant CF as 云函数
 participant DB as MongoDB
 participant WX as 企业微信
+participant CB as 系统剪贴板
 U->>P : 选择日期
 P->>CF : 调用getHistoryData
 CF->>DB : 查询历史记录
@@ -131,19 +148,25 @@ P->>CF : 调用getHistoryData(action=getDailySummary)
 CF->>DB : 统计技师数据
 DB-->>CF : 返回统计数据
 CF-->>P : 统计结果
+alt 企业微信集成
 P->>WX : 推送总结
 WX-->>P : 推送结果
+else 剪贴板复制
+P->>CB : 复制总结内容
+CB-->>P : 复制结果
+end
 ```
 
 **图表来源**
-- [miniprogram/pages/history/history.ts](file://miniprogram/pages/history/history.ts#L156-L193)
-- [cloudfunctions/getHistoryData/index.js](file://cloudfunctions/getHistoryData/index.js#L252-L394)
+- [miniprogram/pages/history/history.ts:394-502](file://miniprogram/pages/history/history.ts#L394-L502)
+- [cloudfunctions/getHistoryData/index.js:260-449](file://cloudfunctions/getHistoryData/index.js#L260-L449)
 
 系统架构特点：
 - **响应式设计**：支持移动端和桌面端访问
 - **实时同步**：页面显示时自动刷新数据
 - **权限分级**：不同角色拥有不同的操作权限
 - **数据安全**：所有数据操作都经过权限验证
+- **多渠道导出**：支持企业微信推送和剪贴板复制两种导出方式
 
 ## 详细组件分析
 
@@ -190,9 +213,9 @@ ConsultationRecord --> StaffInfo : 关联技师
 ```
 
 **图表来源**
-- [typings/index.d.ts](file://typings/index.d.ts#L37-L83)
-- [typings/index.d.ts](file://typings/index.d.ts#L22-L35)
-- [typings/index.d.ts](file://typings/index.d.ts#L89-L97)
+- [typings/index.d.ts:37-83](file://typings/index.d.ts#L37-L83)
+- [typings/index.d.ts:22-35](file://typings/index.d.ts#L22-L35)
+- [typings/index.d.ts:89-97](file://typings/index.d.ts#L89-L97)
 
 ### 核心业务流程
 
@@ -212,8 +235,33 @@ H --> I[渲染页面]
 ```
 
 **图表来源**
-- [miniprogram/pages/history/history.ts](file://miniprogram/pages/history/history.ts#L88-L100)
-- [miniprogram/pages/history/history.ts](file://miniprogram/pages/history/history.ts#L124-L154)
+- [miniprogram/pages/history/history.ts:88-100](file://miniprogram/pages/history/history.ts#L88-L100)
+- [miniprogram/pages/history/history.ts:124-154](file://miniprogram/pages/history/history.ts#L124-L154)
+
+#### 日常总结生成流程
+
+```mermaid
+sequenceDiagram
+participant U as 用户
+participant P as 历史页面
+participant CF as getHistoryData云函数
+participant DB as 数据库
+U->>P : 点击生成总结按钮
+P->>CF : 调用getHistoryData(action=getDailySummary)
+CF->>DB : 查询和统计数据
+DB-->>CF : 返回统计数据
+CF-->>P : 格式化总结内容
+P->>U : 显示总结弹窗
+U->>P : 确认复制到剪贴板
+P->>P : 调用wx.setClipboardData
+P->>U : 显示复制结果
+```
+
+**更新** 日常总结功能现在通过剪贴板复制实现，移除了企业微信集成依赖。
+
+**图表来源**
+- [miniprogram/pages/history/history.ts:394-502](file://miniprogram/pages/history/history.ts#L394-L502)
+- [miniprogram/pages/history/history.ts:758-783](file://miniprogram/pages/history/history.ts#L758-L783)
 
 #### 加钟操作流程
 
@@ -231,12 +279,16 @@ CF->>DB : 更新记录
 DB-->>CF : 更新成功
 CF-->>P : 返回更新结果
 P->>P : 刷新页面数据
+P->>P : 生成加钟提醒消息
+P->>P : 调用sendWechatMessage云函数
 P->>U : 显示操作结果
 ```
 
+**更新** 加钟提醒功能仍保留企业微信集成，用于通知相关人员。
+
 **图表来源**
-- [miniprogram/pages/history/history.ts](file://miniprogram/pages/history/history.ts#L518-L656)
-- [cloudfunctions/getHistoryData/index.js](file://cloudfunctions/getHistoryData/index.js#L658-L687)
+- [miniprogram/pages/history/history.ts:520-658](file://miniprogram/pages/history/history.ts#L520-L658)
+- [cloudfunctions/getHistoryData/index.js:660-690](file://cloudfunctions/getHistoryData/index.js#L660-L690)
 
 ### 权限控制系统
 
@@ -249,10 +301,11 @@ P->>U : 显示操作结果
 | 作废咨询单 | canVoidConsultation | 管理员 | 标记咨询单作废 |
 | 删除咨询单 | canDeleteConsultation | 管理员 | 物理删除记录 |
 | 生成总结 | 无 | 所有角色 | 生成每日统计报告 |
+| 导出总结 | 无 | 所有角色 | 将总结导出到剪贴板 |
 
 **章节来源**
-- [miniprogram/pages/history/history.ts](file://miniprogram/pages/history/history.ts#L89-L92)
-- [typings/index.d.ts](file://typings/index.d.ts#L258-L285)
+- [miniprogram/pages/history/history.ts:89-92](file://miniprogram/pages/history/history.ts#L89-L92)
+- [typings/index.d.ts:258-285](file://typings/index.d.ts#L258-L285)
 
 ## 依赖关系分析
 
@@ -264,28 +317,35 @@ subgraph "外部依赖"
 A[微信小程序框架]
 B[企业微信API]
 C[MongoDB数据库]
+D[系统剪贴板API]
 end
 subgraph "内部模块"
-D[history.ts]
-E[cloud-db.ts]
-F[getHistoryData.js]
-G[getCustomerHistory.js]
-H[sendWechatMessage.js]
+E[history.ts]
+F[cloud-db.ts]
+G[getHistoryData.js]
+H[getCustomerHistory.js]
+I[sendWechatMessage.js]
+J[wechat-work.ts]
 end
-D --> E
-D --> F
-D --> G
-D --> H
-E --> C
+E --> F
+E --> G
+E --> H
+E --> I
+E --> J
 F --> C
 G --> C
-H --> B
-D --> A
+H --> C
+I --> B
+J --> B
+E --> A
+E --> D
 ```
 
+**更新** 新增了系统剪贴板API依赖，用于支持剪贴板复制功能。
+
 **图表来源**
-- [miniprogram/utils/cloud-db.ts](file://miniprogram/utils/cloud-db.ts#L12-L47)
-- [cloudfunctions/getHistoryData/index.js](file://cloudfunctions/getHistoryData/index.js#L1-L5)
+- [miniprogram/utils/cloud-db.ts:12-47](file://miniprogram/utils/cloud-db.ts#L12-L47)
+- [cloudfunctions/getHistoryData/index.js:1-5](file://cloudfunctions/getHistoryData/index.js#L1-L5)
 
 ### 数据流分析
 
@@ -302,15 +362,18 @@ F --> G[页面重新渲染]
 H[定时刷新] --> B
 I[权限验证] --> B
 J[错误处理] --> B
+K[剪贴板操作] --> L[系统剪贴板API]
 ```
 
+**更新** 新增了剪贴板操作的数据流，支持总结内容的复制功能。
+
 **图表来源**
-- [miniprogram/pages/history/history.ts](file://miniprogram/pages/history/history.ts#L103-L113)
-- [miniprogram/utils/cloud-db.ts](file://miniprogram/utils/cloud-db.ts#L170-L188)
+- [miniprogram/pages/history/history.ts:103-113](file://miniprogram/pages/history/history.ts#L103-L113)
+- [miniprogram/utils/cloud-db.ts:170-188](file://miniprogram/utils/cloud-db.ts#L170-L188)
 
 **章节来源**
-- [miniprogram/utils/cloud-db.ts](file://miniprogram/utils/cloud-db.ts#L1-L321)
-- [cloudfunctions/getHistoryData/index.js](file://cloudfunctions/getHistoryData/index.js#L1-L411)
+- [miniprogram/utils/cloud-db.ts:1-321](file://miniprogram/utils/cloud-db.ts#L1-L321)
+- [cloudfunctions/getHistoryData/index.js:1-466](file://cloudfunctions/getHistoryData/index.js#L1-L466)
 
 ## 性能考虑
 
@@ -320,6 +383,7 @@ J[错误处理] --> B
 2. **缓存机制**：页面状态和用户操作结果进行本地缓存
 3. **懒加载**：图片和复杂组件采用懒加载策略
 4. **防抖处理**：频繁的用户操作进行防抖处理
+5. **异步处理**：企业微信推送和剪贴板操作采用异步处理
 
 ### 并发控制
 
@@ -360,9 +424,35 @@ J[错误处理] --> B
 2. 检查页面生命周期
 3. 验证自动刷新机制
 
+#### 剪贴板复制失败
+**症状**：点击复制按钮无反应或显示失败
+**可能原因**：
+- 浏览器或系统阻止剪贴板访问
+- 设备不支持剪贴板API
+- 内容为空或格式不正确
+
+**解决步骤**：
+1. 检查浏览器或系统设置中的剪贴板权限
+2. 尝试在其他设备上复制
+3. 确保总结内容非空且格式正确
+4. 重启小程序后重试
+
+#### 企业微信推送失败
+**症状**：加钟提醒无法推送到企业微信
+**可能原因**：
+- 企业微信机器人配置错误
+- 网络连接异常
+- 企业微信服务不可用
+
+**解决步骤**：
+1. 检查企业微信机器人的Webhook地址
+2. 验证网络连接状态
+3. 查看云函数日志
+4. 联系企业微信技术支持
+
 **章节来源**
-- [miniprogram/pages/history/history.ts](file://miniprogram/pages/history/history.ts#L245-L266)
-- [miniprogram/utils/cloud-db.ts](file://miniprogram/utils/cloud-db.ts#L170-L188)
+- [miniprogram/pages/history/history.ts:245-266](file://miniprogram/pages/history/history.ts#L245-L266)
+- [miniprogram/utils/cloud-db.ts:170-188](file://miniprogram/utils/cloud-db.ts#L170-L188)
 
 ## 结论
 
@@ -373,5 +463,9 @@ J[错误处理] --> B
 3. **安全性高**：完善的权限控制和数据验证
 4. **可扩展性强**：模块化设计便于功能扩展
 5. **维护成本低**：清晰的代码结构和完善的文档
+6. **多渠道导出**：支持企业微信推送和剪贴板复制两种导出方式
+7. **兼容性好**：支持多种设备和操作系统
+
+**更新** 系统现已支持剪贴板复制功能，为用户提供了更加便捷的数据导出方式，同时保留了企业微信集成选项，满足不同场景下的需求。
 
 该系统为咨询业务提供了强有力的技术支撑，能够满足日常运营的各种需求，并为未来的功能扩展奠定了良好的基础。

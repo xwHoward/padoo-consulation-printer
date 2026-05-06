@@ -149,7 +149,7 @@
   </view>
 </modal>
 <!-- 推送排班弹窗 -->
-<modal show="{{showSchedulePushModal}}" title="推送排班表" bind:cancel="onSchedulePushModalCancel" bind:confirm="onSchedulePushModalConfirm" loading="{{schedulePushModal.loading}}" loading-text="推送中..." cancel-text="不推送">
+<modal show="{{showSchedulePushModal}}" title="复制排班表" bind:cancel="onSchedulePushModalCancel" bind:confirm="onSchedulePushModalConfirm" loading="{{schedulePushModal.loading}}" loading-text="复制中..." cancel-text="不复制">
   <view class="form-item">
     <view class="form-label">开始日期</view>
     <picker mode="date" value="{{pushStartDate}}" bindchange="onPushStartDateChange">
@@ -162,7 +162,7 @@
   </view>
   <view class="push-hint">
     <view>提示：</view>
-    <view>• 将推送所选时间段内所有员工的排班信息</view>
-    <view>• 按技师分组显示班次信息</view>
+    <view>• 将复制所选时间段内所有员工的排班信息</view>
+    <view>• 按员工分组显示班次信息</view>
   </view>
 </modal>

@@ -23,7 +23,7 @@ exports.main = async (event, context) => {
     let lastId = null
 
     while (hasMore) {
-      const query = db.collection(collection).limit(MAX_LIMIT)
+      let query = db.collection(collection).limit(MAX_LIMIT)
       
       if (lastId) {
         query = query.where({

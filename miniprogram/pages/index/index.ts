@@ -112,6 +112,8 @@ Page({
       loading: false
     },
     clockInSubmitting: false,
+    // 表单提交状态锁
+    submitting: false,
     // 车牌号提醒弹窗
     plateReminderModal: {
       show: false,
@@ -392,8 +394,21 @@ Page({
   // 保存咨询单（支持新建和更新）
   async saveConsultation(consultation: Add<ConsultationInfo>, editId?: string) {
     try {
+      // 检查提交锁，防止重复提交
+      if (this.data.submitting && !editId) {
+        wx.showToast({
+          title: '正在提交中，请勿重复点击',
+          icon: 'none'
+        });
+        return false;
+      }
 
-      // 使用传入的consultation中的日期和时间，如果存在的话
+      // 设置提交锁
+      if (!editId) {
+        this.setData({ submitting: true });
+      }
+
+      // 使用传入的 consultation 中的日期和时间，如果存在的话
       let currentDate: string;
       let startTimeStr: string;
       let endTimeStr: string;
@@ -416,6 +431,24 @@ Page({
         startTimeStr = formatTime(now, false);
         const endTimeDate = calculateProjectEndTime(now, consultation.project);
         endTimeStr = formatTime(endTimeDate, false);
+      }
+
+      // 检查重复记录（仅新建时检查）
+      if (!editId) {
+        const isDuplicate = await this.checkDuplicateRecord(
+          currentDate,
+          startTimeStr,
+          consultation.technician,
+          consultation.project
+        );
+        if (isDuplicate) {
+          this.setData({ submitting: false });
+          wx.showToast({
+            title: '该技师在同一时间已有相同项目的记录，请勿重复报钟',
+            icon: 'none'
+          });
+          return false;
+        }
       }
 
       const recordData: Add<ConsultationRecord> = {
@@ -481,8 +514,40 @@ Page({
 
       return true;
 
+    } catch (error: any) {
+      this.setData({ loading: false, submitting: false });
+      const errorMessage = error?.message || '保存失败';
+      wx.showToast({
+        title: errorMessage,
+        icon: 'none'
+      });
+      return false;
+    } finally {
+      // 释放提交锁
+      if (!editId) {
+        this.setData({ submitting: false });
+      }
+    }
+  },
+
+  // 检查重复记录
+  async checkDuplicateRecord(
+    date: string,
+    startTime: string,
+    technician: string,
+    project: string
+  ): Promise<boolean> {
+    try {
+      const records = await cloudDb.getConsultationsByDate<ConsultationRecord>(date);
+      
+      return records.some(record => 
+        !record.isVoided &&
+        record.technician === technician &&
+        record.startTime === startTime &&
+        record.project === project
+      );
     } catch (error) {
-      this.setData({ loading: false });
+      console.error('检查重复记录失败:', error);
       return false;
     }
   },

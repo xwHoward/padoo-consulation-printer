@@ -270,10 +270,27 @@ class CloudDatabase {
 				await this.updateById<T>(Collections.CONSULTATION, editId, consultation);
 				return { ...existing, ...consultation, updatedAt: this.getTimestamp() } as T;
 			} else {
-				return await this.insert<T>(Collections.CONSULTATION, consultation);
+				// 使用云函数进行事务性保存
+				const res = await wx.cloud.callFunction({
+					name: 'saveConsultationTransaction',
+					data: {
+						consultation: consultation
+					}
+				});
+
+				if (!res.result || typeof res.result !== 'object') {
+					return null;
+				}
+
+				if (res.result.code === 0) {
+					return res.result.data as T;
+				} else {
+					// 重复记录等错误
+					throw new Error(res.result.message || '保存失败');
+				}
 			}
 		} catch (error) {
-			return null;
+			throw error;
 		}
 	}
 

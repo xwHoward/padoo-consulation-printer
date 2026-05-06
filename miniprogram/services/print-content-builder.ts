@@ -1,4 +1,4 @@
-import { cloudDb } from "../utils/cloud-db";
+import { cloudDb, Collections } from "../utils/cloud-db";
 import { formatTime } from "../utils/util";
 
 interface PrintContentOptions {
@@ -41,6 +41,7 @@ export class PrintContentBuilder {
     const dailyCount = await this.getDailyCount(info);
     content += `技师: ${info.technician}(${dailyCount})${info.isClockIn ? "[点]" : ""}\n`;
     content += `房间: ${info.room}\n`;
+    content += `电话: ${info.phone || "未填写"}\n`;
     content += `力度:${this.strengthMap[info.massageStrength] || "未选择"}\n`;
 
     if (isEssentialOilOnly) {
@@ -66,17 +67,55 @@ export class PrintContentBuilder {
       content += `\n备注: ${info.remarks}`;
     }
 
+    // 添加顾客历史信息备注
+    const historyRemark = await this.buildCustomerHistoryRemark(info.phone);
+    if (historyRemark) {
+      content += historyRemark;
+    }
+
     content += "\n================\n";
 
     content += `打印时间: ${formatTime(new Date(), false)}
-
       
 
-
+      
 
 `;
 
     return content;
+  }
+
+  private async buildCustomerHistoryRemark(phone: string): Promise<string> {
+    try {
+      if (!phone) return '';
+
+      const today = new Date().toISOString().split('T')[0];
+      
+      // 查询该手机号的所有咨询单
+      const records = (await cloudDb.find<ConsultationRecord>(Collections.CONSULTATION, { phone, isVoided: false })).filter(r => r.date < today)
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      // 过滤：排除今天、排除作废，按日期降序取最近一次
+      const lastRecord = records[0];
+
+      if (!lastRecord) return '';
+
+      // 计算距今天数
+      const diffDays = Math.round(
+        (new Date(today).getTime() - new Date(lastRecord.date).getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // 需加强部位（selectedParts 为 true 的部位）
+      const parts = Object.entries(lastRecord.selectedParts || {})
+        .filter(([, active]) => active)
+        .map(([key]) => this.partMap[key] || key)
+        .join('、');
+
+      const partsText = parts || '无';
+      return `\n历史: 老客第${records.length + 1}次，上次${diffDays}天前，加强部位:${partsText}，技师:${lastRecord.technician || '无'}`;
+    } catch {
+      return '';
+    }
   }
 
   private async getDailyCount(info: Add<ConsultationInfo>): Promise<number> {
