@@ -120,6 +120,25 @@ Page({
     this.loadHistoryData(selectedDate);
   },
 
+  async triggerRearrange(date: string): Promise<void> {
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'getAvailableTechnicians',
+        data: {
+          date,
+          mode: 'rearrange'
+        }
+      });
+      if (res.result && (res.result as { code: number }).code === 0) {
+        console.log('[重排] 完成:', (res.result as { data: { summary: any } }).data.summary);
+      } else {
+        console.warn('[重排] 失败:', (res.result as { message?: string }).message);
+      }
+    } catch (error) {
+      console.error('[重排] 调用失败:', error);
+    }
+  },
+
   // 加载顾客历史记录
   async loadCustomerHistory(customerPhone: string, customerId: string) {
     await loadingService.withLoading(this, async () => {
@@ -255,6 +274,7 @@ Page({
                 icon: 'success'
               });
               await this.loadHistoryData(this.data.dateSelector.selectedDate);
+              await this.triggerRearrange(record.date);
             } else {
               throw new Error('记录不存在');
             }

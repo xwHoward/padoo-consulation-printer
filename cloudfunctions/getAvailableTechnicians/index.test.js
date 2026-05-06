@@ -5,7 +5,6 @@
 
 const { parseTimeToMinutes, mergeTimeRanges } = require('./shared-utils')
 
-// 模拟云函数上下文
 const mockCloud = {
   database: jest.fn(() => ({
     collection: jest.fn(() => ({
@@ -171,5 +170,209 @@ describe('parseTimeToMinutes 测试', () => {
     expect(parseTimeToMinutes('09:30')).toBe(570)
     expect(parseTimeToMinutes('23:59')).toBe(1439)
     expect(parseTimeToMinutes('00:00')).toBe(0)
+  })
+})
+
+describe('重排算法测试', () => {
+  const mockStaff = [
+    { _id: 'techA', name: '技师A', gender: 'male', status: 'active' },
+    { _id: 'techB', name: '技师B', gender: 'male', status: 'active' },
+    { _id: 'techC', name: '技师C', gender: 'female', status: 'active' },
+    { _id: 'techD', name: '技师D', gender: 'female', status: 'active' }
+  ]
+
+  const mockSchedule = [
+    { staffId: 'techA', date: '2026-05-06', shift: 'evening' },
+    { staffId: 'techB', date: '2026-05-06', shift: 'evening' },
+    { staffId: 'techC', date: '2026-05-06', shift: 'evening' },
+    { staffId: 'techD', date: '2026-05-06', shift: 'evening' }
+  ]
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    jest.resetModules()
+  })
+
+  const setupMock = (schedule, consultations, reservations, rotationQueue, staff) => {
+    mockCloud.database.mockReturnValue({
+      collection: jest.fn(col => ({
+        where: jest.fn(() => ({
+          get: jest.fn().mockResolvedValue({
+            data: col === 'schedule' ? schedule :
+                  col === 'consultation_records' ? consultations :
+                  col === 'reservations' ? reservations :
+                  col === 'rotation_queue' ? rotationQueue :
+                  col === 'staff' ? staff : []
+          })
+        }))
+      })),
+      command: {}
+    })
+  }
+
+  test('TC1.1: 单个点钟预约不变', async () => {
+    const clockInReservation = {
+      _id: 'res1',
+      date: '2026-05-06',
+      startTime: '14:00',
+      endTime: '15:00',
+      technicianName: '技师A',
+      technicianId: 'techA',
+      isClockIn: true,
+      status: 'active'
+    }
+
+    setupMock(mockSchedule, [], [clockInReservation], [], mockStaff)
+
+    const { main } = require('./index')
+    const result = await main({ date: '2026-05-06', mode: 'rearrange' })
+
+    expect(result.code).toBe(0)
+    expect(result.data.unchanged).toHaveLength(1)
+    expect(result.data.unchanged[0].newTechnician).toBe('技师A')
+    expect(result.data.rearranged).toHaveLength(0)
+    expect(result.data.unassigned).toHaveLength(0)
+  })
+
+  test('TC2.1: 要求男技师，只分配男技师', async () => {
+    const nonClockInReservation = {
+      _id: 'res1',
+      date: '2026-05-06',
+      startTime: '14:00',
+      endTime: '15:00',
+      gender: 'male',
+      isClockIn: false,
+      status: 'active'
+    }
+
+    setupMock(mockSchedule, [], [nonClockInReservation], [], mockStaff)
+
+    const { main } = require('./index')
+    const result = await main({ date: '2026-05-06', mode: 'rearrange' })
+
+    expect(result.code).toBe(0)
+    expect(result.data.rearranged).toHaveLength(1)
+    const assignedTech = result.data.rearranged[0].newTechnician
+    expect(['技师A', '技师B']).toContain(assignedTech)
+    expect(['技师C', '技师D']).not.toContain(assignedTech)
+  })
+
+  test('TC3.2: 开始时间与已有预约结束重叠5分钟，可分配', async () => {
+    const clockInReservation = {
+      _id: 'res-clock',
+      date: '2026-05-06',
+      startTime: '14:00',
+      endTime: '15:00',
+      technicianName: '技师A',
+      technicianId: 'techA',
+      isClockIn: true,
+      status: 'active'
+    }
+
+    const nonClockInReservation = {
+      _id: 'res-rotation',
+      date: '2026-05-06',
+      startTime: '14:55',
+      endTime: '15:55',
+      gender: 'male',
+      isClockIn: false,
+      status: 'active'
+    }
+
+    setupMock(mockSchedule, [], [clockInReservation, nonClockInReservation], [], mockStaff)
+
+    const { main } = require('./index')
+    const result = await main({ date: '2026-05-06', mode: 'rearrange' })
+
+    expect(result.code).toBe(0)
+    expect(result.data.unchanged).toHaveLength(1)
+    expect(result.data.rearranged).toHaveLength(1)
+    expect(result.data.unassigned).toHaveLength(0)
+  })
+
+  test('TC4.1: 轮钟数量少的优先', async () => {
+    const clockInResA = {
+      _id: 'res-a1',
+      date: '2026-05-06',
+      startTime: '15:00',
+      endTime: '16:00',
+      technicianName: '技师A',
+      technicianId: 'techA',
+      isClockIn: true,
+      status: 'active'
+    }
+
+    const clockInResA2 = {
+      _id: 'res-a2',
+      date: '2026-05-06',
+      startTime: '16:00',
+      endTime: '17:00',
+      technicianName: '技师A',
+      technicianId: 'techA',
+      isClockIn: true,
+      status: 'active'
+    }
+
+    const nonClockInReservation = {
+      _id: 'res-rotation',
+      date: '2026-05-06',
+      startTime: '14:00',
+      endTime: '15:00',
+      gender: 'male',
+      isClockIn: false,
+      status: 'active'
+    }
+
+    setupMock(mockSchedule, [], [clockInResA, clockInResA2, nonClockInReservation], [], mockStaff)
+
+    const { main } = require('./index')
+    const result = await main({ date: '2026-05-06', mode: 'rearrange' })
+
+    expect(result.code).toBe(0)
+    expect(result.data.rearranged).toHaveLength(1)
+    expect(result.data.rearranged[0].newTechnician).toBe('技师B')
+  })
+
+  test('TC6.3: 无法分配的预约', async () => {
+    const clockInResA = {
+      _id: 'res-a',
+      date: '2026-05-06',
+      startTime: '14:00',
+      endTime: '15:00',
+      technicianName: '技师A',
+      technicianId: 'techA',
+      isClockIn: true,
+      status: 'active'
+    }
+
+    const clockInResB = {
+      _id: 'res-b',
+      date: '2026-05-06',
+      startTime: '14:00',
+      endTime: '15:00',
+      technicianName: '技师B',
+      technicianId: 'techB',
+      isClockIn: true,
+      status: 'active'
+    }
+
+    const nonClockInReservation = {
+      _id: 'res-rotation',
+      date: '2026-05-06',
+      startTime: '14:00',
+      endTime: '15:00',
+      gender: 'male',
+      isClockIn: false,
+      status: 'active'
+    }
+
+    setupMock(mockSchedule, [], [clockInResA, clockInResB, nonClockInReservation], [], mockStaff)
+
+    const { main } = require('./index')
+    const result = await main({ date: '2026-05-06', mode: 'rearrange' })
+
+    expect(result.code).toBe(0)
+    expect(result.data.unassigned).toHaveLength(1)
+    expect(result.data.unassigned[0].newTechnician).toBeNull()
   })
 })

@@ -47,6 +47,7 @@ interface TimeBlock {
 	extraTime: number
 	technician: string
 	genderRequirement?: 'male' | 'female'
+	rearrangeConflict?: boolean
 }
 
 Component({
@@ -198,7 +199,8 @@ Component({
 							isClockIn: r.isClockIn || false,
 							extraTime: (r as ConsultationRecord).extraTime || 0,
 							technician: r.technician!,
-							genderRequirement: (r as any).genderRequirement
+							genderRequirement: (r as any).genderRequirement,
+							rearrangeConflict: (r as any).rearrangeConflict || false
 						};
 					});
 

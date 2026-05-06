@@ -25,7 +25,7 @@
           <!-- 当前时间线 -->
           <view class="current-time-line" wx:if="{{showCurrentTimeLine}}" style="left: {{currentTimePosition}};"></view>
           <!-- 占用块 -->
-          <view wx:for="{{item.blocks}}" wx:for-item="block" wx:key="startTime" class="time-block {{block.isReservation ? 'reservation' : ''}} {{block.gender}} {{block.isInProgress ? 'in-progress' : ''}} {{block.isSettled ? 'settled' : ''}}" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block._id}}" data-reservation="{{block.isReservation}}" data-settled="{{block.isSettled}}" data-inprogress="{{block.isInProgress}}">
+          <view wx:for="{{item.blocks}}" wx:for-item="block" wx:key="startTime" class="time-block {{block.isReservation ? 'reservation' : ''}} {{block.gender}} {{block.isInProgress ? 'in-progress' : ''}} {{block.isSettled ? 'settled' : ''}} {{block.rearrangeConflict ? 'rearrange-conflict' : ''}}" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block._id}}" data-reservation="{{block.isReservation}}" data-settled="{{block.isSettled}}" data-inprogress="{{block.isInProgress}}">
             <view class="block-content">
               <view class="block-customer">
                 {{block.customerName}}
@@ -36,6 +36,7 @@
                 <text wx:if="{{block.isClockIn}}">[点]</text>
                 <text wx:else>[轮]</text>
                 <text wx:if="{{block.extraTime > 0}}">[加钟]</text>
+                <text wx:if="{{block.rearrangeConflict}}" style="color: #ffff00; font-weight: bold;">[冲突]</text>
               </view>
               <view class="block-info">{{block.project}} | {{block.room}}</view>
             </view>

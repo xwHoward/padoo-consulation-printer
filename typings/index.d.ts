@@ -125,7 +125,13 @@ interface ReservationRecord extends BaseRecord {
   endTime: string; // HH:MM
   isClockIn?: boolean; // 点钟标记
   status: "active" | "cancelled" | 'arrived'; // 状态
-  genderRequirement?: "male" | "female";
+  genderRequirement?: "male" | "female"; // 兼容旧数据
+  
+  // 新增字段 - 完整记录预约需求约束
+  requirementType?: 'specific' | 'gender'; // 预约类型：指定技师/性别需求
+  requiredMaleCount?: number; // 需要的男技师数量
+  requiredFemaleCount?: number; // 需要的女技师数量
+  groupKey?: string; // 预约组标识（同组预约共享同一key）
 }
 
 

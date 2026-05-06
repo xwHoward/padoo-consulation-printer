@@ -26,6 +26,10 @@ exports.main = async (event, context) => {
         return await getRotationQuickSlots(date)
     }
 
+    if (mode === 'rearrange') {
+        return await rearrangeReservations(date)
+    }
+
     if (!date || !currentTime || !projectDuration) {
         return {
             code: -1,
@@ -635,6 +639,293 @@ async function getTechnicianAvailability(date) {
             code: -1,
             message: '获取失败: ' + error.message,
             data: []
+        }
+    }
+}
+
+/**
+ * 计算技师在指定日期的总空闲时长（分钟）
+ * @param {Object} technician - 技师信息
+ * @param {Array} staffConsultations - 技师的咨询单记录
+ * @param {Array} staffReservations - 技师的预约记录
+ * @param {string} shift - 班次类型
+ * @returns {number} 空闲时长（分钟）
+ */
+function calculateFreeMinutes(technician, staffConsultations, staffReservations, shift) {
+    const shiftStartTime = SHIFT_START_TIME[shift] || SHIFT_START_TIME['evening']
+    const shiftEndTime = SHIFT_END_TIME[shift] || SHIFT_END_TIME['evening']
+    
+    const shiftStartMinutes = parseTimeToMinutes(shiftStartTime)
+    const shiftEndMinutes = parseTimeToMinutes(shiftEndTime)
+    
+    const allAppointments = [...staffConsultations, ...staffReservations]
+    if (allAppointments.length === 0) {
+        return shiftEndMinutes - shiftStartMinutes
+    }
+    
+    const mergedRanges = mergeTimeRanges(allAppointments)
+    
+    let occupiedMinutes = 0
+    mergedRanges.forEach(range => {
+        const actualStart = Math.max(range.start, shiftStartMinutes)
+        const actualEnd = Math.min(range.end, shiftEndMinutes)
+        if (actualEnd > actualStart) {
+            occupiedMinutes += actualEnd - actualStart
+        }
+    })
+    
+    return (shiftEndMinutes - shiftStartMinutes) - occupiedMinutes
+}
+
+/**
+ * 检查技师在指定时间是否可用（考虑5分钟重叠容差）
+ * @param {number} proposedStart - 预约开始时间（分钟）
+ * @param {number} proposedEnd - 预约结束时间（分钟）
+ * @param {Array} staffConsultations - 技师的咨询单记录
+ * @param {Array} staffReservations - 技师的预约记录
+ * @returns {{ available: boolean, reason: string }}
+ */
+function checkTechnicianAvailability(proposedStart, proposedEnd, staffConsultations, staffReservations) {
+    const OVERLAP_TOLERANCE = 5
+    
+    const allAppointments = [...staffConsultations, ...staffReservations]
+    if (allAppointments.length === 0) {
+        return { available: true, reason: '空闲' }
+    }
+    
+    const mergedRanges = mergeTimeRanges(allAppointments)
+    
+    const effectiveStart = proposedStart + OVERLAP_TOLERANCE
+    const effectiveEnd = proposedEnd - OVERLAP_TOLERANCE
+    
+    for (const range of mergedRanges) {
+        if (effectiveStart < range.end && effectiveEnd > range.start) {
+            return { 
+                available: false, 
+                reason: `与 ${formatMinutesToTime(range.start)}-${formatMinutesToTime(range.end)} 冲突` 
+            }
+        }
+    }
+    
+    return { available: true, reason: '空闲' }
+}
+
+/**
+ * 预约单重排算法（mode: 'rearrange'）
+ * 1. 点钟预约单始终不变
+ * 2. 严格按照性别要求匹配技师
+ * 3. 轮钟预约按以下优先级分配：
+ *    - 优先级1：技师空闲时间允许预约（前后各5分钟重叠容差）
+ *    - 优先级2：轮钟数量越少，优先级越高
+ *    - 优先级3：最长空闲优先，减少技师空闲时间
+ * @param {string} date - 日期（YYYY-MM-DD）
+ * @returns {{ code: number, message: string, data: { unchanged: Array, rearranged: Array, unassigned: Array } }}
+ */
+async function rearrangeReservations(date) {
+    try {
+        const [scheduleRes, consultationsRes, reservationsRes, rotationRes, staffRes] = await Promise.all([
+            db.collection('schedule').where({ date }).get(),
+            db.collection('consultation_records').where({ date, isVoided: false }).get(),
+            db.collection('reservations').where({ date, status: 'active' }).get(),
+            db.collection('rotation_queue').where({ date }).get(),
+            db.collection('staff').where({ status: 'active' }).get()
+        ])
+
+        const schedules = scheduleRes.data || []
+        const consultations = consultationsRes.data || []
+        const reservations = reservationsRes.data || []
+        const staffList = staffRes.data || []
+        
+        const rotationData = rotationRes.data && rotationRes.data.length > 0 ? rotationRes.data[0] : null
+        const rotationStaffList = rotationData && rotationData.staffList ? rotationData.staffList : []
+        
+        const onDutyStaffIds = schedules
+            .filter(s => s.shift !== 'leave' && s.shift !== 'off')
+            .map(s => s.staffId)
+            
+        const onDutyStaff = staffList.filter(s => onDutyStaffIds.includes(s._id))
+        const scheduleMap = new Map(schedules.map(s => [s.staffId, s]))
+        const staffMap = new Map(staffList.map(s => [s._id, s]))
+        
+        const clockInReservations = reservations.filter(r => r.isClockIn === true)
+        const nonClockInReservations = reservations.filter(r => r.isClockIn !== true)
+        
+        const staffConsultationsMap = new Map()
+        const staffReservationsMap = new Map()
+        
+        onDutyStaff.forEach(staff => {
+            staffConsultationsMap.set(staff._id, consultations.filter(c => c.technician === staff.name))
+            staffReservationsMap.set(staff._id, clockInReservations.filter(r => r.technicianId === staff._id || r.technicianName === staff.name))
+        })
+        
+        const result = {
+            unchanged: [],
+            rearranged: [],
+            unassigned: []
+        }
+        
+        clockInReservations.forEach(res => {
+            result.unchanged.push({
+                ...res,
+                originalTechnician: res.technicianName,
+                newTechnician: res.technicianName,
+                reason: '点钟预约，保持不变'
+            })
+        })
+        
+        const staffRotationCount = new Map()
+        onDutyStaff.forEach(staff => {
+            staffRotationCount.set(staff._id, 0)
+        })
+        
+        nonClockInReservations.sort((a, b) => {
+            return parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime)
+        })
+        
+        nonClockInReservations.forEach(res => {
+            const proposedStart = parseTimeToMinutes(res.startTime)
+            const proposedEnd = parseTimeToMinutes(res.endTime)
+            
+            // 获取技师性别要求（优先使用新增字段，兼容旧数据）
+            const requiredGenders = []
+            if (res.requirementType === 'gender') {
+                // 使用新增的数量约束
+                if (res.requiredMaleCount > 0) {
+                    requiredGenders.push('male')
+                }
+                if (res.requiredFemaleCount > 0) {
+                    requiredGenders.push('female')
+                }
+            } else if (res.genderRequirement) {
+                // 兼容旧数据的单一性别要求
+                requiredGenders.push(res.genderRequirement)
+            } else {
+                // 默认使用客户性别作为技师性别要求
+                requiredGenders.push(res.gender)
+            }
+            
+            const availableTechnicians = []
+            
+            onDutyStaff.forEach(staff => {
+                if (!requiredGenders.includes(staff.gender)) {
+                    return
+                }
+                
+                const staffConsults = staffConsultationsMap.get(staff._id) || []
+                const staffResvs = staffReservationsMap.get(staff._id) || []
+                
+                const availability = checkTechnicianAvailability(proposedStart, proposedEnd, staffConsults, staffResvs)
+                
+                if (availability.available) {
+                    const schedule = scheduleMap.get(staff._id)
+                    const shift = schedule ? schedule.shift : 'evening'
+                    const freeMinutes = calculateFreeMinutes(staff, staffConsults, staffResvs, shift)
+                    const rotationCount = staffRotationCount.get(staff._id)
+                    
+                    availableTechnicians.push({
+                        staff,
+                        rotationCount,
+                        freeMinutes,
+                        reason: availability.reason
+                    })
+                }
+            })
+            
+            if (availableTechnicians.length === 0) {
+                result.unassigned.push({
+                    ...res,
+                    originalTechnician: res.technicianName || '未分配',
+                    newTechnician: null,
+                    reason: `无符合性别要求（${requiredGenders.join(', ')}）且时间可用的技师`
+                })
+                return
+            }
+            
+            availableTechnicians.sort((a, b) => {
+                if (a.rotationCount !== b.rotationCount) {
+                    return a.rotationCount - b.rotationCount
+                }
+                return b.freeMinutes - a.freeMinutes
+            })
+            
+            const bestTech = availableTechnicians[0]
+            
+            result.rearranged.push({
+                ...res,
+                originalTechnician: res.technicianName || '未分配',
+                newTechnician: bestTech.staff.name,
+                newTechnicianId: bestTech.staff._id,
+                reason: `轮钟数${bestTech.rotationCount}，空闲${bestTech.freeMinutes}分钟`
+            })
+            
+            staffRotationCount.set(bestTech.staff._id, bestTech.rotationCount + 1)
+            
+            const currentResvs = staffReservationsMap.get(bestTech.staff._id) || []
+            staffReservationsMap.set(bestTech.staff._id, [...currentResvs, res])
+        })
+        
+        try {
+            const updateTasks = []
+            
+            for (const item of result.rearranged) {
+                updateTasks.push(
+                    db.collection('reservations').where({ _id: item._id }).update({
+                        data: {
+                            technicianId: item.newTechnicianId,
+                            technicianName: item.newTechnician,
+                            rearrangeConflict: false
+                        }
+                    })
+                )
+            }
+            
+            for (const item of result.unassigned) {
+                updateTasks.push(
+                    db.collection('reservations').where({ _id: item._id }).update({
+                        data: {
+                            rearrangeConflict: true
+                        }
+                    })
+                )
+            }
+            
+            for (const item of result.unchanged) {
+                updateTasks.push(
+                    db.collection('reservations').where({ _id: item._id }).update({
+                        data: {
+                            rearrangeConflict: false
+                        }
+                    })
+                )
+            }
+            
+            if (updateTasks.length > 0) {
+                await Promise.all(updateTasks)
+            }
+        } catch (updateError) {
+            console.warn('[重排] 更新预约记录失败:', updateError.message)
+        }
+        
+        return {
+            code: 0,
+            message: '重排完成',
+            data: {
+                unchanged: result.unchanged,
+                rearranged: result.rearranged,
+                unassigned: result.unassigned,
+                summary: {
+                    total: reservations.length,
+                    unchangedCount: result.unchanged.length,
+                    rearrangedCount: result.rearranged.length,
+                    unassignedCount: result.unassigned.length
+                }
+            }
+        }
+    } catch (error) {
+        return {
+            code: -1,
+            message: '重排失败: ' + error.message,
+            data: null
         }
     }
 }

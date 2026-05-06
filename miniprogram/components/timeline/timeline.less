@@ -179,6 +179,18 @@
 		opacity: 1;
 	}
 
+	&.rearrange-conflict {
+		background: repeating-linear-gradient(
+			45deg,
+			#ff4d4f,
+			#ff4d4f 10px,
+			#ff7875 10px,
+			#ff7875 20px
+		);
+		border: 2px solid #ff4d4f;
+		animation: pulse-conflict 1.5s ease-in-out infinite;
+	}
+
 	.block-content {
 		box-sizing: border-box;
 		padding-left: 4px;
@@ -281,5 +293,14 @@
 @keyframes spin {
 	to {
 		transform: rotate(360deg);
+	}
+}
+
+@keyframes pulse-conflict {
+	0%, 100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.7;
 	}
 }

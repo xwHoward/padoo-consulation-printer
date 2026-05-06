@@ -727,6 +727,7 @@ Page({
     }
 
     await this.dataLoader?.loadTechnicianList();
+    await this.triggerRearrange(info1.date);
     
     const { licensePlate } = this.data;
     // 如果是新增且有车牌号，显示车牌号录入提醒
@@ -749,6 +750,25 @@ Page({
 
   hidePlateInputModal() {
     this.modalHandler?.hidePlateInputModal();
+  },
+
+  async triggerRearrange(date: string): Promise<void> {
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'getAvailableTechnicians',
+        data: {
+          date,
+          mode: 'rearrange'
+        }
+      });
+      if (res.result && (res.result as { code: number }).code === 0) {
+        console.log('[重排] 完成:', (res.result as { data: { summary: any } }).data.summary);
+      } else {
+        console.warn('[重排] 失败:', (res.result as { message?: string }).message);
+      }
+    } catch (error) {
+      console.error('[重排] 调用失败:', error);
+    }
   },
 
   onPlateConfirm(e: WechatMiniprogram.CustomEvent) {

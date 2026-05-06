@@ -17,6 +17,28 @@ export class ReservationHandler {
 	}
 
 	/**
+	 * 触发预约单重排
+	 */
+	async triggerRearrange(date: string): Promise<void> {
+		try {
+			const res = await wx.cloud.callFunction({
+				name: 'getAvailableTechnicians',
+				data: {
+					date,
+					mode: 'rearrange'
+				}
+			});
+			if (res.result && (res.result as { code: number }).code === 0) {
+				console.log('[重排] 完成:', (res.result as { data: { summary: any } }).data.summary);
+			} else {
+				console.warn('[重排] 失败:', (res.result as { message?: string }).message);
+			}
+		} catch (error) {
+			console.error('[重排] 调用失败:', error);
+		}
+	}
+
+	/**
 	 * 打开预约弹窗
 	 */
 	async openReserveModal(): Promise<void> {
@@ -523,6 +545,7 @@ export class ReservationHandler {
 							return;
 						}
 
+						await this.triggerRearrange(reservation.date);
 						await this.page.loadTimelineData();
 						wx.showToast({ title: '已取消预约', icon: 'success' });
 					} catch (error) {
@@ -615,6 +638,12 @@ export class ReservationHandler {
 
 		let record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>;
 
+		const generateGroupKey = () => {
+			return 'GRP_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+		};
+		
+		const groupKey = reserveForm.requirementType === 'gender' ? generateGroupKey() : undefined;
+		
 		if (reserveForm.requirementType === 'gender') {
 			// 性别需求模式：更新性别需求
 			const { male, female } = reserveForm.genderRequirement;
@@ -630,7 +659,11 @@ export class ReservationHandler {
 				endTime: endTime,
 				isClockIn: false,
 				status: "active",
-				genderRequirement: male > 0 ? 'male' : (female > 0 ? 'female' : undefined)
+				genderRequirement: male > 0 ? 'male' : (female > 0 ? 'female' : undefined),
+				requirementType: 'gender',
+				requiredMaleCount: male,
+				requiredFemaleCount: female,
+				groupKey
 			};
 		} else {
 			// 点钟模式：更新指定技师
@@ -646,16 +679,18 @@ export class ReservationHandler {
 				startTime: reserveForm.startTime,
 				endTime: endTime,
 				isClockIn: firstTech?.isClockIn || false,
-				status: "active"
+				status: "active",
+				requirementType: 'specific',
+				requiredMaleCount: 0,
+				requiredFemaleCount: 0
 			};
 		}
 
 		const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
 		if (success) {
 			wx.showToast({ title: '保存成功', icon: 'success' });
-			// 关闭预约弹窗
 			this.closeReserveModal();
-			// 立即刷新时间轴数据
+			await this.triggerRearrange(reserveForm.date);
 			await this.page.loadTimelineData();
 		} else {
 			wx.showToast({ title: '保存失败', icon: 'none' });
@@ -673,6 +708,11 @@ export class ReservationHandler {
 		}
 
 		let successCount = 0;
+		const generateGroupKey = () => {
+			return 'GRP_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+		};
+		const groupKey = technicians.length > 1 ? generateGroupKey() : undefined;
+		
 		for (const tech of technicians) {
 			const record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'> = {
 				date: reserveForm.date,
@@ -685,7 +725,11 @@ export class ReservationHandler {
 				startTime: reserveForm.startTime,
 				endTime: endTime,
 				isClockIn: tech.isClockIn || false,
-				status: "active"
+				status: "active",
+				requirementType: 'specific',
+				requiredMaleCount: 0,
+				requiredFemaleCount: 0,
+				groupKey
 			};
 			const insertResult = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
 			if (insertResult) {
@@ -697,10 +741,12 @@ export class ReservationHandler {
 			await app.loadGlobalData();
 			wx.showToast({ title: '预约成功', icon: 'success' });
 			this.closeReserveModal();
+			await this.triggerRearrange(reserveForm.date);
 			await this.page.loadTimelineData();
 		} else {
 			wx.showToast({ title: `成功创建${successCount}/${technicians.length}条预约`, icon: 'none' });
 			this.closeReserveModal();
+			await this.triggerRearrange(reserveForm.date);
 			await this.page.loadTimelineData();
 		}
 	}
@@ -799,6 +845,12 @@ export class ReservationHandler {
 		// 合并选中的技师（先生后女）
 		const selectedTechnicians = [...selectedMaleStaff, ...selectedFemaleStaff];
 
+		// 生成预约组标识
+		const generateGroupKey = () => {
+			return 'GRP_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+		};
+		const groupKey = totalRequired > 1 ? generateGroupKey() : undefined;
+
 		// 为每个选中的技师创建预约
 		let successCount = 0;
 		for (const tech of selectedTechnicians) {
@@ -813,7 +865,12 @@ export class ReservationHandler {
 				startTime: reserveForm.startTime,
 				endTime: endTime,
 				isClockIn: false,
-				status: 'active'
+				status: 'active',
+				genderRequirement: male > 0 ? 'male' : 'female',
+				requirementType: 'gender',
+				requiredMaleCount: male,
+				requiredFemaleCount: female,
+				groupKey
 			};
 			const insertResult = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
 			if (insertResult) {
@@ -824,12 +881,12 @@ export class ReservationHandler {
 		if (successCount === totalRequired) {
 			await app.loadGlobalData();
 			wx.showToast({ title: '预约成功', icon: 'success' });
+			await this.triggerRearrange(reserveForm.date);
 			this.closeReserveModal();
-			await this.page.loadTimelineData();
 		} else {
 			wx.showToast({ title: `成功创建${successCount}/${totalRequired}条预约`, icon: 'none' });
+			await this.triggerRearrange(reserveForm.date);
 			this.closeReserveModal();
-			await this.page.loadTimelineData();
 		}
 	}
 }
