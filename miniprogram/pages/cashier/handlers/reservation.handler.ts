@@ -21,21 +21,14 @@ export class ReservationHandler {
 	 */
 	async triggerRearrange(date: string): Promise<void> {
 		try {
-			const res = await wx.cloud.callFunction({
+			 await wx.cloud.callFunction({
 				name: 'getAvailableTechnicians',
 				data: {
 					date,
 					mode: 'rearrange'
 				}
 			});
-			if (res.result && (res.result as { code: number }).code === 0) {
-				console.log('[重排] 完成:', (res.result as { data: { summary: any } }).data.summary);
-			} else {
-				console.warn('[重排] 失败:', (res.result as { message?: string }).message);
-			}
-		} catch (error) {
-			console.error('[重排] 调用失败:', error);
-		}
+		} catch (error) {	}
 	}
 
 	/**
@@ -481,6 +474,8 @@ export class ReservationHandler {
 					title: '下钟成功',
 					icon: 'success'
 				});
+				// 提前下钟后触发重排，确保后续预约能及时感知占用变化
+				await this.triggerRearrange(record.date);
 				await this.page.loadTimelineData();
 			} else {
 				wx.showToast({
@@ -634,7 +629,6 @@ export class ReservationHandler {
 	 * 处理编辑预约
 	 */
 	private async handleEditReservation(reserveForm: typeof this.page.data.reserveForm, endTime: string): Promise<void> {
-		const originalReservation = this.page.data.originalReservation;
 
 		let record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>;
 

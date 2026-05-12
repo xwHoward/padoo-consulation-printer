@@ -36,7 +36,10 @@
                 <text wx:if="{{block.isClockIn}}">[点]</text>
                 <text wx:else>[轮]</text>
                 <text wx:if="{{block.extraTime > 0}}">[加钟]</text>
-                <text wx:if="{{block.rearrangeConflict}}" style="color: #ffff00; font-weight: bold;">[冲突]</text>
+                <text wx:if="{{block.rearrangeConflict}}" style="color: #ffff00; font-weight: bold;">
+                  [冲突]
+                </text>
+                <text wx:if="{{block.requirement}}">[{{block.requirement}}]</text>
               </view>
               <view class="block-info">{{block.project}} | {{block.room}}</view>
             </view>

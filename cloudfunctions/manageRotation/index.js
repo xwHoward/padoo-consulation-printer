@@ -56,13 +56,10 @@ async function initRotationQueue(date) {
     }
 
     // 并行获取所需数据
-    const [staffRes, yesterdayScheduleRes, yesterdayRotationRes] = await Promise.all([
+    const [staffRes, yesterdayRotationRes] = await Promise.all([
         db.collection('staff').where({
             status: 'active',
             _id: _.in(onDutyStaffIds)
-        }).get(),
-        db.collection('schedule').where({
-            date: getYesterday(date)
         }).get(),
         db.collection('rotation_queue').where({
             date: getYesterday(date)
@@ -70,53 +67,68 @@ async function initRotationQueue(date) {
     ])
 
     const staffList = staffRes.data || []
-    const yesterdaySchedules = yesterdayScheduleRes.data || []
-    const yesterdayRotation = yesterdayRotationRes.data[0]
+    const staffMap = new Map(staffList.map(s => [s._id, s]))
+    const yesterdayRotation = yesterdayRotationRes.data && yesterdayRotationRes.data.length > 0 ? yesterdayRotationRes.data[0] : null
+    const scheduleMap = new Map(schedules.map(s => [s.staffId, s]))
 
-    const staffWithPriority = staffList.map(staff => {
-        const yesterdaySchedule = yesterdaySchedules.find(s => s.staffId === staff._id)
-        const wasOnDutyYesterday = yesterdaySchedule &&
-            yesterdaySchedule.shift !== 'leave' &&
-            yesterdaySchedule.shift !== 'off'
+    // 构建今日在班的员工ID集合
+    const todayOnDutySet = new Set(onDutyStaffIds)
 
-        const todaySchedule = schedules.find(s => s.staffId === staff._id)
-        const shift = todaySchedule ? todaySchedule.shift : 'evening'
+    let finalOrder = []
 
-        let priority = 0
+    if (yesterdayRotation && yesterdayRotation.staffList && yesterdayRotation.staffList.length > 0) {
+        // 有昨日队列：严格继承昨日物理顺序
+        const yesterdayStaffIds = yesterdayRotation.staffList.map(s => s.staffId)
+        
+        // 从昨日队列中保留今日仍在班的员工（保持相对顺序）
+        const inheritedStaff = yesterdayRotation.staffList
+            .filter(s => todayOnDutySet.has(s.staffId))
+            .map(s => s.staffId)
+        
+        // 今日新增人员（昨日不在队列但今日在班）：休假归来、新员工 → 追加到队尾
+        const newStaffIds = onDutyStaffIds.filter(id => !yesterdayStaffIds.includes(id))
+        
+        // 分离早班员工和非早班员工（从继承列表中）
+        const morningStaff = inheritedStaff.filter(id => {
+            const schedule = scheduleMap.get(id)
+            return schedule && schedule.shift === 'morning'
+        })
+        const nonMorningStaff = inheritedStaff.filter(id => {
+            const schedule = scheduleMap.get(id)
+            return !schedule || schedule.shift !== 'morning'
+        })
+        
+        // 最终顺序 = [早班员工（保持继承相对顺序）] + [非早班员工（保持继承顺序）] + [新增人员]
+        finalOrder = [...morningStaff, ...nonMorningStaff, ...newStaffIds]
+    } else {
+        // 无昨日数据（首次使用）：早班优先，其余按员工ID排序
+        const morningStaff = onDutyStaffIds.filter(id => {
+            const schedule = scheduleMap.get(id)
+            return schedule && schedule.shift === 'morning'
+        })
+        const nonMorningStaff = onDutyStaffIds.filter(id => {
+            const schedule = scheduleMap.get(id)
+            return !schedule || schedule.shift !== 'morning'
+        })
+        finalOrder = [...morningStaff, ...nonMorningStaff]
+    }
 
-        if (shift === 'morning') {
-            priority = 1000
-        }
-
-        if (!wasOnDutyYesterday) {
-            priority -= 500
-        } else if (yesterdayRotation) {
-            const yesterdayStaff = yesterdayRotation.staffList.find(s => s.staffId === staff._id)
-            if (yesterdayStaff) {
-                priority += yesterdayStaff.orderCount * 10
-            }
-        }
-
+    const staffListWithOrder = finalOrder.map((staffId, index) => {
+        const staff = staffMap.get(staffId)
+        const schedule = scheduleMap.get(staffId)
         return {
-            staffId: staff._id,
-            name: staff.name,
-            avatar: staff.avatar,
-            phone: staff.phone || '',
-            wechatWorkId: staff.wechatWorkId || '',
-            gender: staff.gender,
-            shift: shift,
-            priority: priority,
+            staffId: staffId,
+            name: staff ? staff.name : '',
+            avatar: staff ? staff.avatar : '',
+            phone: staff ? (staff.phone || '') : '',
+            wechatWorkId: staff ? (staff.wechatWorkId || '') : '',
+            gender: staff ? staff.gender : 'male',
+            shift: schedule ? schedule.shift : 'evening',
             orderCount: 0,
-            lastServedTime: null
+            lastServedTime: null,
+            position: index
         }
-    })
-
-    staffWithPriority.sort((a, b) => b.priority - a.priority)
-
-    const staffListWithOrder = staffWithPriority.map((staff, index) => ({
-        ...staff,
-        position: index
-    }))
+    }).filter(item => item.name)
 
     // 使用事务防止竞态条件：检查并创建/更新轮牌队列
     const transaction = await db.startTransaction()
@@ -240,31 +252,26 @@ async function serveCustomer(date, staffId, isClockIn) {
     }
 
     if (isClockIn) {
+        // 点钟：仅增加计数，不改变队列位置
         staffList[staffIndex].orderCount += 1
         staffList[staffIndex].lastServedTime = new Date().toISOString()
     } else {
+        // 轮钟：将技师移到队尾，从0开始重新编号所有position
         const servedStaff = staffList.splice(staffIndex, 1)[0]
         servedStaff.orderCount += 1
         servedStaff.lastServedTime = new Date().toISOString()
         staffList.push(servedStaff)
 
-        const newIndex = staffList.findIndex(s => s.staffId === staffId)
-        for (let i = newIndex; i < staffList.length; i++) {
+        // 从头重新编号所有position
+        for (let i = 0; i < staffList.length; i++) {
             staffList[i].position = i
         }
-    }
-
-    let nextIndex = queueData.currentIndex
-    const currentStaff = staffList[nextIndex]
-
-    if (currentStaff && currentStaff.staffId === staffId) {
-        nextIndex = (nextIndex + 1) % staffList.length
     }
 
     await db.collection('rotation_queue').doc(queueData._id).update({
         data: {
             staffList: staffList,
-            currentIndex: nextIndex,
+            currentIndex: 0, // 队首即当前轮牌位
             updatedAt: new Date().toISOString()
         }
     })
@@ -274,7 +281,7 @@ async function serveCustomer(date, staffId, isClockIn) {
         message: '服务完成',
         data: {
             staffList: staffList,
-            currentIndex: nextIndex
+            currentIndex: 0
         }
     }
 }

@@ -46,8 +46,19 @@ interface TimeBlock {
 	isClockIn: boolean
 	extraTime: number
 	technician: string
-	genderRequirement?: 'male' | 'female'
+	requirement: string;
 	rearrangeConflict?: boolean
+}
+
+function parseGenderRequirement(rsv: Partial<ReservationRecord>): string {
+	console.log('parseGenderRequirement', rsv.requirementType, rsv.requiredMaleCount, rsv.requiredFemaleCount);
+	let res = '';
+	if(rsv.requirementType !== 'gender'){
+		return res;
+	}
+	if (rsv.requiredMaleCount) res += `${rsv.requiredMaleCount}男`;
+	if (rsv.requiredFemaleCount) res += `${rsv.requiredFemaleCount}女`;
+	return res;
 }
 
 Component({
@@ -152,13 +163,18 @@ Component({
 							gender: r.gender,
 							project: r.project,
 							room: '预约',
+							date: r.date,
+							customerName: r.customerName,
+							status: r.status,
 							startTime: r.startTime,
 							endTime: r.endTime,
 							extraTime: 0,
 							isClockIn: r.isClockIn || false,
 							isReservation: true,
 							technician: r.technicianName,
-							genderRequirement: r.genderRequirement // 新增：性别需求
+							requirementType: r.requirementType,
+							requiredMaleCount: r.requiredMaleCount,
+							requiredFemaleCount: r.requiredFemaleCount
 						}))
 					];
 
@@ -199,8 +215,8 @@ Component({
 							isClockIn: r.isClockIn || false,
 							extraTime: (r as ConsultationRecord).extraTime || 0,
 							technician: r.technician!,
-							genderRequirement: (r as any).genderRequirement,
-							rearrangeConflict: (r as any).rearrangeConflict || false
+							requirement: parseGenderRequirement(r as Update<ReservationRecord>),
+							rearrangeConflict: (r as Update<ReservationRecord>).rearrangeConflict || false
 						};
 					});
 

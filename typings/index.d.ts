@@ -131,6 +131,7 @@ interface ReservationRecord extends BaseRecord {
   requirementType?: 'specific' | 'gender'; // 预约类型：指定技师/性别需求
   requiredMaleCount?: number; // 需要的男技师数量
   requiredFemaleCount?: number; // 需要的女技师数量
+  rearrangeConflict?: boolean; // 是否重排冲突
   groupKey?: string; // 预约组标识（同组预约共享同一key）
 }
 

@@ -492,18 +492,18 @@ Page({
           }
         }
 
-        // 重新分配未来的非点钟预约
+        // 报钟后触发重排，确保预约分配及时更新
         try {
-          await this.reassignFutureReservations(currentDate, startTimeStr);
+          await this.triggerRearrange(currentDate);
         } catch (error) {
-          console.error('重新分配预约失败:', error);
+          console.error('重排失败:', error);
         }
       } else {
-        // 编辑模式下也需要重新分配未来的非点钟预约
+        // 编辑模式下也触发重排
         try {
-          await this.reassignFutureReservations(currentDate, startTimeStr);
+          await this.triggerRearrange(currentDate);
         } catch (error) {
-          console.error('重新分配预约失败:', error);
+          console.error('重排失败:', error);
         }
       }
 

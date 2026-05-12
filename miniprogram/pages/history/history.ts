@@ -333,6 +333,8 @@ Page({
         this.setData({
           'earlyFinishModal.show': false
         });
+        // 提前下钟后触发重排
+        await this.triggerRearrange(this.data.dateSelector.selectedDate);
         await this.loadHistoryData(this.data.dateSelector.selectedDate);
       } else {
         wx.showToast({
@@ -375,6 +377,8 @@ Page({
                 icon: 'success'
               });
               await this.loadHistoryData(this.data.dateSelector.selectedDate);
+              // 删除后触发重排
+              await this.triggerRearrange(record.date);
             } else {
               wx.showToast({
                 title: '记录不存在',
@@ -607,6 +611,9 @@ Page({
 
     await this.updateExtraTimeOrOvertime(record._id, date, inputValue);
 
+    // 加钟后触发重排
+    await this.triggerRearrange(date);
+
     this.setData({
       'numberInputModal.show': false
     });
@@ -744,6 +751,10 @@ Page({
       }
 
       await cloudDb.updateById(Collections.CONSULTATION, record._id, updateData);
+      
+      // 刮痧变更后触发重排
+      await this.triggerRearrange(date);
+      
       wx.showToast({
         title: newGuasha ? '已添加刮痧' : '已取消刮痧',
         icon: 'success'
