@@ -17,49 +17,44 @@
       <view class="logo-container">
         <image class="logo" src="/assets/logo.jpg" mode="contain" />
       </view>
-      <!-- 双人模式切换 -->
-      <view class="dual-mode-switch" wx:if="{{!editId}}">
-        <view class="dual-mode-label">双人模式</view>
-        <switch class="dual-mode-toggle" checked="{{isDualMode}}" bindchange="toggleDualMode" color="#FF6B00" />
-      </view>
-      <!-- 双人模式顾客切换标签 -->
-      <view class="guest-tabs" wx:if="{{isDualMode}}">
-        <view class="guest-tab {{activeGuest === 1 ? 'active' : ''}}" bindtap="switchGuest" data-guest="1">
-          <view class="tab-text">顾客1</view>
-          <view class="guest-name" wx:if="{{guest1Info.surname}}">
-            {{guest1Info.surname}}{{guest1Info.gender === 'male' ? '先生' : '女士'}}
+      <!-- 人数选择 -->
+      <view class="guest-count-control" wx:if="{{!editId}}">
+        <view class="guest-count-label">人数</view>
+        <view class="guest-count-buttons">
+          <view class="count-btn minus-btn {{guestCount <= 1 ? 'disabled' : ''}}" bindtap="removeGuest">
+            -
           </view>
-          <view class="guest-tech" wx:if="{{guest1Info.technician}}">
-            {{guest1Info.technician}}
-          </view>
+          <view class="count-display">{{guestCount}}</view>
+          <view class="count-btn plus-btn" bindtap="addGuest">+</view>
         </view>
-        <view class="guest-tab {{activeGuest === 2 ? 'active' : ''}}" bindtap="switchGuest" data-guest="2">
-          <view class="tab-text">顾客2</view>
-          <view class="guest-name" wx:if="{{guest2Info.surname}}">
-            {{guest2Info.surname}}{{guest2Info.gender === 'male' ? '先生' : '女士'}}
+      </view>
+      <!-- 多人模式顾客切换标签 -->
+      <view class="guest-tabs" wx:if="{{guestCount > 1}}">
+        <view wx:for="{{guestInfos}}" wx:key="index" class="guest-tab {{activeGuest === index + 1 ? 'active' : ''}}" bindtap="switchGuest" data-guest="{{index + 1}}">
+          <view class="tab-text">顾客{{index + 1}}</view>
+          <view class="guest-name" wx:if="{{item.surname}}">
+            {{item.surname}}{{item.gender === 'male' ? '先生' : '女士'}}
           </view>
-          <view class="guest-tech" wx:if="{{guest2Info.technician}}">
-            {{guest2Info.technician}}
-          </view>
+          <view class="guest-tech" wx:if="{{item.technician}}">{{item.technician}}</view>
         </view>
       </view>
       <view class="form-item">
         <view class="form-label">项目</view>
-        <project-selector selectedProject="{{(isDualMode ? (activeGuest === 1 ? guest1Info.project : guest2Info.project) : consultationInfo.project)}}" bind:change="onProjectSelect" />
+        <project-selector selectedProject="{{(guestCount > 1 ? guestInfos[activeGuest - 1].project : consultationInfo.project)}}" bind:change="onProjectSelect" />
       </view>
       <!-- 加强部位 -->
       <view class="section-title">加强部位</view>
-      <body-selector selectedParts="{{isDualMode ? (activeGuest === 1 ? guest1Info.selectedParts : guest2Info.selectedParts) : consultationInfo.selectedParts}}" bind:change="onBodyPartSelect" />
+      <body-selector selectedParts="{{guestCount > 1 ? guestInfos[activeGuest - 1].selectedParts : consultationInfo.selectedParts}}" bind:change="onBodyPartSelect" />
     </view>
     <!-- 按摩力度 -->
     <view class="section">
       <view class="section-title">按摩力度</view>
-      <strength-selector selectedStrength="{{(isDualMode ? (activeGuest === 1 ? guest1Info.massageStrength : guest2Info.massageStrength) : consultationInfo.massageStrength)}}" bind:change="onMassageStrengthSelect" />
+      <strength-selector selectedStrength="{{(guestCount > 1 ? guestInfos[activeGuest - 1].massageStrength : consultationInfo.massageStrength)}}" bind:change="onMassageStrengthSelect" />
     </view>
     <!-- 精油选择 -->
     <view class="section" wx:if="{{!currentProjectIsEssentialOilOnly && currentProjectNeedEssentialOil}}">
       <view class="section-title">精油选择</view>
-      <oil-selector selectedOil="{{isDualMode ? (activeGuest === 1 ? guest1Info.essentialOil : guest2Info.essentialOil) : consultationInfo.essentialOil}}" bind:change="onEssentialOilSelect" />
+      <oil-selector selectedOil="{{guestCount > 1 ? guestInfos[activeGuest - 1].essentialOil : consultationInfo.essentialOil}}" bind:change="onEssentialOilSelect" />
     </view>
     <!-- 专属精油显示 -->
     <view class="section" wx:if="{{currentProjectIsEssentialOilOnly && currentProjectNeedEssentialOil}}">
@@ -88,16 +83,16 @@
       <view class="section-title">上钟信息</view>
       <view class="form-item">
         <text class="form-label">技师</text>
-        <technician-selector selectedTechnician="{{(isDualMode ? (activeGuest === 1 ? guest1Info.technician : guest2Info.technician) : consultationInfo.technician)}}" technicianList="{{technicianList}}" bind:change="onTechnicianSelect" />
+        <technician-selector selectedTechnician="{{(guestCount > 1 ? guestInfos[activeGuest - 1].technician : consultationInfo.technician)}}" technicianList="{{technicianList}}" bind:change="onTechnicianSelect" />
         <view class="checkbox-group">
-          <label class="checkbox-item {{(isDualMode ? (activeGuest === 1 ? guest1Info.isClockIn : guest2Info.isClockIn) : consultationInfo.isClockIn) ? 'selected' : ''}}" bindtap="onClockInSelect">
+          <label class="checkbox-item {{(guestCount > 1 ? guestInfos[activeGuest - 1].isClockIn : consultationInfo.isClockIn) ? 'selected' : ''}}" bindtap="onClockInSelect">
             点
           </label>
         </view>
       </view>
-      <view class="form-item {{isDualMode && activeGuest === 2 ? 'shared-field-disabled' : ''}}">
-        <text class="form-label">房间{{isDualMode ? '（共享）' : ''}}</text>
-        <room-selector selectedRoom="{{consultationInfo.room}}" disabled="{{isDualMode && activeGuest === 2}}" bind:change="onRoomSelect" />
+      <view class="form-item">
+        <text class="form-label">房间</text>
+        <room-selector selectedRoom="{{guestCount > 1 ? guestInfos[activeGuest - 1].room : consultationInfo.room}}" bind:change="onRoomSelect" />
       </view>
     </view>
     <!-- 备注信息 -->
@@ -107,14 +102,14 @@
       <view wx:if="{{!matchedCustomerApplied}}" class="form-item combined-form-item customer-info-row">
         <view class="form-field surname-field">
           <text class="form-label">姓氏</text>
-          <input class="form-input" placeholder="选填" bind:input="onSurnameInput" value="{{isDualMode ? (activeGuest === 1 ? guest1Info.surname : guest2Info.surname) : consultationInfo.surname}}" />
+          <input class="form-input" placeholder="选填" bind:input="onSurnameInput" value="{{guestCount > 1 ? guestInfos[activeGuest - 1].surname : consultationInfo.surname}}" />
         </view>
         <view class="form-field gender-field">
-          <gender-selector selectedGender="{{(isDualMode ? (activeGuest === 1 ? guest1Info.gender : guest2Info.gender) : consultationInfo.gender)}}" bind:change="onGenderSelect" />
+          <gender-selector selectedGender="{{(guestCount > 1 ? guestInfos[activeGuest - 1].gender : consultationInfo.gender)}}" bind:change="onGenderSelect" />
         </view>
-        <view class="form-field phone-field {{isDualMode && activeGuest === 2 ? 'shared-field-disabled' : ''}}">
-          <text class="form-label">手机号{{isDualMode ? '（共享）' : ''}}</text>
-          <input class="form-input" type="number" placeholder="选填" maxlength="11" bind:input="onPhoneInput" value="{{consultationInfo.phone}}" disabled="{{isDualMode && activeGuest === 2}}" />
+        <view class="form-field phone-field {{guestCount > 1 && activeGuest > 1 ? 'shared-field-disabled' : ''}}">
+          <text class="form-label">手机号{{guestCount > 1 ? '（共享）' : ''}}</text>
+          <input class="form-input" type="number" placeholder="选填" maxlength="11" bind:input="onPhoneInput" value="{{consultationInfo.phone}}" disabled="{{guestCount > 1 && activeGuest > 1}}" />
         </view>
       </view>
       <!-- 顾客匹配结果 -->
@@ -143,13 +138,13 @@
       <view class="form-item coupon-form-item">
         <text class="form-label">券码</text>
         <view class="coupon-container">
-          <input class="form-input coupon-input" type="number" placeholder="选填" bind:input="onCouponCodeInput" value="{{isDualMode ? (activeGuest === 1 ? guest1Info.couponCode : guest2Info.couponCode) : consultationInfo.couponCode}}" />
+          <input class="form-input coupon-input" type="number" placeholder="选填" bind:input="onCouponCodeInput" value="{{guestCount > 1 ? guestInfos[activeGuest - 1].couponCode : consultationInfo.couponCode}}" />
         </view>
-        <platform-selector selectedPlatform="{{(isDualMode ? (activeGuest === 1 ? guest1Info.couponPlatform : guest2Info.couponPlatform) : consultationInfo.couponPlatform)}}" bind:change="onCouponPlatformSelect" />
+        <platform-selector selectedPlatform="{{(guestCount > 1 ? guestInfos[activeGuest - 1].couponPlatform : consultationInfo.couponPlatform)}}" bind:change="onCouponPlatformSelect" />
       </view>
       <view class="form-item">
         <text class="form-label">备注</text>
-        <input class="form-input" placeholder="选填" bind:input="onRemarksInput" value="{{isDualMode ? (activeGuest === 1 ? guest1Info.remarks : guest2Info.remarks) : consultationInfo.remarks}}" />
+        <input class="form-input" placeholder="选填" bind:input="onRemarksInput" value="{{guestCount > 1 ? guestInfos[activeGuest - 1].remarks : consultationInfo.remarks}}" />
       </view>
     </view>
     <!-- 提交和打印按钮 -->

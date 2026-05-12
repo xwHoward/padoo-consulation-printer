@@ -56,6 +56,7 @@ export class ReservationHandler {
 
 		this.page.setData({
 			showReserveModal: true,
+			editingGroupIds: [],
 			reserveForm: {
 				_id: '',
 				date: this.page.data.selectedDate || getCurrentDate(),
@@ -95,22 +96,47 @@ export class ReservationHandler {
 					this.page.setData({ loading: false });
 					return;
 				}
-
-				// 判断预约类型
-				const hasGenderRequirement = record.genderRequirement && !record.technicianId;
-				const requirementType = hasGenderRequirement ? 'gender' : 'specific';
-
-				const selectedTechnicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }> = [];
+	
+				// 判断预约类型：优先使用 requirementType 字段，兼容旧数据
+				const requirementType: 'specific' | 'gender' =
+					record.requirementType || (record.genderRequirement && !record.technicianId ? 'gender' : 'specific');
+						
+				let selectedTechnicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }> = [];
+				let editingGroupIds: string[] = [];
 				if (record.technicianId && record.technicianName) {
 					// 从 activeStaffList 获取技师信息（无需依赖尚未刷新的 staffAvailability）
 					const staffInfo = this.page.data.activeStaffList.find(s => s._id === record.technicianId);
 					if (staffInfo) {
 						selectedTechnicians.push({ _id: staffInfo._id, name: staffInfo.name, phone: staffInfo.phone || '', isClockIn: record.isClockIn || false });
 					}
+					editingGroupIds = [record._id];
 				}
-
+						
+				// 如果有 groupKey，加载所有组成员
+				if (record.groupKey && requirementType === 'specific') {
+					const groupMembers = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, {
+						groupKey: record.groupKey,
+						status: 'active',
+					});
+					selectedTechnicians = [];
+					editingGroupIds = [];
+					for (const member of groupMembers) {
+						editingGroupIds.push(member._id);
+						if (member.technicianId && member.technicianName) {
+							const staffInfo = this.page.data.activeStaffList.find(s => s._id === member.technicianId);
+							selectedTechnicians.push({
+								_id: member.technicianId,
+								name: member.technicianName,
+								phone: staffInfo?.phone || '',
+								isClockIn: member.isClockIn || false
+							});
+						}
+					}
+				}
+						
 				this.page.setData({
 					showReserveModal: true,
+					editingGroupIds,
 					reserveForm: {
 						_id: record._id,
 						date: record.date,
@@ -118,9 +144,12 @@ export class ReservationHandler {
 						gender: record.gender,
 						project: record.project,
 						phone: record.phone,
-						requirementType: requirementType as 'specific' | 'gender',
+						requirementType,
 						selectedTechnicians,
-						genderRequirement: hasGenderRequirement ? { male: record.genderRequirement === 'male' ? 1 : 0, female: record.genderRequirement === 'female' ? 1 : 0 } : { male: 0, female: 0 },
+						// 使用 requiredMaleCount/requiredFemaleCount 回填实际数量
+						genderRequirement: requirementType === 'gender'
+							? { male: record.requiredMaleCount || 0, female: record.requiredFemaleCount || 0 }
+							: { male: 0, female: 0 },
 						startTime: record.startTime,
 						technicianId: record.technicianId || '',
 						technicianName: record.technicianName || '',
@@ -152,8 +181,11 @@ export class ReservationHandler {
 
 			const projectDuration = parseProjectDuration(project) || 60;
 
-			// 编辑模式下，排除当前正在编辑的预约ID，使其原技师可选
-			const currentReservationIds = editingReservationId ? [editingReservationId] : [];
+		// 编辑模式下，排除当前编辑的所有预约（包括分组成员），使其原技师可选
+			const editingGroupIds = this.page.data.editingGroupIds;
+			const currentReservationIds = editingGroupIds.length > 0
+				? editingGroupIds
+				: (editingReservationId ? [editingReservationId] : []);
 
 			const res = await wx.cloud.callFunction({
 				name: 'getAvailableTechnicians',
@@ -238,9 +270,7 @@ export class ReservationHandler {
 		const currentCount = reserveForm.genderRequirement[gender as 'male' | 'female'];
 
 		if (action === 'increase') {
-			if (currentCount < 2) {
-				reserveForm.genderRequirement[gender as 'male' | 'female'] = currentCount + 1;
-			}
+			reserveForm.genderRequirement[gender as 'male' | 'female'] = currentCount + 1;
 		} else if (action === 'decrease') {
 			if (currentCount > 0) {
 				reserveForm.genderRequirement[gender as 'male' | 'female'] = currentCount - 1;
@@ -572,7 +602,7 @@ export class ReservationHandler {
 			}
 		} else if (reserveForm.requirementType === 'gender') {
 			const totalRequired = reserveForm.genderRequirement.male + reserveForm.genderRequirement.female;
-			if (totalRequired === 0) {
+		if (totalRequired === 0) {
 				wx.showToast({ title: '请选择技师需求', icon: 'none' });
 				return;
 			}
@@ -582,10 +612,6 @@ export class ReservationHandler {
 			}
 			if (reserveForm.genderRequirement.female > availableFemaleCount) {
 				wx.showToast({ title: `可用女技师不足（仅${availableFemaleCount}位）`, icon: 'none' });
-				return;
-			}
-			if (totalRequired > 2) {
-				wx.showToast({ title: '最多只能预约2位技师', icon: 'none' });
 				return;
 			}
 		}
@@ -659,35 +685,76 @@ export class ReservationHandler {
 				requiredFemaleCount: female,
 				groupKey
 			};
+			const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
+			if (success) {
+				wx.showToast({ title: '保存成功', icon: 'success' });
+				this.closeReserveModal();
+				await this.triggerRearrange(reserveForm.date);
+				await this.page.loadTimelineData();
+			} else {
+				wx.showToast({ title: '保存失败', icon: 'none' });
+			}
 		} else {
-			// 点钟模式：更新指定技师
-			const firstTech = reserveForm.selectedTechnicians[0];
-			record = {
-				date: reserveForm.date,
-				customerName: reserveForm.customerName || '',
-				gender: reserveForm.gender,
-				phone: reserveForm.phone,
-				project: reserveForm.project || '待定',
-				technicianId: firstTech?._id || '',
-				technicianName: firstTech?.name || '',
-				startTime: reserveForm.startTime,
-				endTime: endTime,
-				isClockIn: firstTech?.isClockIn || false,
-				status: "active",
-				requirementType: 'specific',
-				requiredMaleCount: 0,
-				requiredFemaleCount: 0
-			};
-		}
-
-		const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
-		if (success) {
-			wx.showToast({ title: '保存成功', icon: 'success' });
-			this.closeReserveModal();
-			await this.triggerRearrange(reserveForm.date);
-			await this.page.loadTimelineData();
-		} else {
-			wx.showToast({ title: '保存失败', icon: 'none' });
+			// 点钟模式
+			const originalRecord = this.page.data.originalReservation;
+			const originalGroupKey = originalRecord?.groupKey;
+			if (originalGroupKey) {
+				// 分组预约：更新所有组成员的公共字段
+				const groupMembers = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, {
+					groupKey: originalGroupKey,
+					status: 'active',
+				});
+				const commonFields = {
+					date: reserveForm.date,
+					customerName: reserveForm.customerName || '',
+					gender: reserveForm.gender,
+					phone: reserveForm.phone,
+					project: reserveForm.project || '待定',
+					startTime: reserveForm.startTime,
+					endTime: endTime,
+				};
+				let allSuccess = true;
+				for (const member of groupMembers) {
+					const ok = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, member._id, commonFields);
+					if (!ok) allSuccess = false;
+				}
+				if (allSuccess) {
+					wx.showToast({ title: '保存成功', icon: 'success' });
+				} else {
+					wx.showToast({ title: '部分保存失败', icon: 'none' });
+				}
+				this.closeReserveModal();
+				await this.triggerRearrange(reserveForm.date);
+				await this.page.loadTimelineData();
+			} else {
+				// 单个预约：更新指定技师
+				const firstTech = reserveForm.selectedTechnicians[0];
+				record = {
+					date: reserveForm.date,
+					customerName: reserveForm.customerName || '',
+					gender: reserveForm.gender,
+					phone: reserveForm.phone,
+					project: reserveForm.project || '待定',
+					technicianId: firstTech?._id || '',
+					technicianName: firstTech?.name || '',
+					startTime: reserveForm.startTime,
+					endTime: endTime,
+					isClockIn: firstTech?.isClockIn || false,
+					status: "active",
+					requirementType: 'specific',
+					requiredMaleCount: 0,
+					requiredFemaleCount: 0
+				};
+				const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
+				if (success) {
+					wx.showToast({ title: '保存成功', icon: 'success' });
+					this.closeReserveModal();
+					await this.triggerRearrange(reserveForm.date);
+					await this.page.loadTimelineData();
+				} else {
+					wx.showToast({ title: '保存失败', icon: 'none' });
+				}
+			}
 		}
 	}
 

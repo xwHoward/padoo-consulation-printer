@@ -45,6 +45,7 @@ const DefaultGuestInfo: GuestInfo = {
   couponCode: "",
   couponPlatform: "meituan",
   project: "",
+  room: "",
 };
 
 function ensureConsultationInfoCompatibility(data: ConsultationInfo, projects: Project[] = []): Update<ConsultationInfo> {
@@ -85,11 +86,10 @@ Page({
     // 专用精油相关
     currentProjectIsEssentialOilOnly: false, // 当前项目是否为专用精油项目
     currentProjectNeedEssentialOil: false, // 当前项目是否需要精油
-    // 双人模式相关
-    isDualMode: false, // 是否为双人模式
-    activeGuest: 1 as 1 | 2, // 当前活跃的顾客标签
-    guest1Info: { ...DefaultGuestInfo, selectedParts: {} } as GuestInfo, // 顾客1独立信息
-    guest2Info: { ...DefaultGuestInfo, selectedParts: {} } as GuestInfo, // 顾客2独立信息
+    // 多人模式相关
+    guestCount: 1,  // 顾客人数（1=单人模式）
+    activeGuest: 1 as number, // 当前激活的顾客
+    guestInfos: [{ ...DefaultGuestInfo, selectedParts: {} }] as GuestInfo[], // 每位顾客独立信息
     // 顾客匹配相关
     matchedCustomer: null as CustomerRecord | null, // 匹配到的顾客信息
     matchedCustomerApplied: false, // 是否已应用匹配的顾客信息
@@ -153,49 +153,80 @@ Page({
     }
   },
 
-  // 切换双人模式
-  toggleDualMode() {
-    const newMode = !this.data.isDualMode;
-    if (newMode) {
-      // 启用双人模式时，将当前咨询单信息复制到顾客1
-      const { consultationInfo } = this.data;
+  // 添加顾客
+  addGuest() {
+    const { guestCount, guestInfos, consultationInfo } = this.data;
+    if (guestCount === 1) {
+      // 从单人模式切换：将当前咨询单信息复制到顾客1
+      const guest1: GuestInfo = {
+        surname: consultationInfo.surname,
+        gender: (consultationInfo.gender || 'male') as 'male' | 'female',
+        selectedParts: { ...consultationInfo.selectedParts },
+        massageStrength: (consultationInfo.massageStrength || 'standard') as 'standard' | 'soft' | 'gravity',
+        essentialOil: consultationInfo.essentialOil,
+        remarks: consultationInfo.remarks,
+        technician: consultationInfo.technician,
+        isClockIn: consultationInfo.isClockIn,
+        couponCode: consultationInfo.couponCode,
+        couponPlatform: consultationInfo.couponPlatform,
+        project: consultationInfo.project,
+        room: consultationInfo.room,
+      };
+      const newGuestInfos = [guest1, { ...DefaultGuestInfo, selectedParts: {} }];
       this.setData({
-        isDualMode: true,
+        guestCount: 2,
         activeGuest: 1,
-        guest1Info: {
-          surname: consultationInfo.surname,
-          gender: (consultationInfo.gender || 'male') as 'male' | 'female',
-          selectedParts: { ...consultationInfo.selectedParts },
-          massageStrength: (consultationInfo.massageStrength || 'standard') as 'standard' | 'soft' | 'gravity',
-          essentialOil: consultationInfo.essentialOil,
-          remarks: consultationInfo.remarks,
-          technician: consultationInfo.technician,
-          isClockIn: consultationInfo.isClockIn,
-          couponCode: consultationInfo.couponCode,
-          couponPlatform: consultationInfo.couponPlatform,
-          project: consultationInfo.project,
-        },
-        guest2Info: { ...DefaultGuestInfo, selectedParts: {} },
+        guestInfos: newGuestInfos,
         matchedCustomer: null,
         matchedCustomerApplied: false
       });
     } else {
-      // 关闭双人模式时，将顾客1信息复制回咨询单
-      const { guest1Info } = this.data;
+      // 继续添加新顾客
+      const newGuestInfos = [...guestInfos, { ...DefaultGuestInfo, selectedParts: {} }];
       this.setData({
-        isDualMode: false,
+        guestCount: guestCount + 1,
+        activeGuest: guestCount + 1,
+        guestInfos: newGuestInfos,
+        matchedCustomer: null,
+        matchedCustomerApplied: false
+      });
+    }
+  },
+
+  // 移除顾客
+  removeGuest() {
+    const { guestCount, guestInfos, activeGuest } = this.data;
+    if (guestCount <= 1) return;
+    if (guestCount === 2) {
+      // 回到单人模式：将顾客1信息复制回咨询单
+      const guest1 = guestInfos[0];
+      this.setData({
+        guestCount: 1,
         activeGuest: 1,
-        'consultationInfo.surname': guest1Info.surname,
-        'consultationInfo.gender': guest1Info.gender,
-        'consultationInfo.selectedParts': { ...guest1Info.selectedParts },
-        'consultationInfo.massageStrength': guest1Info.massageStrength,
-        'consultationInfo.essentialOil': guest1Info.essentialOil,
-        'consultationInfo.remarks': guest1Info.remarks,
-        'consultationInfo.technician': guest1Info.technician,
-        'consultationInfo.isClockIn': guest1Info.isClockIn,
-        'consultationInfo.couponCode': guest1Info.couponCode,
-        'consultationInfo.couponPlatform': guest1Info.couponPlatform,
-        'consultationInfo.project': guest1Info.project,
+        guestInfos: [{ ...DefaultGuestInfo, selectedParts: {} }],
+        'consultationInfo.surname': guest1.surname,
+        'consultationInfo.gender': guest1.gender,
+        'consultationInfo.selectedParts': { ...guest1.selectedParts },
+        'consultationInfo.massageStrength': guest1.massageStrength,
+        'consultationInfo.essentialOil': guest1.essentialOil,
+        'consultationInfo.remarks': guest1.remarks,
+        'consultationInfo.technician': guest1.technician,
+        'consultationInfo.isClockIn': guest1.isClockIn,
+        'consultationInfo.couponCode': guest1.couponCode,
+        'consultationInfo.couponPlatform': guest1.couponPlatform,
+        'consultationInfo.project': guest1.project,
+        'consultationInfo.room': guest1.room,
+        matchedCustomer: null,
+        matchedCustomerApplied: false
+      });
+    } else {
+      // 移除最后一位顾客
+      const newGuestInfos = guestInfos.slice(0, guestCount - 1);
+      const newActive = Math.min(activeGuest, guestCount - 1);
+      this.setData({
+        guestCount: guestCount - 1,
+        activeGuest: newActive,
+        guestInfos: newGuestInfos,
         matchedCustomer: null,
         matchedCustomerApplied: false
       });
@@ -204,9 +235,10 @@ Page({
 
   // 切换顾客标签
   switchGuest(e: WechatMiniprogram.CustomEvent) {
-    const guest = parseInt(e.currentTarget.dataset.guest) as 1 | 2;
-    const { guest1Info, guest2Info, projects } = this.data;
-    const currentGuestProject = guest === 1 ? guest1Info.project : guest2Info.project;
+    const guest = parseInt(e.currentTarget.dataset.guest);
+    const { guestInfos, projects } = this.data;
+    const currentGuestInfo = guestInfos[guest - 1];
+    const currentGuestProject = currentGuestInfo?.project || '';
     const selectedProject = projects.find((p) => p.name === currentGuestProject);
     const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
     const needEssentialOil = selectedProject?.needEssentialOil || false;
@@ -268,9 +300,9 @@ Page({
 
   // 打印咨询单
   async printConsultation() {
-    const { isDualMode, consultationInfo, guest1Info, guest2Info, projects } = this.data;
+    const { guestCount, guestInfos, consultationInfo, projects } = this.data;
 
-    const validationResult = validateConsultationForPrint(consultationInfo, this.data.currentProjectIsEssentialOilOnly, this.data.currentProjectNeedEssentialOil, isDualMode, guest1Info, guest2Info);
+    const validationResult = validateConsultationForPrint(consultationInfo, this.data.currentProjectIsEssentialOilOnly, this.data.currentProjectNeedEssentialOil, guestCount, guestInfos);
     if (!showValidationError(validationResult)) {
       return;
     }
@@ -278,44 +310,29 @@ Page({
     try {
       const printContents: string[] = [];
 
-      if (isDualMode) {
-        const guest1Project = projects.find((p) => p.name === guest1Info.project);
-        const guest1IsEssentialOilOnly = guest1Project?.isEssentialOilOnly || false;
+      if (guestCount > 1) {
+        for (const guestInfo of guestInfos) {
+          const guestProject = projects.find((p) => p.name === guestInfo.project);
+          const isEssentialOilOnly = guestProject?.isEssentialOilOnly || false;
+          const needEssentialOil = guestProject?.needEssentialOil || false;
 
-        const guest2Project = projects.find((p) => p.name === guest2Info.project);
-        const guest2IsEssentialOilOnly = guest2Project?.isEssentialOilOnly || false;
-
-        const info1: Add<ConsultationInfo> = {
-          ...consultationInfo,
-          surname: guest1Info.surname,
-          gender: guest1Info.gender,
-          project: guest1Info.project,
-          selectedParts: guest1Info.selectedParts,
-          massageStrength: guest1Info.massageStrength,
-          essentialOil: guest1Info.essentialOil,
-          remarks: guest1Info.remarks,
-          technician: guest1Info.technician,
-          isClockIn: guest1Info.isClockIn,
-          couponCode: guest1Info.couponCode,
-          couponPlatform: guest1Info.couponPlatform,
-        };
-        printContents.push(await this.printContentBuilder!.buildContent({ info: info1, isEssentialOilOnly: guest1IsEssentialOilOnly, needEssentialOil: guest1Project?.needEssentialOil || true }));
-
-        const info2: Add<ConsultationInfo> = {
-          ...consultationInfo,
-          surname: guest2Info.surname,
-          gender: guest2Info.gender,
-          project: guest2Info.project,
-          selectedParts: guest2Info.selectedParts,
-          massageStrength: guest2Info.massageStrength,
-          essentialOil: guest2Info.essentialOil,
-          remarks: guest2Info.remarks,
-          technician: guest2Info.technician,
-          isClockIn: guest2Info.isClockIn,
-          couponCode: guest2Info.couponCode,
-          couponPlatform: guest2Info.couponPlatform,
-        };
-        printContents.push(await this.printContentBuilder!.buildContent({ info: info2, isEssentialOilOnly: guest2IsEssentialOilOnly, needEssentialOil: guest2Project?.needEssentialOil || true }));
+          const info: Add<ConsultationInfo> = {
+            ...consultationInfo,
+            surname: guestInfo.surname,
+            gender: guestInfo.gender,
+            project: guestInfo.project,
+            selectedParts: guestInfo.selectedParts,
+            massageStrength: guestInfo.massageStrength,
+            essentialOil: guestInfo.essentialOil,
+            remarks: guestInfo.remarks,
+            technician: guestInfo.technician,
+            isClockIn: guestInfo.isClockIn,
+            couponCode: guestInfo.couponCode,
+            couponPlatform: guestInfo.couponPlatform,
+            room: guestInfo.room,
+          };
+          printContents.push(await this.printContentBuilder!.buildContent({ info, isEssentialOilOnly, needEssentialOil }));
+        }
       } else {
         const { currentProjectIsEssentialOilOnly, currentProjectNeedEssentialOil } = this.data;
         printContents.push(await this.printContentBuilder!.buildContent({ info: consultationInfo, isEssentialOilOnly: currentProjectIsEssentialOilOnly, needEssentialOil: currentProjectNeedEssentialOil }));
@@ -351,11 +368,10 @@ Page({
         selectedParts: {},
       },
       editId: "",
-      // 重置双人模式相关数据
-      isDualMode: false,
+      // 重置多人模式相关数据
+      guestCount: 1,
       activeGuest: 1,
-      guest1Info: { ...DefaultGuestInfo, selectedParts: {} },
-      guest2Info: { ...DefaultGuestInfo, selectedParts: {} },
+      guestInfos: [{ ...DefaultGuestInfo, selectedParts: {} }],
       // 重置车牌号相关数据
       licensePlate: '',
       plateNumber: ['', '', '', '', '', '', '', ''],
@@ -629,14 +645,13 @@ Page({
 
   // 搜索匹配顾客
   async searchCustomer() {
-    const { consultationInfo, isDualMode, activeGuest, guest1Info, guest2Info } = this.data;
+    const { consultationInfo, guestCount, activeGuest, guestInfos } = this.data;
 
     const matchedCustomer = await CustomerUtils.searchCustomer(
       consultationInfo,
-      isDualMode,
+      guestCount,
       activeGuest,
-      guest1Info,
-      guest2Info
+      guestInfos
     );
 
     this.setData({
@@ -647,11 +662,11 @@ Page({
 
   // 应用匹配的顾客信息
   applyMatchedCustomer() {
-    const { matchedCustomer, isDualMode, activeGuest } = this.data;
+    const { matchedCustomer, guestCount, activeGuest } = this.data;
 
     if (!matchedCustomer) return;
 
-    const updates = CustomerUtils.buildCustomerUpdates(matchedCustomer, isDualMode, activeGuest);
+    const updates = CustomerUtils.buildCustomerUpdates(matchedCustomer, guestCount, activeGuest);
     this.setData(updates);
 
     wx.showToast({
@@ -669,9 +684,9 @@ Page({
 
   // 报钟功能
   async onClockIn() {
-    const { consultationInfo, isDualMode, guest1Info, guest2Info } = this.data;
+    const { consultationInfo, guestCount, guestInfos } = this.data;
 
-    const validationResult = validateConsultationForPrint(consultationInfo, this.data.currentProjectIsEssentialOilOnly, this.data.currentProjectNeedEssentialOil, isDualMode, guest1Info, guest2Info);
+    const validationResult = validateConsultationForPrint(consultationInfo, this.data.currentProjectIsEssentialOilOnly, this.data.currentProjectNeedEssentialOil, guestCount, guestInfos);
     if (!showValidationError(validationResult)) {
       return;
     }
@@ -701,33 +716,28 @@ Page({
     this.modalHandler?.onTimeColumnChange(e);
   },
 
-  // 双人模式报钟
-  async doDualClockIn(startTimeDate?: Date, editId?: string) {
-    const { consultationInfo, guest1Info, guest2Info } = this.data;
+  // 多人模式报钟
+  async doMultiClockIn(startTimeDate?: Date, editId?: string) {
+    const { consultationInfo, guestInfos } = this.data;
 
-    const { info1, info2 } = ClockInUtils.buildDualClockInInfo(
+    const { infos } = ClockInUtils.buildMultiClockInInfo(
       consultationInfo,
-      guest1Info,
-      guest2Info,
+      guestInfos,
       startTimeDate,
       editId
     );
 
     // 顺序执行保存，避免并发更新轮牌导致数据不一致
-    const success1 = await this.saveConsultation(info1, editId);
-    if (!success1) {
-      wx.showToast({ title: '保存顾客1失败', icon: 'error' });
-      return;
-    }
-
-    const success2 = await this.saveConsultation(info2, editId);
-    if (!success2) {
-      wx.showToast({ title: '保存顾客2失败', icon: 'error' });
-      return;
+    for (let i = 0; i < infos.length; i++) {
+      const success = await this.saveConsultation(infos[i], editId);
+      if (!success) {
+        wx.showToast({ title: `保存顾客${i + 1}失败`, icon: 'error' });
+        return;
+      }
     }
 
     await this.dataLoader?.loadTechnicianList();
-    await this.triggerRearrange(info1.date);
+    await this.triggerRearrange(infos[0].date);
     
     const { licensePlate } = this.data;
     // 如果是新增且有车牌号，显示车牌号录入提醒

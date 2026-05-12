@@ -180,13 +180,11 @@
 	}
 
 	&.rearrange-conflict {
-		background: repeating-linear-gradient(
-			45deg,
-			#ff4d4f,
-			#ff4d4f 10px,
-			#ff7875 10px,
-			#ff7875 20px
-		);
+		background: repeating-linear-gradient(45deg,
+				#ff4d4f,
+				#ff4d4f 10px,
+				#ff7875 10px,
+				#ff7875 20px);
 		border: 2px solid #ff4d4f;
 		animation: pulse-conflict 1.5s ease-in-out infinite;
 	}
@@ -236,6 +234,53 @@
 			line-height: 18px;
 		}
 	}
+}
+
+/* 关联预约组同色标记 */
+.time-block.reservation {
+	&.group-color-0 {
+		background-color: #1890ff;
+	}
+
+	/* 蓝 */
+	&.group-color-1 {
+		background-color: #722ed1;
+	}
+
+	/* 紫 */
+	&.group-color-2 {
+		background-color: #13c2c2;
+	}
+
+	/* 青 */
+	&.group-color-3 {
+		background-color: #fa8c16;
+	}
+
+	/* 橙 */
+	&.group-color-4 {
+		background-color: #eb2f96;
+	}
+
+	/* 红 */
+	&.group-color-5 {
+		background-color: #52c41a;
+	}
+
+	/* 绿 */
+}
+
+/* 关联人数标签 */
+.group-size-badge {
+	display: inline-block;
+	margin-left: 4px;
+	font-size: 10px;
+	line-height: 14px;
+	padding: 0 4px;
+	background: rgba(255, 255, 255, 0.35);
+	border-radius: 4px;
+	font-weight: bold;
+	vertical-align: middle;
 }
 
 .current-time-line {
@@ -297,9 +342,12 @@
 }
 
 @keyframes pulse-conflict {
-	0%, 100% {
+
+	0%,
+	100% {
 		opacity: 1;
 	}
+
 	50% {
 		opacity: 0.7;
 	}

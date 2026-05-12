@@ -237,8 +237,8 @@ page {
   background-color: @bg-color-light;
 }
 
-/* 双人模式样式 */
-.dual-mode-switch {
+/* 人数控制按钮 */
+.guest-count-control {
   position: absolute;
   top: 10rpx;
   right: 10rpx;
@@ -247,15 +247,54 @@ page {
   justify-content: flex-end;
   padding: 8px 0;
 
-  .dual-mode-label {
+  .guest-count-label {
     font-size: 14px;
     color: @primary-color;
     margin-right: 10px;
     font-weight: 500;
   }
 
-  .dual-mode-toggle {
-    transform: scale(0.85);
+  .guest-count-buttons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background-color: @bg-color-light;
+    border-radius: 8px;
+    padding: 2px;
+
+    .count-btn {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 600;
+      border-radius: 6px;
+      color: @primary-color;
+      background-color: #fff;
+      border: 1.5px solid @primary-color;
+      transition: all 0.2s ease;
+
+      &:active {
+        opacity: 0.7;
+      }
+
+      &.disabled {
+        color: @text-color-secondary;
+        border-color: @border-color-light;
+        pointer-events: none;
+        opacity: 0.4;
+      }
+    }
+
+    .count-display {
+      min-width: 28px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 600;
+      color: @primary-color;
+    }
   }
 }
 
@@ -608,9 +647,19 @@ page {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
 }
 
 .reminder-text {

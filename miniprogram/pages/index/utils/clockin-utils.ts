@@ -127,35 +127,16 @@ export class ClockInUtils {
     startTimeDate?: Date,
     editId?: string
   ): { info1: Add<ConsultationInfo>; info2: Add<ConsultationInfo>; startTime: string } {
-    const info1: Add<ConsultationInfo> = {
-      ...consultationInfo,
-      surname: guest1Info.surname,
-      gender: guest1Info.gender,
-      project: guest1Info.project,
-      selectedParts: guest1Info.selectedParts,
-      massageStrength: guest1Info.massageStrength,
-      essentialOil: guest1Info.essentialOil,
-      remarks: guest1Info.remarks,
-      technician: guest1Info.technician,
-      isClockIn: guest1Info.isClockIn,
-      couponCode: guest1Info.couponCode,
-      couponPlatform: guest1Info.couponPlatform,
-    };
-    const info2: Add<ConsultationInfo> = {
-      ...consultationInfo,
-      surname: guest2Info.surname,
-      gender: guest2Info.gender,
-      project: guest2Info.project,
-      selectedParts: guest2Info.selectedParts,
-      massageStrength: guest2Info.massageStrength,
-      essentialOil: guest2Info.essentialOil,
-      remarks: guest2Info.remarks,
-      technician: guest2Info.technician,
-      isClockIn: guest2Info.isClockIn,
-      couponCode: guest2Info.couponCode,
-      couponPlatform: guest2Info.couponPlatform,
-    };
+    const result = ClockInUtils.buildMultiClockInInfo(consultationInfo, [guest1Info, guest2Info], startTimeDate, editId);
+    return { info1: result.infos[0], info2: result.infos[1], startTime: result.startTime };
+  }
 
+  static buildMultiClockInInfo(
+    consultationInfo: Add<ConsultationInfo>,
+    guestInfos: GuestInfo[],
+    startTimeDate?: Date,
+    editId?: string
+  ): { infos: Add<ConsultationInfo>[]; startTime: string } {
     let actualStartTime: Date;
     if (startTimeDate) {
       actualStartTime = startTimeDate;
@@ -169,27 +150,39 @@ export class ClockInUtils {
     }
 
     const startTime = formatTime(actualStartTime, false);
-
-    info1.startTime = startTime;
-    info2.startTime = startTime;
-
-    if (editId) {
-      info1.date = consultationInfo.date || formatDate(new Date());
-      info2.date = consultationInfo.date || formatDate(new Date());
-    }
-
-    const projectDuration1 = parseProjectDuration(info1.project) || 60;
-    const projectDuration2 = parseProjectDuration(info2.project) || 60;
     const extraTime = consultationInfo.extraTime || 0;
-    const totalDuration1 = projectDuration1 + extraTime + SPARE_TIME;
-    const totalDuration2 = projectDuration2 + extraTime + SPARE_TIME;
 
-    const endTimeDate1 = new Date(actualStartTime.getTime() + totalDuration1 * 60 * 1000);
-    const endTimeDate2 = new Date(actualStartTime.getTime() + totalDuration2 * 60 * 1000);
+    const infos: Add<ConsultationInfo>[] = guestInfos.map(guest => {
+      const projectDuration = parseProjectDuration(guest.project) || 60;
+      const totalDuration = projectDuration + extraTime + SPARE_TIME;
+      const endTimeDate = new Date(actualStartTime.getTime() + totalDuration * 60 * 1000);
+      const endTime = formatTime(endTimeDate, false);
 
-    info1.endTime = formatTime(endTimeDate1, false);
-    info2.endTime = formatTime(endTimeDate2, false);
+      const info: Add<ConsultationInfo> = {
+        ...consultationInfo,
+        surname: guest.surname,
+        gender: guest.gender,
+        project: guest.project,
+        technician: guest.technician,
+        room: guest.room,
+        isClockIn: guest.isClockIn,
+        massageStrength: guest.massageStrength,
+        essentialOil: guest.essentialOil,
+        selectedParts: guest.selectedParts,
+        remarks: guest.remarks,
+        couponCode: guest.couponCode,
+        couponPlatform: guest.couponPlatform,
+        startTime,
+        endTime,
+      };
 
-    return { info1, info2, startTime };
+      if (editId) {
+        info.date = consultationInfo.date || formatDate(new Date());
+      }
+
+      return info;
+    });
+
+    return { infos, startTime };
   }
 }

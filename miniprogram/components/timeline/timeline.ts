@@ -48,6 +48,9 @@ interface TimeBlock {
 	technician: string
 	requirement: string;
 	rearrangeConflict?: boolean
+	groupKey: string
+	groupColorIndex: number
+	groupSize: number
 }
 
 function parseGenderRequirement(rsv: Partial<ReservationRecord>): string {
@@ -174,7 +177,8 @@ Component({
 							technician: r.technicianName,
 							requirementType: r.requirementType,
 							requiredMaleCount: r.requiredMaleCount,
-							requiredFemaleCount: r.requiredFemaleCount
+							requiredFemaleCount: r.requiredFemaleCount,
+							groupKey: r.groupKey || ''
 						}))
 					];
 
@@ -216,7 +220,10 @@ Component({
 							extraTime: (r as ConsultationRecord).extraTime || 0,
 							technician: r.technician!,
 							requirement: parseGenderRequirement(r as Update<ReservationRecord>),
-							rearrangeConflict: (r as Update<ReservationRecord>).rearrangeConflict || false
+							rearrangeConflict: (r as Update<ReservationRecord>).rearrangeConflict || false,
+							groupKey: r.isReservation ? (r as any).groupKey || '' : '',
+							groupColorIndex: 0,
+							groupSize: 1,
 						};
 					});
 
@@ -235,6 +242,29 @@ Component({
 						highlighted: highlightStaffId === staff._id,
 						rotationCount
 					});
+				}
+				// 分配关联预约组颜色
+				const groupKeyColorMap = new Map<string, { colorIndex: number; size: number }>();
+				let colorIdx = 0;
+				for (const staffItem of staffTimeline) {
+					for (const block of staffItem.blocks) {
+						if (block.groupKey) {
+							if (!groupKeyColorMap.has(block.groupKey)) {
+								groupKeyColorMap.set(block.groupKey, { colorIndex: colorIdx % 6, size: 0 });
+								colorIdx++;
+							}
+							groupKeyColorMap.get(block.groupKey)!.size++;
+						}
+					}
+				}
+				for (const staffItem of staffTimeline) {
+					for (const block of staffItem.blocks) {
+						if (block.groupKey && groupKeyColorMap.has(block.groupKey)) {
+							const groupInfo = groupKeyColorMap.get(block.groupKey)!;
+							block.groupColorIndex = groupInfo.colorIndex;
+							block.groupSize = groupInfo.size;
+						}
+					}
 				}
 				staffTimeline.sort((a) => a.gender === 'male' ? 1 : -1);
 

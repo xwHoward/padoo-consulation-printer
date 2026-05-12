@@ -77,6 +77,7 @@ export interface CashierPageData {
 	availableFemaleCount: number;
 	reserveForm: ReserveForm;
 	originalReservation: ReservationRecord | null;
+	editingGroupIds: string[]; // 编辑分组预约时，该组所有成员的ID
 	showSettlementModal: boolean;
 	settlementRecordId: string;
 	settlementCouponCode: string;

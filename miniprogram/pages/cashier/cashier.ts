@@ -58,6 +58,7 @@ Page({
             technicianName: '',
         },
         originalReservation: null as ReservationRecord | null,
+        editingGroupIds: [] as string[],
         // 结算弹窗相关
         showSettlementModal: false,
         settlementRecordId: '',

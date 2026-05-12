@@ -63,15 +63,15 @@ interface ConsultationInfo extends BaseRecord {
 }
 
 /**
- * 双人模式顾客信息，从ConsultationInfo中提取公共字段
+ * 多人模式顾客信息，从ConsultationInfo中提取公共字段
  */
 type GuestInfoFields = Pick<ConsultationInfo, 
   'surname' | 'gender' | 'selectedParts' | 'essentialOil' | 'remarks' | 
-  'technician' | 'isClockIn' | 'couponCode' | 'couponPlatform' | 'project'
+  'technician' | 'isClockIn' | 'couponCode' | 'couponPlatform' | 'project' | 'room'
 >;
 
 interface GuestInfo extends GuestInfoFields {
-  massageStrength: 'standard' | 'soft' | 'gravity'; // 双人模式不允许空值
+  massageStrength: 'standard' | 'soft' | 'gravity'; // 多人模式不允许空值
 }
 
 // 定义带ID的咨询单数据结构（用于历史记录）
@@ -379,10 +379,9 @@ interface IndexPage<D> {
     consultationInfo: Omit<ConsultationInfo, "_id" | "createdAt" | "updatedAt"> & { selectedParts: {} };
     currentReservationIds: string[];
     projects: Project[];
-    isDualMode: boolean;
-    activeGuest: number;
-    guest1Info: GuestInfo;
-    guest2Info: GuestInfo;
+    guestCount: number;       // 顾客人数（1=单人模式）
+    activeGuest: number;      // 当前激活的顾客（1-indexed）
+    guestInfos: GuestInfo[];  // 每位顾客的独立信息
     timePickerModal: {
       currentTime: string;
     };
@@ -395,7 +394,7 @@ interface IndexPage<D> {
   dataLoader: D | null;
   setData: (data: Record<string, any>) => void;
   searchCustomer: () => void;
-  doDualClockIn: (startTimeDate?: Date, editId?: string) => Promise<void>;
+  doMultiClockIn: (startTimeDate?: Date, editId?: string) => Promise<void>;
   saveConsultation: (consultation: Add<ConsultationInfo>, editId?: string) => Promise<boolean>;
   sendToWechatWebhook: (content: string) => Promise<boolean>;
   resetForm: () => void;

@@ -14,7 +14,7 @@ export class ModalHandler {
   }
 
   async onTimePickerConfirm() {
-    const { timePickerModal, consultationInfo, editId, isDualMode, licensePlate } = this.page.data;
+    const { timePickerModal, consultationInfo, editId, guestCount, licensePlate } = this.page.data;
     const { currentTime: selectedTime } = timePickerModal;
 
     this.page.setData({ 'timePickerModal.show': false });
@@ -32,8 +32,8 @@ export class ModalHandler {
 
     this.page.setData({ loading: true, loadingText: '报钟中...' });
     try {
-      if (isDualMode) {
-        await this.page.doDualClockIn(startTimeDate, editId);
+      if (guestCount > 1) {
+        await this.page.doMultiClockIn(startTimeDate, editId);
       } else {
         const projectDuration = parseProjectDuration(consultationInfo.project) || 60;
         const extraTime = consultationInfo.extraTime || 0;

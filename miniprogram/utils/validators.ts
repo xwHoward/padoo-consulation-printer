@@ -23,7 +23,7 @@ export function validateConsultationInfo(info: Add<ConsultationInfo>, isEssentia
   return { isValid: true };
 }
 
-export function validateGuestInfo(guest: GuestInfo, guestNum: 1 | 2): ValidationResult {
+export function validateGuestInfo(guest: GuestInfo, guestNum: number): ValidationResult {
   if (!guest.gender) {
     return { isValid: false, message: `请选择顾客${guestNum}称呼` };
   }
@@ -33,39 +33,34 @@ export function validateGuestInfo(guest: GuestInfo, guestNum: 1 | 2): Validation
   if (!guest.technician) {
     return { isValid: false, message: `请选择顾客${guestNum}技师` };
   }
-  return { isValid: true };
-}
-
-export function validateDualModeInfo(guest1: GuestInfo, guest2: GuestInfo): ValidationResult {
-  const guest1Result = validateGuestInfo(guest1, 1);
-  if (!guest1Result.isValid) {
-    return guest1Result;
-  }
-  const guest2Result = validateGuestInfo(guest2, 2);
-  if (!guest2Result.isValid) {
-    return guest2Result;
+  if (!guest.room) {
+    return { isValid: false, message: `请选择顾客${guestNum}房间` };
   }
   return { isValid: true };
 }
 
-export function validateConsultationForPrint(consultationInfo: Add<ConsultationInfo>, isEssentialOilOnly: boolean, needEssentialOil: boolean, isDualMode: boolean, guest1Info?: GuestInfo, guest2Info?: GuestInfo): ValidationResult {
-  if (isDualMode) {
-    if (!guest1Info || !guest2Info) {
-      return { isValid: false, message: '双人模式信息不完整' };
-    }
-    const dualResult = validateDualModeInfo(guest1Info, guest2Info);
-    if (!dualResult.isValid) {
-      return dualResult;
+export function validateMultiModeInfo(guestInfos: GuestInfo[]): ValidationResult {
+  for (let i = 0; i < guestInfos.length; i++) {
+    const result = validateGuestInfo(guestInfos[i], i + 1);
+    if (!result.isValid) return result;
+  }
+  return { isValid: true };
+}
+
+export function validateConsultationForPrint(consultationInfo: Add<ConsultationInfo>, isEssentialOilOnly: boolean, needEssentialOil: boolean, guestCount: number, guestInfos: GuestInfo[]): ValidationResult {
+  if (guestCount > 1) {
+    const multiResult = validateMultiModeInfo(guestInfos);
+    if (!multiResult.isValid) {
+      return multiResult;
     }
   } else {
     const singleResult = validateConsultationInfo(consultationInfo, isEssentialOilOnly, needEssentialOil);
     if (!singleResult.isValid) {
       return singleResult;
     }
-  }
-
-  if (!consultationInfo.room) {
-    return { isValid: false, message: '请选择房间' };
+    if (!consultationInfo.room) {
+      return { isValid: false, message: '请选择房间' };
+    }
   }
 
   return { isValid: true };

@@ -3,19 +3,18 @@ import { matchCustomer as matchCustomerService, parseCustomerName, buildPlateNum
 export class CustomerUtils {
   static async searchCustomer(
     consultationInfo: Add<ConsultationInfo>,
-    isDualMode: boolean,
-    activeGuest: 1 | 2,
-    guest1Info: GuestInfo,
-    guest2Info: GuestInfo
+    guestCount: number,
+    activeGuest: number,
+    guestInfos: GuestInfo[]
   ): Promise<CustomerRecord | null> {
     let currentSurname = '';
     let currentGender: 'male' | 'female' | '' = '';
     let currentPhone = '';
 
-    if (isDualMode) {
-      const guestInfo = activeGuest === 1 ? guest1Info : guest2Info;
-      currentSurname = guestInfo.surname;
-      currentGender = guestInfo.gender;
+    if (guestCount > 1) {
+      const guestInfo = guestInfos[activeGuest - 1];
+      currentSurname = guestInfo?.surname || '';
+      currentGender = guestInfo?.gender || '';
     } else {
       currentSurname = consultationInfo.surname;
       currentGender = consultationInfo.gender;
@@ -34,21 +33,21 @@ export class CustomerUtils {
 
   static buildCustomerUpdates(
     matchedCustomer: CustomerRecord,
-    isDualMode: boolean,
-    activeGuest: 1 | 2
+    guestCount: number,
+    activeGuest: number
   ): Record<string, unknown> {
     if (!matchedCustomer) return {};
 
-    const guestKey = activeGuest === 1 ? 'guest1Info' : 'guest2Info';
     const updates: Record<string, unknown> = {};
     const { surname, gender } = parseCustomerName(matchedCustomer.name);
 
-    if (isDualMode) {
-      updates[`${guestKey}.surname`] = surname;
-      updates[`${guestKey}.gender`] = gender;
+    if (guestCount > 1) {
+      const guestIdx = activeGuest - 1;
+      updates[`guestInfos[${guestIdx}].surname`] = surname;
+      updates[`guestInfos[${guestIdx}].gender`] = gender;
 
       if (matchedCustomer.responsibleTechnician) {
-        updates[`${guestKey}.technician`] = matchedCustomer.responsibleTechnician;
+        updates[`guestInfos[${guestIdx}].technician`] = matchedCustomer.responsibleTechnician;
       }
 
       if (matchedCustomer.phone) {

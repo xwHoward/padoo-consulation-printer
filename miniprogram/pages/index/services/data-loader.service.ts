@@ -150,12 +150,20 @@ export class DataLoaderService {
         const firstRecord = validRecords[0];
         const selectedProject = this.page.data.projects.find((p: Project) => p.name === firstRecord.project);
         const isEssentialOilOnly = selectedProject?.isEssentialOilOnly || false;
-        const isClockInValue = firstRecord.isClockIn || false;
 
         if (validRecords.length > 1) {
-          const secondIsClockIn = validRecords[1].isClockIn || false;
+          // 多人预约：构建 guestInfos 数组
+          const guestInfos: GuestInfo[] = validRecords.map(r => ({
+            ...DefaultGuestInfo,
+            surname: r.customerName,
+            gender: r.gender as 'male' | 'female',
+            project: r.project,
+            technician: r.technicianName || '',
+            isClockIn: r.isClockIn || false,
+            room: '',
+          }));
           this.page.setData({
-            isDualMode: true,
+            guestCount: validRecords.length,
             activeGuest: 1,
             consultationInfo: {
               ...DefaultConsultationInfo,
@@ -164,30 +172,26 @@ export class DataLoaderService {
               phone: firstRecord.phone,
               project: firstRecord.project,
               technician: firstRecord.technicianName || '',
-              isClockIn: isClockInValue,
+              isClockIn: firstRecord.isClockIn || false,
             },
-            guest1Info: {
-              ...DefaultGuestInfo,
-              surname: firstRecord.customerName,
-              gender: firstRecord.gender,
-              project: firstRecord.project,
-              technician: firstRecord.technicianName || '',
-              isClockIn: isClockInValue,
-            },
-            guest2Info: {
-              ...DefaultGuestInfo,
-              surname: firstRecord.customerName,
-              gender: firstRecord.gender,
-              project: firstRecord.project,
-              technician: validRecords[1].technicianName || '',
-              isClockIn: secondIsClockIn,
-            },
+            guestInfos,
             currentProjectIsEssentialOilOnly: isEssentialOilOnly,
             currentProjectNeedEssentialOil: selectedProject?.needEssentialOil || false,
             currentReservationIds: reserveIds
           });
         } else {
           this.page.setData({
+            guestCount: 1,
+            activeGuest: 1,
+            guestInfos: [{
+              ...DefaultGuestInfo,
+              surname: firstRecord.customerName,
+              gender: firstRecord.gender as 'male' | 'female',
+              project: firstRecord.project,
+              technician: firstRecord.technicianName || '',
+              isClockIn: firstRecord.isClockIn || false,
+              room: '',
+            }],
             consultationInfo: {
               ...DefaultConsultationInfo,
               surname: firstRecord.customerName,
@@ -195,7 +199,7 @@ export class DataLoaderService {
               phone: firstRecord.phone,
               project: firstRecord.project,
               technician: firstRecord.technicianName || '',
-              isClockIn: isClockInValue,
+              isClockIn: firstRecord.isClockIn || false,
             },
             currentProjectIsEssentialOilOnly: isEssentialOilOnly,
             currentProjectNeedEssentialOil: selectedProject?.needEssentialOil || false,
