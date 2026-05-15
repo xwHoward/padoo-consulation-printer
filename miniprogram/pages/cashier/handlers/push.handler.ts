@@ -210,7 +210,7 @@ ${customerInfo} 已到店
 				}
 			});
 		} catch (error) {
-			// 静默失败
+			console.error("[PushHandler] sendArrivalNotification 失败:", error);
 		}
 	}
 
@@ -313,7 +313,7 @@ ${changes.join('\n')}
 				}
 			});
 		} catch (error) {
-			// 静默失败
+			console.error("[PushHandler] sendReservationModificationNotification 失败:", error);
 		}
 	}
 

@@ -73,126 +73,6 @@ export function calculateEndTime(startTime: string, project: string): string {
 /**
  * 获取预约类型文本
  */
-export function getReservationTypeText(
-	technicians: Array<{ _id: string; name: string; phone: string; wechatWorkId?: string; isClockIn: boolean }>
-): string {
-	if (technicians.length === 0) {
-		return '排钟';
-	}
-	const hasClockIn = technicians.some(t => t.isClockIn);
-	const hasNonClockIn = technicians.some(t => !t.isClockIn);
-	if (hasClockIn && hasNonClockIn) {
-		return '混合（点钟+排钟）';
-	} else if (hasClockIn) {
-		return '点钟';
-	} else {
-		return '排钟';
-	}
-}
-
-/**
- * 构建新建预约的推送消息
- */
-export function buildCreateReservationMessage(
-	form: ReserveForm,
-	endTime: string,
-	technicians: Array<{ _id: string; name: string; phone: string; wechatWorkId?: string; isClockIn: boolean }>
-): string {
-	const genderLabel = form.gender === 'male' ? '先生' : '女士';
-	const customerInfo = `${form.customerName || ''}${genderLabel}`;
-	const technicianMentions = technicians.map(t => formatMention({ ...t, wechatWorkId: t.wechatWorkId || '' })).join(' ');
-	const reservationType = getReservationTypeText(technicians);
-	const daysText = formatDaysFromNow(form.date);
-
-	return `【⏰ 新预约提醒】
-
-顾客：${customerInfo}
-日期：${form.date}${daysText}
-时间：**${form.startTime} - ${endTime}**
-项目：${form.project || '待定'}
-类型：${reservationType}
-技师：**${technicianMentions}**`;
-}
-
-/**
- * 构建预约变更的推送消息
- */
-export function buildEditReservationMessage(
-	original: ReservationRecord,
-	updated: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>,
-	staffInfo: StaffInfo | null
-): { message: string; changes: string[] } {
-	const changes: string[] = [];
-
-	if (original.date !== updated.date) {
-		const originalDaysText = formatDaysFromNow(original.date);
-		const updatedDaysText = formatDaysFromNow(updated.date);
-		changes.push(`📅 日期：${original.date}${originalDaysText} → ${updated.date}${updatedDaysText}`);
-	}
-	if (original.startTime !== updated.startTime) {
-		changes.push(`⏰ 时间：${original.startTime} → ${updated.startTime}`);
-	}
-	if (original.project !== updated.project) {
-		changes.push(`💆 项目：${original.project} → ${updated.project}`);
-	}
-	if (
-		original.technicianId !== updated.technicianId ||
-		original.technicianName !== updated.technicianName ||
-		(original.isClockIn || false) !== (updated.isClockIn || false)
-	) {
-		changes.push(
-			`👨\u200d💼 技师：${original.technicianName}${original.isClockIn ? '[点]' : ''} → ${updated.technicianName}${updated.isClockIn ? '[点]' : ''}`
-		);
-	}
-	if (original.customerName !== updated.customerName) {
-		changes.push(`👤 顾客：${original.customerName} → ${updated.customerName}`);
-	}
-	if (original.phone !== updated.phone) {
-		changes.push(`📱 电话：${original.phone} → ${updated.phone}`);
-	}
-
-	const genderLabel = updated.gender === 'male' ? '先生' : '女士';
-	const customerInfo = `${updated.customerName}${genderLabel}`;
-	const technicianMention = staffInfo ? formatMention(staffInfo) : '';
-	const technicianName = updated.technicianName || '待定';
-	const daysText = formatDaysFromNow(updated.date);
-	const dateInfo = `📅 预约日期：${updated.date}${daysText}`;
-
-	const message = `【📝 预约变更通知】
-
-顾客：${customerInfo}
-${dateInfo}
-${changes.join('\n')}
-
-请${technicianMention || technicianName}知悉，做好准备`;
-
-	return { message, changes };
-}
-
-/**
- * 构建取消预约的推送消息
- */
-export function buildCancelReservationMessage(
-	reservation: ReservationRecord,
-	technicians: Array<{ _id: string; name: string; phone: string; wechatWorkId?: string; isClockIn: boolean }>
-): string {
-	const genderLabel = reservation.gender === 'male' ? '先生' : '女士';
-	const customerInfo = `${reservation.customerName}${genderLabel}`;
-	const technicianMentions = technicians.map(t => formatMention({ ...t, wechatWorkId: t.wechatWorkId || '' })).join(' ');
-	const daysText = formatDaysFromNow(reservation.date);
-
-	return `【🚫 预约**取消**提醒】
-
-顾客：${customerInfo}
-日期：${reservation.date}${daysText}
-时间：**${reservation.startTime} - ${reservation.endTime}**
-项目：${reservation.project}
-技师：**${technicianMentions}**`;
-}
-
-/**
- * 预约服务类
- */
 export class ReservationService {
 	/**
 	 * 检查是否有新增预约权限
@@ -562,6 +442,24 @@ export class ReservationService {
 			return { success: true, technicians: [...selectedMaleStaff, ...selectedFemaleStaff] };
 		} catch (error) {
 			return { success: false, message: '分配技师失败' };
+		}
+	}
+	/**
+	 * 触发预约重排（供各页面复用）
+	 */
+	static async triggerRearrange(date: string): Promise<void> {
+		try {
+			const res = await wx.cloud.callFunction({
+				name: "getAvailableTechnicians",
+				data: { date, mode: "rearrange" }
+			});
+			if (res.result && (res.result as { code: number }).code === 0) {
+				console.log("[重排] 完成:", (res.result as { data: { summary: any } }).data.summary);
+			} else {
+				console.warn("[重排] 失败:", (res.result as { message?: string }).message);
+			}
+		} catch (error) {
+			console.error("[重排] 调用失败:", error);
 		}
 	}
 }

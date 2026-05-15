@@ -8,19 +8,20 @@ cloud.init({
 const db = cloud.database();
 
 const OVERTIME_DURATION_MAP = {
-  45: 1,
-  60: 2,
-  70: 2,
-  80: 2,
-  90: 3,
-  120: 4
+  30: 0.5,
+  45: 0.5,
+  60: 1,
+  70: 1,
+  80: 1,
+  90: 1.5,
+  120: 2
 };
 
 function calculateOvertime(duration) {
   if (OVERTIME_DURATION_MAP[ duration ] !== undefined) {
     return OVERTIME_DURATION_MAP[ duration ];
   }
-  return Math.floor(duration / 30);
+  return Math.round(duration / 60 * 10) / 10;
 }
 
 function isToday(date) {
@@ -38,10 +39,29 @@ function parseProjectDuration(project) {
   return match ? parseInt(match[ 1 ], 10) : 60;
 }
 
+/**
+ * 处理单条咨询记录，计算时间信息
+ */
+function processRecord(record) {
+  let startTimeStr = record.startTime;
+  let endTimeStr = record.endTime;
+
+  if (!startTimeStr || !endTimeStr) {
+    const createdDate = new Date(record.createdAt);
+    startTimeStr = formatTime(createdDate);
+    const projectDuration = parseProjectDuration(record.project);
+    const totalDuration = projectDuration + (record.extraTime || 0) + 10;
+    const endDate = new Date(createdDate.getTime() + totalDuration * 60 * 1000);
+    endTimeStr = formatTime(endDate);
+  }
+
+  return { startTime: startTimeStr, endTime: endTimeStr };
+}
+
 async function getDailyRecordsWithCount(date) {
   const recordsResult = await db.collection('consultation_records').where({
     date: date
-  }).orderBy('createdAt', 'asc').get();
+  }).orderBy('createdAt', 'asc').limit(1000).get();
 
   const records = recordsResult.data;
   const technicianCounts = {};
@@ -58,18 +78,7 @@ async function getDailyRecordsWithCount(date) {
       technicianCounts[ record.technician ]++;
     }
 
-    let startTimeStr = record.startTime;
-    let endTimeStr = record.endTime;
-
-    if (!startTimeStr || !endTimeStr) {
-      const createdDate = new Date(record.createdAt);
-      startTimeStr = formatTime(createdDate);
-
-      const projectDuration = parseProjectDuration(record.project);
-      const totalDuration = projectDuration + (record.extraTime || 0) + 10;
-      const endDate = new Date(createdDate.getTime() + totalDuration * 60 * 1000);
-      endTimeStr = formatTime(endDate);
-    }
+    const { startTime: startTimeStr, endTime: endTimeStr } = processRecord(record);
 
     const [ startHour, startMinute ] = startTimeStr.split(':').map(Number);
     const [ endHour, endMinute ] = endTimeStr.split(':').map(Number);
@@ -165,7 +174,7 @@ exports.main = async (event) => {
 
       const allRecordsResult = await db.collection('consultation_records').where({
         phone: customerPhone
-      }).orderBy('createdAt', 'desc').get();
+      }).field({ _id: true, phone: true, isVoided: true, technician: true, createdAt: true, startTime: true, endTime: true, project: true, extraTime: true, date: true }).orderBy('createdAt', 'desc').limit(1000).get();
 
       const consultationHistory = {};
       allRecordsResult.data.forEach(record => {
@@ -187,22 +196,11 @@ exports.main = async (event) => {
         });
 
         if (customerRecords.length > 0) {
-
-          const updatedRecordsResult = await db.collection('consultation_records').where({
-            date: date,
-            phone: customerPhone,
-            isVoided: false
-          }).get();
-
-          const filteredRecords = updatedRecordsResult.data.filter(record => {
-            const recordKey = record.phone || record._id;
-            return recordKey === customerId && !record.isVoided;
-          });
-
+          // 直接使用初始查询已获取的数据，避免 N+1 重复查询
           const processedRecords = [];
           const technicianCounts = {};
 
-          const sortedByTime = filteredRecords.sort((a, b) => {
+          const sortedByTime = customerRecords.sort((a, b) => {
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           });
 
@@ -215,18 +213,7 @@ exports.main = async (event) => {
               technicianCounts[ record.technician ]++;
             }
 
-            let startTimeStr = record.startTime;
-            let endTimeStr = record.endTime;
-
-            if (!startTimeStr || !endTimeStr) {
-              const createdDate = new Date(record.createdAt);
-              startTimeStr = formatTime(createdDate);
-
-              const projectDuration = parseProjectDuration(record.project);
-              const totalDuration = projectDuration + (record.extraTime || 0) + 10;
-              const endDate = new Date(createdDate.getTime() + totalDuration * 60 * 1000);
-              endTimeStr = formatTime(endDate);
-            }
+            const { startTime: startTimeStr, endTime: endTimeStr } = processRecord(record);
 
             processedRecords.push({
               ...record,
@@ -266,9 +253,9 @@ exports.main = async (event) => {
       }
 
       const [ recordsResult, schedulesResult, staffResult ] = await Promise.all([
-        db.collection('consultation_records').where({ date: targetDate }).get(),
-        db.collection('schedule').where({ date: targetDate }).get(),
-        db.collection('staff').where({ status: 'active' }).get()
+        db.collection('consultation_records').where({ date: targetDate }).field({ isVoided: true, technician: true, project: true, isClockIn: true, extraTime: true, guasha: true, overtime: true, startTime: true, endTime: true }).limit(1000).get(),
+        db.collection('schedule').where({ date: targetDate }).field({ staffId: true, shift: true }).limit(1000).get(),
+        db.collection('staff').where({ status: 'active' }).field({ name: true }).limit(1000).get()
       ]);
 
       const records = recordsResult.data;
@@ -361,7 +348,8 @@ exports.main = async (event) => {
             regexp: `^(${ currentYear }-${ String(currentMonth + 1).padStart(2, '0') })`
           })
         })
-        .get();
+        .field({ salesStaff: true, cardName: true })
+        .limit(1000).get();
 
       const membershipSales = {};
       monthlyMemberships.data.forEach(membership => {
@@ -392,7 +380,8 @@ exports.main = async (event) => {
           isClockIn: true,
           isVoided: false
         })
-        .get();
+        .field({ technician: true })
+        .limit(1000).get();
 
       const clockInCounts = {};
       monthlyClockIns.data.forEach(record => {

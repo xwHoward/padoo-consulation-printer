@@ -45,6 +45,7 @@ Page({
                 }, 1500);
             }
         } catch (error) {
+            console.error('[Login] checkLoginStatus 失败:', error);
         }
     },
 

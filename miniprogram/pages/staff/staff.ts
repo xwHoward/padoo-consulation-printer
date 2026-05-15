@@ -54,9 +54,10 @@ Page({
 			const endDate = dates[dates.length - 1].date;
 
 
-			const allSchedules = await (cloudDb.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
-				return item.date >= startDate && item.date <= endDate;
-			}));
+			const _ = cloudDb.getCommand();
+			const allSchedules = await cloudDb.find<ScheduleRecord>(Collections.SCHEDULE, {
+				date: _.gte(startDate).and(_.lte(endDate))
+			});
 
 
 			// 构造渲染用的 Map
@@ -368,8 +369,9 @@ Page({
 			const startDate = pushStartDate;
 			const endDate = pushEndDate;
 
-			const allSchedules = await cloudDb.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
-				return item.date >= startDate && item.date <= endDate;
+			const _ = cloudDb.getCommand();
+			const allSchedules = await cloudDb.find<ScheduleRecord>(Collections.SCHEDULE, {
+				date: _.gte(startDate).and(_.lte(endDate))
 			});
 
 			if (allSchedules.length === 0) {

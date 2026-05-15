@@ -1,4 +1,5 @@
 import { PrintContentBuilder } from "../../services/print-content-builder";
+import { ReservationService } from "../../services/reservation.service";
 import { printerService } from "../../services/printer-service";
 import { checkLogin } from "../../utils/auth";
 import { cloudDb } from "../../utils/cloud-db";
@@ -96,7 +97,8 @@ Page({
     // 报钟时间选择相关
     timePickerModal: {
       show: false,
-      currentTime: '' // 当前选择的时间 HH:mm
+      currentTime: '', // 当前选择的时间 HH:mm
+      currentDate: ''  // 当前选择的日期 YYYY-MM-DD
     },
     hours: Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')),
     minutes: Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')),
@@ -693,11 +695,13 @@ Page({
 
     const now = new Date();
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const currentDate = consultationInfo.date || formatDate(now);
 
     this.setData({
       timePickerModal: {
         show: true,
-        currentTime: currentTime
+        currentTime: currentTime,
+        currentDate: currentDate
       },
       selectedHour: now.getHours(),
       selectedMinute: now.getMinutes()
@@ -714,6 +718,10 @@ Page({
 
   onTimeColumnChange(e: WechatMiniprogram.CustomEvent) {
     this.modalHandler?.onTimeColumnChange(e);
+  },
+
+  onDatePickerChange(e: WechatMiniprogram.CustomEvent) {
+    this.modalHandler?.onDatePickerChange(e);
   },
 
   // 多人模式报钟
@@ -763,22 +771,7 @@ Page({
   },
 
   async triggerRearrange(date: string): Promise<void> {
-    try {
-      const res = await wx.cloud.callFunction({
-        name: 'getAvailableTechnicians',
-        data: {
-          date,
-          mode: 'rearrange'
-        }
-      });
-      if (res.result && (res.result as { code: number }).code === 0) {
-        console.log('[重排] 完成:', (res.result as { data: { summary: any } }).data.summary);
-      } else {
-        console.warn('[重排] 失败:', (res.result as { message?: string }).message);
-      }
-    } catch (error) {
-      console.error('[重排] 调用失败:', error);
-    }
+    return ReservationService.triggerRearrange(date);
   },
 
   onPlateConfirm(e: WechatMiniprogram.CustomEvent) {

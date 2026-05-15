@@ -171,12 +171,23 @@
 </view>
 <!-- 时间选择器弹窗 -->
 <modal show="{{timePickerModal.show}}" title="选择上钟开始时间" show-close="{{true}}" bind:cancel="onTimePickerCancel" bind:confirm="onTimePickerConfirm">
-  <picker mode="multiSelector" range="{{[hours, minutes]}}" value="{{[selectedHour, selectedMinute]}}" bindchange="onTimePickerChange" bindcolumnchange="onTimeColumnChange">
-    <view class="time-picker-display">
-      <text class="time-value">{{timePickerModal.currentTime}}</text>
-      <text class="time-hint">点击修改时间</text>
+  <view class="date-time-picker-container">
+    <!-- 日期选择 -->
+    <view class="date-picker-section">
+      <view class="section-label">日期</view>
+      <date-picker initialDate="{{timePickerModal.currentDate}}" bind:change="onDatePickerChange" />
     </view>
-  </picker>
+    <!-- 时间选择 -->
+    <view class="time-picker-section">
+      <view class="section-label">时间</view>
+      <picker mode="multiSelector" range="{{[hours, minutes]}}" value="{{[selectedHour, selectedMinute]}}" bindchange="onTimePickerChange" bindcolumnchange="onTimeColumnChange">
+        <view class="time-picker-display">
+          <text class="time-value">{{timePickerModal.currentTime}}</text>
+          <text class="time-hint">点击修改时间</text>
+        </view>
+      </picker>
+    </view>
+  </view>
 </modal>
 <!-- 车牌号输入弹窗 -->
 <license-plate-input visible="{{licensePlateInputVisible}}" value="{{licensePlate}}" bind:cancel="hidePlateInputModal" bind:confirm="onPlateConfirm" />

@@ -64,3 +64,29 @@ export function calculateOvertimeHours(duration: number): number {
 	}
 	return Math.round(duration / 60 * 10) / 10;
 }
+
+/** 身体部位中英文映射 */
+export const BODY_PART_MAP: Record<string, string> = {
+	head: '头部',
+	neck: '颈部',
+	shoulder: '肩部',
+	back: '后背',
+	arm: '手臂',
+	abdomen: '腹部',
+	waist: '腰部',
+	thigh: '大腿',
+	calf: '小腿'
+};
+
+/** 支付平台完整名称映射 */
+export const COUPON_PLATFORM_NAMES: Record<string, string> = {
+	meituan: '美团',
+	dianping: '大众点评',
+	douyin: '抖音',
+	wechat: '微信',
+	alipay: '支付宝',
+	cash: '现金',
+	gaode: '高德',
+	free: '免单',
+	membership: '划卡'
+};

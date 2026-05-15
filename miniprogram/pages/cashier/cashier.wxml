@@ -7,10 +7,7 @@
         <view bindtap="loadInitialData" class="nav-btn" aria-role="button" aria-label="刷新">
             <text class="nav-btn-text">刷新</text>
         </view>
-        <!-- <view bindtap="goToLottery" class="nav-btn" aria-role="button" aria-label="抽奖">
-            <text class="nav-btn-text">抽奖</text>
-        </view> -->
-        <view bindtap="onScreensaver" class="nav-btn" aria-role="button" aria-label="无人值守">
+                <view bindtap="onScreensaver" class="nav-btn" aria-role="button" aria-label="无人值守">
             <text class="nav-btn-text">无人值守</text>
         </view>
     </view>

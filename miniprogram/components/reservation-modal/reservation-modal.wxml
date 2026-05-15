@@ -1,119 +1,119 @@
 <!-- 预约弹窗组件 -->
 <modal show="{{show}}" title="{{mode === 'edit' ? '编辑预约' : '新增预约'}}" size="large" bind:cancel="onCancel" bind:confirm="onConfirm" loading="{{loading}}" loading-text="{{loadingText}}">
-				<view class="reservation-modal">
-								<!-- 日期和时间 -->
-								<view class="form-item">
-												<view class="form-label">日期</view>
-												<picker mode="date" value="{{reserveForm.date}}" bindchange="onDateChange">
-																<view class="picker-val">{{reserveForm.date}}</view>
-												</picker>
-												<view class="form-label"></view>
-												<view class="form-label">开始时间</view>
-												<picker mode="time" value="{{reserveForm.startTime}}" bindchange="onTimeChange">
-																<view class="picker-val">{{reserveForm.startTime}}</view>
-												</picker>
-								</view>
-								<!-- 姓名和性别 -->
-								<view class="form-item combined-form-item">
-												<view class="form-field">
-																<view class="form-label">姓名</view>
-																<input class="form-input" placeholder="选填" value="{{reserveForm.customerName}}" bindinput="onNameInput" />
-												</view>
-												<view class="form-field">
-																<gender-selector selectedGender="{{reserveForm.gender}}" bind:change="onGenderChange" />
-												</view>
-								</view>
-								<!-- 手机号 -->
-								<view class="form-item">
-												<view class="form-label">手机号</view>
-												<input class="form-input" type="number" maxlength="11" placeholder="选填" value="{{reserveForm.phone}}" bindinput="onPhoneInput" />
-								</view>
-								<!-- 匹配顾客 -->
-								<view class="customer-match-result" wx:if="{{matchedCustomer}}">
-												<view class="match-info">
-																<view class="match-label">匹配顾客：</view>
-																<view class="match-name">
-																				{{matchedCustomer.name}}{{matchedCustomer.gender === 'male' ? '先生' : '女士'}}
-																</view>
-																<view class="match-phone">{{matchedCustomer.phone || '无手机号'}}</view>
-																<view class="match-tech" wx:if="{{matchedCustomer.responsibleTechnician}}">
-																				责任技师：{{matchedCustomer.responsibleTechnician}}
-																</view>
-																<view wx:if="{{matchedCustomer.remark}}" class="match-remark">
-																				{{matchedCustomer.remark}}
-																</view>
-																<view class="match-actions">
-																				<view wx:if="{{!matchedCustomerApplied}}" class="match-btn apply-btn" bindtap="onApplyCustomer">
-																								应用
-																				</view>
-																				<view class="match-btn clear-btn" bindtap="onClearCustomer">清除</view>
-																</view>
-												</view>
-								</view>
-								<!-- 项目选择 -->
-								<view class="form-item project-item">
-												<view class="form-label">项目</view>
-												<project-selector selectedProject="{{reserveForm.project}}" bind:change="onProjectSelect" />
-								</view>
-								<!-- 技师需求类型 -->
-								<view class="form-item requirement-type-item">
-												<view class="form-label">技师需求</view>
-												<radio-group class="requirement-type-group" bindchange="onRequirementTypeChange">
-																<label class="requirement-type-option">
-																				<radio value="specific" checked="{{reserveForm.requirementType === 'specific'}}" />
-																				<text>点钟</text>
-																</label>
-																<label class="requirement-type-option">
-																				<radio value="gender" checked="{{reserveForm.requirementType === 'gender'}}" />
-																				<text>轮钟</text>
-																</label>
-												</radio-group>
-								</view>
-								<!-- 指定技师（点钟模式） -->
-								<view class="form-item technician-item" wx:if="{{reserveForm.requirementType === 'specific'}}">
-												<view class="form-label">
-																技师{{reserveForm.selectedTechnicians.length > 0 ? '(' + reserveForm.selectedTechnicians.length + ')' : ''}}
-												</view>
-												<technician-selector multi="{{true}}" technicianList="{{staffAvailability}}" showClockInBadge="{{true}}" bind:change="onTechnicianSelect" bind:toggleClockIn="onClockInToggle" />
-								</view>
-								<!-- 性别需求模式（轮钟） -->
-								<view class="form-item gender-requirement-item" wx:if="{{reserveForm.requirementType === 'gender'}}">
-												<!-- 男技师数量 -->
-												<view class="gender-counter">
-																<view class="gender-label">男技师</view>
-																<view class="counter-controls">
-																				<view class="counter-btn" bindtap="onGenderCountChange" data-gender="male" data-action="decrease" disabled="{{reserveForm.genderRequirement.male <= 0}}">
-																								-
-																				</view>
-																				<view class="counter-value">{{reserveForm.genderRequirement.male}}</view>
-																				<view class="counter-btn" bindtap="onGenderCountChange" data-gender="male" data-action="increase" disabled="{{reserveForm.genderRequirement.male >= 2}}">
-																								+
-																				</view>
-																</view>
-												</view>
-												<!-- 女技师数量 -->
-												<view class="gender-counter">
-																<view class="gender-label">女技师</view>
-																<view class="counter-controls">
-																				<view class="counter-btn" bindtap="onGenderCountChange" data-gender="female" data-action="decrease" disabled="{{reserveForm.genderRequirement.female <= 0}}">
-																								-
-																				</view>
-																				<view class="counter-value">{{reserveForm.genderRequirement.female}}</view>
-																				<view class="counter-btn" bindtap="onGenderCountChange" data-gender="female" data-action="increase" disabled="{{reserveForm.genderRequirement.female >= 2}}">
-																								+
-																				</view>
-																</view>
-												</view>
-												<view class="availability-hint" wx:if="{{staffAvailability.length > 0}}">
-																<view class="hint-item">
-																				<text class="hint-label">可用男技师：</text>
-																				<text class="hint-value">{{availableMaleCount}}位</text>
-																</view>
-																<view class="hint-item">
-																				<text class="hint-label">可用女技师：</text>
-																				<text class="hint-value">{{availableFemaleCount}}位</text>
-																</view>
-												</view>
-								</view>
+		<view class="reservation-modal">
+				<!-- 日期和时间 -->
+				<view class="form-item">
+						<view class="form-label">日期</view>
+						<picker mode="date" value="{{reserveForm.date}}" bindchange="onDateChange">
+								<view class="picker-val">{{reserveForm.date}}</view>
+						</picker>
+						<view class="form-label"></view>
+						<view class="form-label">开始时间</view>
+						<picker mode="time" value="{{reserveForm.startTime}}" bindchange="onTimeChange">
+								<view class="picker-val">{{reserveForm.startTime}}</view>
+						</picker>
 				</view>
+				<!-- 姓名和性别 -->
+				<view class="form-item combined-form-item">
+						<view class="form-field">
+								<view class="form-label">姓名</view>
+								<input class="form-input" placeholder="选填" value="{{reserveForm.customerName}}" bindinput="onNameInput" />
+						</view>
+						<view class="form-field">
+								<gender-selector selectedGender="{{reserveForm.gender}}" bind:change="onGenderChange" />
+						</view>
+				</view>
+				<!-- 手机号 -->
+				<view class="form-item">
+						<view class="form-label">手机号</view>
+						<input class="form-input" type="number" maxlength="11" placeholder="选填" value="{{reserveForm.phone}}" bindinput="onPhoneInput" />
+				</view>
+				<!-- 匹配顾客 -->
+				<view class="customer-match-result" wx:if="{{matchedCustomer}}">
+						<view class="match-info">
+								<view class="match-label">匹配顾客：</view>
+								<view class="match-name">
+										{{matchedCustomer.name}}{{matchedCustomer.gender === 'male' ? '先生' : '女士'}}
+								</view>
+								<view class="match-phone">{{matchedCustomer.phone || '无手机号'}}</view>
+								<view class="match-tech" wx:if="{{matchedCustomer.responsibleTechnician}}">
+										责任技师：{{matchedCustomer.responsibleTechnician}}
+								</view>
+								<view wx:if="{{matchedCustomer.remark}}" class="match-remark">
+										{{matchedCustomer.remark}}
+								</view>
+								<view class="match-actions">
+										<view wx:if="{{!matchedCustomerApplied}}" class="match-btn apply-btn" bindtap="onApplyCustomer">
+												应用
+										</view>
+										<view class="match-btn clear-btn" bindtap="onClearCustomer">清除</view>
+								</view>
+						</view>
+				</view>
+				<!-- 项目选择 -->
+				<view class="form-item project-item">
+						<view class="form-label">项目</view>
+						<project-selector selectedProject="{{reserveForm.project}}" bind:change="onProjectSelect" />
+				</view>
+				<!-- 技师需求类型 -->
+				<view class="form-item requirement-type-item">
+						<view class="form-label">技师需求</view>
+						<radio-group class="requirement-type-group" bindchange="onRequirementTypeChange">
+								<label class="requirement-type-option">
+										<radio value="specific" checked="{{reserveForm.requirementType === 'specific'}}" />
+										<text>点钟</text>
+								</label>
+								<label class="requirement-type-option">
+										<radio value="gender" checked="{{reserveForm.requirementType === 'gender'}}" />
+										<text>轮钟</text>
+								</label>
+						</radio-group>
+				</view>
+				<!-- 指定技师（点钟模式） -->
+				<view class="form-item technician-item" wx:if="{{reserveForm.requirementType === 'specific'}}">
+						<view class="form-label">
+								技师{{reserveForm.selectedTechnicians.length > 0 ? '(' + reserveForm.selectedTechnicians.length + ')' : ''}}
+						</view>
+						<technician-selector multi="{{true}}" technicianList="{{staffAvailability}}" showClockInBadge="{{true}}" bind:change="onTechnicianSelect" bind:toggleClockIn="onClockInToggle" />
+				</view>
+				<!-- 性别需求模式（轮钟） -->
+				<view class="form-item gender-requirement-item" wx:if="{{reserveForm.requirementType === 'gender'}}">
+						<!-- 男技师数量 -->
+						<view class="gender-counter">
+								<view class="gender-label">男技师</view>
+								<view class="counter-controls">
+										<view class="counter-btn" bindtap="onGenderCountChange" data-gender="male" data-action="decrease" disabled="{{reserveForm.genderRequirement.male <= 0}}">
+												-
+										</view>
+										<view class="counter-value">{{reserveForm.genderRequirement.male}}</view>
+										<view class="counter-btn" bindtap="onGenderCountChange" data-gender="male" data-action="increase" disabled="{{reserveForm.genderRequirement.male >= 2}}">
+												+
+										</view>
+								</view>
+						</view>
+						<!-- 女技师数量 -->
+						<view class="gender-counter">
+								<view class="gender-label">女技师</view>
+								<view class="counter-controls">
+										<view class="counter-btn" bindtap="onGenderCountChange" data-gender="female" data-action="decrease" disabled="{{reserveForm.genderRequirement.female <= 0}}">
+												-
+										</view>
+										<view class="counter-value">{{reserveForm.genderRequirement.female}}</view>
+										<view class="counter-btn" bindtap="onGenderCountChange" data-gender="female" data-action="increase" disabled="{{reserveForm.genderRequirement.female >= 2}}">
+												+
+										</view>
+								</view>
+						</view>
+						<view class="availability-hint" wx:if="{{staffAvailability.length > 0}}">
+								<view class="hint-item">
+										<text class="hint-label">可用男技师：</text>
+										<text class="hint-value">{{availableMaleCount}}位</text>
+								</view>
+								<view class="hint-item">
+										<text class="hint-label">可用女技师：</text>
+										<text class="hint-value">{{availableFemaleCount}}位</text>
+								</view>
+						</view>
+				</view>
+		</view>
 </modal>

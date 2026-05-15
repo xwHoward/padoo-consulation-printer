@@ -1,4 +1,5 @@
 import { cloudDb, Collections } from "../../../utils/cloud-db";
+import { buildPlateNumberUpdates } from "../../../services/customer.service";
 import { formatDate, formatTime, parseProjectDuration } from "../../../utils/util";
 
 const app = getApp<IAppOption>();
@@ -93,25 +94,12 @@ export class DataLoaderService {
         };
 
         const licensePlate = foundRecord.licensePlate || '';
-        updateData.licensePlate = licensePlate;
-
-        const isNoPlate = licensePlate.startsWith('临');
-        updateData.isNoPlate = isNoPlate;
-
         const isNewEnergyVehicle = licensePlate.length === 8;
-        updateData.isNewEnergyVehicle = isNewEnergyVehicle;
-        const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
-        const plateNumber = Array(maxPlateLength).fill('');
-        
-        if (licensePlate) {
-          const plateChars = licensePlate.split('');
-          plateChars.forEach((char: string, index: number) => {
-            if (index < maxPlateLength) {
-              plateNumber[index] = char;
-            }
-          });
-        }
+        const { plateNumber } = buildPlateNumberUpdates(licensePlate);
 
+        updateData.licensePlate = licensePlate;
+        updateData.isNoPlate = licensePlate.startsWith('临');
+        updateData.isNewEnergyVehicle = isNewEnergyVehicle;
         updateData.plateNumber = plateNumber;
 
         this.page.setData(updateData);
@@ -209,6 +197,7 @@ export class DataLoaderService {
         await this.loadTechnicianList();
       }
     } catch (error) {
+      console.error('[DataLoader] loadReservationData 失败:', error);
     } finally {
       this.page.setData({ loading: false });
     }

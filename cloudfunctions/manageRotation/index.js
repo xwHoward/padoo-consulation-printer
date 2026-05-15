@@ -40,7 +40,7 @@ exports.main = async (event, context) => {
 async function initRotationQueue(date) {
     const scheduleRes = await db.collection('schedule').where({
         date: date
-    }).get()
+    }).field({ staffId: true, shift: true }).limit(1000).get()
     const schedules = scheduleRes.data || []
 
     const onDutyStaffIds = schedules
@@ -60,10 +60,10 @@ async function initRotationQueue(date) {
         db.collection('staff').where({
             status: 'active',
             _id: _.in(onDutyStaffIds)
-        }).get(),
+        }).field({ _id: true, name: true, gender: true, avatar: true, phone: true, wechatWorkId: true }).limit(1000).get(),
         db.collection('rotation_queue').where({
             date: getYesterday(date)
-        }).get()
+        }).field({ staffList: true }).limit(1000).get()
     ])
 
     const staffList = staffRes.data || []
@@ -136,7 +136,7 @@ async function initRotationQueue(date) {
         // 在事务中重新检查是否已存在
         const existingQueue = await transaction.collection('rotation_queue').where({
             date: date
-        }).get()
+        }).limit(1000).get()
 
         const now = new Date().toISOString()
         let queueId
@@ -168,7 +168,7 @@ async function initRotationQueue(date) {
         await transaction.commit()
 
         // 事务提交后获取最新数据
-        const queue = await db.collection('rotation_queue').doc(queueId).get()
+        const queue = await db.collection('rotation_queue').doc(queueId).limit(1000).get()
         return {
             code: 0,
             message: '轮牌初始化成功',
@@ -179,7 +179,7 @@ async function initRotationQueue(date) {
         // 事务失败可能是因为并发冲突，尝试返回已存在的数据
         const existingQueue = await db.collection('rotation_queue').where({
             date: date
-        }).get()
+        }).limit(1000).get()
         if (existingQueue.data.length > 0) {
             return {
                 code: 0,
@@ -192,21 +192,29 @@ async function initRotationQueue(date) {
 }
 
 async function getNextTechnician(date) {
-    let queue = await db.collection('rotation_queue').where({
+    let queueRes = await db.collection('rotation_queue').where({
         date: date
-    }).get()
+    }).limit(1000).get()
 
-    if (queue.data.length === 0) {
+    if (queueRes.data.length === 0) {
         const initResult = await initRotationQueue(date)
         if (initResult.code !== 0) {
             return initResult
         }
-        queue = await db.collection('rotation_queue').where({
-            date: date
-        }).get()
+        // initRotationQueue 已返回创建后的队列数据，无需再次查询
+        const queueData = initResult.data
+        return {
+            code: 0,
+            message: '获取成功',
+            data: {
+                staff: queueData.staffList[0],
+                queue: queueData.staffList,
+                currentIndex: 0
+            }
+        }
     }
 
-    const queueData = queue.data[0]
+    const queueData = queueRes.data[0]
 
     if (queueData.staffList.length === 0) {
         return {
@@ -229,93 +237,107 @@ async function getNextTechnician(date) {
 }
 
 async function serveCustomer(date, staffId, isClockIn) {
-    const queueRes = await db.collection('rotation_queue').where({
-        date: date
-    }).get()
+    // 使用事务保护读写，防止并发更新丢失
+    const MAX_RETRIES = 3;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        const transaction = await db.startTransaction();
+        try {
+            const queueRes = await transaction.collection('rotation_queue').where({
+                date: date
+            }).limit(1).get();
 
-    if (queueRes.data.length === 0) {
-        return {
-            code: -1,
-            message: '轮牌不存在'
+            if (queueRes.data.length === 0) {
+                await transaction.rollback();
+                return { code: -1, message: '轮牌不存在' };
+            }
+
+            const queueData = queueRes.data[0];
+            const staffList = [...queueData.staffList];
+            const staffIndex = staffList.findIndex(s => s.staffId === staffId);
+
+            if (staffIndex === -1) {
+                await transaction.rollback();
+                return { code: -1, message: '员工不在轮牌中' };
+            }
+
+            if (isClockIn) {
+                staffList[staffIndex].orderCount += 1;
+                staffList[staffIndex].lastServedTime = new Date().toISOString();
+            } else {
+                const servedStaff = staffList.splice(staffIndex, 1)[0];
+                servedStaff.orderCount += 1;
+                servedStaff.lastServedTime = new Date().toISOString();
+                staffList.push(servedStaff);
+                for (let i = 0; i < staffList.length; i++) {
+                    staffList[i].position = i;
+                }
+            }
+
+            await transaction.collection('rotation_queue').doc(queueData._id).update({
+                data: {
+                    staffList: staffList,
+                    currentIndex: 0,
+                    updatedAt: new Date().toISOString()
+                }
+            });
+
+            await transaction.commit();
+            return {
+                code: 0,
+                message: '服务完成',
+                data: {
+                    staffList: staffList,
+                    currentIndex: 0
+                }
+            };
+        } catch (error) {
+            try { await transaction.rollback(); } catch (e) { /* ignore */ }
+            if (attempt < MAX_RETRIES - 1) {
+                console.warn('[serveCustomer] 事务冲突重试:', attempt + 1);
+                await new Promise(r => setTimeout(r, 100 * (attempt + 1)));
+            } else {
+                console.error('[serveCustomer] 重试耗尽:', error);
+                return { code: -1, message: '服务操作失败，请重试' };
+            }
         }
     }
 
-    const queueData = queueRes.data[0]
-    const staffList = [...queueData.staffList]
-    const staffIndex = staffList.findIndex(s => s.staffId === staffId)
-
-    if (staffIndex === -1) {
-        return {
-            code: -1,
-            message: '员工不在轮牌中'
-        }
-    }
-
-    if (isClockIn) {
-        // 点钟：仅增加计数，不改变队列位置
-        staffList[staffIndex].orderCount += 1
-        staffList[staffIndex].lastServedTime = new Date().toISOString()
-    } else {
-        // 轮钟：将技师移到队尾，从0开始重新编号所有position
-        const servedStaff = staffList.splice(staffIndex, 1)[0]
-        servedStaff.orderCount += 1
-        servedStaff.lastServedTime = new Date().toISOString()
-        staffList.push(servedStaff)
-
-        // 从头重新编号所有position
-        for (let i = 0; i < staffList.length; i++) {
-            staffList[i].position = i
-        }
-    }
-
-    await db.collection('rotation_queue').doc(queueData._id).update({
-        data: {
-            staffList: staffList,
-            currentIndex: 0, // 队首即当前轮牌位
-            updatedAt: new Date().toISOString()
-        }
-    })
-
-    return {
-        code: 0,
-        message: '服务完成',
-        data: {
-            staffList: staffList,
-            currentIndex: 0
-        }
-    }
+    return { code: -1, message: '服务操作失败' };
 }
 
 async function getRotationQueue(date) {
-    let queue = await db.collection('rotation_queue').where({
+    let queueRes = await db.collection('rotation_queue').where({
         date: date
-    }).get()
+    }).limit(1000).get()
 
-    if (queue.data.length === 0) {
+    if (queueRes.data.length === 0) {
         const initResult = await initRotationQueue(date)
-        if (initResult.code !== 0) {
+        if (initResult.code !== 0 || !initResult.data) {
             return {
                 code: 0,
                 message: '暂无轮牌数据',
                 data: { staffList: [], currentIndex: 0 }
             }
         }
-        queue = await db.collection('rotation_queue').where({
-            date: date
-        }).get()
+        // initRotationQueue 已返回创建后的队列数据，无需再次查询
+        return {
+            code: 0,
+            message: '获取成功',
+            data: initResult.data
+        }
     }
 
     return {
         code: 0,
         message: '获取成功',
-        data: queue.data[0]
+        data: queueRes.data[0]
     }
 }
 
 async function adjustPosition(date, fromIndex, toIndex) {
     const queueRes = await db.collection('rotation_queue').where({
         date: date
-    }).get()
+    }).limit(1000).get()
 
     if (queueRes.data.length === 0) {
         return {

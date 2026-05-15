@@ -1,5 +1,5 @@
 
-export type QueryCondition<T> = Partial<T> | ((item: T) => boolean);
+export type QueryCondition<T> = any;
 
 export interface CloudDbConfig {
 	envId?: string;
@@ -54,6 +54,34 @@ class CloudDatabase {
 	}
 
 	/**
+	 * 瞬态故障重试包装器（指数退避 + 抖动）
+	 */
+	private async retry<T>(fn: () => Promise<T>, label: string, maxRetries: number = 2): Promise<T> {
+		let lastError: any;
+		for (let attempt = 0; attempt <= maxRetries; attempt++) {
+			try {
+				return await fn();
+			} catch (error) {
+				lastError = error;
+				if (attempt < maxRetries && this.isTransientError(error)) {
+					const delay = Math.floor(100 * Math.pow(2, attempt) + Math.random() * 100);
+					console.warn(`[CloudDB] ${label} 重试 ${attempt + 1}/${maxRetries}，${delay}ms 后重试`);
+					await new Promise(r => setTimeout(r, delay));
+				}
+			}
+		}
+		throw lastError;
+	}
+
+	/**
+	 * 判断是否为可重试的瞬态错误
+	 */
+	private isTransientError(error: any): boolean {
+		const msg = (error?.errMsg || error?.message || '').toLowerCase();
+		return /timeout|network|exceed|limit|busy|try again|internal/i.test(msg);
+	}
+
+	/**
 	 * 获取集合引用
 	 */
 	private getCollection(collection: string) {
@@ -61,6 +89,27 @@ class CloudDatabase {
 			throw new Error('[CloudDB] 数据库未初始化');
 		}
 		return this.db.collection(collection);
+	}
+
+	/**
+	 * 获取数据库查询操作符（_.gte, _.lte, _.and 等）
+	 * 用于构建范围查询条件，避免全量拉取
+	 */
+	getCommand() {
+		if (!this.db) {
+			throw new Error('[CloudDB] 数据库未初始化');
+		}
+		return this.db.command;
+	}
+
+	/**
+	 * 获取数据库正则表达式对象
+	 */
+	getRegExp(options: { regexp: string, options?: string }) {
+		if (!this.db) {
+			throw new Error('[CloudDB] 数据库未初始化');
+		}
+		return new this.db.RegExp(options);
 	}
 
 	/**
@@ -110,13 +159,29 @@ class CloudDatabase {
 			const collectionRef = this.getCollection(collection);
 
 			if (typeof condition === 'function') {
+				console.warn(`[CloudDB] find() 函数条件触发全量拉取 (${collection})，建议改用 getCommand() 构建原生查询`);
 				const allData = await this.getAll<T>(collection);
 				return allData.filter(condition);
 			}
 
-			const query = collectionRef.where(condition);
-			const res = await query.get();
-			return res.data as T[];
+			// 微信客户端 SDK 的 .get() 默认仅返回 20 条，需要分页拉取全量
+			const countRes = await collectionRef.where(condition).count();
+			const total = countRes.total || 0;
+			if (total === 0) return [];
+
+			const PAGE_SIZE = 100;
+			const allData: T[] = [];
+			let skip = 0;
+
+			while (skip < total) {
+				const res = await collectionRef.where(condition).skip(skip).limit(PAGE_SIZE).get();
+				const pageData = res.data as T[];
+				allData.push(...pageData);
+				skip += pageData.length;
+				if (pageData.length === 0) break;
+			}
+
+			return allData;
 		} catch (error) {
 			return [];
 		}
@@ -135,7 +200,8 @@ class CloudDatabase {
 	 */
 	async insert<T extends BaseRecord>(collection: string, record: Omit<T, '_id' | 'createdAt' | 'updatedAt'>): Promise<T | null> {
 		try {
-			const now = this.getTimestamp();
+			return await this.retry(async () => {
+				const now = this.getTimestamp();
 
 			const dataToInsert = {
 				...record,
@@ -158,7 +224,8 @@ class CloudDatabase {
 				_id: res._id,
 			} as unknown as T;
 
-			return newRecord;
+			return { ...dataToInsert, _id: res._id } as unknown as T;
+			}, "insert(" + collection + ")");
 		} catch (error) {
 			return null;
 		}
@@ -169,7 +236,8 @@ class CloudDatabase {
 	 */
 	async updateById<T extends BaseRecord>(collection: string, _id: string, updates: Partial<Update<T>>): Promise<boolean> {
 		try {
-			const updateData = {
+			return await this.retry(async () => {
+				const updateData = {
 				...updates,
 				updatedAt: this.getTimestamp()
 			};
@@ -179,6 +247,7 @@ class CloudDatabase {
 				data: updateData
 			});
 			return (res.stats?.updated || 0) > 0;
+			}, "updateById(" + collection + ")");
 		} catch (error) {
 			if ((error as any).errMsg?.includes('document not found')) {
 				return false;
@@ -192,8 +261,10 @@ class CloudDatabase {
 	 */
 	async deleteById(collection: string, _id: string): Promise<boolean> {
 		try {
-			await this.getCollection(collection).doc(_id).remove();
+			return await this.retry(async () => {
+				await this.getCollection(collection).doc(_id).remove();
 			return true;
+			}, "deleteById(" + collection + ")");
 		} catch (error) {
 			if ((error as any).errMsg?.includes('document not found')) {
 				return false;
@@ -217,6 +288,7 @@ class CloudDatabase {
 			const collectionRef = this.getCollection(collection);
 
 			if (typeof condition === 'function') {
+				console.warn(`[CloudDB] findWithPage() 函数条件触发全量拉取 (${collection})，建议改用 getCommand() 构建原生查询`);
 				const allData = await this.getAll<T>(collection);
 				const filteredData = allData.filter(condition);
 				const total = filteredData.length;
@@ -299,16 +371,23 @@ class CloudDatabase {
 	 */
 	async getConsultationsByDate<T extends ConsultationRecord>(date: string): Promise<T[]> {
 		try {
-			const res = await this.getCollection(Collections.CONSULTATION)
-				.where({
-					createdAt: this.db?.RegExp({
-						regexp: `^${date}`,
-						options: 'i'
-					})
-				})
-				.orderBy('createdAt', 'asc')
-				.get();
-			return res.data as T[];
+			// 微信客户端 SDK .get() 仅返回 20 条，需要分页拉取全量
+			const PAGE_SIZE = 20;
+			const collectionRef = this.getCollection(Collections.CONSULTATION);
+			// 使用专用 date 字段替代 createdAt 正则，可利用索引加速
+			const where = { date };
+			const allData: T[] = [];
+			let skip = 0;
+
+			while (true) {
+				const res = await collectionRef.where(where).orderBy('createdAt', 'asc').skip(skip).limit(PAGE_SIZE).get();
+				const pageData = res.data as T[];
+				allData.push(...pageData);
+				if (pageData.length < PAGE_SIZE) break;
+				skip += pageData.length;
+			}
+
+			return allData;
 		} catch (error) {
 			return [];
 		}

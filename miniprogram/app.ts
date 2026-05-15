@@ -169,6 +169,7 @@ App<IAppOption<AppGlobalData>>({
 			}
 			return null;
 		} catch (error) {
+			console.error('[App] getRotationQueue 失败:', error);
 			return null;
 		}
 	},
@@ -188,6 +189,7 @@ App<IAppOption<AppGlobalData>>({
 			}
 			return null;
 		} catch (error) {
+			console.error('[App] getNextTechnician 失败:', error);
 			return null;
 		}
 	},
@@ -209,6 +211,7 @@ App<IAppOption<AppGlobalData>>({
 			}
 			return null;
 		} catch (error) {
+			console.error('[App] serveCustomer 失败:', error);
 			return null;
 		}
 	},
@@ -230,6 +233,7 @@ App<IAppOption<AppGlobalData>>({
 			}
 			return null;
 		} catch (error) {
+			console.error('[App] adjustRotationPosition 失败:', error);
 			return null;
 		}
 	}

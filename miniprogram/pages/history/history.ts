@@ -1,5 +1,6 @@
 import {Collections, cloudDb} from '../../utils/cloud-db';
-import {COUPON_PLATFORMS, GENDERS, MASSAGE_STRENGTHS} from "../../utils/constants";
+import {ReservationService} from '../../services/reservation.service';
+import {BODY_PART_MAP, COUPON_PLATFORM_NAMES, COUPON_PLATFORMS, GENDERS, MASSAGE_STRENGTHS} from "../../utils/constants";
 import {loadingService, LockKeys} from '../../utils/loading-service';
 import {hasButtonPermission} from '../../utils/permission';
 import {formatTime, getCurrentDate, getPreviousDate, getNextDate} from "../../utils/util";
@@ -18,17 +19,6 @@ interface DailyGroup {
   records: DisplayRecord[];
 }
 
-const BODY_PART_MAP = {
-  'head': '头部',
-  'neck': '颈部',
-  'shoulder': '肩部',
-  'back': '后背',
-  'arm': '手臂',
-  'abdomen': '腹部',
-  'waist': '腰部',
-  'thigh': '大腿',
-  'calf': '小腿'
-};
 const app = getApp<IAppOption>();
 
 
@@ -37,17 +27,7 @@ Page({
     historyData: [] as DailyGroup[], // 按天分组的历史记录
     platforms: COUPON_PLATFORMS.reduce((acc, p) => ({...acc, [p._id]: p.name}), {}),
     genders: GENDERS.reduce((acc, g) => ({...acc, [g._id]: g.name}), {}),
-    paymentPlatformLabels: {
-      meituan: '美团',
-      dianping: '大众点评',
-      douyin: '抖音',
-      wechat: '微信',
-      alipay: '支付宝',
-      cash: '现金',
-      gaode: '高德',
-      free: '免单',
-      membership: '划卡'
-    },
+    paymentPlatformLabels: COUPON_PLATFORM_NAMES,
     customerPhone: '', // 顾客手机号
     customerId: '', // 顾客ID
     loading: false, // 全局loading状态
@@ -121,22 +101,7 @@ Page({
   },
 
   async triggerRearrange(date: string): Promise<void> {
-    try {
-      const res = await wx.cloud.callFunction({
-        name: 'getAvailableTechnicians',
-        data: {
-          date,
-          mode: 'rearrange'
-        }
-      });
-      if (res.result && (res.result as { code: number }).code === 0) {
-        console.log('[重排] 完成:', (res.result as { data: { summary: any } }).data.summary);
-      } else {
-        console.warn('[重排] 失败:', (res.result as { message?: string }).message);
-      }
-    } catch (error) {
-      console.error('[重排] 调用失败:', error);
-    }
+    return ReservationService.triggerRearrange(date);
   },
 
   // 加载顾客历史记录
@@ -467,7 +432,7 @@ Page({
         }
 
         if (stats.overtime > 0) {
-          summaryText += `  加班: ${ stats.overtime * 0.5 }小时\n`;
+          summaryText += `  加班: ${ stats.overtime }小时\n`;
         }
 
         if (stats.guashaCount > 0) {

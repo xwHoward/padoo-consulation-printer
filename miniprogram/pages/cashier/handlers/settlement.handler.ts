@@ -1,5 +1,6 @@
 // settlement.handler.ts - 结算处理器
 import { cloudDb, Collections } from '../../../utils/cloud-db';
+import { ReservationService } from '../../../services/reservation.service';
 import { getCurrentDate } from '../../../utils/util';
 import type { CashierPage, PaymentMethodItem } from '../cashier.types';
 import { PushHandler } from './push.handler';
@@ -16,22 +17,7 @@ export class SettlementHandler {
 	}
 
 	async triggerRearrange(date: string): Promise<void> {
-		try {
-			const res = await wx.cloud.callFunction({
-				name: 'getAvailableTechnicians',
-				data: {
-					date,
-					mode: 'rearrange'
-				}
-			});
-			if (res.result && (res.result as { code: number }).code === 0) {
-				console.log('[重排] 完成:', (res.result as { data: { summary: any } }).data.summary);
-			} else {
-				console.warn('[重排] 失败:', (res.result as { message?: string }).message);
-			}
-		} catch (error) {
-			console.error('[重排] 调用失败:', error);
-		}
+		return ReservationService.triggerRearrange(date);
 	}
 
 	/**

@@ -74,6 +74,7 @@ async function getAnalyticsData(startDate, endDate, timeRangeType, currentDate) 
       date: _.gte(startDate).and(_.lte(endDate)),
       isVoided: false
     })
+    .field({ date: true, createdAt: true, gender: true, project: true, technician: true })
     .limit(1000)
     .get();
   
@@ -84,7 +85,8 @@ async function getAnalyticsData(startDate, endDate, timeRangeType, currentDate) 
       date: _.gte(startDate).and(_.lte(endDate)),
       status: _.neq('cancelled')
     })
-    .get();
+    .field({ _id: true })
+    .limit(1000).get();
   
   const reservations = reservationResult.data;
   
@@ -92,6 +94,7 @@ async function getAnalyticsData(startDate, endDate, timeRangeType, currentDate) 
     .where({
       date: _.gte(startDate).and(_.lte(endDate))
     })
+    .field({ date: true, staffId: true })
     .limit(1000)
     .get();
   
@@ -101,7 +104,8 @@ async function getAnalyticsData(startDate, endDate, timeRangeType, currentDate) 
     .where({
       status: 'active'
     })
-    .get();
+    .field({ _id: true, name: true, gender: true })
+    .limit(1000).get();
   
   const staffList = staffResult.data;
   

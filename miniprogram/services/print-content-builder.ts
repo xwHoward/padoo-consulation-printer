@@ -1,4 +1,5 @@
 import { cloudDb, Collections } from "../utils/cloud-db";
+import { BODY_PART_MAP } from "../utils/constants";
 import { formatTime } from "../utils/util";
 
 interface PrintContentOptions {
@@ -14,17 +15,7 @@ export class PrintContentBuilder {
     gravity: "重力",
   };
 
-  private readonly partMap: Record<string, string> = {
-    head: "头部",
-    neck: "颈部",
-    shoulder: "肩部",
-    back: "后背",
-    arm: "手臂",
-    abdomen: "腹部",
-    waist: "腰部",
-    thigh: "大腿",
-    calf: "小腿",
-  };
+  private readonly partMap = BODY_PART_MAP;
 
   constructor(private readonly oils: EssentialOil[]) { }
 

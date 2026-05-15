@@ -23,6 +23,7 @@ exports.main = async (event, context) => {
       .where({
         phone: phoneClean
       })
+      .field({ _id: true, createdAt: true, project: true, technician: true, room: true, amount: true, isClockIn: true, isVoided: true, startTime: true, endTime: true, couponPlatform: true, couponCode: true })
       .orderBy('createdAt', 'desc')
       .limit(100)
       .get()
@@ -50,7 +51,7 @@ exports.main = async (event, context) => {
       .where({
         phone: phoneClean
       })
-      .get()
+      .limit(1000).get()
 
     const customer = customerRes.data && customerRes.data.length > 0 
       ? customerRes.data[0] 
@@ -61,7 +62,7 @@ exports.main = async (event, context) => {
         customerPhone: phoneClean
       })
       .orderBy('createdAt', 'desc')
-      .get()
+      .limit(1000).get()
 
     const customerMemberships = customerMembershipsRes.data || []
 

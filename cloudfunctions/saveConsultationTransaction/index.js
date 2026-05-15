@@ -7,39 +7,24 @@ cloud.init({
 const db = cloud.database();
 const _ = db.command;
 
-exports.main = async (event, context) => {
-  const { consultation, editId } = event;
-  
-  try {
-    // 如果是编辑模式，直接更新
-    if (editId) {
-      const existing = await db.collection('consultation_records').doc(editId).get();
-      if (!existing.data) {
-        return {
-          code: -1,
-          message: '记录不存在'
-        };
-      }
-      
-      await db.collection('consultation_records').doc(editId).update({
-        data: {
-          ...consultation,
-          updatedAt: db.serverDate()
-        }
-      });
-      
-      return {
-        code: 0,
-        data: { ...existing.data, ...consultation },
-        message: '更新成功'
-      };
-    }
-    
-    // 新建模式：使用事务检查并插入
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 200;
+
+/**
+ * 带重试的睡眠
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * 执行带重试的事务保存
+ */
+async function executeTransaction(consultation) {
+  let lastError;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     const transaction = await db.startTransaction();
-    
     try {
-      // 检查重复记录
       const duplicateCheck = await transaction.collection('consultation_records')
         .where({
           date: consultation.date,
@@ -49,43 +34,49 @@ exports.main = async (event, context) => {
           isVoided: false
         })
         .get();
-      
+
       if (duplicateCheck.data.length > 0) {
-        await transaction.abort();
-        return {
-          code: 1,
-          message: '该技师在同一时间已有相同项目的记录，请勿重复报钟'
-        };
+        await transaction.rollback();
+        return { code: 1, message: '该技师在同一时间已有相同项目的记录，请勿重复报钟' };
       }
-      
-      // 插入新记录
+
       const now = new Date().toISOString();
-      const recordData = {
-        ...consultation,
-        createdAt: now,
-        updatedAt: now
-      };
-      
       const result = await transaction.collection('consultation_records').add({
-        data: recordData
+        data: { ...consultation, createdAt: now, updatedAt: now }
       });
-      
+
       await transaction.commit();
-      
-      return {
-        code: 0,
-        data: { _id: result._id, ...recordData },
-        message: '保存成功'
-      };
-    } catch (transactionError) {
-      await transaction.abort();
-      throw transactionError;
+      return { code: 0, data: { _id: result._id, ...consultation, createdAt: now, updatedAt: now }, message: '保存成功' };
+    } catch (error) {
+      try { await transaction.rollback(); } catch (e) { /* 忽略回滚错误 */ }
+      lastError = error;
+      if (attempt < MAX_RETRIES - 1) {
+        console.warn(`[saveConsultation] 事务冲突，第${attempt + 1}次重试...`);
+        await sleep(RETRY_DELAY_MS * (attempt + 1));
+      }
     }
+  }
+  throw lastError || new Error('事务保存失败');
+}
+
+exports.main = async (event, context) => {
+  const { consultation, editId } = event;
+
+  try {
+    if (editId) {
+      const existing = await db.collection('consultation_records').doc(editId).get();
+      if (!existing.data) {
+        return { code: -1, message: '记录不存在' };
+      }
+      await db.collection('consultation_records').doc(editId).update({
+        data: { ...consultation, updatedAt: db.serverDate() }
+      });
+      return { code: 0, data: { ...existing.data, ...consultation }, message: '更新成功' };
+    }
+
+    return await executeTransaction(consultation);
   } catch (error) {
-    console.error('保存咨询单失败:', error);
-    return {
-      code: -1,
-      message: '保存失败：' + (error.message || '未知错误')
-    };
+    console.error('[saveConsultation] 保存失败:', error);
+    return { code: -1, message: '保存失败：' + (error.message || '未知错误') };
   }
 };

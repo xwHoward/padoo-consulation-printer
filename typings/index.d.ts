@@ -384,6 +384,7 @@ interface IndexPage<D> {
     guestInfos: GuestInfo[];  // 每位顾客的独立信息
     timePickerModal: {
       currentTime: string;
+      currentDate: string;
     };
     licensePlate: string;
     clockInModal: {

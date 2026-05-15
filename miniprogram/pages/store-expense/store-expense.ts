@@ -111,8 +111,8 @@ Page({
         const { selectedYear, selectedMonth } = this.data.monthSelector;
         const monthStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
 
-        const expenses = await cloudDb.find<StoreExpense>(Collections.STORE_EXPENSE, (item) => {
-            return (typeof item.date === 'string') && item.date.startsWith(monthStr);
+        const expenses = await cloudDb.find<StoreExpense>(Collections.STORE_EXPENSE, {
+            date: cloudDb.getRegExp({ regexp: `^${monthStr}` })
         });
 
         expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -319,15 +319,17 @@ Page({
         const monthStartStr = formatDate(monthStart);
         const monthEndStr = formatDate(monthEnd);
 
+        const _ = cloudDb.getCommand();
         const [consultations, schedules, memberships] = await Promise.all([
-            cloudDb.find<ConsultationRecord>(Collections.CONSULTATION, (item) => {
-                return item.date >= monthStartStr && item.date <= monthEndStr && !item.isVoided;
+            cloudDb.find<ConsultationRecord>(Collections.CONSULTATION, {
+                date: _.gte(monthStartStr).and(_.lte(monthEndStr)),
+                isVoided: false
             }),
-            cloudDb.find<ScheduleRecord>(Collections.SCHEDULE, (item) => {
-                return item.date >= monthStartStr && item.date <= monthEndStr;
+            cloudDb.find<ScheduleRecord>(Collections.SCHEDULE, {
+                date: _.gte(monthStartStr).and(_.lte(monthEndStr))
             }),
-            cloudDb.find<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, (item) => {
-                return (typeof item.createdAt === 'string') && item.createdAt.startsWith(monthStr);
+            cloudDb.find<CustomerMembership>(Collections.CUSTOMER_MEMBERSHIP, {
+                createdAt: cloudDb.getRegExp({ regexp: `^${monthStr}` })
             })
         ]);
 

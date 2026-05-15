@@ -2,6 +2,7 @@
 import { checkLogin } from '../../utils/auth';
 import { loadingService, LockKeys } from '../../utils/loading-service';
 import { hasButtonPermission, requirePagePermission } from '../../utils/permission';
+import { COUPON_PLATFORM_NAMES } from '../../utils/constants';
 import { formatDate, getCurrentDate } from '../../utils/util';
 import type { CashierPage, PaymentMethodItem } from './cashier.types';
 import { ReservationHandler } from './handlers/reservation.handler';
@@ -65,17 +66,9 @@ Page({
         settlementCouponCode: '',
         projectOriginalPrice: 0,
         totalSettlementAmount: 0,
-        paymentMethods: [
-            { key: 'meituan', label: '美团', selected: false, amount: '', couponCode: '' },
-            { key: 'dianping', label: '大众点评', selected: false, amount: '', couponCode: '' },
-            { key: 'douyin', label: '抖音', selected: false, amount: '', couponCode: '' },
-            { key: 'wechat', label: '微信', selected: false, amount: '', couponCode: '' },
-            { key: 'alipay', label: '支付宝', selected: false, amount: '', couponCode: '' },
-            { key: 'cash', label: '现金', selected: false, amount: '', couponCode: '' },
-            { key: 'gaode', label: '高德', selected: false, amount: '', couponCode: '' },
-            { key: 'free', label: '免单', selected: false, amount: '', couponCode: '' },
-            { key: 'membership', label: '划卡', selected: false, amount: '', couponCode: '' },
-        ],
+        paymentMethods: Object.entries(COUPON_PLATFORM_NAMES).map(([key, label]) => ({
+            key, label, selected: false, amount: '', couponCode: ''
+        })),
         // loading状态
         loading: false,
         loadingText: '加载中...',

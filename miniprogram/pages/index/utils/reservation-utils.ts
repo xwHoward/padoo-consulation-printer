@@ -19,6 +19,7 @@ export class ReservationUtils {
       }
       return deletedCount;
     } catch (error) {
+      console.error('[ReservationUtils] markReservationAsArrived 失败:', error);
       return 0;
     }
   }
@@ -157,6 +158,7 @@ export class ReservationUtils {
         await cloudDb.insert<CustomerRecord>(Collections.CUSTOMERS, customerData);
       }
     } catch (error) {
+      console.error('[ReservationUtils] saveCustomerInfo 失败:', error);
     }
   }
 }

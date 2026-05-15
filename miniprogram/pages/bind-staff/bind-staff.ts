@@ -49,6 +49,7 @@ Page({
 				this.setData({ loading: false });
 			}
 		} catch (error) {
+			console.error('[BindStaff] checkBindingStatus 失败:', error);
 			this.setData({ loading: false });
 		}
 	},

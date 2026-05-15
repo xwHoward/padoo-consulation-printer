@@ -28,7 +28,9 @@ export class ReservationHandler {
 					mode: 'rearrange'
 				}
 			});
-		} catch (error) {	}
+		} catch (error) {
+			console.error('[ReservationHandler] triggerRearrange 失败:', error);
+		}
 	}
 
 	/**

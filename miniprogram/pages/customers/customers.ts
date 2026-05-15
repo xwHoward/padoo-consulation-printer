@@ -56,6 +56,7 @@ Page({
         technicianListWithSelection: staffListWithSelection
       });
     } catch (error) {
+      console.error("[Customers] loadTechnicianList 失败:", error);
     }
   },
 
@@ -73,17 +74,18 @@ Page({
 
       const {searchKeyword, currentPage, pageSize} = this.data;
 
+      let condition: any = {};
+      if (searchKeyword) {
+        const _ = cloudDb.getCommand();
+        condition = _.or([
+          { name: cloudDb.getRegExp({ regexp: searchKeyword, options: 'i' }) },
+          { phone: cloudDb.getRegExp({ regexp: searchKeyword }) }
+        ]);
+      }
+
       const result = await cloudDb.findWithPage<CustomerRecord>(
         Collections.CUSTOMERS,
-        (customer) => {
-          if (!searchKeyword) return true;
-
-          const keyword = searchKeyword.toLowerCase();
-          const nameMatch = customer.name ? customer.name.toLowerCase().includes(keyword) : false;
-          const phoneMatch = customer.phone ? customer.phone.includes(keyword) : false;
-
-          return nameMatch || phoneMatch;
-        },
+        condition,
         currentPage,
         pageSize,
         {field: 'createdAt', direction: 'desc'}
@@ -286,6 +288,7 @@ Page({
         loading: false
       });
     } catch (error) {
+      console.error("[Customers] loadCustomerVisits 失败:", error);
     }
     this.setData({loading: false});
   },

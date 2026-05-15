@@ -10,6 +10,7 @@
     "gender-selector": "/components/gender-selector/gender-selector",
     "platform-selector": "/components/platform-selector/platform-selector",
     "license-plate-input": "/components/license-plate-input/license-plate-input",
-    "modal": "/components/modal/modal"
+    "modal": "/components/modal/modal",
+    "date-picker": "/components/date-picker/date-picker"
   }
 }

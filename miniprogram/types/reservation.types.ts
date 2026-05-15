@@ -51,58 +51,11 @@ export interface PushModalState {
 }
 
 /** 到店确认弹窗状态 */
-export interface ArrivalConfirmModalState {
-	show: boolean;
-	reserveId: string;
-	customerName: string;
-	project: string;
-	technicianName: string;
-}
 
 /** 预约弹窗组件属性 */
-export interface ReservationModalProps {
-	show: boolean;
-	mode: 'create' | 'edit';
-	reserveForm: ReserveForm;
-	originalReservation: ReservationRecord | null;
-	selectedDate: string;
-	projects: Project[];
-	staffAvailability: StaffAvailability[];
-	availableMaleCount: number;
-	availableFemaleCount: number;
-	matchedCustomer: CustomerRecord | null;
-	matchedCustomerApplied: boolean;
-}
 
 /** 预约弹窗组件事件 */
-export interface ReservationModalEvents {
-	confirm: (form: ReserveForm) => void;
-	cancel: () => void;
-	'check-availability': (date: string, startTime: string, project: string) => void;
-	'search-customer': (name: string, phone: string, gender: string) => void;
-	'apply-customer': (customer: CustomerRecord) => void;
-	'clear-customer': () => void;
-}
 
 /** 预约组件完整数据结构 */
-export interface ReservationComponentData {
-	show: boolean;
-	mode: 'create' | 'edit';
-	loading: boolean;
-	loadingText: string;
-	reserveForm: ReserveForm;
-	originalReservation: ReservationRecord | null;
-	projects: Project[];
-	staffAvailability: StaffAvailability[];
-	availableMaleCount: number;
-	availableFemaleCount: number;
-	matchedCustomer: CustomerRecord | null;
-	matchedCustomerApplied: boolean;
-	pushModal: PushModalState;
-}
 
 /** 预约组件方法接口 */
-export interface ReservationComponentInstance {
-	data: ReservationComponentData;
-	setData: (data: Partial<ReservationComponentData> | Record<string, unknown>) => void;
-}

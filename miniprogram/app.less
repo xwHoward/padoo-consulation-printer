@@ -113,3 +113,250 @@
     transform: rotate(360deg);
   }
 }
+
+/* ============ 页面基础布局 ============ */
+page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: @bg-color-light;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  padding-top: env(safe-area-inset-top);
+  padding-top: constant(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: constant(safe-area-inset-bottom);
+  box-sizing: border-box;
+}
+
+.scrollarea {
+  flex: 1;
+  width: 100%;
+  overflow-y: hidden;
+}
+
+/* ============ 通用区块卡片 ============ */
+.section {
+  box-sizing: border-box;
+  width: 100%;
+  background-color: @bg-color;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: @text-color;
+  border-left: 2px solid @primary-color;
+  padding-left: 8px;
+  margin-bottom: 10px;
+}
+
+/* ============ 通用表单布局 ============ */
+.form-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid @border-color-light;
+
+  &:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+
+.form-label {
+  flex: none;
+  margin-right: 12px;
+  font-size: 13px;
+  color: @text-color;
+}
+
+.form-input {
+  flex: 1;
+  font-size: 13px;
+  color: @text-color;
+  padding: 5px 0;
+  border: none;
+  border-bottom: 1px solid @border-color;
+}
+
+/* ============ 房间网格（收银台/概览页共用） ============ */
+.room-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.room-item {
+  flex: 1 1 30%;
+  padding: 8px;
+  border: 1px solid @border-color;
+  border-radius: 6px;
+  background-color: @bg-color;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.room-item.empty {
+  opacity: 0.5;
+}
+
+.room-item.occupied {
+  border-color: @primary-color;
+  background-color: rgba(255, 107, 0, 0.03);
+}
+
+.room-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: @text-color;
+}
+
+.room-detail {
+  font-size: 12px;
+  color: @text-color-secondary;
+  margin-top: 4px;
+}
+
+.occupied-record {
+  margin-top: 8px;
+  padding: 6px;
+  background-color: @bg-color-light;
+  border-radius: 4px;
+}
+
+.customer-tag {
+  font-size: 12px;
+  color: @primary-color;
+  font-weight: 500;
+}
+
+.staff-tag {
+  font-size: 11px;
+  color: @text-color-secondary;
+}
+
+.time-tag {
+  font-size: 11px;
+  color: @text-color-light;
+}
+
+/* ============ 班次标签 ============ */
+.shift-tag {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+
+  &.morning  { background-color: rgba(52, 152, 219, 0.1); color: #3498db; }
+  &.evening  { background-color: rgba(155, 89, 182, 0.1); color: #9b59b6; }
+  &.off      { background-color: rgba(0, 0, 0, 0.05); color: @text-color-secondary; }
+  &.leave    { background-color: rgba(231, 76, 60, 0.1); color: #e74c3c; }
+  &.overtime { background-color: rgba(230, 126, 34, 0.1); color: #e67e22; }
+}
+
+/* ============ 推送预览 ============ */
+.push-preview {
+  background-color: @bg-color-light;
+  border: 1px solid @border-color-light;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  position: relative;
+
+  .push-textarea {
+    width: 100%;
+    min-height: 200px;
+    max-height: 400px;
+    padding: 12px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: @text-color;
+    background-color: @bg-color;
+    border: 1px solid @border-color;
+    border-radius: 4px;
+    box-sizing: border-box;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .push-textarea::placeholder {
+    color: @text-color-light;
+  }
+
+  .char-count {
+    position: absolute;
+    bottom: 24px;
+    right: 28px;
+    font-size: 12px;
+    color: @text-color-secondary;
+    background-color: @bg-color-light;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+}
+
+.push-tips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background-color: rgba(24, 144, 255, 0.08);
+  border-radius: 4px;
+
+  .tips-text {
+    flex: 1;
+    font-size: 12px;
+    color: #1890ff;
+    line-height: 1.4;
+  }
+}
+
+/* ============ 结算信息展示 ============ */
+.settlement-info {
+  margin: 8px 0;
+  padding: 10px 12px;
+  background-color: rgba(255, 107, 0, 0.05);
+  border-left: 3px solid @primary-color;
+  border-radius: 4px;
+}
+
+.settlement-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.settlement-label  { font-size: 13px; font-weight: 600; color: @primary-color; }
+.settlement-time   { font-size: 11px; color: @text-color-secondary; }
+.settlement-amount { font-size: 16px; font-weight: 600; color: @primary-color; margin-bottom: 8px; }
+
+.payment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payment-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.payment-platform {
+  padding: 2px 8px;
+  background-color: @bg-color;
+  border-radius: 3px;
+  color: @text-color-secondary;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.payment-detail { color: @text-color; font-weight: 500; }
+.payment-coupon { margin-left: auto; color: @text-color-light; font-size: 11px; }

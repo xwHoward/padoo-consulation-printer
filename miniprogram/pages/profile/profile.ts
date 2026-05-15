@@ -137,6 +137,7 @@ Page({
 			const staff = await cloudDb.findById<StaffInfo>(Collections.STAFF, this.data.staffId);
 			this.setData({ staffInfo: staff });
 		} catch (error) {
+			console.error('[Profile] loadStaffInfo 失败:', error);
 		}
 	},
 
@@ -145,6 +146,7 @@ Page({
 			const projects = await app.getProjects();
 			this.setData({ projects });
 		} catch (error) {
+			console.error('[Profile] loadProjects 失败:', error);
 		}
 	},
 

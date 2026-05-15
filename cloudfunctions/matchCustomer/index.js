@@ -18,7 +18,11 @@ exports.main = async (event, context) => {
   }
 
   try {
-    const customersRes = await db.collection('customers').get()
+    let customersQuery = db.collection('customers').field({ phone: true, name: true });
+    if (phone) {
+      customersQuery = customersQuery.where({ phone: db.RegExp({ regexp: phone, options: 'i' }) });
+    }
+    const customersRes = await customersQuery.limit(500).get()
     const customers = customersRes.data || []
     
     let bestMatch = null

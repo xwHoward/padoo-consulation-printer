@@ -41,42 +41,47 @@ exports.main = async (event, context) => {
         const currentMinutes = parseTimeToMinutes(currentTime)
         const proposedEndTimeMinutes = currentMinutes + projectDuration
 
-        const reservationsRes = await db.collection('reservations').where({
-            date: date,
-            status: 'active'
-        }).get()
-        const reservations = (reservationsRes.data || [])
+        // 并行查询无依赖关系的 4 个集合
+        const [reservationsRes, scheduleRes, consultationsRes, rotationRes] = await Promise.all([
+            db.collection('reservations')
+                .where({ date: date, status: 'active' })
+                .field({ _id: true, isClockIn: true, technicianName: true, technicianId: true, startTime: true, endTime: true, surname: true, gender: true, customerName: true })
+                .limit(1000).get(),
+            db.collection('schedule')
+                .where({ date: date })
+                .field({ staffId: true, shift: true })
+                .limit(1000).get(),
+            db.collection('consultation_records')
+                .where({ date: date, isVoided: false })
+                .field({ _id: true, technician: true, startTime: true, endTime: true, surname: true, gender: true, customerName: true })
+                .limit(1000).get(),
+            db.collection('rotation_queue')
+                .where({ date: date })
+                .field({ staffList: true })
+                .limit(1000).get()
+        ])
 
+        const reservations = (reservationsRes.data || [])
         const filteredReservations = reservations.filter(r => !currentReservationIds || !currentReservationIds.includes(r._id))
 
-        const scheduleRes = await db.collection('schedule').where({
-            date: date
-        }).get()
         const schedules = scheduleRes.data || []
         const scheduledStaffIds = schedules
             .filter(s => s.shift !== 'leave' && s.shift !== 'off')
             .map(s => s.staffId)
 
+        // 根据排班结果查询在岗技师
         let activeStaff = []
         if (scheduledStaffIds.length > 0) {
             const staffRes = await db.collection('staff').where({
                 status: 'active',
                 _id: _.in(scheduledStaffIds)
-            }).get()
+            }).field({ _id: true, name: true, gender: true, phone: true, wechatWorkId: true }).limit(1000).limit(1000).get()
             activeStaff = staffRes.data || []
         }
 
-        const consultationsRes = await db.collection('consultation_records').where({
-            date: date,
-            isVoided: false
-        }).get()
         const todayRecords = consultationsRes.data || []
-
         const filteredRecords = todayRecords.filter(r => !currentConsultationId || r._id !== currentConsultationId)
 
-        const rotationRes = await db.collection('rotation_queue').where({
-            date: date
-        }).get()
         const rotationData = rotationRes.data && rotationRes.data.length > 0 ? rotationRes.data[0] : null
         const rotationStaffList = rotationData && rotationData.staffList ? rotationData.staffList : []
 
@@ -407,12 +412,12 @@ async function getRotationQuickSlots(date) {
         const { todayStr, currentHour, currentMinute, currentMins } = getChinaTime()
         const isToday = date === todayStr
 
-        // 并行获取所有所需数据
+        // 并行获取所有所需数据（含 field 投影减少数据传输）
         const [scheduleRes, consultationsRes, reservationsRes, rotationRes] = await Promise.all([
-            db.collection('schedule').where({ date }).get(),
-            db.collection('consultation_records').where({ date, isVoided: false }).get(),
-            db.collection('reservations').where({ date, status: 'active' }).get(),
-            db.collection('rotation_queue').where({ date }).get()
+            db.collection('schedule').where({ date }).field({ staffId: true, shift: true }).limit(1000).limit(1000).get(),
+            db.collection('consultation_records').where({ date, isVoided: false }).field({ _id: true, technician: true, startTime: true, endTime: true }).limit(1000).limit(1000).get(),
+            db.collection('reservations').where({ date, status: 'active' }).field({ _id: true, technicianId: true, technicianName: true, startTime: true, endTime: true, isClockIn: true }).limit(1000).limit(1000).get(),
+            db.collection('rotation_queue').where({ date }).field({ staffList: true }).limit(1000).limit(1000).get()
         ])
 
         const schedules = scheduleRes.data || []
@@ -452,7 +457,7 @@ async function getRotationQuickSlots(date) {
         const staffRes = await db.collection('staff').where({
             status: 'active',
             _id: _.in(onDutyStaffIds)
-        }).get()
+        }).field({ _id: true, name: true, gender: true, avatar: true }).limit(1000).limit(1000).get()
         const staffList = staffRes.data || []
         const staffMap = new Map(staffList.map(s => [s._id, s]))
 
@@ -569,12 +574,12 @@ async function getTechnicianAvailability(date) {
     try {
         const { currentMins } = getChinaTime()
 
-        // 并行获取所有所需数据（与 getRotationQuickSlots 保持一致）
+        // 并行获取所有所需数据（含 field 投影减少数据传输）
         const [scheduleRes, consultationsRes, reservationsRes, rotationRes] = await Promise.all([
-            db.collection('schedule').where({ date }).get(),
-            db.collection('consultation_records').where({ date, isVoided: false }).get(),
-            db.collection('reservations').where({ date, status: 'active' }).get(),
-            db.collection('rotation_queue').where({ date }).get()
+            db.collection('schedule').where({ date }).field({ staffId: true, shift: true }).limit(1000).limit(1000).get(),
+            db.collection('consultation_records').where({ date, isVoided: false }).field({ _id: true, technician: true, startTime: true, endTime: true }).limit(1000).limit(1000).get(),
+            db.collection('reservations').where({ date, status: 'active' }).field({ _id: true, technicianName: true, startTime: true, endTime: true }).limit(1000).limit(1000).get(),
+            db.collection('rotation_queue').where({ date }).field({ staffList: true }).limit(1000).limit(1000).get()
         ])
 
         const schedules = scheduleRes.data || []
@@ -592,7 +597,7 @@ async function getTechnicianAvailability(date) {
         const staffRes = await db.collection('staff').where({
             status: 'active',
             _id: _.in(onDutyStaffIds)
-        }).get()
+        }).field({ _id: true, name: true, gender: true, avatar: true, phone: true, wechatWorkId: true }).limit(1000).limit(1000).get()
         const onDutyStaff = staffRes.data || []
 
         const rotationData = rotationRes.data && rotationRes.data.length > 0 ? rotationRes.data[0] : null
@@ -755,11 +760,11 @@ function calculateOverlapMinutes(proposedStart, proposedEnd, staffConsultations,
 async function rearrangeReservations(date) {
     try {
         const [scheduleRes, consultationsRes, reservationsRes, rotationRes, staffRes] = await Promise.all([
-            db.collection('schedule').where({ date }).get(),
-            db.collection('consultation_records').where({ date, isVoided: false }).get(),
-            db.collection('reservations').where({ date, status: 'active' }).get(),
-            db.collection('rotation_queue').where({ date }).get(),
-            db.collection('staff').where({ status: 'active' }).get()
+            db.collection('schedule').where({ date }).field({ staffId: true, shift: true }).limit(1000).limit(1000).get(),
+            db.collection('consultation_records').where({ date, isVoided: false }).field({ _id: true, technician: true, startTime: true, endTime: true }).limit(1000).limit(1000).get(),
+            db.collection('reservations').where({ date, status: 'active' }).limit(1000).limit(1000).get(),
+            db.collection('rotation_queue').where({ date }).field({ staffList: true }).limit(1000).limit(1000).get(),
+            db.collection('staff').where({ status: 'active' }).field({ _id: true, name: true, gender: true }).limit(1000).limit(1000).get()
         ])
 
         const schedules = scheduleRes.data || []

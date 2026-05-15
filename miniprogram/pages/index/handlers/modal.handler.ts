@@ -1,6 +1,6 @@
+import { buildPlateNumberUpdates } from "../../../services/customer.service";
 import { formatDate, formatTime, parseProjectDuration } from "../../../utils/util";
 import { DataLoaderService } from "../services/data-loader.service";
-import { ClockInUtils } from "../utils/clockin-utils";
 
 const SPARE_TIME = 15;
 
@@ -15,19 +15,20 @@ export class ModalHandler {
 
   async onTimePickerConfirm() {
     const { timePickerModal, consultationInfo, editId, guestCount, licensePlate } = this.page.data;
-    const { currentTime: selectedTime } = timePickerModal;
+    const { currentTime: selectedTime, currentDate: selectedDate } = timePickerModal;
 
     this.page.setData({ 'timePickerModal.show': false });
     const [hours, minutes] = selectedTime.split(':').map(Number);
     let startTimeDate: Date;
 
     if (editId) {
-      const recordDate = consultationInfo.date || formatDate(new Date());
+      const recordDate = selectedDate || consultationInfo.date || formatDate(new Date());
       const [year, month, day] = recordDate.split('-').map(Number);
       startTimeDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
     } else {
-      startTimeDate = new Date();
-      startTimeDate.setHours(hours, minutes, 0, 0);
+      const recordDate = selectedDate || formatDate(new Date());
+      const [year, month, day] = recordDate.split('-').map(Number);
+      startTimeDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
     }
 
     this.page.setData({ loading: true, loadingText: '报钟中...' });
@@ -40,12 +41,13 @@ export class ModalHandler {
         const totalDuration = projectDuration + extraTime + SPARE_TIME;
         const endTimeDate = new Date(startTimeDate.getTime() + totalDuration * 60 * 1000);
         const endTime = formatTime(endTimeDate, false);
+        const recordDate = selectedDate || consultationInfo.date || formatDate(new Date());
         const updatedInfo = {
           ...consultationInfo,
           startTime: selectedTime,
           licensePlate: licensePlate || '',
           isNewEnergyVehicle: licensePlate?.length === 8 || false,
-          date: editId ? consultationInfo.date : formatDate(new Date()),
+          date: recordDate,
           endTime,
         };
         const success = await this.page.saveConsultation(updatedInfo, editId);
@@ -95,6 +97,11 @@ export class ModalHandler {
     }
   }
 
+  onDatePickerChange(e: WechatMiniprogram.CustomEvent) {
+    const { date } = e.detail;
+    this.page.setData({ 'timePickerModal.currentDate': date });
+  }
+
   showPlateInputModal() {
     this.page.setData({ licensePlateInputVisible: true });
   }
@@ -105,18 +112,7 @@ export class ModalHandler {
 
   onPlateConfirm(e: WechatMiniprogram.CustomEvent) {
     const { value } = e.detail;
-    const isNewEnergyVehicle = value.length === 8;
-    const maxPlateLength = isNewEnergyVehicle ? 8 : 7;
-    const plateNumber = Array(maxPlateLength).fill('');
-
-    if (value) {
-      const plateChars = value.split('');
-      plateChars.forEach((char: string, index: number) => {
-        if (index < maxPlateLength) {
-          plateNumber[index] = char;
-        }
-      });
-    }
+    const { plateNumber } = buildPlateNumberUpdates(value || '');
 
     this.page.setData({
       licensePlateInputVisible: false,

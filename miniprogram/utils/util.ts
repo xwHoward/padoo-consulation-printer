@@ -23,21 +23,6 @@ export function formatDate(date: Date): string {
   return `${ year }-${ month }-${ day }`;
 }
 
-export function getMinutesDiff(startTime: string, endTime: string): number {
-  const [startH, startM] = startTime.split(":").map(Number);
-  const [endH, endM] = endTime.split(":").map(Number);
-  return endH * 60 + endM - (startH * 60 + startM);
-}
-
-export function isTimeOverlapping(
-  startA: string,
-  endA: string,
-  startB: string,
-  endB: string
-): boolean {
-  return startA < endB && endA > startB;
-}
-
 export function formatDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
@@ -51,30 +36,7 @@ export function formatDuration(minutes: number): string {
 }
 
 
-/**
- * 计算加班单位（每30分钟为一个单位）
- * @param startTime 报钟开始时间 HH:mm
- * @param shiftEndTime 班次结束时间 HH:mm
- * @returns 加班单位数
- */
-export function calculateOvertimeUnits(
-  startTime: string,
-  shiftEndTime: string
-): number {
-  if (!startTime || !shiftEndTime) return 0;
-  const [startHour, startMin] = startTime.split(":").map(Number);
-  const [endHour, endMin] = shiftEndTime.split(":").map(Number);
 
-  const startTotalMinutes = startHour * 60 + startMin;
-  const endTotalMinutes = endHour * 60 + endMin;
-
-  if (startTotalMinutes <= endTotalMinutes) {
-    return 0;
-  }
-
-  const overtimeMinutes = startTotalMinutes - endTotalMinutes;
-  return Math.floor(overtimeMinutes / 30);
-}
 
 /**
  * 计算项目结束时间（包含准备时间10min）

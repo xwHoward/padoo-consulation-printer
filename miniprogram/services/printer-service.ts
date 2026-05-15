@@ -257,6 +257,32 @@ class PrinterService {
     return true;
   }
 
+  private writeChunkWithRetry(
+    deviceId: string, serviceId: string, characteristicId: string,
+    chunk: ArrayBuffer, maxRetries: number = 2
+  ): Promise<boolean> {
+    return new Promise((resolve) => {
+      let attempts = 0;
+      const tryWrite = () => {
+        wx.writeBLECharacteristicValue({
+          deviceId, serviceId, characteristicId,
+          value: chunk,
+          success: () => resolve(true),
+          fail: (err) => {
+            attempts++;
+            if (attempts < maxRetries) {
+              setTimeout(tryWrite, 100 * attempts);
+            } else {
+              console.error('[PrinterService] 块写入重试耗尽:', err);
+              resolve(false);
+            }
+          },
+        });
+      };
+      tryWrite();
+    });
+  }
+
   private printContent(content: string): Promise<boolean> {
     return new Promise((resolve) => {
       const { printerDeviceId, printerServiceId, printerCharacteristicId } = this.state;
@@ -264,7 +290,7 @@ class PrinterService {
       const chunkSize = 20;
       let offset = 0;
 
-      const writeNextChunk = () => {
+      const writeNextChunk = async () => {
         if (offset >= uint8Array.length) {
           resolve(true);
           return;
@@ -273,27 +299,23 @@ class PrinterService {
         const end = Math.min(offset + chunkSize, uint8Array.length);
         const chunk = uint8Array.slice(offset, end).buffer;
 
-        wx.writeBLECharacteristicValue({
-          deviceId: printerDeviceId,
-          serviceId: printerServiceId,
-          characteristicId: printerCharacteristicId,
-          value: chunk,
-          success: () => {
-            offset += chunkSize;
-            setTimeout(writeNextChunk, 20);
-          },
-          fail: (err) => {
-            wx.showToast({ title: '打印失败，请重试', icon: 'none' });
-            
-            this.state.isPrinterConnected = false;
-            this.state.printerDeviceId = "";
-            this.state.printerServiceId = "";
-            this.state.printerCharacteristicId = "";
-            this.connectingPromise = null;
-            
-            resolve(false);
-          },
-        });
+        const success = await this.writeChunkWithRetry(
+          printerDeviceId, printerServiceId, printerCharacteristicId, chunk
+        );
+
+        if (!success) {
+          wx.showToast({ title: '打印失败，请重试', icon: 'none' });
+          this.state.isPrinterConnected = false;
+          this.state.printerDeviceId = '';
+          this.state.printerServiceId = '';
+          this.state.printerCharacteristicId = '';
+          this.connectingPromise = null;
+          resolve(false);
+          return;
+        }
+
+        offset += chunkSize;
+        setTimeout(writeNextChunk, 20);
       };
 
       writeNextChunk();
@@ -307,6 +329,7 @@ class PrinterService {
           deviceId: this.state.printerDeviceId
         });
       } catch (err) {
+        console.error('[PrinterService] closeBLEConnection 失败:', err);
       }
     }
 
@@ -314,6 +337,7 @@ class PrinterService {
       await wx.stopBluetoothDevicesDiscovery();
       await wx.closeBluetoothAdapter();
     } catch (err) {
+      console.error('[PrinterService] stopBluetoothDiscovery 失败:', err);
     }
 
     this.state = {

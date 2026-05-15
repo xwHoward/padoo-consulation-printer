@@ -54,7 +54,6 @@ interface TimeBlock {
 }
 
 function parseGenderRequirement(rsv: Partial<ReservationRecord>): string {
-	console.log('parseGenderRequirement', rsv.requirementType, rsv.requiredMaleCount, rsv.requiredFemaleCount);
 	let res = '';
 	if(rsv.requirementType !== 'gender'){
 		return res;

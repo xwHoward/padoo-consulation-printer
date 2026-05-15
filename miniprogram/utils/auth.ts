@@ -235,14 +235,3 @@ export const checkLogin = async (): Promise<boolean> => {
 	}
 	return true;
 };
-
-export const requireLogin = async (action?: string): Promise<UserRecord> => {
-	const user = await authManager.silentLogin();
-	if (!user) {
-		wx.reLaunch({
-			url: '/pages/login/login'
-		});
-		throw new Error('用户未登录');
-	}
-	return user;
-};
