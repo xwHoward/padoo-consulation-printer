@@ -277,6 +277,24 @@ Page({
         });
     },
 
+    // ========== 手动重排预约 ==========
+    async rearrangeReservations() {
+        const { selectedDate } = this.data;
+        if (!selectedDate) return;
+
+        if (reservationHandler) {
+            await loadingService.withLoading(this, async () => {
+                await reservationHandler!.triggerRearrange(selectedDate);
+                await this.loadTimelineData();
+                wx.showToast({ title: '重排完成', icon: 'success' });
+            }, {
+                loadingText: '重排中...',
+                lockKey: LockKeys.ADJUST_ROTATION,
+                errorText: '重排失败'
+            });
+        }
+    },
+
     // ========== 预约相关（委托给 ReservationHandler） ==========
     async openReserveModal() {
         if (reservationHandler) await reservationHandler.openReserveModal();

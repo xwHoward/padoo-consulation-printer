@@ -30,9 +30,6 @@
               <view class="block-customer">
                 {{block.customerName}}
                 <text style="font-size: 10px;font-weight: normal;">| {{block.phone || '无号码'}}</text>
-                <view wx:if="{{block.groupSize > 1}}" class="group-size-badge">
-                  {{block.groupSize}}人
-                </view>
               </view>
               <view class="block-time">
                 {{block.startTime}}-{{block.endTime}}

@@ -31,6 +31,9 @@
                 <view class="section-title">排钟进度</view>
                 <!-- 日期快速导航 -->
                 <date-picker initialDate="{{dateSelector.selectedDate}}" bind:change="onDatePickerChange" />
+                <view class="reserve-btn" wx:if="{{canCreateReservation}}" bindtap="rearrangeReservations">
+                    重排
+                </view>
                 <view class="reserve-btn" wx:if="{{canCreateReservation}}" bindtap="openReserveModal">
                     +预约
                 </view>
