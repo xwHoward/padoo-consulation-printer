@@ -686,25 +686,41 @@ Page({
 
   // 报钟功能
   async onClockIn() {
-    const { consultationInfo, guestCount, guestInfos } = this.data;
+    const { consultationInfo, guestCount, guestInfos, editId } = this.data;
 
     const validationResult = validateConsultationForPrint(consultationInfo, this.data.currentProjectIsEssentialOilOnly, this.data.currentProjectNeedEssentialOil, guestCount, guestInfos);
     if (!showValidationError(validationResult)) {
       return;
     }
 
-    const now = new Date();
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const currentDate = consultationInfo.date || formatDate(now);
+    // 编辑模式以单据报钟时间为默认值，否则以当前时间
+    let defaultTime: string;
+    let defaultDate: string;
+    let defaultHour: number;
+    let defaultMinute: number;
+
+    if (editId && consultationInfo.startTime && consultationInfo.date) {
+      const [h, m] = consultationInfo.startTime.split(':').map(Number);
+      defaultTime = consultationInfo.startTime;
+      defaultDate = consultationInfo.date;
+      defaultHour = h;
+      defaultMinute = m;
+    } else {
+      const now = new Date();
+      defaultTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      defaultDate = consultationInfo.date || formatDate(now);
+      defaultHour = now.getHours();
+      defaultMinute = now.getMinutes();
+    }
 
     this.setData({
       timePickerModal: {
         show: true,
-        currentTime: currentTime,
-        currentDate: currentDate
+        currentTime: defaultTime,
+        currentDate: defaultDate
       },
-      selectedHour: now.getHours(),
-      selectedMinute: now.getMinutes()
+      selectedHour: defaultHour,
+      selectedMinute: defaultMinute
     });
   },
 

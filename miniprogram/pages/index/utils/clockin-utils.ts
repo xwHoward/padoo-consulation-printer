@@ -51,4 +51,58 @@ export class ClockInUtils {
       return 0;
     }
   }
+
+  static buildMultiClockInInfo(
+    consultationInfo: Add<ConsultationInfo>,
+    guestInfos: GuestInfo[],
+    startTimeDate?: Date,
+    editId?: string
+  ): { infos: Add<ConsultationInfo>[]; startTime: string } {
+    let actualStartTime: Date;
+    if (startTimeDate) {
+      actualStartTime = startTimeDate;
+    } else if (editId && consultationInfo.startTime && consultationInfo.date) {
+      const [year, month, day] = consultationInfo.date.split('-').map(Number);
+      const [hours, minutes] = consultationInfo.startTime.split(':').map(Number);
+      actualStartTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
+    } else {
+      actualStartTime = new Date();
+    }
+
+    const startTime = formatTime(actualStartTime, false);
+    const extraTime = consultationInfo.extraTime || 0;
+
+    const infos: Add<ConsultationInfo>[] = guestInfos.map(guest => {
+      const projectDuration = parseProjectDuration(guest.project) || 60;
+      const totalDuration = projectDuration + extraTime + SPARE_TIME;
+      const endTimeDate = new Date(actualStartTime.getTime() + totalDuration * 60 * 1000);
+      const endTime = formatTime(endTimeDate, false);
+
+      const info: Add<ConsultationInfo> = {
+        ...consultationInfo,
+        surname: guest.surname,
+        gender: guest.gender,
+        project: guest.project,
+        technician: guest.technician,
+        room: guest.room,
+        isClockIn: guest.isClockIn,
+        massageStrength: guest.massageStrength,
+        essentialOil: guest.essentialOil,
+        selectedParts: guest.selectedParts,
+        remarks: guest.remarks,
+        couponCode: guest.couponCode,
+        couponPlatform: guest.couponPlatform,
+        startTime,
+        endTime,
+      };
+
+      if (editId) {
+        info.date = consultationInfo.date || formatDate(new Date());
+      }
+
+      return info;
+    });
+
+    return { infos, startTime };
+  }
 }
