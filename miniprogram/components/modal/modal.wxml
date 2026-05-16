@@ -8,6 +8,10 @@
       <slot></slot>
     </view>
     <view class="modal-footer" wx:if="{{showFooter}}">
-          </view>
+        <view class="modal-btn cancel-btn" bindtap="handleCancel" wx:if="{{showCancel}}">{{cancelText}}</view>
+        <view class="modal-btn confirm-btn" bindtap="handleConfirm" disabled="{{loading}}">
+          {{loading ? loadingText : confirmText}}
+        </view>
+    </view>
   </view>
 </view>
