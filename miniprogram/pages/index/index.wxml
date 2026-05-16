@@ -47,10 +47,10 @@
       <body-selector selectedParts="{{guestCount > 1 ? guestInfos[activeGuest - 1].selectedParts : consultationInfo.selectedParts}}" bind:change="onBodyPartSelect" />
     </view>
     <!-- 按摩力度 -->
-    <view class="section">
+    <!-- <view class="section">
       <view class="section-title">按摩力度</view>
       <strength-selector selectedStrength="{{(guestCount > 1 ? guestInfos[activeGuest - 1].massageStrength : consultationInfo.massageStrength)}}" bind:change="onMassageStrengthSelect" />
-    </view>
+    </view> -->
     <!-- 精油选择 -->
     <view class="section" wx:if="{{!currentProjectIsEssentialOilOnly && currentProjectNeedEssentialOil}}">
       <view class="section-title">精油选择</view>
@@ -74,7 +74,7 @@
               </view>
             </view>
           </view>
-          <view class="parking-tips">*免费停车2小时，超时需要自付超额部分，1元/小时</view>
+          <view class="parking-tips">*免费停车2小时，超时1元/小时</view>
         </view>
       </view>
     </view>
@@ -183,7 +183,6 @@
       <picker mode="multiSelector" range="{{[hours, minutes]}}" value="{{[selectedHour, selectedMinute]}}" bindchange="onTimePickerChange" bindcolumnchange="onTimeColumnChange">
         <view class="time-picker-display">
           <text class="time-value">{{timePickerModal.currentTime}}</text>
-          <text class="time-hint">点击修改时间</text>
         </view>
       </picker>
     </view>

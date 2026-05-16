@@ -381,7 +381,7 @@
             </view>
         </view>
         <view class="arrival-actions">
-            <view class="arrival-btn skip-btn" bindtap="onArrivalConfirmSkip">不推送，直接到店</view>
+            <view class="arrival-btn skip-btn" bindtap="onArrivalConfirmSkip">不推送通知</view>
             <view class="arrival-btn push-btn" bindtap="onArrivalConfirmPush">推送到店通知</view>
         </view>
     </view>

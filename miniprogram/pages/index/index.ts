@@ -58,7 +58,7 @@ function ensureConsultationInfoCompatibility(data: ConsultationInfo, projects: P
     technician: data.technician || "",
     room: data.room || "",
     extraTime: data.extraTime || 0,
-    massageStrength: data.massageStrength || "",
+    massageStrength: data.massageStrength || "standard",
     essentialOil: data.essentialOil || "",
     selectedParts: data.selectedParts || {},
     isClockIn: data.isClockIn || false,
