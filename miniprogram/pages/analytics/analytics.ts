@@ -69,6 +69,7 @@ Page({
 
 	onTimeRangeChange(e: WechatMiniprogram.CustomEvent) {
 		const value = e.currentTarget.dataset.value as TimeRangeType;
+		if (value === this.data.timeRangeType) return;
 		this.setData({ timeRangeType: value });
 		this.loadAnalyticsData();
 	},
@@ -80,6 +81,9 @@ Page({
 	},
 
 	async loadAnalyticsData() {
+		if ((this as any)._loadingData) return;
+		(this as any)._loadingData = true;
+
 		const { timeRangeType, currentDate } = this.data;
 		const dateRange = this.getDateRange(timeRangeType, currentDate);
 
@@ -115,6 +119,7 @@ Page({
 			wx.showToast({ title: "加载数据失败", icon: "none" });
 		} finally {
 			this.setData({ loading: false });
+			(this as any)._loadingData = false;
 		}
 	},
 
@@ -184,60 +189,42 @@ Page({
 		const { analyticsData } = this.data;
 		if (!analyticsData) return;
 
-		this.updateCustomerTrendChart();
-		this.updateGenderTrendChart();
-		this.updateProjectRankingChart();
-		
+		Object.values(this.charts).forEach((chart: any) => {
+			chart.stopAnimation();
+		});
+		this.charts = {};
+
+		this.drawCustomerTrendChart();
+		this.drawGenderTrendChart();
+		this.drawProjectRankingChart();
+
 		if (analyticsData.technicianAvgTrend) {
-			this.updateTechnicianAvgTrendChart();
+			this.drawTechnicianAvgTrendChart();
 		}
 	},
 
-	updateCustomerTrendChart() {
+	drawCustomerTrendChart() {
 		const { analyticsData } = this.data;
 		if (!analyticsData || !analyticsData.customerTrend) return;
 
 		const data = analyticsData.customerTrend;
-		const labels = data.labels;
-
-		if (this.charts['customerTrendChart']) {
-			this.charts['customerTrendChart'].updateData({
-				categories: labels,
-				series: [
-					{ name: '客流总数', data: data.total, color: '#FF6B00' }
-				]
-			});
-		} else {
-			this.charts['customerTrendChart'] = this.drawLineChart('customerTrendChart', labels, [
-				{ name: '客流总数', data: data.total, color: '#FF6B00' }
-			]);
-		}
+		this.charts['customerTrendChart'] = this.drawLineChart('customerTrendChart', data.labels, [
+			{ name: '客流总数', data: data.total, color: '#FF6B00' }
+		]);
 	},
 
-	updateGenderTrendChart() {
+	drawGenderTrendChart() {
 		const { analyticsData } = this.data;
 		if (!analyticsData || !analyticsData.genderTrend) return;
 
 		const data = analyticsData.genderTrend;
-		const labels = data.labels;
-
-		if (this.charts['genderTrendChart']) {
-			this.charts['genderTrendChart'].updateData({
-				categories: labels,
-				series: [
-					{ name: '男', data: data.male, color: '#2196F3' },
-					{ name: '女', data: data.female, color: '#FF9800' }
-				]
-			});
-		} else {
-			this.charts['genderTrendChart'] = this.drawLineChart('genderTrendChart', labels, [
-				{ name: '男', data: data.male, color: '#2196F3' },
-				{ name: '女', data: data.female, color: '#FF9800' }
-			]);
-		}
+		this.charts['genderTrendChart'] = this.drawLineChart('genderTrendChart', data.labels, [
+			{ name: '男', data: data.male, color: '#2196F3' },
+			{ name: '女', data: data.female, color: '#FF9800' }
+		]);
 	},
 
-	updateProjectRankingChart() {
+	drawProjectRankingChart() {
 		const { analyticsData } = this.data;
 		if (!analyticsData || !analyticsData.projectRanking) return;
 
@@ -245,39 +232,20 @@ Page({
 		const projects = data.map(item => `${item.project} (${item.percentage}%)`);
 		const counts = data.map(item => item.count);
 
-		if (this.charts['projectRankingChart']) {
-			this.charts['projectRankingChart'].updateData({
-				categories: projects,
-				series: [{ name: '消费次数', data: counts, color: '#FF6B00' }]
-			});
-		} else {
-			this.charts['projectRankingChart'] = this.drawBarChart('projectRankingChart', projects, [
-				{ name: '消费次数', data: counts, color: '#FF6B00' }
-			]);
-		}
+		this.charts['projectRankingChart'] = this.drawBarChart('projectRankingChart', projects, [
+			{ name: '消费次数', data: counts, color: '#FF6B00' }
+		]);
 	},
 
-	updateTechnicianAvgTrendChart() {
+	drawTechnicianAvgTrendChart() {
 		const { analyticsData } = this.data;
 		if (!analyticsData || !analyticsData.technicianAvgTrend) return;
 
 		const data = analyticsData.technicianAvgTrend;
-		const labels = data.labels;
-
-		if (this.charts['technicianAvgTrendChart']) {
-			this.charts['technicianAvgTrendChart'].updateData({
-				categories: labels,
-				series: [
-					{ name: '男技师', data: data.male, color: '#2196F3' },
-					{ name: '女技师', data: data.female, color: '#FF9800' }
-				]
-			});
-		} else {
-			this.charts['technicianAvgTrendChart'] = this.drawLineChart('technicianAvgTrendChart', labels, [
-				{ name: '男技师', data: data.male, color: '#2196F3' },
-				{ name: '女技师', data: data.female, color: '#FF9800' }
-			]);
-		}
+		this.charts['technicianAvgTrendChart'] = this.drawLineChart('technicianAvgTrendChart', data.labels, [
+			{ name: '男技师', data: data.male, color: '#2196F3' },
+			{ name: '女技师', data: data.female, color: '#FF9800' }
+		]);
 	},
 
 	drawLineChart(canvasId: string, categories: string[], series: { name: string; data: number[]; color?: string }[]) {
