@@ -99,13 +99,13 @@ export class CashierDataLoaderService {
 
 	async loadTimelineData(): Promise<void> {
 		const { pushModalLocked, pushModal } = this.page.data;
-		
+
 		// 只有在非推送确认弹窗状态下才显示loading
 		const shouldShowLoading = !pushModalLocked && !pushModal?.show;
 		if (shouldShowLoading) {
 			this.page.setData({ loading: true, loadingText: '加载中...' });
 		}
-		
+
 		try {
 			const today = this.page.data.selectedDate || getCurrentDate();
 			const dateSelector = {
@@ -115,13 +115,24 @@ export class CashierDataLoaderService {
 				isToday: today === getCurrentDate()
 			};
 
-			// 更新轮牌列表并计算快速预约时段
-			const { rotationList, quickReservationSlots } = await this.prepareRotationList(today);
+			// 更新轮牌列表并计算快速预约时段（保持当前计数）
+			const { quickReservationSlots: qs } = this.page.data;
+			const rotationResult = await this.prepareRotationList(today);
+			const rotationList = rotationResult.rotationList;
+
+			// 保持用户当前设置的计数，重新查询对应时段
+			const { earliestTime, slots, emptyReason } = await this.loadQuickReservationSlots(qs.maleCount, qs.femaleCount);
 
 			this.page.setData({
 				dateSelector,
 				rotationList,
-				quickReservationSlots,
+				quickReservationSlots: {
+					maleCount: qs.maleCount,
+					femaleCount: qs.femaleCount,
+					earliestTime,
+					slots,
+					emptyReason
+				},
 				timelineRefreshTrigger: this.page.data.timelineRefreshTrigger + 1
 			});
 		} finally {
@@ -131,8 +142,8 @@ export class CashierDataLoaderService {
 		}
 	}
 
-	async prepareRotationList(today: string): Promise<{ rotationList: RotationItem[]; quickReservationSlots: { oneMale: Array<QuickReservation>; oneFemale: Array<QuickReservation>; twoMale: Array<QuickReservation>; twoFemale: Array<QuickReservation> } }> {
-		const empty = { rotationList: [], quickReservationSlots: { oneMale: [], oneFemale: [], twoMale: [], twoFemale: [] } };
+	async prepareRotationList(today: string): Promise<{ rotationList: RotationItem[]; quickReservationSlots: { maleCount: number; femaleCount: number; earliestTime: string; slots: QuickReservation[] } }> {
+		const empty = { rotationList: [], quickReservationSlots: { maleCount: 0, femaleCount: 2, earliestTime: '', slots: [] } };
 		try {
 			const res = await wx.cloud.callFunction({
 				name: 'getAvailableTechnicians',
@@ -153,14 +164,45 @@ export class CashierDataLoaderService {
 					};
 				};
 				if (result.code === 0 && result.data) {
+					const defaultSlots = result.data.quickReservationSlots.twoFemale.map(s => ({
+						...s,
+						maleStaff: [] as string[],
+						femaleStaff: [...s.staffNames]
+					}));
 					return {
 						rotationList: result.data.rotationItems,
-						quickReservationSlots: result.data.quickReservationSlots
+						quickReservationSlots: {
+							maleCount: 0,
+							femaleCount: 2,
+							earliestTime: defaultSlots[0]?.time || '',
+							slots: defaultSlots
+						}
 					};
 				}
 			}
 		} catch (error) {
 			console.error('prepareRotationList failed:', error);
+		}
+		return empty;
+	}
+
+	async loadQuickReservationSlots(maleCount: number, femaleCount: number): Promise<{ earliestTime: string; slots: QuickReservation[]; emptyReason?: string }> {
+		const empty = { earliestTime: '', slots: [] };
+		try {
+			const today = this.page.data.selectedDate || getCurrentDate();
+			const res = await wx.cloud.callFunction({
+				name: 'getAvailableTechnicians',
+				data: { mode: 'quickSlots', date: today, maleCount, femaleCount }
+			});
+
+			if (res.result && typeof res.result === 'object') {
+				const result = res.result as { code: number; data: { earliestTime: string; slots: QuickReservation[]; emptyReason?: string } };
+				if (result.code === 0 && result.data) {
+					return result.data;
+				}
+			}
+		} catch (error) {
+			console.error('loadQuickReservationSlots failed:', error);
 		}
 		return empty;
 	}

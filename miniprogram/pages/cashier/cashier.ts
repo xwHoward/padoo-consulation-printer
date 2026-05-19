@@ -109,11 +109,13 @@ Page({
         },
         // 快速预约时段
         quickReservationSlots: {
-            oneMale: [] as QuickReservation[],
-            oneFemale: [] as QuickReservation[],
-            twoMale: [] as QuickReservation[],
-            twoFemale: [] as QuickReservation[]
-        }
+            maleCount: 0,
+            femaleCount: 2,
+            earliestTime: '',
+            slots: [] as QuickReservation[],
+            emptyReason: ''
+        },
+        quickReservationLoading: false
     },
 
     // ========== 生命周期 ==========
@@ -210,17 +212,15 @@ Page({
     },
 
     copyReservationSlot(e: WechatMiniprogram.CustomEvent) {
-        const { type, text } = e.currentTarget.dataset;
-
-        const typeLabels: Record<string, string> = {
-            oneMale: '1位男技师',
-            oneFemale: '1位女技师',
-            twoMale: '2位男技师',
-            twoFemale: '2位女技师'
-        };
+        const { text } = e.currentTarget.dataset;
 
         const timeRange = text.match(/^(\d{2}:\d{2}-\d{2}:\d{2})/)?.[1] || text;
-        const label = typeLabels[type] || '';
+        const { maleCount, femaleCount } = this.data.quickReservationSlots;
+
+        const parts: string[] = [];
+        if (maleCount > 0) parts.push(`${maleCount}位男技师`);
+        if (femaleCount > 0) parts.push(`${femaleCount}位女技师`);
+        const label = parts.join('+') || '';
 
         const message = `您好，目前${label}可预约时段为${timeRange}哦，您可以告诉小趴到店时间，小趴给您保留预约哦~`;
 
@@ -241,6 +241,33 @@ Page({
                 });
             }
         });
+    },
+
+    async onQuickReservationGenderChange(e: WechatMiniprogram.CustomEvent) {
+        const { gender, action } = e.currentTarget.dataset;
+        const qs = { ...this.data.quickReservationSlots };
+
+        if (action === 'increase') {
+            if (gender === 'male') qs.maleCount++;
+            else qs.femaleCount++;
+        } else if (action === 'decrease') {
+            if (gender === 'male' && qs.maleCount > 0) qs.maleCount--;
+            else if (gender === 'female' && qs.femaleCount > 0) qs.femaleCount--;
+        }
+
+        this.setData({ quickReservationSlots: qs, quickReservationLoading: true });
+        await this.fetchQuickReservationSlots();
+    },
+
+    async fetchQuickReservationSlots() {
+        const { maleCount, femaleCount } = this.data.quickReservationSlots;
+        if (dataLoader) {
+            const { earliestTime, slots, emptyReason='' } = await dataLoader.loadQuickReservationSlots(maleCount, femaleCount);
+            this.setData({
+                quickReservationSlots: { maleCount, femaleCount, earliestTime, slots, emptyReason },
+                quickReservationLoading: false
+            });
+        }
     },
 
     // ========== 轮牌相关 ==========
@@ -441,25 +468,25 @@ Page({
     },
 
     async resetRotation() {
-        try {
-            await loadingService.withLoading(this, async () => {
-                await wx.cloud.callFunction({
-                    name: 'manageRotation',
-                    data: {
-                        action: 'init',
-                        date: formatDate(new Date())
-                    }
-                });
-                await app.loadGlobalData();
-            }, {
-                loadingText: '调整中...',
-                lockKey: LockKeys.ADJUST_ROTATION,
-                errorText: '调整失败'
-            });
-        } catch (error) {
-            wx.showToast({ title: '重置失败', icon: 'none' });
-        }
+        const { selectedDate } = this.data;
+        if (!selectedDate) return;
 
+        await loadingService.withLoading(this, async () => {
+            await wx.cloud.callFunction({
+                name: 'manageRotation',
+                data: {
+                    action: 'init',
+                    date: selectedDate
+                }
+            });
+            await app.loadGlobalData();
+            await this.loadTimelineData();
+            wx.showToast({ title: '重置成功', icon: 'success' });
+        }, {
+            loadingText: '重置中...',
+            lockKey: LockKeys.ADJUST_ROTATION,
+            errorText: '重置失败'
+        });
     },
 
     onRotationPushModalCancel() {

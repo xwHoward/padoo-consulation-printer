@@ -184,10 +184,16 @@ Page({
 	async loadStaffList() {
 		try {
 			this.setData({ loading: true });
-			const staffList = await app.getStaffs();
+			const staffList = await app.getStaffs(true);
 
 			// 按创建时间倒序排列，增加兼容性处理
 			staffList.sort((a, b) => {
+				if(a.status === 'disabled') {
+					return 1;
+				}
+				if(b.status === 'disabled') {
+					return -1;
+				}
 				const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
 				const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
 				return timeB - timeA;

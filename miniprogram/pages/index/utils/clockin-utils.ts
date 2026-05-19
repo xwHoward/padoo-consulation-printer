@@ -3,7 +3,7 @@ import { formatDate, formatTime, parseProjectDuration } from "../../../utils/uti
 import { SHIFT_START_TIME, SHIFT_END_TIME, calculateOvertimeHours } from "../../../utils/constants";
 
 const app = getApp<IAppOption>();
-const SPARE_TIME = 15;
+const SPARE_TIME = 10; // 10分钟准备+休息时间
 
 export class ClockInUtils {
   static async calculateOvertime(record: Add<ConsultationRecord>): Promise<number> {
@@ -70,11 +70,11 @@ export class ClockInUtils {
     }
 
     const startTime = formatTime(actualStartTime, false);
-    const extraTime = consultationInfo.extraTime || 0;
+    const extraTimeMinutes = (consultationInfo.extraTime || 0) * 30;
 
     const infos: Add<ConsultationInfo>[] = guestInfos.map(guest => {
       const projectDuration = parseProjectDuration(guest.project) || 60;
-      const totalDuration = projectDuration + extraTime + SPARE_TIME;
+      const totalDuration = projectDuration + extraTimeMinutes + SPARE_TIME;
       const endTimeDate = new Date(actualStartTime.getTime() + totalDuration * 60 * 1000);
       const endTime = formatTime(endTimeDate, false);
 

@@ -440,14 +440,14 @@ Page({
         const [year, month, day] = currentDate.split('-').map(Number);
         const [hours, minutes] = startTimeStr.split(':').map(Number);
         const startTimeDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
-        const endTimeDate = calculateProjectEndTime(startTimeDate, consultation.project);
+        const endTimeDate = calculateProjectEndTime(startTimeDate, consultation.project, consultation.extraTime || 0);
         endTimeStr = formatTime(endTimeDate, false);
       } else {
         // 使用当前时间
         const now = new Date();
         currentDate = formatDate(now);
         startTimeStr = formatTime(now, false);
-        const endTimeDate = calculateProjectEndTime(now, consultation.project);
+        const endTimeDate = calculateProjectEndTime(now, consultation.project, consultation.extraTime || 0);
         endTimeStr = formatTime(endTimeDate, false);
       }
 
@@ -473,7 +473,7 @@ Page({
         ...consultation,
         date: currentDate,
         isVoided: false,
-        extraTime: 0,
+        extraTime: consultation.extraTime || 0,
         overtime: 0,
         guasha: false,
         startTime: startTimeStr,

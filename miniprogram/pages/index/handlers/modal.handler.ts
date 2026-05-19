@@ -2,7 +2,7 @@ import { buildPlateNumberUpdates } from "../../../services/customer.service";
 import { formatDate, formatTime, parseProjectDuration } from "../../../utils/util";
 import { DataLoaderService } from "../services/data-loader.service";
 
-const SPARE_TIME = 15;
+const SPARE_TIME = 10; // 10分钟准备+休息时间
 
 export class ModalHandler {
   private page: IndexPage<DataLoaderService>;
@@ -37,8 +37,8 @@ export class ModalHandler {
         await this.page.doMultiClockIn(startTimeDate, editId);
       } else {
         const projectDuration = parseProjectDuration(consultationInfo.project) || 60;
-        const extraTime = consultationInfo.extraTime || 0;
-        const totalDuration = projectDuration + extraTime + SPARE_TIME;
+        const extraTimeMinutes = (consultationInfo.extraTime || 0) * 30;
+        const totalDuration = projectDuration + extraTimeMinutes + SPARE_TIME;
         const endTimeDate = new Date(startTimeDate.getTime() + totalDuration * 60 * 1000);
         const endTime = formatTime(endTimeDate, false);
         const recordDate = selectedDate || consultationInfo.date || formatDate(new Date());

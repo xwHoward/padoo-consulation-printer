@@ -93,11 +93,13 @@ export interface CashierPageData {
 	pushModalLocked: boolean;
 	arrivalConfirmModal: ArrivalConfirmModalState;
 	quickReservationSlots: {
-		oneMale: Array<QuickReservation>;
-		oneFemale: Array<QuickReservation>;
-		twoMale: Array<QuickReservation>;
-		twoFemale: Array<QuickReservation>;
+		maleCount: number;
+		femaleCount: number;
+		earliestTime: string;
+		slots: QuickReservation[];
+		emptyReason?: string;
 	};
+	quickReservationLoading: boolean;
 }
 
 // 页面实例类型（用于 handler 类）

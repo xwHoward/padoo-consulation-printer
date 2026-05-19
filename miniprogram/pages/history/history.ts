@@ -584,63 +584,10 @@ Page({
     });
 
     if (inputValue > 0) {
-      const typeText = '加钟';
-
-      const genderObj = GENDERS.find(g => g._id === record.gender);
-      const genderText = genderObj ? genderObj.name : '';
-
-      const staffList = await app.getActiveStaffs();
-      const staff = staffList.find(s => s.name === record.technician);
-
-      let technicianMention = '';
-      if (staff && staff.phone) {
-        technicianMention = formatMention(staff);
-      }
-
-      const updatedRecord = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, record._id) as ConsultationRecord | null;
-      const originalEndTime = record.endTime;
-      const newEndTime = updatedRecord?.endTime || record.endTime;
-
-      const message = `【⏰ 加钟提醒】
-顾客：${ record.surname }${ genderText }
-项目：${ typeText }(${ inputValue })
-技师：${ technicianMention }
-房间：${ record.room }
-时间：${ originalEndTime } - ${ newEndTime }`;
-
-      try {
-        const res = await wx.cloud.callFunction({
-          name: 'sendWechatMessage',
-          data: {
-            content: message
-          }
-        });
-
-        if (res.result && typeof res.result === 'object') {
-          const result = res.result as {code: number; message?: string;};
-          if (result.code === 0) {
-            wx.showToast({
-              title: '推送成功',
-              icon: 'success'
-            });
-          } else {
-            wx.showToast({
-              title: '推送失败',
-              icon: 'none'
-            });
-          }
-        } else {
-          wx.showToast({
-            title: '推送失败',
-            icon: 'none'
-          });
-        }
-      } catch (error) {
-        wx.showToast({
-          title: '推送失败',
-          icon: 'none'
-        });
-      }
+      wx.showToast({
+        title: `已加钟${ inputValue }分钟`,
+        icon: 'success'
+      });
     } else {
       wx.showToast({
         title: '已清除',

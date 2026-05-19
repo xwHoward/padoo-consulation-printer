@@ -246,7 +246,7 @@ interface IAppOption<T extends Record<string, any> = AppGlobalData> {
   getRooms: () => Promise<Room[]>;
   getEssentialOils: () => Promise<EssentialOil[]>;
   initLogin: () => Promise<void>;
-  getStaffs: () => Promise<StaffInfo[]>;
+  getStaffs: (forceRefresh?: boolean) => Promise<StaffInfo[]>;
   getActiveStaffs: () => Promise<StaffInfo[]>;
   getStaff: (id: string) => Promise<StaffInfo | null>;
   getRotationQueue: (date: string) => Promise<RotationQueue | null>;
@@ -517,4 +517,6 @@ interface TechnicianSalary {
 interface QuickReservation {
   time: string;
   staffNames: string[];
+  maleStaff?: string[];
+  femaleStaff?: string[];
 }

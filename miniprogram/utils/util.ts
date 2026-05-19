@@ -52,7 +52,7 @@ export function calculateProjectEndTime(
 ): Date {
   const projectDuration = parseProjectDuration(project);
   const extraTimeMinutes = extraTimeUnits * 30;
-  const totalDuration = projectDuration + extraTimeMinutes + SPARE_TIME; // 项目时长 + 加钟 + 10分钟准备
+  const totalDuration = projectDuration + extraTimeMinutes + SPARE_TIME; // 项目时长 + 加钟 + 15分钟准备
   return new Date(startTime.getTime() + totalDuration * 60 * 1000);
 }
 

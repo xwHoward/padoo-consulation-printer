@@ -26,6 +26,12 @@ exports.main = async (event, context) => {
         return await getRotationQuickSlots(date)
     }
 
+    if (mode === 'quickSlots') {
+        const maleCount = event.maleCount || 0
+        const femaleCount = event.femaleCount || 0
+        return await getQuickSlots(date, maleCount, femaleCount)
+    }
+
     if (mode === 'rearrange') {
         return await rearrangeReservations(date)
     }
@@ -514,6 +520,263 @@ async function getRotationQuickSlots(date) {
             code: -1,
             message: '获取失败: ' + error.message,
             data: null
+        }
+    }
+}
+
+/**
+ * 动态快速预约时段计算（mode: 'quickSlots'）
+ * 支持任意男女技师数量组合
+ */
+async function getQuickSlots(date, maleCount, femaleCount) {
+    try {
+        const { todayStr, currentMins } = getChinaTime()
+        const isToday = date === todayStr
+
+        const [scheduleRes, consultationsRes, reservationsRes, rotationRes] = await Promise.all([
+            db.collection('schedule').where({ date }).field({ staffId: true, shift: true }).limit(1000).get(),
+            db.collection('consultation_records').where({ date, isVoided: false }).field({ _id: true, technician: true, startTime: true, endTime: true }).limit(1000).get(),
+            db.collection('reservations').where({ date, status: 'active' }).field({ _id: true, technicianId: true, technicianName: true, startTime: true, endTime: true, isClockIn: true }).limit(1000).get(),
+            db.collection('rotation_queue').where({ date }).field({ staffList: true }).limit(1000).get()
+        ])
+
+        const schedules = scheduleRes.data || []
+        const consultations = consultationsRes.data || []
+        const reservations = reservationsRes.data || []
+
+        const rotationData = rotationRes.data && rotationRes.data.length > 0 ? rotationRes.data[0] : null
+        const rotationStaffList = rotationData && rotationData.staffList ? rotationData.staffList : []
+
+        if (rotationStaffList.length === 0) {
+            return { code: 0, message: '获取成功', data: { earliestTime: '', slots: [] } }
+        }
+
+        const scheduleMap = new Map(schedules.map(s => [s.staffId, s]))
+        const onDutyStaffIds = schedules
+            .filter(s => s.shift !== 'leave' && s.shift !== 'off')
+            .map(s => s.staffId)
+
+        if (onDutyStaffIds.length === 0) {
+            return { code: 0, message: '获取成功', data: { earliestTime: '', slots: [] } }
+        }
+
+        const staffRes = await db.collection('staff').where({
+            status: 'active',
+            _id: _.in(onDutyStaffIds)
+        }).field({ _id: true, name: true, gender: true }).limit(1000).get()
+        const staffList = staffRes.data || []
+
+        // 构建 rotationItems（含性别和班次信息）
+        const staffMap = new Map(staffList.map(s => [s._id, s]))
+        const rotationItems = rotationStaffList.map(item => {
+            const staff = staffMap.get(item.staffId)
+            if (!staff) return null
+            const schedule = scheduleMap.get(item.staffId)
+            return {
+                _id: item.staffId,
+                name: staff.name,
+                gender: staff.gender,
+                shift: schedule ? schedule.shift : 'evening'
+            }
+        }).filter(Boolean)
+
+        const totalRequired = maleCount + femaleCount
+        if (totalRequired === 0) {
+            return { code: 0, message: '获取成功', data: { earliestTime: '', slots: [] } }
+        }
+
+        // 按性别分组
+        const maleStaff = rotationItems.filter(s => s.gender === 'male')
+        const femaleStaff = rotationItems.filter(s => s.gender === 'female')
+
+        // 计算每位技师的所有可用时段
+        function getStaffAvailableSlots(staffList) {
+            const staffSlots = new Map()
+            staffList.forEach(staff => {
+                const shiftStart = SHIFT_START_TIME[staff.shift]
+                const shiftEnd = SHIFT_END_TIME[staff.shift]
+                if (!shiftStart || !shiftEnd) {
+                    staffSlots.set(staff._id, [])
+                    return
+                }
+
+                const shiftStartMins = parseTimeToMinutes(shiftStart)
+                const shiftEndMins = parseTimeToMinutes(shiftEnd)
+
+                let searchStart = shiftStartMins
+                if (isToday) {
+                    searchStart = Math.max(currentMins, shiftStartMins)
+                }
+
+                // 收集占用区间
+                const staffConsultations = consultations.filter(c => c.technician === staff.name)
+                const staffReservations = reservations.filter(r => r.technicianId === staff._id || r.technicianName === staff.name)
+                const rawSlots = []
+                staffConsultations.forEach(r => {
+                    if (r.startTime && r.endTime) rawSlots.push({ start: parseTimeToMinutes(r.startTime), end: parseTimeToMinutes(r.endTime) })
+                })
+                staffReservations.forEach(r => {
+                    if (r.startTime && r.endTime) rawSlots.push({ start: parseTimeToMinutes(r.startTime), end: parseTimeToMinutes(r.endTime) })
+                })
+                rawSlots.sort((a, b) => a.start - b.start)
+
+                // 合并重叠占用
+                const occupiedSlots = []
+                if (rawSlots.length > 0) {
+                    let cur = { ...rawSlots[0] }
+                    for (let i = 1; i < rawSlots.length; i++) {
+                        if (rawSlots[i].start <= cur.end) {
+                            cur.end = Math.max(cur.end, rawSlots[i].end)
+                        } else {
+                            occupiedSlots.push({ ...cur })
+                            cur = { ...rawSlots[i] }
+                        }
+                    }
+                    occupiedSlots.push({ ...cur })
+                }
+
+                // 从占用间隙中提取可用时段
+                const availableSlots = []
+                let cur = searchStart
+                for (const occ of occupiedSlots) {
+                    if (cur < occ.start) {
+                        const duration = occ.start - cur
+                        if (duration >= 60) {
+                            availableSlots.push({ start: cur, end: occ.start, duration })
+                        }
+                    }
+                    cur = Math.max(cur, occ.end)
+                }
+                if (cur < shiftEndMins) {
+                    const duration = shiftEndMins - cur
+                    if (duration >= 60) {
+                        availableSlots.push({ start: cur, end: shiftEndMins, duration })
+                    }
+                }
+
+                staffSlots.set(staff._id, availableSlots)
+            })
+            return staffSlots
+        }
+
+        // 扫描线算法：求 N 个技师的同时空闲时段
+        function findSlotsForCount(staffSlots, requiredCount) {
+            if (requiredCount === 0) return [{ start: 0, end: 24 * 60, duration: 24 * 60 }]
+
+            const staffCount = staffSlots.size
+            if (staffCount < requiredCount) return []
+
+            // 收集所有可用时段的开始/结束事件
+            const events = []
+            staffSlots.forEach((slots) => {
+                slots.forEach(slot => {
+                    events.push({ time: slot.start, delta: 1 })
+                    events.push({ time: slot.end, delta: -1 })
+                })
+            })
+            events.sort((a, b) => a.time - b.time || a.delta - b.delta)
+
+            const result = []
+            let count = 0
+            let rangeStart = null
+
+            for (const evt of events) {
+                const prevCount = count
+                count += evt.delta
+                if (prevCount < requiredCount && count >= requiredCount) {
+                    rangeStart = evt.time
+                } else if (prevCount >= requiredCount && count < requiredCount) {
+                    if (rangeStart !== null) {
+                        const duration = evt.time - rangeStart
+                        if (duration >= 60) {
+                            result.push({ start: rangeStart, end: evt.time, duration })
+                        }
+                        rangeStart = null
+                    }
+                }
+            }
+
+            return result
+        }
+
+        // 求男女技师可用时段的交集
+        function intersectSlots(slotsA, slotsB) {
+            if (slotsA.length === 0 && slotsB.length === 0) return []
+            if (slotsA.length === 0) return slotsB
+            if (slotsB.length === 0) return slotsA
+
+            const result = []
+            for (const a of slotsA) {
+                for (const b of slotsB) {
+                    const overlapStart = Math.max(a.start, b.start)
+                    const overlapEnd = Math.min(a.end, b.end)
+                    const overlapDuration = overlapEnd - overlapStart
+                    if (overlapDuration >= 60) {
+                        result.push({ start: overlapStart, end: overlapEnd, duration: overlapDuration })
+                    }
+                }
+            }
+            return result
+        }
+
+        const maleStaffSlots = getStaffAvailableSlots(maleStaff)
+        const femaleStaffSlots = getStaffAvailableSlots(femaleStaff)
+
+        const maleSlots = findSlotsForCount(maleStaffSlots, maleCount)
+        const femaleSlots = findSlotsForCount(femaleStaffSlots, femaleCount)
+
+        // 若某一方有需求但无可用时段，整体无结果
+        if ((maleCount > 0 && maleSlots.length === 0) || (femaleCount > 0 && femaleSlots.length === 0)) {
+            const parts = []
+            if (maleCount > 0 && maleSlots.length === 0) parts.push(`可用男技师不足${maleCount}位`)
+            if (femaleCount > 0 && femaleSlots.length === 0) parts.push(`可用女技师不足${femaleCount}位`)
+            return { code: 0, message: '获取成功', data: { earliestTime: '', slots: [], emptyReason: parts.join('，') } }
+        }
+
+        const combinedSlots = intersectSlots(maleSlots, femaleSlots)
+        combinedSlots.sort((a, b) => a.start - b.start)
+
+        // 转换为 QuickReservation 格式，按性别分列技师名字（只收集用户实际需要的性别）
+        const slots = combinedSlots.map(slot => {
+            const timeText = `${formatMinutesToTime(slot.start)}-${formatMinutesToTime(slot.end)} (${slot.duration}分)`
+            const maleStaffNames = []
+            const femaleStaffNames = []
+            if (maleCount > 0) {
+                maleStaff.forEach(staff => {
+                    const slots_ = maleStaffSlots.get(staff._id)
+                    if (slots_ && slots_.some(s => s.start <= slot.start && s.end >= slot.end)) {
+                        maleStaffNames.push(staff.name)
+                    }
+                })
+            }
+            if (femaleCount > 0) {
+                femaleStaff.forEach(staff => {
+                    const slots_ = femaleStaffSlots.get(staff._id)
+                    if (slots_ && slots_.some(s => s.start <= slot.start && s.end >= slot.end)) {
+                        femaleStaffNames.push(staff.name)
+                    }
+                })
+            }
+            return {
+                time: timeText,
+                staffNames: [...maleStaffNames, ...femaleStaffNames],
+                maleStaff: maleStaffNames,
+                femaleStaff: femaleStaffNames
+            }
+        })
+
+        const earliestTime = slots.length > 0 ? slots[0].time : ''
+
+        return {
+            code: 0,
+            message: '获取成功',
+            data: { earliestTime, slots }
+        }
+    } catch (error) {
+        return {
+            code: -1,
+            message: '获取失败: ' + error.message,
+            data: { earliestTime: '', slots: [] }
         }
     }
 }
