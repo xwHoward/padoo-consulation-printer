@@ -43,22 +43,24 @@ export class ReservationHandler {
 		}
 
 		const now = new Date();
-		// 计算最近的整点或半点
 		const minutes = now.getMinutes();
-		const roundedMinutes = minutes < 30 ? 30 : 60;
+		const roundedMinutes = Math.ceil(minutes / 5) * 5;
 		const startTime = new Date(now);
-		if (roundedMinutes === 60) {
+		if (roundedMinutes >= 60) {
 			startTime.setHours(now.getHours() + 1);
 			startTime.setMinutes(0);
 		} else {
-			startTime.setMinutes(30);
+			startTime.setMinutes(roundedMinutes);
 		}
 
 		const startTimeStr = `${String(startTime.getHours()).padStart(2, '0')}:${String(startTime.getMinutes()).padStart(2, '0')}`;
+		const hourIndex = startTime.getHours();
+		const minuteIndex = startTime.getMinutes() / 5;
 
 		this.page.setData({
 			showReserveModal: true,
 			editingGroupIds: [],
+			startTimeMultiIndex: [hourIndex, minuteIndex],
 			reserveForm: {
 				_id: '',
 				date: this.page.data.selectedDate || getCurrentDate(),
@@ -139,6 +141,7 @@ export class ReservationHandler {
 				this.page.setData({
 					showReserveModal: true,
 					editingGroupIds,
+					startTimeMultiIndex: [parseInt(record.startTime.split(':')[0]), parseInt(record.startTime.split(':')[1]) / 5],
 					reserveForm: {
 						_id: record._id,
 						date: record.date,
@@ -181,7 +184,7 @@ export class ReservationHandler {
 
 			this.page.setData({ loading: true, loadingText: '检查技师可用性...' });
 
-			const projectDuration = parseProjectDuration(project) || 60;
+			const projectDuration = parseProjectDuration(project) || (project ? 60 : 90);
 
 		// 编辑模式下，排除当前编辑的所有预约（包括分组成员），使其原技师可选
 			const editingGroupIds = this.page.data.editingGroupIds;
@@ -303,6 +306,23 @@ export class ReservationHandler {
 				this.page.searchCustomer();
 			}
 		}
+	}
+
+	/**
+	 * 开始时间选择变更
+	 */
+	onStartTimeChange(e: WechatMiniprogram.CustomEvent): void {
+		const [hourIndex, minuteIndex] = e.detail.value as [number, number];
+		const { reserveForm } = this.page.data;
+		const hours = this.page.data.startTimeRange[0];
+		const minutes = this.page.data.startTimeRange[1];
+		const startTime = `${hours[hourIndex]}:${minutes[minuteIndex]}`;
+		reserveForm.startTime = startTime;
+		this.page.setData({
+			reserveForm,
+			startTimeMultiIndex: [hourIndex, minuteIndex]
+		});
+		this.page.checkStaffAvailability();
 	}
 
 	/**
@@ -840,7 +860,7 @@ export class ReservationHandler {
 		})).filter(item => item.staff && item.staff!.status === 'active');
 
 		// 获取该时间段已有的预约和服务记录
-		const projectDuration = parseProjectDuration(reserveForm.project) || 60;
+		const projectDuration = parseProjectDuration(reserveForm.project) || (reserveForm.project ? 60 : 90);
 		const technicianRes = await wx.cloud.callFunction({
 			name: 'getAvailableTechnicians',
 			data: {

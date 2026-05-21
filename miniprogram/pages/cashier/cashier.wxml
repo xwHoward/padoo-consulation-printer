@@ -172,8 +172,8 @@
             </picker>
             <view class="form-label"></view>
             <view class="form-label">开始时间</view>
-            <picker mode="time" value="{{reserveForm.startTime}}" bindchange="onReserveFieldChange"
-                data-field="startTime">
+            <picker mode="multiSelector" value="{{startTimeMultiIndex}}" range="{{startTimeRange}}"
+                bindchange="onStartTimeChange">
                 <view class="picker-val">{{reserveForm.startTime}}</view>
             </picker>
         </view>

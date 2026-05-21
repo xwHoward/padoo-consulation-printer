@@ -111,9 +111,9 @@ function formatHour(date) {
  * @returns {number} 分钟数
  */
 function parseProjectDuration(duration) {
-    if (!duration) return 60
+    if (!duration) return 90
     const match = duration.match(/(\d+)/)
-    return match ? parseInt(match[1], 10) : 60
+    return match ? parseInt(match[1], 10) : 90
 }
 
 /**

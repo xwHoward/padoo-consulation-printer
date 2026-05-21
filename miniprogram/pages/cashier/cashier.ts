@@ -58,6 +58,8 @@ Page({
             technicianId: '',
             technicianName: '',
         },
+        startTimeMultiIndex: [0, 0],
+        startTimeRange: [] as string[][],
         originalReservation: null as ReservationRecord | null,
         editingGroupIds: [] as string[],
         // 结算弹窗相关
@@ -125,8 +127,11 @@ Page({
 
         if (!requirePagePermission('cashier')) return;
 
-        // 初始化处理器
         this.initHandlers();
+
+        const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+        const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+        this.setData({ startTimeRange: [hours, minutes] });
 
         const today = getCurrentDate();
         this.setData({ selectedDate: today });
@@ -345,6 +350,10 @@ Page({
 
     onReserveFieldChange(e: WechatMiniprogram.CustomEvent) {
         if (reservationHandler) reservationHandler.onReserveFieldChange(e);
+    },
+
+    onStartTimeChange(e: WechatMiniprogram.CustomEvent) {
+        if (reservationHandler) reservationHandler.onStartTimeChange(e);
     },
 
     selectReserveTechnician(e: WechatMiniprogram.CustomEvent) {
