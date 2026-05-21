@@ -272,11 +272,12 @@ exports.main = async (event) => {
       });
 
       const technicianStats = {};
+      const technicianTimes = {};
 
       records.forEach(record => {
         if (!record.isVoided) {
           const technician = record.technician;
-          
+
           if (!activeStaffNames.has(technician)) {
             return;
           }
@@ -292,6 +293,7 @@ exports.main = async (event) => {
               guashaCount: 0,
               shift: ''
             };
+            technicianTimes[ technician ] = { firstStartMins: Infinity, lastEndMins: -Infinity };
           }
 
           if (!technicianStats[ technician ].projects[ record.project ]) {
@@ -312,27 +314,67 @@ exports.main = async (event) => {
             technicianStats[ technician ].guashaCount++;
           }
 
-          const staffId = staffIdMap[ technician ];
-          const shift = staffId ? scheduleMap[ staffId ] : null;
+          // 记录时间范围：第一个开始时间、最后一个结束时间
+          if (record.startTime && record.endTime) {
+            const [ sh, sm ] = record.startTime.split(':').map(Number);
+            const [ eh, em ] = record.endTime.split(':').map(Number);
+            const startMins = sh * 60 + sm;
+            let endMins = eh * 60 + em;
 
-          if (shift === 'overtime') {
-            technicianStats[ technician ].shift = 'overtime';
-            const projectDuration = parseProjectDuration(record.project);
-            const overtime = calculateOvertime(projectDuration);
-            // 加班班次只记一次加班（取最大单笔），不随业务笔数累加
-            technicianStats[ technician ].overtime = Math.max(
-              technicianStats[ technician ].overtime,
-              overtime
+            if (endMins < startMins) {
+              endMins += 24 * 60;
+            }
+
+            technicianTimes[ technician ].firstStartMins = Math.min(
+              technicianTimes[ technician ].firstStartMins, startMins
             );
-          } else {
-            if (record.overtime) {
-              technicianStats[ technician ].overtime += record.overtime;
+            technicianTimes[ technician ].lastEndMins = Math.max(
+              technicianTimes[ technician ].lastEndMins, endMins
+            );
+          }
+
+          // 记录班次信息
+          if (!technicianStats[ technician ].shift) {
+            const staffId = staffIdMap[ technician ];
+            const shift = staffId ? scheduleMap[ staffId ] : null;
+            if (shift) {
+              technicianStats[ technician ].shift = shift;
             }
           }
 
           technicianStats[ technician ].totalCount++;
         }
       });
+
+      // 基于第一个钟开始时间和最后一个钟结束时间计算加班
+      const SHIFT_BOUNDARIES = {
+        morning: { start: 12 * 60, end: 22 * 60 },
+        evening: { start: 13 * 60, end: 23 * 60 }
+      };
+
+      for (const technician of Object.keys(technicianStats)) {
+        const times = technicianTimes[ technician ];
+        if (!times || times.firstStartMins === Infinity) continue;
+
+        const shift = technicianStats[ technician ].shift;
+
+        if (shift === 'overtime') {
+          const totalMins = times.lastEndMins - times.firstStartMins;
+          technicianStats[ technician ].overtime = calculateOvertime(totalMins);
+        } else {
+          const boundary = SHIFT_BOUNDARIES[ shift ] || SHIFT_BOUNDARIES.evening;
+          let overtimeMins = 0;
+
+          if (times.firstStartMins < boundary.start) {
+            overtimeMins += boundary.start - times.firstStartMins;
+          }
+          if (times.lastEndMins > boundary.end) {
+            overtimeMins += times.lastEndMins - boundary.end;
+          }
+
+          technicianStats[ technician ].overtime = calculateOvertime(overtimeMins);
+        }
+      }
 
       const currentDate = new Date(targetDate);
       const currentYear = currentDate.getFullYear();

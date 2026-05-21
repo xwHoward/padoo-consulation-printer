@@ -66,7 +66,7 @@ export class ReservationHandler {
 				gender: 'male',
 				project: '',
 				phone: '',
-				requirementType: 'specific',
+				requirementType: 'gender',
 				selectedTechnicians: [],
 				genderRequirement: { male: 0, female: 0 },
 				startTime: startTimeStr,
@@ -328,7 +328,7 @@ export class ReservationHandler {
 		} else {
 			// 未选中，添加
 			const staff = this.page.data.staffAvailability.find(s => s._id === _id);
-			selectedTechnicians.push({ _id, name, phone, wechatWorkId: staff?.wechatWorkId, isClockIn: false });
+			selectedTechnicians.push({ _id, name, phone, wechatWorkId: staff?.wechatWorkId, isClockIn: true });
 		}
 
 		// 更新 staffAvailability 的 isSelected 状态

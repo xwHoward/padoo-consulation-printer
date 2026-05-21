@@ -51,7 +51,7 @@ Page({
             gender: 'male' as 'male' | 'female',
             project: '',
             phone: '',
-            requirementType: 'specific' as 'specific' | 'gender',
+            requirementType: 'gender' as 'specific' | 'gender',
             selectedTechnicians: [] as Array<{ _id: string; name: string; phone: string; isClockIn: boolean }>,
             genderRequirement: { male: 0, female: 0 },
             startTime: '',

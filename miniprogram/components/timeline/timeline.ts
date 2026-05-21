@@ -121,6 +121,13 @@ Component({
 	},
 
 	methods: {
+		toMinutesFromTimelineStart(h: number, m: number): number {
+			const timelineStartHour = parseInt(this.data.timeLabels[0]);
+			return h >= timelineStartHour
+				? (h - timelineStartHour) * 60 + m
+				: (h + 24 - timelineStartHour) * 60 + m;
+		},
+
 		loadAllStaffTimelineData(highlightStaffId?: string) {
 			// 更新加载标识，防止重复请求
 			const selectedDate = this.properties.selectedDate || getCurrentDate();
@@ -191,16 +198,15 @@ Component({
 						const [startH, startM] = r.startTime.split(':').map(Number);
 						const [endH, endM] = r.endTime.split(':').map(Number);
 
-						const startMinutes = (startH - parseInt(this.data.timeLabels[0])) * 60 + startM;
-						const duration = (endH - startH) * 60 + (endM - startM);
+						const startMinutes = this.toMinutesFromTimelineStart(startH, startM);
+						const endMinutes = this.toMinutesFromTimelineStart(endH, endM);
+						const duration = endMinutes - startMinutes;
 
 						const isSettled = !r.isReservation && (r as ConsultationRecord).settlement && Object.keys((r as ConsultationRecord).settlement!).length > 0 || false;
 
 						const now = new Date();
-						const nowMinutes = now.getHours() * 60 + now.getMinutes();
-						const recordStartMinutes = startH * 60 + startM;
-						const recordEndMinutes = endH * 60 + endM;
-						const isInProgress = isToday && nowMinutes >= recordStartMinutes && nowMinutes < recordEndMinutes;
+						const nowMinutes = this.toMinutesFromTimelineStart(now.getHours(), now.getMinutes());
+						const isInProgress = isToday && nowMinutes >= startMinutes && nowMinutes < endMinutes;
 						return {
 							_id: r._id,
 							customerName: r.surname + (r.gender === 'male' ? '先生' : '女士'),
@@ -271,9 +277,7 @@ Component({
 				let showCurrentTimeLine = false;
 				if (isToday) {
 					const now = new Date();
-					const nowMinutes = now.getHours() * 60 + now.getMinutes();
-					const startHour = parseInt(this.data.timeLabels[0]);
-					const timeInTimeline = nowMinutes - startHour * 60;
+					const timeInTimeline = this.toMinutesFromTimelineStart(now.getHours(), now.getMinutes());
 					if (timeInTimeline >= 0 && timeInTimeline <= timelineWidth) {
 						currentTimePosition = (timeInTimeline / this.data.timeLabels.length / 60 * 100) + '%';
 						showCurrentTimeLine = true;
@@ -296,14 +300,12 @@ Component({
 		calculateAvailableSlotsBetweenBlocks(blocks: TimeBlock[], shift: ShiftType): AvailableSlot[] {
 			const availableSlots: AvailableSlot[] = [];
 
-			const timelineStartHour = parseInt(this.data.timeLabels[0]);
-
 			const now = new Date();
 			const todayStr = getCurrentDate();
 			const selectedDate = this.properties.selectedDate;
 			const isToday = selectedDate === todayStr;
 
-			const nowMinutes = now.getHours() * 60 + now.getMinutes();
+			const nowTimelineMinutes = this.toMinutesFromTimelineStart(now.getHours(), now.getMinutes());
 
 			const shiftStartTime = SHIFT_START_TIME[shift];
 			const shiftEndTime = SHIFT_END_TIME[shift];
@@ -314,20 +316,19 @@ Component({
 
 			const [shiftStartH, shiftStartM] = shiftStartTime.split(':').map(Number);
 			const [shiftEndH, shiftEndM] = shiftEndTime.split(':').map(Number);
-			const shiftStartMinutes = shiftStartH * 60 + shiftStartM;
-			const shiftEndMinutes = shiftEndH * 60 + shiftEndM;
+			const shiftStartTimelineMinutes = this.toMinutesFromTimelineStart(shiftStartH, shiftStartM);
+			const shiftEndTimelineMinutes = this.toMinutesFromTimelineStart(shiftEndH, shiftEndM);
 
 			if (!isToday) {
 				if (blocks.length > 0) {
 					const firstBlock = blocks[0];
 					const [firstStartH, firstStartM] = firstBlock.startTime.split(':').map(Number);
-					const firstStartMinutes = firstStartH * 60 + firstStartM;
+					const firstStartTimelineMinutes = this.toMinutesFromTimelineStart(firstStartH, firstStartM);
 
-					if (firstStartMinutes > shiftStartMinutes) {
-						const gapMinutes = firstStartMinutes - shiftStartMinutes;
-						const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
+					if (firstStartTimelineMinutes > shiftStartTimelineMinutes) {
+						const gapMinutes = firstStartTimelineMinutes - shiftStartTimelineMinutes;
 
-						const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+						const left = (shiftStartTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 						availableSlots.push({
@@ -344,17 +345,15 @@ Component({
 					const nextBlock = blocks[i + 1];
 
 					const [currentEndH, currentEndM] = currentBlock.endTime.split(':').map(Number);
-					const currentEndMinutes = currentEndH * 60 + currentEndM;
+					const currentEndTimelineMinutes = this.toMinutesFromTimelineStart(currentEndH, currentEndM);
 
 					const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-					const nextStartMinutes = nextStartH * 60 + nextStartM;
+					const nextStartTimelineMinutes = this.toMinutesFromTimelineStart(nextStartH, nextStartM);
 
-					const gapMinutes = nextStartMinutes - currentEndMinutes;
+					const gapMinutes = nextStartTimelineMinutes - currentEndTimelineMinutes;
 
 					if (gapMinutes > 0) {
-						const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
-
-						const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+						const left = (currentEndTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 						availableSlots.push({
@@ -369,13 +368,12 @@ Component({
 				if (blocks.length > 0) {
 					const lastBlock = blocks[blocks.length - 1];
 					const [lastEndH, lastEndM] = lastBlock.endTime.split(':').map(Number);
-					const lastEndMinutes = lastEndH * 60 + lastEndM;
+					const lastEndTimelineMinutes = this.toMinutesFromTimelineStart(lastEndH, lastEndM);
 
-					if (lastEndMinutes < shiftEndMinutes) {
-						const gapMinutes = shiftEndMinutes - lastEndMinutes;
-						const gapStartMinutesFromTimelineStart = (lastEndH - timelineStartHour) * 60 + lastEndM;
+					if (lastEndTimelineMinutes < shiftEndTimelineMinutes) {
+						const gapMinutes = shiftEndTimelineMinutes - lastEndTimelineMinutes;
 
-						const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+						const left = (lastEndTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 						availableSlots.push({
@@ -390,7 +388,7 @@ Component({
 				return availableSlots;
 			}
 
-			if (nowMinutes >= shiftEndMinutes) {
+			if (nowTimelineMinutes >= shiftEndTimelineMinutes) {
 				return availableSlots;
 			}
 
@@ -399,10 +397,10 @@ Component({
 				const block = blocks[i];
 				const [startH, startM] = block.startTime.split(':').map(Number);
 				const [endH, endM] = block.endTime.split(':').map(Number);
-				const startMinutes = startH * 60 + startM;
-				const endMinutes = endH * 60 + endM;
+				const startTimelineMinutes = this.toMinutesFromTimelineStart(startH, startM);
+				const endTimelineMinutes = this.toMinutesFromTimelineStart(endH, endM);
 
-				if (nowMinutes >= startMinutes && nowMinutes < endMinutes) {
+				if (nowTimelineMinutes >= startTimelineMinutes && nowTimelineMinutes < endTimelineMinutes) {
 					currentBlockIndex = i;
 					break;
 				}
@@ -411,19 +409,17 @@ Component({
 			if (currentBlockIndex !== -1) {
 				const currentBlock = blocks[currentBlockIndex];
 				const [currentEndH, currentEndM] = currentBlock.endTime.split(':').map(Number);
-				const currentEndMinutes = currentEndH * 60 + currentEndM;
+				const currentEndTimelineMinutes = this.toMinutesFromTimelineStart(currentEndH, currentEndM);
 
 				if (currentBlockIndex < blocks.length - 1) {
 					const nextBlock = blocks[currentBlockIndex + 1];
 					const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-					const nextStartMinutes = nextStartH * 60 + nextStartM;
+					const nextStartTimelineMinutes = this.toMinutesFromTimelineStart(nextStartH, nextStartM);
 
-					const gapMinutes = nextStartMinutes - currentEndMinutes;
+					const gapMinutes = nextStartTimelineMinutes - currentEndTimelineMinutes;
 
 					if (gapMinutes > 0) {
-						const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
-
-						const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+						const left = (currentEndTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 						availableSlots.push({
@@ -434,11 +430,10 @@ Component({
 						});
 					}
 				} else {
-					if (currentEndMinutes < shiftEndMinutes) {
-						const gapMinutes = shiftEndMinutes - currentEndMinutes;
-						const gapStartMinutesFromTimelineStart = (currentEndH - timelineStartHour) * 60 + currentEndM;
+					if (currentEndTimelineMinutes < shiftEndTimelineMinutes) {
+						const gapMinutes = shiftEndTimelineMinutes - currentEndTimelineMinutes;
 
-						const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+						const left = (currentEndTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 						availableSlots.push({
@@ -454,25 +449,24 @@ Component({
 				for (let i = 0; i < blocks.length; i++) {
 					const block = blocks[i];
 					const [startH, startM] = block.startTime.split(':').map(Number);
-					const startMinutes = startH * 60 + startM;
+					const startTimelineMinutes = this.toMinutesFromTimelineStart(startH, startM);
 
-					if (startMinutes > nowMinutes) {
+					if (startTimelineMinutes > nowTimelineMinutes) {
 						nextBlockIndex = i;
 						break;
 					}
 				}
 
-				if (nowMinutes < shiftStartMinutes) {
+				if (nowTimelineMinutes < shiftStartTimelineMinutes) {
 					if (nextBlockIndex !== -1) {
 						const nextBlock = blocks[nextBlockIndex];
 						const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-						const nextStartMinutes = nextStartH * 60 + nextStartM;
+						const nextStartTimelineMinutes = this.toMinutesFromTimelineStart(nextStartH, nextStartM);
 
-						if (nextStartMinutes > shiftStartMinutes) {
-							const gapMinutes = nextStartMinutes - shiftStartMinutes;
-							const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
+						if (nextStartTimelineMinutes > shiftStartTimelineMinutes) {
+							const gapMinutes = nextStartTimelineMinutes - shiftStartTimelineMinutes;
 
-							const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+							const left = (shiftStartTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 							availableSlots.push({
@@ -483,11 +477,10 @@ Component({
 							});
 						}
 					} else {
-						if (shiftEndMinutes > shiftStartMinutes) {
-							const gapMinutes = shiftEndMinutes - shiftStartMinutes;
-							const gapStartMinutesFromTimelineStart = (shiftStartH - timelineStartHour) * 60 + shiftStartM;
+						if (shiftEndTimelineMinutes > shiftStartTimelineMinutes) {
+							const gapMinutes = shiftEndTimelineMinutes - shiftStartTimelineMinutes;
 
-							const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+							const left = (shiftStartTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 							availableSlots.push({
@@ -502,13 +495,12 @@ Component({
 					if (nextBlockIndex !== -1) {
 						const nextBlock = blocks[nextBlockIndex];
 						const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-						const nextStartMinutes = nextStartH * 60 + nextStartM;
+						const nextStartTimelineMinutes = this.toMinutesFromTimelineStart(nextStartH, nextStartM);
 
-						if (nextStartMinutes > nowMinutes) {
-							const gapMinutes = nextStartMinutes - nowMinutes;
-							const gapStartMinutesFromTimelineStart = (Math.floor(nowMinutes / 60) - timelineStartHour) * 60 + (nowMinutes % 60);
+						if (nextStartTimelineMinutes > nowTimelineMinutes) {
+							const gapMinutes = nextStartTimelineMinutes - nowTimelineMinutes;
 
-							const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+							const left = (nowTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 							availableSlots.push({
@@ -519,11 +511,10 @@ Component({
 							});
 						}
 					} else {
-						if (shiftEndMinutes > nowMinutes) {
-							const gapMinutes = shiftEndMinutes - nowMinutes;
-							const gapStartMinutesFromTimelineStart = (Math.floor(nowMinutes / 60) - timelineStartHour) * 60 + (nowMinutes % 60);
+						if (shiftEndTimelineMinutes > nowTimelineMinutes) {
+							const gapMinutes = shiftEndTimelineMinutes - nowTimelineMinutes;
 
-							const left = (gapStartMinutesFromTimelineStart / this.data.timeLabels.length / 60 * 100) + '%';
+							const left = (nowTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 
 							availableSlots.push({

@@ -432,7 +432,7 @@ Page({
         }
 
         if (stats.overtime > 0) {
-          summaryText += `  加班: ${ stats.overtime }小时\n`;
+          summaryText += `  加班: ${ stats.overtime/2 }小时\n`;
         }
 
         if (stats.guashaCount > 0) {
@@ -461,7 +461,7 @@ Page({
         summaryText += `  总加钟: ${ totalExtraTime }\n`;
       }
       if (totalOvertime > 0) {
-        summaryText += `  总加班: ${ totalOvertime * 0.5 }小时\n`;
+        summaryText += `  总加班: ${ totalOvertime/2 }小时\n`;
       }
 
       if (monthlyScoreRanking && monthlyScoreRanking.rankings) {

@@ -238,8 +238,8 @@
                 技师{{reserveForm.selectedTechnicians.length > 0 ? '(' + reserveForm.selectedTechnicians.length + ')' :
                 ''}}
             </view>
-            <technician-selector multi="{{true}}" technicianList="{{staffAvailability}}" showClockInBadge="{{true}}"
-                bind:change="selectReserveTechnician" bind:toggleClockIn="toggleReserveClockIn" />
+            <technician-selector multi="{{true}}" technicianList="{{staffAvailability}}"
+                bind:change="selectReserveTechnician" />
         </view>
         <!-- 性别需求模式 -->
         <view class="form-item gender-requirement-item" wx:if="{{reserveForm.requirementType === 'gender'}}">
