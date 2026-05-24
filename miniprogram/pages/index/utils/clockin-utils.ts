@@ -1,6 +1,6 @@
-import { cloudDb, Collections } from "../../../utils/cloud-db";
-import { formatDate, formatTime, parseProjectDuration } from "../../../utils/util";
-import { SHIFT_START_TIME, SHIFT_END_TIME, calculateOvertimeHours } from "../../../utils/constants";
+import {cloudDb, Collections} from "../../../utils/cloud-db";
+import {formatDate, formatTime, parseProjectDuration} from "../../../utils/util";
+import {SHIFT_START_TIME, SHIFT_END_TIME, calculateOvertimeHours} from "../../../utils/constants";
 
 const app = getApp<IAppOption>();
 const SPARE_TIME = 10; // 10分钟准备+休息时间
@@ -27,7 +27,7 @@ export class ClockInUtils {
         return calculateOvertimeHours(projectDuration);
       }
 
-      const { startTime, endTime } = record;
+      const {startTime, endTime} = record;
       const shiftStartTime = SHIFT_START_TIME[schedule.shift as keyof typeof SHIFT_START_TIME], shiftEndTime = SHIFT_END_TIME[schedule.shift as keyof typeof SHIFT_END_TIME];
       if (!startTime || !endTime || !shiftStartTime || !shiftEndTime) return 0;
       const [startHour, startMin] = startTime.split(":").map(Number);
@@ -57,7 +57,7 @@ export class ClockInUtils {
     guestInfos: GuestInfo[],
     startTimeDate?: Date,
     editId?: string
-  ): { infos: Add<ConsultationInfo>[]; startTime: string } {
+  ): {infos: Add<ConsultationInfo>[]; startTime: string;} {
     let actualStartTime: Date;
     if (startTimeDate) {
       actualStartTime = startTimeDate;
@@ -73,7 +73,7 @@ export class ClockInUtils {
     const extraTimeMinutes = (consultationInfo.extraTime || 0) * 30;
 
     const infos: Add<ConsultationInfo>[] = guestInfos.map(guest => {
-      const projectDuration = parseProjectDuration(guest.project) || 60;
+      const projectDuration = parseProjectDuration(guest.project) || 90;
       const totalDuration = projectDuration + extraTimeMinutes + SPARE_TIME;
       const endTimeDate = new Date(actualStartTime.getTime() + totalDuration * 60 * 1000);
       const endTime = formatTime(endTimeDate, false);
@@ -103,6 +103,6 @@ export class ClockInUtils {
       return info;
     });
 
-    return { infos, startTime };
+    return {infos, startTime};
   }
 }

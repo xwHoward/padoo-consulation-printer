@@ -1,9 +1,9 @@
 // reservation.handler.ts - 预约处理器
-import { cloudDb, Collections } from '../../../utils/cloud-db';
-import { getCurrentDate, formatTime, parseProjectDuration } from '../../../utils/util';
-import { hasButtonPermission } from '../../../utils/permission';
-import type { CashierPage } from '../cashier.types';
-import { PushHandler } from './push.handler';
+import {cloudDb, Collections} from '../../../utils/cloud-db';
+import {getCurrentDate, formatTime, parseProjectDuration} from '../../../utils/util';
+import {hasButtonPermission} from '../../../utils/permission';
+import type {CashierPage} from '../cashier.types';
+import {PushHandler} from './push.handler';
 
 const app = getApp<IAppOption>();
 
@@ -21,7 +21,7 @@ export class ReservationHandler {
 	 */
 	async triggerRearrange(date: string): Promise<void> {
 		try {
-			 await wx.cloud.callFunction({
+			await wx.cloud.callFunction({
 				name: 'getAvailableTechnicians',
 				data: {
 					date,
@@ -38,7 +38,7 @@ export class ReservationHandler {
 	 */
 	async openReserveModal(): Promise<void> {
 		if (!hasButtonPermission('createReservation')) {
-			wx.showToast({ title: '您没有权限新增预约', icon: 'none' });
+			wx.showToast({title: '您没有权限新增预约', icon: 'none'});
 			return;
 		}
 
@@ -54,7 +54,7 @@ export class ReservationHandler {
 			startTime.setMinutes(30);
 		}
 
-		const startTimeStr = `${String(startTime.getHours()).padStart(2, '0')}:${String(startTime.getMinutes()).padStart(2, '0')}`;
+		const startTimeStr = `${ String(startTime.getHours()).padStart(2, '0') }:${ String(startTime.getMinutes()).padStart(2, '0') }`;
 
 		this.page.setData({
 			showReserveModal: true,
@@ -68,7 +68,7 @@ export class ReservationHandler {
 				phone: '',
 				requirementType: 'gender',
 				selectedTechnicians: [],
-				genderRequirement: { male: 0, female: 0 },
+				genderRequirement: {male: 0, female: 0},
 				startTime: startTimeStr,
 				technicianId: '',
 				technicianName: '',
@@ -81,7 +81,7 @@ export class ReservationHandler {
 	 * 关闭预约弹窗
 	 */
 	closeReserveModal(): void {
-		this.page.setData({ showReserveModal: false });
+		this.page.setData({showReserveModal: false});
 		this.page.loadTimelineData();
 	}
 
@@ -89,31 +89,31 @@ export class ReservationHandler {
 	 * 编辑预约
 	 */
 	async editReservation(_id: string): Promise<void> {
-		this.page.setData({ loading: true, loadingText: '加载中...' });
+		this.page.setData({loading: true, loadingText: '加载中...'});
 		try {
 			const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, _id);
 			if (record) {
 				if (record.status === 'cancelled') {
-					wx.showToast({ title: '该预约已取消，无法编辑', icon: 'none' });
-					this.page.setData({ loading: false });
+					wx.showToast({title: '该预约已取消，无法编辑', icon: 'none'});
+					this.page.setData({loading: false});
 					return;
 				}
-	
+
 				// 判断预约类型：优先使用 requirementType 字段，兼容旧数据
 				const requirementType: 'specific' | 'gender' =
 					record.requirementType || (record.genderRequirement && !record.technicianId ? 'gender' : 'specific');
-						
-				let selectedTechnicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }> = [];
+
+				let selectedTechnicians: Array<{_id: string; name: string; phone: string; isClockIn: boolean;}> = [];
 				let editingGroupIds: string[] = [];
 				if (record.technicianId && record.technicianName) {
 					// 从 activeStaffList 获取技师信息（无需依赖尚未刷新的 staffAvailability）
 					const staffInfo = this.page.data.activeStaffList.find(s => s._id === record.technicianId);
 					if (staffInfo) {
-						selectedTechnicians.push({ _id: staffInfo._id, name: staffInfo.name, phone: staffInfo.phone || '', isClockIn: record.isClockIn || false });
+						selectedTechnicians.push({_id: staffInfo._id, name: staffInfo.name, phone: staffInfo.phone || '', isClockIn: record.isClockIn || false});
 					}
 					editingGroupIds = [record._id];
 				}
-						
+
 				// 如果有 groupKey，加载所有组成员
 				if (record.groupKey && requirementType === 'specific') {
 					const groupMembers = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, {
@@ -135,7 +135,7 @@ export class ReservationHandler {
 						}
 					}
 				}
-						
+
 				this.page.setData({
 					showReserveModal: true,
 					editingGroupIds,
@@ -150,8 +150,8 @@ export class ReservationHandler {
 						selectedTechnicians,
 						// 使用 requiredMaleCount/requiredFemaleCount 回填实际数量
 						genderRequirement: requirementType === 'gender'
-							? { male: record.requiredMaleCount || 0, female: record.requiredFemaleCount || 0 }
-							: { male: 0, female: 0 },
+							? {male: record.requiredMaleCount || 0, female: record.requiredFemaleCount || 0}
+							: {male: 0, female: 0},
 						startTime: record.startTime,
 						technicianId: record.technicianId || '',
 						technicianName: record.technicianName || '',
@@ -167,7 +167,7 @@ export class ReservationHandler {
 				icon: 'none'
 			});
 		} finally {
-			this.page.setData({ loading: false });
+			this.page.setData({loading: false});
 		}
 	}
 
@@ -176,14 +176,14 @@ export class ReservationHandler {
 	 */
 	async checkStaffAvailability(): Promise<void> {
 		try {
-			const { date, startTime, project, _id: editingReservationId } = this.page.data.reserveForm;
+			const {date, startTime, project, _id: editingReservationId} = this.page.data.reserveForm;
 			if (!date || !startTime) return;
 
-			this.page.setData({ loading: true, loadingText: '检查技师可用性...' });
+			this.page.setData({loading: true, loadingText: '检查技师可用性...'});
 
-			const projectDuration = parseProjectDuration(project) || 60;
+			const projectDuration = parseProjectDuration(project) || 90;
 
-		// 编辑模式下，排除当前编辑的所有预约（包括分组成员），使其原技师可选
+			// 编辑模式下，排除当前编辑的所有预约（包括分组成员），使其原技师可选
 			const editingGroupIds = this.page.data.editingGroupIds;
 			const currentReservationIds = editingGroupIds.length > 0
 				? editingGroupIds
@@ -203,8 +203,8 @@ export class ReservationHandler {
 				throw new Error('获取技师列表失败');
 			}
 
-			if ((res.result as { code: number }).code === 0) {
-				const list = (res.result as { data: StaffAvailability[] }).data;
+			if ((res.result as {code: number;}).code === 0) {
+				const list = (res.result as {data: StaffAvailability[];}).data;
 
 				const selectedTechnicianIds = this.page.data.reserveForm.selectedTechnicians.map(t => t._id);
 
@@ -230,7 +230,7 @@ export class ReservationHandler {
 				});
 			} else {
 				wx.showToast({
-					title: (res.result as { message?: string }).message || '获取技师列表失败',
+					title: (res.result as {message?: string;}).message || '获取技师列表失败',
 					icon: 'none'
 				});
 			}
@@ -240,7 +240,7 @@ export class ReservationHandler {
 				icon: 'none'
 			});
 		} finally {
-			this.page.setData({ loading: false });
+			this.page.setData({loading: false});
 		}
 	}
 
@@ -248,27 +248,27 @@ export class ReservationHandler {
 	 * 切换技师需求类型
 	 */
 	onRequirementTypeChange(e: WechatMiniprogram.CustomEvent): void {
-		const { value } = e.detail;
-		const { reserveForm } = this.page.data;
+		const {value} = e.detail;
+		const {reserveForm} = this.page.data;
 		reserveForm.requirementType = value as 'specific' | 'gender';
 
 		// 切换时清空选择
 		if (value === 'gender') {
 			reserveForm.selectedTechnicians = [];
-			reserveForm.genderRequirement = { male: 0, female: 0 };
+			reserveForm.genderRequirement = {male: 0, female: 0};
 		} else {
-			reserveForm.genderRequirement = { male: 0, female: 0 };
+			reserveForm.genderRequirement = {male: 0, female: 0};
 		}
 
-		this.page.setData({ reserveForm });
+		this.page.setData({reserveForm});
 	}
 
 	/**
 	 * 调整性别数量
 	 */
 	onChangeGenderCount(e: WechatMiniprogram.CustomEvent): void {
-		const { gender, action } = e.currentTarget.dataset;
-		const { reserveForm } = this.page.data;
+		const {gender, action} = e.currentTarget.dataset;
+		const {reserveForm} = this.page.data;
 		const currentCount = reserveForm.genderRequirement[gender as 'male' | 'female'];
 
 		if (action === 'increase') {
@@ -279,7 +279,7 @@ export class ReservationHandler {
 			}
 		}
 
-		this.page.setData({ reserveForm });
+		this.page.setData({reserveForm});
 		this.page.checkStaffAvailability();
 	}
 
@@ -287,17 +287,17 @@ export class ReservationHandler {
 	 * 表单字段变更
 	 */
 	onReserveFieldChange(e: WechatMiniprogram.CustomEvent): void {
-		const { field } = e.currentTarget.dataset;
+		const {field} = e.currentTarget.dataset;
 		const val = e.detail.value;
-		const { reserveForm } = this.page.data;
+		const {reserveForm} = this.page.data;
 
 		if (field === 'startTime' || field === 'date') {
 			reserveForm[field as 'startTime' | 'date'] = val;
-			this.page.setData({ reserveForm });
+			this.page.setData({reserveForm});
 			this.page.checkStaffAvailability();
 		} else {
 			reserveForm[field as 'customerName' | 'phone'] = val;
-			this.page.setData({ reserveForm });
+			this.page.setData({reserveForm});
 			// 触发顾客匹配
 			if (field === 'customerName' || field === 'phone') {
 				this.page.searchCustomer();
@@ -309,13 +309,13 @@ export class ReservationHandler {
 	 * 选择技师（预约场景）
 	 */
 	selectReserveTechnician(e: WechatMiniprogram.CustomEvent): void {
-		const { _id, technician: name, occupied, reason, phone, hasNonClockInConflict } = e.detail;
-		
+		const {_id, technician: name, occupied, reason, phone, hasNonClockInConflict} = e.detail;
+
 		// 预约场景下，即使有占用也允许选择，只显示提示
 		if (occupied) {
-			wx.showToast({ title: reason || '该技师在此时段已有安排，请注意协调', icon: 'none', duration: 2500 });
+			wx.showToast({title: reason || '该技师在此时段已有安排，请注意协调', icon: 'none', duration: 2500});
 		} else if (hasNonClockInConflict) {
-			wx.showToast({ title: '该技师有非点钟预约冲突，请注意协调', icon: 'none', duration: 2500 });
+			wx.showToast({title: '该技师有非点钟预约冲突，请注意协调', icon: 'none', duration: 2500});
 		}
 
 		// 多选逻辑：切换选中状态
@@ -328,7 +328,7 @@ export class ReservationHandler {
 		} else {
 			// 未选中，添加
 			const staff = this.page.data.staffAvailability.find(s => s._id === _id);
-			selectedTechnicians.push({ _id, name, phone, wechatWorkId: staff?.wechatWorkId, isClockIn: true });
+			selectedTechnicians.push({_id, name, phone, wechatWorkId: staff?.wechatWorkId, isClockIn: true});
 		}
 
 		// 更新 staffAvailability 的 isSelected 状态
@@ -347,28 +347,28 @@ export class ReservationHandler {
 	 * 切换点钟状态
 	 */
 	toggleReserveClockIn(e: WechatMiniprogram.CustomEvent): void {
-		const { _id } = e.detail;
+		const {_id} = e.detail;
 		const selectedTechnicians = [...this.page.data.reserveForm.selectedTechnicians];
 		const tech = selectedTechnicians.find(t => t._id === _id);
 		if (tech) {
 			tech.isClockIn = !tech.isClockIn;
-			this.page.setData({ 'reserveForm.selectedTechnicians': selectedTechnicians });
+			this.page.setData({'reserveForm.selectedTechnicians': selectedTechnicians});
 		}
 
 		const staffAvailability = this.page.data.staffAvailability.map(staff => {
 			if (staff._id === _id) {
-				return { ...staff, isClockIn: !staff.isClockIn };
+				return {...staff, isClockIn: !staff.isClockIn};
 			}
 			return staff;
 		});
-		this.page.setData({ staffAvailability });
+		this.page.setData({staffAvailability});
 	}
 
 	/**
 	 * 选择项目
 	 */
 	async selectReserveProject(e: WechatMiniprogram.CustomEvent): Promise<void> {
-		const { project } = e.detail;
+		const {project} = e.detail;
 		const currentProject = this.page.data.reserveForm.project;
 		// 切换选中状态
 		this.page.setData({
@@ -381,7 +381,7 @@ export class ReservationHandler {
 	 * 修改性别
 	 */
 	onReserveGenderChange(e: WechatMiniprogram.CustomEvent): void {
-		this.page.setData({ 'reserveForm.gender': e.detail.value });
+		this.page.setData({'reserveForm.gender': e.detail.value});
 		// 触发顾客匹配
 		this.page.searchCustomer();
 	}
@@ -390,22 +390,22 @@ export class ReservationHandler {
 	 * 处理到店操作 - 显示确认弹窗
 	 */
 	async handleArrival(reserveId: string): Promise<void> {
-		this.page.setData({ loading: true, loadingText: '加载中...' });
+		this.page.setData({loading: true, loadingText: '加载中...'});
 		try {
 			const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
 			if (!record) {
-				wx.showToast({ title: '预约不存在', icon: 'none' });
-				this.page.setData({ loading: false });
+				wx.showToast({title: '预约不存在', icon: 'none'});
+				this.page.setData({loading: false});
 				return;
 			}
 
 			if (record.status === 'cancelled') {
-				wx.showToast({ title: '该预约已取消', icon: 'none' });
-				this.page.setData({ loading: false });
+				wx.showToast({title: '该预约已取消', icon: 'none'});
+				this.page.setData({loading: false});
 				return;
 			}
 
-			this.page.setData({ loading: false });
+			this.page.setData({loading: false});
 
 			this.page.setData({
 				'arrivalConfirmModal.show': true,
@@ -415,8 +415,8 @@ export class ReservationHandler {
 				'arrivalConfirmModal.technicianName': record.technicianName || '未指定'
 			});
 		} catch (error) {
-			wx.showToast({ title: '加载失败', icon: 'none' });
-			this.page.setData({ loading: false });
+			wx.showToast({title: '加载失败', icon: 'none'});
+			this.page.setData({loading: false});
 		}
 	}
 
@@ -424,18 +424,18 @@ export class ReservationHandler {
 	 * 处理到店操作 - 实际执行
 	 */
 	async processArrival(reserveId: string, shouldPushNotification: boolean): Promise<void> {
-		this.page.setData({ loading: true, loadingText: '处理中...' });
+		this.page.setData({loading: true, loadingText: '处理中...'});
 		try {
 			const record = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
 			if (!record) {
-				wx.showToast({ title: '预约不存在', icon: 'none' });
-				this.page.setData({ loading: false });
+				wx.showToast({title: '预约不存在', icon: 'none'});
+				this.page.setData({loading: false});
 				return;
 			}
 
 			if (record.status === 'cancelled') {
-				wx.showToast({ title: '该预约已取消', icon: 'none' });
-				this.page.setData({ loading: false });
+				wx.showToast({title: '该预约已取消', icon: 'none'});
+				this.page.setData({loading: false});
 				return;
 			}
 
@@ -451,17 +451,17 @@ export class ReservationHandler {
 				await this.pushHandler.sendArrivalNotification(reservations);
 			}
 
-			this.page.setData({ loading: false });
+			this.page.setData({loading: false});
 
 			if (reservations.length > 1) {
 				const reserveIds = reservations.map(r => r._id).join(',');
-				wx.navigateTo({ url: `/pages/index/index?reserveIds=${reserveIds}` });
+				wx.navigateTo({url: `/pages/index/index?reserveIds=${ reserveIds }`});
 			} else {
-				wx.navigateTo({ url: `/pages/index/index?reserveId=${reserveId}` });
+				wx.navigateTo({url: `/pages/index/index?reserveId=${ reserveId }`});
 			}
 		} catch (error) {
-			wx.showToast({ title: '处理失败', icon: 'none' });
-			this.page.setData({ loading: false });
+			wx.showToast({title: '处理失败', icon: 'none'});
+			this.page.setData({loading: false});
 		}
 	}
 
@@ -469,7 +469,7 @@ export class ReservationHandler {
 	 * 提前下钟操作
 	 */
 	async handleEarlyFinish(recordId: string): Promise<void> {
-		this.page.setData({ loading: true, loadingText: '处理中...' });
+		this.page.setData({loading: true, loadingText: '处理中...'});
 
 		try {
 			const record = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, recordId);
@@ -478,19 +478,19 @@ export class ReservationHandler {
 					title: '记录不存在',
 					icon: 'none'
 				});
-				this.page.setData({ loading: false });
+				this.page.setData({loading: false});
 				return;
 			}
 
 			const modalRes = await wx.showModal({
 				title: '提前下钟',
-				content: `确认要为技师 ${record.technician || ''}（房间：${record.room || ''}）提前下钟吗？\n\n将把结束时间更新为当前时间。`,
+				content: `确认要为技师 ${ record.technician || '' }（房间：${ record.room || '' }）提前下钟吗？\n\n将把结束时间更新为当前时间。`,
 				confirmText: '确定',
 				cancelText: '取消'
 			});
 
 			if (!modalRes.confirm) {
-				this.page.setData({ loading: false });
+				this.page.setData({loading: false});
 				return;
 			}
 
@@ -521,7 +521,7 @@ export class ReservationHandler {
 				icon: 'none'
 			});
 		} finally {
-			this.page.setData({ loading: false });
+			this.page.setData({loading: false});
 		}
 	}
 
@@ -536,12 +536,12 @@ export class ReservationHandler {
 			cancelText: '再想想',
 			success: async (res) => {
 				if (res.confirm) {
-					this.page.setData({ loading: true, loadingText: '取消中...' });
+					this.page.setData({loading: true, loadingText: '取消中...'});
 					try {
 						const reservation = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, _id);
 
 						if (!reservation) {
-							wx.showToast({ title: '预约不存在', icon: 'none' });
+							wx.showToast({title: '预约不存在', icon: 'none'});
 							return;
 						}
 
@@ -568,17 +568,17 @@ export class ReservationHandler {
 						}
 
 						if (!allSuccess) {
-							wx.showToast({ title: '部分取消失败', icon: 'none' });
+							wx.showToast({title: '部分取消失败', icon: 'none'});
 							return;
 						}
 
 						await this.triggerRearrange(reservation.date);
 						await this.page.loadTimelineData();
-						wx.showToast({ title: '已取消预约', icon: 'success' });
+						wx.showToast({title: '已取消预约', icon: 'success'});
 					} catch (error) {
-						wx.showToast({ title: '取消失败', icon: 'none' });
+						wx.showToast({title: '取消失败', icon: 'none'});
 					} finally {
-						this.page.setData({ loading: false });
+						this.page.setData({loading: false});
 					}
 				}
 			}
@@ -589,36 +589,36 @@ export class ReservationHandler {
 	 * 确认预约
 	 */
 	async confirmReserve(): Promise<void> {
-		const { reserveForm, availableMaleCount, availableFemaleCount } = this.page.data;
+		const {reserveForm, availableMaleCount, availableFemaleCount} = this.page.data;
 
 		if (!reserveForm.startTime) {
-			wx.showToast({ title: '开始时间必填', icon: 'none' });
+			wx.showToast({title: '开始时间必填', icon: 'none'});
 			return;
 		}
 
 		// 验证技师需求
 		if (reserveForm.requirementType === 'specific') {
 			if (reserveForm.selectedTechnicians.length === 0) {
-				wx.showToast({ title: '请选择技师', icon: 'none' });
+				wx.showToast({title: '请选择技师', icon: 'none'});
 				return;
 			}
 		} else if (reserveForm.requirementType === 'gender') {
 			const totalRequired = reserveForm.genderRequirement.male + reserveForm.genderRequirement.female;
-		if (totalRequired === 0) {
-				wx.showToast({ title: '请选择技师需求', icon: 'none' });
+			if (totalRequired === 0) {
+				wx.showToast({title: '请选择技师需求', icon: 'none'});
 				return;
 			}
 			if (reserveForm.genderRequirement.male > availableMaleCount) {
-				wx.showToast({ title: `可用男技师不足（仅${availableMaleCount}位）`, icon: 'none' });
+				wx.showToast({title: `可用男技师不足（仅${ availableMaleCount }位）`, icon: 'none'});
 				return;
 			}
 			if (reserveForm.genderRequirement.female > availableFemaleCount) {
-				wx.showToast({ title: `可用女技师不足（仅${availableFemaleCount}位）`, icon: 'none' });
+				wx.showToast({title: `可用女技师不足（仅${ availableFemaleCount }位）`, icon: 'none'});
 				return;
 			}
 		}
 
-		this.page.setData({ loading: true, loadingText: '保存中...' });
+		this.page.setData({loading: true, loadingText: '保存中...'});
 		try {
 			// 计算结束时间
 			const [h, m] = reserveForm.startTime.split(':').map(Number);
@@ -626,13 +626,13 @@ export class ReservationHandler {
 			let duration = 90;
 			if (reserveForm.project) {
 				duration = parseProjectDuration(reserveForm.project);
-				if (duration === 0) duration = 60;
+				if (duration === 0) duration = 90;
 			}
 
 			const endTotal = startTotal + duration + 20;
 			const endH = Math.floor(endTotal / 60);
 			const endM = endTotal % 60;
-			const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+			const endTime = `${ String(endH).padStart(2, '0') }:${ String(endM).padStart(2, '0') }`;
 
 			// 如果是编辑模式
 			if (reserveForm._id) {
@@ -647,9 +647,9 @@ export class ReservationHandler {
 				await this.handleGenderReservation(reserveForm, endTime);
 			}
 		} catch (error) {
-			wx.showToast({ title: '保存失败', icon: 'none' });
+			wx.showToast({title: '保存失败', icon: 'none'});
 		} finally {
-			this.page.setData({ loading: false });
+			this.page.setData({loading: false});
 		}
 	}
 
@@ -663,12 +663,12 @@ export class ReservationHandler {
 		const generateGroupKey = () => {
 			return 'GRP_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 		};
-		
+
 		const groupKey = reserveForm.requirementType === 'gender' ? generateGroupKey() : undefined;
-		
+
 		if (reserveForm.requirementType === 'gender') {
 			// 性别需求模式：更新性别需求
-			const { male, female } = reserveForm.genderRequirement;
+			const {male, female} = reserveForm.genderRequirement;
 			record = {
 				date: reserveForm.date,
 				customerName: reserveForm.customerName || '',
@@ -689,12 +689,12 @@ export class ReservationHandler {
 			};
 			const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
 			if (success) {
-				wx.showToast({ title: '保存成功', icon: 'success' });
+				wx.showToast({title: '保存成功', icon: 'success'});
 				this.closeReserveModal();
 				await this.triggerRearrange(reserveForm.date);
 				await this.page.loadTimelineData();
 			} else {
-				wx.showToast({ title: '保存失败', icon: 'none' });
+				wx.showToast({title: '保存失败', icon: 'none'});
 			}
 		} else {
 			// 点钟模式
@@ -721,9 +721,9 @@ export class ReservationHandler {
 					if (!ok) allSuccess = false;
 				}
 				if (allSuccess) {
-					wx.showToast({ title: '保存成功', icon: 'success' });
+					wx.showToast({title: '保存成功', icon: 'success'});
 				} else {
-					wx.showToast({ title: '部分保存失败', icon: 'none' });
+					wx.showToast({title: '部分保存失败', icon: 'none'});
 				}
 				this.closeReserveModal();
 				await this.triggerRearrange(reserveForm.date);
@@ -749,12 +749,12 @@ export class ReservationHandler {
 				};
 				const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
 				if (success) {
-					wx.showToast({ title: '保存成功', icon: 'success' });
+					wx.showToast({title: '保存成功', icon: 'success'});
 					this.closeReserveModal();
 					await this.triggerRearrange(reserveForm.date);
 					await this.page.loadTimelineData();
 				} else {
-					wx.showToast({ title: '保存失败', icon: 'none' });
+					wx.showToast({title: '保存失败', icon: 'none'});
 				}
 			}
 		}
@@ -766,7 +766,7 @@ export class ReservationHandler {
 	private async handleSpecificReservation(reserveForm: typeof this.page.data.reserveForm, endTime: string): Promise<void> {
 		const technicians = reserveForm.selectedTechnicians;
 		if (technicians.length === 0) {
-			wx.showToast({ title: '请至少选择一位技师', icon: 'none' });
+			wx.showToast({title: '请至少选择一位技师', icon: 'none'});
 			return;
 		}
 
@@ -775,7 +775,7 @@ export class ReservationHandler {
 			return 'GRP_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 		};
 		const groupKey = technicians.length > 1 ? generateGroupKey() : undefined;
-		
+
 		for (const tech of technicians) {
 			const record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'> = {
 				date: reserveForm.date,
@@ -802,12 +802,12 @@ export class ReservationHandler {
 
 		if (successCount === technicians.length) {
 			await app.loadGlobalData();
-			wx.showToast({ title: '预约成功', icon: 'success' });
+			wx.showToast({title: '预约成功', icon: 'success'});
 			this.closeReserveModal();
 			await this.triggerRearrange(reserveForm.date);
 			await this.page.loadTimelineData();
 		} else {
-			wx.showToast({ title: `成功创建${successCount}/${technicians.length}条预约`, icon: 'none' });
+			wx.showToast({title: `成功创建${ successCount }/${ technicians.length }条预约`, icon: 'none'});
 			this.closeReserveModal();
 			await this.triggerRearrange(reserveForm.date);
 			await this.page.loadTimelineData();
@@ -818,13 +818,13 @@ export class ReservationHandler {
 	 * 处理性别需求预约
 	 */
 	private async handleGenderReservation(reserveForm: typeof this.page.data.reserveForm, endTime: string): Promise<void> {
-		const { male, female } = reserveForm.genderRequirement;
+		const {male, female} = reserveForm.genderRequirement;
 		const totalRequired = male + female;
 
 		// 获取轮牌数据
 		const rotationData = await app.getRotationQueue(reserveForm.date);
 		if (!rotationData || !rotationData.staffList || rotationData.staffList.length === 0) {
-			wx.showToast({ title: '无法获取轮牌数据', icon: 'none' });
+			wx.showToast({title: '无法获取轮牌数据', icon: 'none'});
 			return;
 		}
 
@@ -840,7 +840,7 @@ export class ReservationHandler {
 		})).filter(item => item.staff && item.staff!.status === 'active');
 
 		// 获取该时间段已有的预约和服务记录
-		const projectDuration = parseProjectDuration(reserveForm.project) || 60;
+		const projectDuration = parseProjectDuration(reserveForm.project) || 90;
 		const technicianRes = await wx.cloud.callFunction({
 			name: 'getAvailableTechnicians',
 			data: {
@@ -853,7 +853,7 @@ export class ReservationHandler {
 
 		let availableTechnicians: StaffAvailability[] = [];
 		if (technicianRes.result && typeof technicianRes.result === 'object') {
-			const result = technicianRes.result as { code: number; data: StaffAvailability[] };
+			const result = technicianRes.result as {code: number; data: StaffAvailability[];};
 			if (result.code === 0 && result.data) {
 				availableTechnicians = result.data;
 			}
@@ -863,8 +863,8 @@ export class ReservationHandler {
 		const availableTechnicianIds = new Set(availableTechnicians.map(t => t._id));
 
 		// 按轮牌顺序选择可用技师
-		const selectedMaleStaff: Array<{ _id: string; name: string; isClockIn: boolean }> = [];
-		const selectedFemaleStaff: Array<{ _id: string; name: string; isClockIn: boolean }> = [];
+		const selectedMaleStaff: Array<{_id: string; name: string; isClockIn: boolean;}> = [];
+		const selectedFemaleStaff: Array<{_id: string; name: string; isClockIn: boolean;}> = [];
 
 		for (const rotationItem of rotationStaffList) {
 			const staff = rotationItem.staff!;
@@ -899,7 +899,7 @@ export class ReservationHandler {
 		// 检查是否成功分配
 		if (selectedMaleStaff.length < male || selectedFemaleStaff.length < female) {
 			wx.showToast({
-				title: `可用技师不足（男${selectedMaleStaff.length}/${male}，女${selectedFemaleStaff.length}/${female}）`,
+				title: `可用技师不足（男${ selectedMaleStaff.length }/${ male }，女${ selectedFemaleStaff.length }/${ female }）`,
 				icon: 'none'
 			});
 			return;
@@ -943,11 +943,11 @@ export class ReservationHandler {
 
 		if (successCount === totalRequired) {
 			await app.loadGlobalData();
-			wx.showToast({ title: '预约成功', icon: 'success' });
+			wx.showToast({title: '预约成功', icon: 'success'});
 			await this.triggerRearrange(reserveForm.date);
 			this.closeReserveModal();
 		} else {
-			wx.showToast({ title: `成功创建${successCount}/${totalRequired}条预约`, icon: 'none' });
+			wx.showToast({title: `成功创建${ successCount }/${ totalRequired }条预约`, icon: 'none'});
 			await this.triggerRearrange(reserveForm.date);
 			this.closeReserveModal();
 		}

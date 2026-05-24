@@ -1,6 +1,6 @@
-import { buildPlateNumberUpdates } from "../../../services/customer.service";
-import { formatDate, formatTime, parseProjectDuration } from "../../../utils/util";
-import { DataLoaderService } from "../services/data-loader.service";
+import {buildPlateNumberUpdates} from "../../../services/customer.service";
+import {formatDate, formatTime, parseProjectDuration} from "../../../utils/util";
+import {DataLoaderService} from "../services/data-loader.service";
 
 const SPARE_TIME = 10; // 10分钟准备+休息时间
 
@@ -14,10 +14,10 @@ export class ModalHandler {
   }
 
   async onTimePickerConfirm() {
-    const { timePickerModal, consultationInfo, editId, guestCount, licensePlate } = this.page.data;
-    const { currentTime: selectedTime, currentDate: selectedDate } = timePickerModal;
+    const {timePickerModal, consultationInfo, editId, guestCount, licensePlate} = this.page.data;
+    const {currentTime: selectedTime, currentDate: selectedDate} = timePickerModal;
 
-    this.page.setData({ 'timePickerModal.show': false });
+    this.page.setData({'timePickerModal.show': false});
     const [hours, minutes] = selectedTime.split(':').map(Number);
     let startTimeDate: Date;
 
@@ -31,12 +31,12 @@ export class ModalHandler {
       startTimeDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
     }
 
-    this.page.setData({ loading: true, loadingText: '报钟中...' });
+    this.page.setData({loading: true, loadingText: '报钟中...'});
     try {
       if (guestCount > 1) {
         await this.page.doMultiClockIn(startTimeDate, editId);
       } else {
-        const projectDuration = parseProjectDuration(consultationInfo.project) || 60;
+        const projectDuration = parseProjectDuration(consultationInfo.project) || 90;
         const extraTimeMinutes = (consultationInfo.extraTime || 0) * 30;
         const totalDuration = projectDuration + extraTimeMinutes + SPARE_TIME;
         const endTimeDate = new Date(startTimeDate.getTime() + totalDuration * 60 * 1000);
@@ -56,7 +56,7 @@ export class ModalHandler {
           if (this.dataLoader) {
             await this.dataLoader.loadTechnicianList();
           }
-          
+
           // 如果是新增且有车牌号，显示车牌号录入提醒
           if (!editId && licensePlate && licensePlate.trim()) {
             this.page.setData({
@@ -64,7 +64,7 @@ export class ModalHandler {
               'plateReminderModal.licensePlate': licensePlate
             });
           } else {
-            wx.showToast({ title: '报钟成功', icon: 'success' });
+            wx.showToast({title: '报钟成功', icon: 'success'});
             setTimeout(() => {
               wx.navigateBack();
             }, 1000);
@@ -72,47 +72,47 @@ export class ModalHandler {
         }
       }
     } finally {
-      this.page.setData({ loading: false });
+      this.page.setData({loading: false});
     }
   }
 
   onTimePickerCancel() {
-    this.page.setData({ 'timePickerModal.show': false });
+    this.page.setData({'timePickerModal.show': false});
   }
 
   onTimePickerChange(e: WechatMiniprogram.CustomEvent) {
-    const { value } = e.detail;
+    const {value} = e.detail;
     const now = new Date();
     now.setHours(value[0], value[1], 0, 0);
-    const currentTime = `${String(value[0]).padStart(2, '0')}:${String(value[1]).padStart(2, '0')}`;
-    this.page.setData({ 'timePickerModal.currentTime': currentTime });
+    const currentTime = `${ String(value[0]).padStart(2, '0') }:${ String(value[1]).padStart(2, '0') }`;
+    this.page.setData({'timePickerModal.currentTime': currentTime});
   }
 
   onTimeColumnChange(e: WechatMiniprogram.CustomEvent) {
-    const { column, value } = e.detail;
+    const {column, value} = e.detail;
     if (column === 0) {
-      this.page.setData({ selectedHour: value });
+      this.page.setData({selectedHour: value});
     } else if (column === 1) {
-      this.page.setData({ selectedMinute: value });
+      this.page.setData({selectedMinute: value});
     }
   }
 
   onDatePickerChange(e: WechatMiniprogram.CustomEvent) {
-    const { date } = e.detail;
-    this.page.setData({ 'timePickerModal.currentDate': date });
+    const {date} = e.detail;
+    this.page.setData({'timePickerModal.currentDate': date});
   }
 
   showPlateInputModal() {
-    this.page.setData({ licensePlateInputVisible: true });
+    this.page.setData({licensePlateInputVisible: true});
   }
 
   hidePlateInputModal() {
-    this.page.setData({ licensePlateInputVisible: false });
+    this.page.setData({licensePlateInputVisible: false});
   }
 
   onPlateConfirm(e: WechatMiniprogram.CustomEvent) {
-    const { value } = e.detail;
-    const { plateNumber } = buildPlateNumberUpdates(value || '');
+    const {value} = e.detail;
+    const {plateNumber} = buildPlateNumberUpdates(value || '');
 
     this.page.setData({
       licensePlateInputVisible: false,
@@ -122,7 +122,7 @@ export class ModalHandler {
   }
 
   onClockInModalCancel() {
-    const { editId, licensePlate, currentReservationIds } = this.page.data;
+    const {editId, licensePlate, currentReservationIds} = this.page.data;
 
     this.page.setData({
       'clockInModal.show': false,
@@ -153,18 +153,18 @@ export class ModalHandler {
   }
 
   async onClockInModalConfirm() {
-    const { content } = this.page.data.clockInModal;
-    const { editId, licensePlate, currentReservationIds } = this.page.data;
+    const {content} = this.page.data.clockInModal;
+    const {editId, licensePlate, currentReservationIds} = this.page.data;
 
-    this.page.setData({ 'clockInModal.loading': true });
+    this.page.setData({'clockInModal.loading': true});
 
     try {
       const success = await this.page.sendToWechatWebhook(content);
 
-      this.page.setData({ 'clockInModal.loading': false });
+      this.page.setData({'clockInModal.loading': false});
 
       if (success) {
-        wx.showToast({ title: '推送成功', icon: 'success' });
+        wx.showToast({title: '推送成功', icon: 'success'});
 
         setTimeout(() => {
           this.page.setData({
@@ -188,11 +188,11 @@ export class ModalHandler {
           }
         }, 1500);
       } else {
-        wx.showToast({ title: '推送失败，请重试', icon: 'error' });
+        wx.showToast({title: '推送失败，请重试', icon: 'error'});
       }
     } catch (error) {
-      this.page.setData({ 'clockInModal.loading': false });
-      wx.showToast({ title: '推送失败，请重试', icon: 'error' });
+      this.page.setData({'clockInModal.loading': false});
+      wx.showToast({title: '推送失败，请重试', icon: 'error'});
     }
   }
 }
