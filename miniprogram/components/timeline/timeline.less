@@ -158,7 +158,7 @@
 
 	&.reservation {
 		box-shadow: 0 2px 4px rgba(74, 144, 226, 0.2);
-		opacity: 0.9;
+		opacity: 0.8;
 
 		&.male {
 			background-color: #1890ff;
@@ -187,6 +187,13 @@
 				#ff7875 20px);
 		border: 2px solid #ff4d4f;
 		animation: pulse-conflict 1.5s ease-in-out infinite;
+	}
+
+	&.cancelled {
+		background: #999 !important;
+		opacity: 0.25 !important;
+		box-shadow: none !important;
+		pointer-events: none;
 	}
 
 	.block-content {

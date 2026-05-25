@@ -2,6 +2,7 @@ import { cloudDb, Collections } from '../../utils/cloud-db';
 import { SHIFT_END_TIME, SHIFT_START_TIME, ShiftType } from '../../utils/constants';
 import { loadingService, LockKeys } from '../../utils/loading-service';
 import { getCurrentDate } from '../../utils/util';
+import { authManager } from '../../utils/auth';
 
 const app = getApp<IAppOption>();
 
@@ -48,6 +49,7 @@ interface TimeBlock {
 	technician: string
 	requirement: string;
 	rearrangeConflict?: boolean
+	isCancelled?: boolean
 	groupKey: string
 	groupColorIndex: number
 	groupSize: number
@@ -143,6 +145,11 @@ Component({
 				const activeRecords = todayRecords.filter(r => !r.isVoided);
 				const reservations = (await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today, status: 'active' }));
 
+				let cancelledReservations: ReservationRecord[] = [];
+				if (authManager.isAdmin()) {
+					cancelledReservations = (await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today, status: 'cancelled' }));
+				}
+
 				const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
 				const allStaff = await app.getStaffs();
 				const activeStaff = allStaff.filter(s => s.status === 'active');
@@ -162,6 +169,7 @@ Component({
 
 					const staffRecords = activeRecords.filter(r => r.technician === staff.name);
 					const staffReservations = reservations.filter(r => r.technicianName === staff.name || r.technicianId === staff._id);
+					const staffCancelledReservations = cancelledReservations.filter(r => r.technicianName === staff.name || r.technicianId === staff._id);
 
 					const rawBlocks = [
 						...staffRecords.map(r => ({ ...r, isReservation: false })),
@@ -180,6 +188,28 @@ Component({
 							extraTime: 0,
 							isClockIn: r.isClockIn || false,
 							isReservation: true,
+							technician: r.technicianName,
+							requirementType: r.requirementType,
+							requiredMaleCount: r.requiredMaleCount,
+							requiredFemaleCount: r.requiredFemaleCount,
+							groupKey: r.groupKey || ''
+						})),
+						...staffCancelledReservations.map(r => ({
+							_id: r._id,
+							surname: r.customerName,
+							phone: r.phone || '',
+							gender: r.gender,
+							project: r.project,
+							room: '已取消',
+							date: r.date,
+							customerName: r.customerName,
+							status: r.status,
+							startTime: r.startTime,
+							endTime: r.endTime,
+							extraTime: 0,
+							isClockIn: r.isClockIn || false,
+							isReservation: true,
+							isCancelled: true,
 							technician: r.technicianName,
 							requirementType: r.requirementType,
 							requiredMaleCount: r.requiredMaleCount,
@@ -226,16 +256,18 @@ Component({
 							technician: r.technician!,
 							requirement: parseGenderRequirement(r as Update<ReservationRecord>),
 							rearrangeConflict: (r as Update<ReservationRecord>).rearrangeConflict || false,
+							isCancelled: (r as any).isCancelled || false,
 							groupKey: r.isReservation ? (r as any).groupKey || '' : '',
 							groupColorIndex: 0,
 							groupSize: 1,
 						};
 					});
 
-					const availableSlots = this.calculateAvailableSlotsBetweenBlocks(blocks, shift);
+					const activeBlocks = blocks.filter(b => !b.isCancelled);
+					const availableSlots = this.calculateAvailableSlotsBetweenBlocks(activeBlocks, shift);
 					
 					// 计算当日轮钟数量（非点钟且非预约的记录）
-					const rotationCount = blocks.filter(b => !b.isClockIn && !b.isReservation).length;
+					const rotationCount = blocks.filter(b => !b.isClockIn && !b.isReservation && !b.isCancelled).length;
 					
 					staffTimeline.push({
 						_id: staff._id,
@@ -534,7 +566,9 @@ Component({
 		onBlockClick(e: WechatMiniprogram.CustomEvent) {
 			if (this.data.readonly) return;
 
-			const { id, reservation, settled, inprogress } = e.currentTarget.dataset;
+			const { id, reservation, settled, inprogress, cancelled } = e.currentTarget.dataset;
+			if (cancelled) return;
+
 			this.triggerEvent('blockclick', {
 				id,
 				reservation,

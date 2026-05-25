@@ -25,7 +25,7 @@
           <!-- 当前时间线 -->
           <view class="current-time-line" wx:if="{{showCurrentTimeLine}}" style="left: {{currentTimePosition}};"></view>
           <!-- 占用块 -->
-          <view wx:for="{{item.blocks}}" wx:for-item="block" wx:key="_id" class="time-block {{block.isReservation ? 'reservation' : ''}} {{block.gender}} {{block.isInProgress ? 'in-progress' : ''}} {{block.isSettled ? 'settled' : ''}} {{block.rearrangeConflict ? 'rearrange-conflict' : ''}} {{block.groupSize > 1 ? 'group-color-' + block.groupColorIndex : ''}}" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block._id}}" data-reservation="{{block.isReservation}}" data-settled="{{block.isSettled}}" data-inprogress="{{block.isInProgress}}">
+          <view wx:for="{{item.blocks}}" wx:for-item="block" wx:key="_id" class="time-block {{block.isReservation ? 'reservation' : ''}} {{block.gender}} {{block.isInProgress ? 'in-progress' : ''}} {{block.isSettled ? 'settled' : ''}} {{block.rearrangeConflict ? 'rearrange-conflict' : ''}} {{block.isCancelled ? 'cancelled' : ''}} {{block.groupSize > 1 ? 'group-color-' + block.groupColorIndex : ''}}" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block._id}}" data-reservation="{{block.isReservation}}" data-settled="{{block.isSettled}}" data-inprogress="{{block.isInProgress}}" data-cancelled="{{block.isCancelled}}">
             <view class="block-content">
               <view class="block-customer">
                 {{block.customerName}}
