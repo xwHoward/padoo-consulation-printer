@@ -216,7 +216,7 @@
         </view>
         <view class="form-item project-item">
             <view class="form-label">项目</view>
-            <project-selector selectedProject="{{reserveForm.project}}" bind:change="selectReserveProject" />
+            <project-selector multi="{{true}}" selectedProjects="{{reserveForm.projects}}" bind:change="selectReserveProject" />
         </view>
         <!-- 技师需求类型 -->
         <view class="form-item requirement-type-item">

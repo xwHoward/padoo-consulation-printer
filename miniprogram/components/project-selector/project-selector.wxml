@@ -1,11 +1,11 @@
 <view class="project-selector">
-  <label
+  <view
     wx:for="{{projects}}"
     wx:key="*this"
-    class="project-option {{selectedProject === item ? 'selected' : ''}}"
+    class="project-option {{multi ? (selectedMap[item] ? 'selected' : '') : (selectedProject === item ? 'selected' : '')}}"
     bindtap="onProjectTap"
     data-project="{{item}}"
   >
     <view class="project-name">{{item}}</view>
-  </label>
+  </view>
 </view>

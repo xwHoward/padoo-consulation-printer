@@ -50,6 +50,7 @@ Page({
             customerName: '',
             gender: 'male' as 'male' | 'female',
             project: '',
+            projects: [] as string[],
             phone: '',
             requirementType: 'gender' as 'specific' | 'gender',
             selectedTechnicians: [] as Array<{ _id: string; name: string; phone: string; isClockIn: boolean }>,
