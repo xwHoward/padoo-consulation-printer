@@ -73,7 +73,7 @@ export class ClockInUtils {
     const extraTimeMinutes = (consultationInfo.extraTime || 0) * 30;
 
     const infos: Add<ConsultationInfo>[] = guestInfos.map(guest => {
-      const projectDuration = parseProjectDuration(guest.project) || 60;
+      const projectDuration = parseProjectDuration(guest.project) || 90;
       const totalDuration = projectDuration + extraTimeMinutes + SPARE_TIME;
       const endTimeDate = new Date(actualStartTime.getTime() + totalDuration * 60 * 1000);
       const endTime = formatTime(endTimeDate, false);

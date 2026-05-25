@@ -29,7 +29,7 @@ export class DataLoaderService {
 
       this.page.setData({ loadingTechnicians: true });
 
-      const projectDuration = parseProjectDuration(this.page.data.consultationInfo.project) || 60;
+      const projectDuration = parseProjectDuration(this.page.data.consultationInfo.project) || 90;
 
       const res = await wx.cloud.callFunction({
         name: 'getAvailableTechnicians',

@@ -165,7 +165,7 @@ export class ReservationService {
 		editingReservationId?: string
 	): Promise<{ success: boolean; data?: StaffAvailability[]; maleCount?: number; femaleCount?: number; message?: string }> {
 		try {
-			const projectDuration = parseProjectDuration(project) || 60;
+			const projectDuration = parseProjectDuration(project) || 90;
 			const currentReservationIds = editingReservationId ? [editingReservationId] : [];
 
 			const res = await wx.cloud.callFunction({
@@ -389,7 +389,7 @@ export class ReservationService {
 				.filter(item => item.staff && item.staff!.status === 'active');
 
 			// 获取可用技师
-			const projectDuration = parseProjectDuration(project) || 60;
+			const projectDuration = parseProjectDuration(project) || 90;
 			const technicianRes = await wx.cloud.callFunction({
 				name: 'getAvailableTechnicians',
 				data: {

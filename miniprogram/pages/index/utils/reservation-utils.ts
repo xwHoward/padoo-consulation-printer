@@ -81,7 +81,7 @@ export class ReservationUtils {
         const assignedInGroup = groupAssignedStaff.get(groupKey)!;
 
         // 规则3：一次性获取该时间段所有可用技师（含10分钟重叠容差检测）
-        const projectDuration = parseProjectDuration(reservation.project) || 60;
+        const projectDuration = parseProjectDuration(reservation.project) || 90;
         let availableTechnicians: StaffAvailability[] = [];
         try {
           const checkRes = await wx.cloud.callFunction({

@@ -36,7 +36,7 @@ export class ModalHandler {
       if (guestCount > 1) {
         await this.page.doMultiClockIn(startTimeDate, editId);
       } else {
-        const projectDuration = parseProjectDuration(consultationInfo.project) || 60;
+        const projectDuration = parseProjectDuration(consultationInfo.project) || 90;
         const extraTimeMinutes = (consultationInfo.extraTime || 0) * 30;
         const totalDuration = projectDuration + extraTimeMinutes + SPARE_TIME;
         const endTimeDate = new Date(startTimeDate.getTime() + totalDuration * 60 * 1000);

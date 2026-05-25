@@ -30,7 +30,13 @@ Page({
 		showSchedulePushModal: false,
 		pushStartDate: '',
 		pushEndDate: '',
-		pushLoading: false
+		pushLoading: false,
+		// 一键初始化排班相关
+		showInitScheduleModal: false,
+		initScheduleDaysIndex: 2,
+		initScheduleDaysOptions: [1, 3, 7, 14, 30],
+		initScheduleShiftIndex: 1,
+		initScheduleLoading: false
 	},
 
 	onShow() {
@@ -320,6 +326,88 @@ Page({
 		} catch (error) {
 			this.setData({ loading: false });
 			wx.showToast({ title: '操作失败', icon: 'none' });
+		}
+	},
+
+	// ========== 一键初始化排班 ==========
+	openInitScheduleModal() {
+		this.setData({ showInitScheduleModal: true });
+	},
+
+	onInitScheduleModalCancel() {
+		this.setData({
+			showInitScheduleModal: false,
+			initScheduleLoading: false
+		});
+	},
+
+	onInitScheduleDaysChange(e: WechatMiniprogram.CustomEvent) {
+		this.setData({ initScheduleDaysIndex: parseInt(e.detail.value) });
+	},
+
+	onInitScheduleShiftChange(e: WechatMiniprogram.CustomEvent) {
+		this.setData({ initScheduleShiftIndex: parseInt(e.detail.value) });
+	},
+
+	async onInitScheduleModalConfirm() {
+		const { initScheduleDaysOptions, initScheduleDaysIndex, initScheduleShiftIndex, today } = this.data;
+		const totalDays = initScheduleDaysOptions[initScheduleDaysIndex];
+		const shiftType = SHIFT_TYPES[initScheduleShiftIndex];
+
+		this.setData({ initScheduleLoading: true });
+
+		try {
+			const dateList: string[] = [];
+			const start = new Date(today);
+			for (let i = 0; i < totalDays; i++) {
+				dateList.push(formatDate(start));
+				start.setDate(start.getDate() + 1);
+			}
+			const endDate = dateList[dateList.length - 1];
+
+			const activeStaff = this.data.staffList.filter(s => s.status === 'active');
+
+			const _ = cloudDb.getCommand();
+			const existingSchedules = await cloudDb.find<ScheduleRecord>(Collections.SCHEDULE, {
+				date: _.gte(today).and(_.lte(endDate))
+			});
+
+			const existingKeys = new Set(existingSchedules.map(s => `${s.staffId}_${s.date}`));
+
+			let insertedCount = 0;
+			let skippedCount = 0;
+
+			for (const staff of activeStaff) {
+				for (const date of dateList) {
+					if (existingKeys.has(`${staff._id}_${date}`)) {
+						skippedCount++;
+						continue;
+					}
+
+					const ok = await cloudDb.insert<ScheduleRecord>(Collections.SCHEDULE, {
+						date,
+						staffId: staff._id,
+						shift: shiftType
+					});
+					if (ok) insertedCount++;
+				}
+			}
+
+			this.setData({
+				showInitScheduleModal: false,
+				initScheduleLoading: false
+			});
+
+			await this.initSchedule();
+
+			wx.showToast({
+				title: `新增${insertedCount}条，跳过${skippedCount}条`,
+				icon: 'success',
+				duration: 2500
+			});
+		} catch (error) {
+			this.setData({ initScheduleLoading: false });
+			wx.showToast({ title: '初始化失败', icon: 'none' });
 		}
 	},
 

@@ -11,6 +11,9 @@
       <view class="section-header">
         <view class="section-title">员工排班</view>
         <view class="today-text">当前日期: {{today}}</view>
+        <view class="push-schedule-btn" bindtap="openInitScheduleModal">
+          <view class="btn-text">一键初始化</view>
+        </view>
         <view class="push-schedule-btn" bindtap="openSchedulePushModal">
           <view class="btn-text">推送排班</view>
         </view>
@@ -146,6 +149,28 @@
         <view>禁用</view>
       </view>
     </view>
+  </view>
+</modal>
+<!-- 一键初始化排班弹窗 -->
+<modal show="{{showInitScheduleModal}}" title="一键初始化排班" bind:cancel="onInitScheduleModalCancel"
+  bind:confirm="onInitScheduleModalConfirm" loading="{{initScheduleLoading}}" loading-text="初始化中...">
+  <view class="form-item">
+    <view class="form-label">初始化天数</view>
+    <picker mode="selector" value="{{initScheduleDaysIndex}}" range="{{initScheduleDaysOptions}}"
+      bindchange="onInitScheduleDaysChange">
+      <view class="form-picker">{{initScheduleDaysOptions[initScheduleDaysIndex]}} 天</view>
+    </picker>
+    <view class="form-label" style="margin-left: auto">默认班次</view>
+    <picker mode="selector" value="{{initScheduleShiftIndex}}" range="{{shiftNames}}"
+      bindchange="onInitScheduleShiftChange">
+      <view class="form-picker">{{shiftNames[initScheduleShiftIndex]}}</view>
+    </picker>
+  </view>
+  <view class="push-hint">
+    <view>提示：</view>
+    <view>• 从今日起往后{{initScheduleDaysOptions[initScheduleDaysIndex]}}天</view>
+    <view>• 默认班次为{{shiftNames[initScheduleShiftIndex]}}</view>
+    <view>• 已有排班的日期不会被覆盖</view>
   </view>
 </modal>
 <!-- 推送排班弹窗 -->

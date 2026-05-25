@@ -105,7 +105,7 @@ Page({
 				editingItem: item,
 				formData: {
 					name: item.name,
-					duration: (item as Project).duration || 60,
+					duration: (item as Project).duration || 90,
 					price: (item as Project).price || 0,
 					commission: (item as Project).commission || 0,
 					effect: (item as EssentialOil).effect || '',
@@ -131,7 +131,7 @@ Page({
 	},
 
 	onDurationInput(e: WechatMiniprogram.CustomEvent) {
-		this.setData({ 'formData.duration': parseInt(e.detail.value) || 60 });
+		this.setData({ 'formData.duration': parseInt(e.detail.value) || 90 });
 	},
 
 	onPriceInput(e: WechatMiniprogram.CustomEvent) {
