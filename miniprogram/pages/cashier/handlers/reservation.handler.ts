@@ -394,8 +394,12 @@ export class ReservationHandler {
 	 */
 	onReserveGenderChange(e: WechatMiniprogram.CustomEvent): void {
 		this.page.setData({ 'reserveForm.gender': e.detail.value });
-		// 触发顾客匹配
 		this.page.searchCustomer();
+	}
+
+	onRenewalToggle(e: WechatMiniprogram.CustomEvent): void {
+		const isRenewal = (e.detail.value as string[]).length > 0;
+		this.page.setData({ 'reserveForm.isRenewal': isRenewal });
 	}
 
 	/**
@@ -461,6 +465,12 @@ export class ReservationHandler {
 
 			if (shouldPushNotification) {
 				await this.pushHandler.sendArrivalNotification(reservations);
+			}
+
+			for (const r of reservations) {
+				await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, r._id, {
+					isFulfilled: true
+				});
 			}
 
 			this.page.setData({ loading: false });
@@ -697,6 +707,7 @@ export class ReservationHandler {
 				requirementType: 'gender',
 				requiredMaleCount: male,
 				requiredFemaleCount: female,
+				isRenewal: reserveForm.isRenewal || false,
 				groupKey
 			};
 			const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
@@ -742,6 +753,7 @@ export class ReservationHandler {
 						requirementType: 'specific',
 						requiredMaleCount: 0,
 						requiredFemaleCount: 0,
+						isRenewal: reserveForm.isRenewal || false,
 						groupKey: originalGroupKey
 					};
 					const ok = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, newRecord);
@@ -774,6 +786,7 @@ export class ReservationHandler {
 					requirementType: 'specific',
 					requiredMaleCount: 0,
 					requiredFemaleCount: 0,
+					isRenewal: reserveForm.isRenewal || false,
 					groupKey: originalRecord?.groupKey || undefined
 				};
 				const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id, record);
@@ -840,6 +853,7 @@ export class ReservationHandler {
 					requirementType: 'specific',
 					requiredMaleCount: 0,
 					requiredFemaleCount: 0,
+					isRenewal: reserveForm.isRenewal || false,
 					groupKey
 				};
 				const insertResult = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
@@ -996,6 +1010,7 @@ export class ReservationHandler {
 					requirementType: 'gender',
 					requiredMaleCount: male,
 					requiredFemaleCount: female,
+					isRenewal: reserveForm.isRenewal || false,
 					groupKey
 				};
 				const insertResult = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);

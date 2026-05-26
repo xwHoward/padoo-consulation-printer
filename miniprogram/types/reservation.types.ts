@@ -22,6 +22,7 @@ export interface ReserveForm {
 	startTime: string;
 	technicianId: string;
 	technicianName: string;
+	isRenewal?: boolean;
 }
 
 /** 推送弹窗状态 */

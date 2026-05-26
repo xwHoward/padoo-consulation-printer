@@ -115,5 +115,11 @@
 								</view>
 						</view>
 				</view>
+		<view class="form-item renewal-item">
+			<label class="renewal-checkbox">
+				<checkbox checked="{{reserveForm.isRenewal}}" bindchange="onRenewalToggle" />
+				<view class="renewal-label">是否续约</view>
+			</label>
 		</view>
+</view>
 </modal>

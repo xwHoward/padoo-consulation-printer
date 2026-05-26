@@ -126,6 +126,8 @@ interface ReservationRecord extends BaseRecord {
   isClockIn?: boolean; // 点钟标记
   status: "active" | "cancelled" | 'arrived'; // 状态
   genderRequirement?: "male" | "female"; // 兼容旧数据
+  isRenewal?: boolean; // 是否续约预约
+  isFulfilled?: boolean; // 是否已履约到店
   
   // 新增字段 - 完整记录预约需求约束
   requirementType?: 'specific' | 'gender'; // 预约类型：指定技师/性别需求
@@ -195,6 +197,14 @@ interface MembershipUsageRecord extends BaseRecord {
   technician: string; // 技师
   room: string; // 房间
   consultationId: string; // 关联的咨询单ID
+}
+
+interface TechnicianWechatRecord extends BaseRecord {
+  technician: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  wechatId: string;
 }
 
 interface Project extends BaseRecord {
@@ -511,6 +521,24 @@ interface TechnicianSalary {
   workDays: number;
   offDays: number;
   leaveDays: number;
+  /** 绩效-回头率 */
+  returnRate?: number;
+  /** 绩效-加微信率 */
+  wechatRate?: number;
+  /** 绩效-续约成功数 */
+  renewalFulfilled?: number;
+  /** 绩效-次卡推销数 */
+  packageSales?: number;
+  /** 绩效-回头奖金 */
+  bonusReturn?: number;
+  /** 绩效-加微信奖金 */
+  bonusWechat?: number;
+  /** 绩效-次卡奖金 */
+  bonusPackage?: number;
+  /** 绩效-续约奖金 */
+  bonusRenewal?: number;
+  /** 绩效-奖金合计 */
+  totalPerformanceBonus?: number;
 }
 
 

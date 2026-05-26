@@ -346,6 +346,10 @@ Page({
         if (reservationHandler) reservationHandler.onReserveGenderChange(e);
     },
 
+    onRenewalToggle(e: WechatMiniprogram.CustomEvent) {
+        if (reservationHandler) reservationHandler.onRenewalToggle(e);
+    },
+
     async confirmReserve() {
         if (reservationHandler) await reservationHandler.confirmReserve();
     },

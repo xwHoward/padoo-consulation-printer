@@ -51,7 +51,8 @@ Page({
         expenseCategories: EXPENSE_CATEGORIES,
         salaryList: [] as TechnicianSalary[],
         totalExpense: 0,
-        totalSalary: 0
+        totalSalary: 0,
+        totalPerformanceBonus: 0
     },
 
     onLoad() {
@@ -495,10 +496,66 @@ Page({
 
         const totalSalary = salaryList.reduce((sum, s) => sum + s.totalSalary, 0);
 
+        const enrichedSalaryList = await this.enrichWithPerformance(salaryList);
+
+        const totalPerformanceBonus = enrichedSalaryList.reduce((sum, s) => sum + (s.totalPerformanceBonus || 0), 0);
+
         this.setData({
-            salaryList,
-            totalSalary
+            salaryList: enrichedSalaryList,
+            totalSalary,
+            totalPerformanceBonus
         });
+    },
+
+    async enrichWithPerformance(salaryList: TechnicianSalary[]): Promise<TechnicianSalary[]> {
+        try {
+            const { selectedYear, selectedMonth } = this.data.monthSelector;
+            const targetDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-15`;
+
+            const res = await wx.cloud.callFunction({
+                name: 'getHistoryData',
+                data: {
+                    action: 'getDailySummary',
+                    targetDate
+                }
+            });
+
+            if (!res.result || typeof res.result !== 'object') {
+                return salaryList;
+            }
+
+            const result = res.result as { code: number; data: { performanceMetrics?: { technicians: Record<string, any> } } };
+            if (result.code !== 0 || !result.data?.performanceMetrics?.technicians) {
+                return salaryList;
+            }
+
+            const perfTechs = result.data.performanceMetrics.technicians;
+
+            return salaryList.map(salary => {
+                const perf = perfTechs[ salary.technicianName ];
+                if (!perf) return salary;
+
+                return {
+                    ...salary,
+                    returnRate: perf.returnRate,
+                    returnOrders: perf.returnOrders,
+                    totalOrders: perf.totalOrders,
+                    wechatAdds: perf.wechatAdds,
+                    uniqueCustomers: perf.uniqueCustomers,
+                    wechatRate: perf.wechatRate,
+                    renewalFulfilled: perf.renewalFulfilled,
+                    packageSales: perf.packageSales,
+                    bonusReturn: perf.bonusReturn,
+                    bonusWechat: perf.bonusWechat,
+                    bonusPackage: perf.bonusPackage,
+                    bonusRenewal: perf.bonusRenewal,
+                    totalPerformanceBonus: perf.totalBonus
+                };
+            });
+        } catch (error) {
+            console.error('[StoreExpense] enrichWithPerformance 失败:', error);
+            return salaryList;
+        }
     },
 
     getCategoryName(category: ExpenseCategory): string {

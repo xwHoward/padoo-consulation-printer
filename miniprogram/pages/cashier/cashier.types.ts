@@ -27,6 +27,7 @@ export interface ReserveForm {
 	startTime: string;
 	technicianId: string;
 	technicianName: string;
+	isRenewal?: boolean;
 }
 
 export interface PushModalState {

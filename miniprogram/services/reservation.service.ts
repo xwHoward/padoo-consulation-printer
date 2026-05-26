@@ -24,6 +24,7 @@ export const DEFAULT_RESERVE_FORM: ReserveForm = {
 	startTime: '',
 	technicianId: '',
 	technicianName: '',
+	isRenewal: false,
 };
 
 /** 默认推送弹窗状态 */
@@ -116,6 +117,7 @@ export class ReservationService {
 			startTime: record.startTime,
 			technicianId: record.technicianId || '',
 			technicianName: record.technicianName || '',
+			isRenewal: record.isRenewal || false,
 		};
 	}
 
@@ -251,6 +253,7 @@ export class ReservationService {
 				endTime: endTime,
 				isClockIn: tech.isClockIn || false,
 				status: 'active',
+				isRenewal: form.isRenewal || false,
 			};
 
 			const insertResult = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
@@ -289,6 +292,7 @@ export class ReservationService {
 					isClockIn: false,
 					status: 'active',
 					genderRequirement: male > 0 ? 'male' : female > 0 ? 'female' : undefined,
+					isRenewal: form.isRenewal || false,
 				};
 			} else {
 				const firstTech = form.selectedTechnicians[0];
@@ -304,6 +308,7 @@ export class ReservationService {
 					endTime: endTime,
 					isClockIn: firstTech?.isClockIn || false,
 					status: 'active',
+					isRenewal: form.isRenewal || false,
 				};
 			}
 

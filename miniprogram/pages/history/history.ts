@@ -4,7 +4,6 @@ import {BODY_PART_MAP, COUPON_PLATFORM_NAMES, COUPON_PLATFORMS, GENDERS, MASSAGE
 import {loadingService, LockKeys} from '../../utils/loading-service';
 import {hasButtonPermission} from '../../utils/permission';
 import {formatTime, getCurrentDate, getPreviousDate, getNextDate} from "../../utils/util";
-import {formatMention} from '../../utils/wechat-work';
 
 // 扩展记录类型，添加折叠状态
 interface DisplayRecord extends ConsultationRecord {
@@ -17,6 +16,22 @@ interface DisplayRecord extends ConsultationRecord {
 interface DailyGroup {
   date: string;
   records: DisplayRecord[];
+}
+
+function visualWidth(s: string): number {
+  let w = 0;
+  for (const ch of s) {
+    w += ch.charCodeAt(0) > 127 ? 2 : 1;
+  }
+  return w;
+}
+
+function padVisual(s: string, targetWidth: number): string {
+  return s + ' '.repeat(Math.max(0, targetWidth - visualWidth(s)));
+}
+
+function buildTableRow(cols: string[], widths: number[], sep: string): string {
+  return sep + cols.map((c, i) => padVisual(c, widths[i])).join(sep) + sep;
 }
 
 const app = getApp<IAppOption>();
@@ -406,9 +421,10 @@ Page({
         return;
       }
 
-      const {technicianStats, monthlyScoreRanking} = res.result.data as {technicianStats: Record<string, TechnicianStats>; monthlyScoreRanking: MonthlyScoreRanking;} || {
+      const {technicianStats, monthlyScoreRanking, performanceMetrics} = res.result.data as {technicianStats: Record<string, TechnicianStats>; monthlyScoreRanking: MonthlyScoreRanking; performanceMetrics?: { technicians: Record<string, any> };} || {
         technicianStats: {},
-        monthlyScoreRanking: []
+        monthlyScoreRanking: {} as MonthlyScoreRanking,
+        performanceMetrics: undefined
       };
 
       if (Object.keys(technicianStats).length === 0) {
@@ -468,11 +484,26 @@ Page({
         summaryText += `\n${'='.repeat(20)}\n`;
         summaryText += `${ monthlyScoreRanking.period.month }月排名\n\n`;
 
+        const colWidths = [ 2, 1, 1, 1, 1, 1, 1];
+        const headers = ['代号', '卡', '点', '回', '微', '总'];
+
+        summaryText += buildTableRow(headers, colWidths, '┃') + '\n';
+
         monthlyScoreRanking.rankings.forEach((item) => {
-          const rankLabel = item.rank === 1 ? '第1名' : item.rank === 2 ? '第2名' : item.rank === 3 ? '第3名' : `第${ item.rank }名`;
-          summaryText += `  ${ rankLabel } ${ item.technician }: ${ item.totalScore }分`;
-          summaryText += ` (${ item.salesCount }次卡 | 点钟${ item.clockInCount }次)\n`;
+          const perf = (performanceMetrics && performanceMetrics.technicians) ? performanceMetrics.technicians[item.technician] : null;
+
+          const cells = [
+            item.technician,
+            String(item.salesCount),
+            String(item.clockInCount),
+            String(perf ? (perf.returnOrders || 0) : '-'),
+            String(perf ? (perf.wechatAdds || 0) : '-'),
+            String(item.totalScore),
+          ];
+
+          summaryText += buildTableRow(cells, colWidths, '┃') + '\n';
         });
+
       }
 
       this.setData({

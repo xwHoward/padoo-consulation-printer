@@ -700,6 +700,30 @@ page {
 			}
 		}
 	}
+
+	.renewal-item {
+		margin-top: 15px;
+		padding: 10px 15px;
+		background-color: @bg-color;
+		border-radius: 6px;
+
+		.renewal-checkbox {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			cursor: pointer;
+
+			checkbox {
+				transform: scale(1.1);
+			}
+
+			.renewal-label {
+				font-size: 14px;
+				color: @text-color;
+				font-weight: 500;
+			}
+		}
+	}
 }
 
 // 结算弹窗样式

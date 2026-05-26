@@ -33,7 +33,11 @@ Page({
     currentPage: 1,
     pageSize: 20,
     total: 0,
-    hasMore: true
+    hasMore: true,
+    showWechatAddModal: false,
+    selectedCustomerForWechat: null as CustomerRecord | null,
+    formWechatTechnician: '',
+    formWechatId: ''
   },
 
   onLoad() {
@@ -497,6 +501,90 @@ Page({
   onClearSearch() {
     this.setData({searchKeyword: ''});
     this.loadCustomerList(true);
+  },
+
+  showWechatModal(e: WechatMiniprogram.CustomEvent) {
+    const customer = e.currentTarget.dataset.customer as CustomerRecord;
+    const responsibleTech = customer.responsibleTechnician || '';
+    this.setData({
+      showWechatAddModal: true,
+      selectedCustomerForWechat: customer,
+      formWechatTechnician: responsibleTech,
+      formWechatId: ''
+    });
+  },
+
+  onWechatTechnicianSelect(e: WechatMiniprogram.CustomEvent) {
+    const technician = e.currentTarget.dataset.technician;
+    this.setData({formWechatTechnician: technician});
+  },
+
+  onWechatIdInput(e: WechatMiniprogram.CustomEvent) {
+    this.setData({formWechatId: e.detail.value});
+  },
+
+  onWechatModalCancel() {
+    this.setData({
+      showWechatAddModal: false,
+      selectedCustomerForWechat: null,
+      formWechatTechnician: '',
+      formWechatId: ''
+    });
+  },
+
+  async onWechatModalConfirm() {
+    const {selectedCustomerForWechat, formWechatTechnician, formWechatId} = this.data;
+
+    if (!selectedCustomerForWechat) {
+      wx.showToast({title: '顾客信息错误', icon: 'none'});
+      return;
+    }
+
+    if (!formWechatTechnician) {
+      wx.showToast({title: '请选择技师', icon: 'none'});
+      return;
+    }
+
+    if (!formWechatId.trim()) {
+      wx.showToast({title: '请输入顾客微信号', icon: 'none'});
+      return;
+    }
+
+    try {
+      this.setData({loading: true});
+
+      const existing = await cloudDb.find<TechnicianWechatRecord>(Collections.TECHNICIAN_WECHAT, {
+        technician: formWechatTechnician,
+        customerId: selectedCustomerForWechat._id
+      });
+
+      if (existing && existing.length > 0) {
+        this.setData({loading: false});
+        wx.showToast({title: '该技师已添加过该顾客微信', icon: 'none'});
+        return;
+      }
+
+      await cloudDb.insert<TechnicianWechatRecord>(Collections.TECHNICIAN_WECHAT, {
+        technician: formWechatTechnician,
+        customerId: selectedCustomerForWechat._id,
+        customerName: selectedCustomerForWechat.name,
+        customerPhone: selectedCustomerForWechat.phone,
+        wechatId: formWechatId.trim()
+      });
+
+      this.setData({
+        showWechatAddModal: false,
+        selectedCustomerForWechat: null,
+        formWechatTechnician: '',
+        formWechatId: '',
+        loading: false
+      });
+
+      wx.showToast({title: '添加成功', icon: 'success'});
+    } catch (error) {
+      this.setData({loading: false});
+      wx.showToast({title: '添加失败', icon: 'error'});
+    }
   },
 
   onLoadMore() {

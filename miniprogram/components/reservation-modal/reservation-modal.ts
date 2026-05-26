@@ -131,5 +131,10 @@ Component({
 		onClearCustomer() {
 			this.triggerEvent('clear-customer');
 		},
+
+		onRenewalToggle(e: WechatMiniprogram.CustomEvent) {
+			const isRenewal = (e.detail.value as string[]).length > 0;
+			this.triggerEvent('field-change', { field: 'isRenewal', value: isRenewal });
+		},
 	},
 });
