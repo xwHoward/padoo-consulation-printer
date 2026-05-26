@@ -18,7 +18,7 @@ export class ReservationHandler {
 
 	private calcTotalDuration(projectNames: string[]): number {
 		if (projectNames.length === 0) return 90;
-		const durations = projectNames.map(p => parseProjectDuration(p) || 60);
+		const durations = projectNames.map(p => parseProjectDuration(p) || 90);
 		const sorted = [...durations].sort((a, b) => b - a);
 		return sorted.reduce((sum, d) => sum + d + 20, 0) - 20;
 	}
@@ -156,7 +156,7 @@ export class ReservationHandler {
 						customerName: record.customerName,
 						gender: record.gender,
 						project: record.project,
-						projects: record.project ? [record.project] : [],
+						projects: record.project ? record.project.split('&') : [],
 						phone: record.phone,
 						requirementType,
 						selectedTechnicians,
@@ -668,6 +668,7 @@ export class ReservationHandler {
 		const endH = Math.floor(endTotal / 60);
 		const endM = endTotal % 60;
 		const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+		const projectStr = resolvedProjects.join('&');
 
 		let record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>;
 
@@ -685,7 +686,7 @@ export class ReservationHandler {
 				customerName: reserveForm.customerName || '',
 				gender: reserveForm.gender,
 				phone: reserveForm.phone,
-				project: reserveForm.project || '待定',
+				project: projectStr,
 				technicianId: '',
 				technicianName: '',
 				startTime: reserveForm.startTime,
@@ -731,7 +732,7 @@ export class ReservationHandler {
 						customerName: reserveForm.customerName || '',
 						gender: reserveForm.gender,
 						phone: reserveForm.phone,
-						project: reserveForm.project || '待定',
+						project: projectStr,
 						technicianId: tech._id,
 						technicianName: tech.name,
 						startTime: reserveForm.startTime,
@@ -763,7 +764,7 @@ export class ReservationHandler {
 					customerName: reserveForm.customerName || '',
 					gender: reserveForm.gender,
 					phone: reserveForm.phone,
-					project: reserveForm.project || '待定',
+					project: projectStr,
 					technicianId: firstTech?._id || '',
 					technicianName: firstTech?.name || '',
 					startTime: reserveForm.startTime,
@@ -801,6 +802,7 @@ export class ReservationHandler {
 		const resolvedProjects = projectNames.length > 0 ? projectNames : ['待定'];
 		const durations = resolvedProjects.map(p => ({ name: p, dur: parseProjectDuration(p) || 60 }));
 		durations.sort((a, b) => b.dur - a.dur);
+		const projectStr = resolvedProjects.join('&');
 
 		let successCount = 0;
 		const expectedCount = technicians.length * durations.length;
@@ -828,7 +830,7 @@ export class ReservationHandler {
 					customerName: reserveForm.customerName || '',
 					gender: reserveForm.gender,
 					phone: reserveForm.phone,
-					project: d.name,
+					project: projectStr,
 					technicianId: tech._id,
 					technicianName: tech.name,
 					startTime: cStartTime,
@@ -868,6 +870,7 @@ export class ReservationHandler {
 		const durations = resolvedProjects.map(p => ({ name: p, dur: parseProjectDuration(p) || 60 }));
 		durations.sort((a, b) => b.dur - a.dur);
 		const totalDuration = this.calcTotalDuration(resolvedProjects);
+		const projectStr = resolvedProjects.join('&');
 
 		// 获取轮牌数据
 		const rotationData = await app.getRotationQueue(reserveForm.date);
@@ -982,7 +985,7 @@ export class ReservationHandler {
 					customerName: reserveForm.customerName || '',
 					gender: reserveForm.gender,
 					phone: reserveForm.phone,
-					project: d.name,
+					project: projectStr,
 					technicianId: tech._id,
 					technicianName: tech.name,
 					startTime: cStartTime,

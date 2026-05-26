@@ -36,7 +36,7 @@ function isToday(date) {
 
 function parseProjectDuration(project) {
   const match = project.match(/(\d+)min/);
-  return match ? parseInt(match[ 1 ], 10) : 60;
+  return match ? parseInt(match[ 1 ], 10) : 90;
 }
 
 /**
