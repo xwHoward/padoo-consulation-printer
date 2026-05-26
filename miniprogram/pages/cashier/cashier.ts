@@ -207,11 +207,6 @@ Page({
     },
 
     // ========== 日期选择 ==========
-    async onDateChange(e: WechatMiniprogram.CustomEvent) {
-        const date = e.detail.date;
-        this.setData({ selectedDate: date });
-    },
-
     onDatePickerChange(e: WechatMiniprogram.CustomEvent) {
         const date = e.detail.date;
         this.setData({ selectedDate: date });
@@ -309,25 +304,7 @@ Page({
             errorText: '调整失败'
         });
     },
-
-    // ========== 手动重排预约 ==========
-    async rearrangeReservations() {
-        const { selectedDate } = this.data;
-        if (!selectedDate) return;
-
-        if (reservationHandler) {
-            await loadingService.withLoading(this, async () => {
-                await reservationHandler!.triggerRearrange(selectedDate);
-                await this.loadTimelineData();
-                wx.showToast({ title: '重排完成', icon: 'success' });
-            }, {
-                loadingText: '重排中...',
-                lockKey: LockKeys.ADJUST_ROTATION,
-                errorText: '重排失败'
-            });
-        }
-    },
-
+    
     // ========== 预约相关（委托给 ReservationHandler） ==========
     async openReserveModal() {
         if (reservationHandler) await reservationHandler.openReserveModal();
@@ -359,10 +336,6 @@ Page({
 
     selectReserveTechnician(e: WechatMiniprogram.CustomEvent) {
         if (reservationHandler) reservationHandler.selectReserveTechnician(e);
-    },
-
-    toggleReserveClockIn(e: WechatMiniprogram.CustomEvent) {
-        if (reservationHandler) reservationHandler.toggleReserveClockIn(e);
     },
 
     async selectReserveProject(e: WechatMiniprogram.CustomEvent) {
@@ -449,10 +422,6 @@ Page({
 
     onPaymentCouponCodeInput(e: WechatMiniprogram.CustomEvent) {
         if (settlementHandler) settlementHandler.onPaymentCouponCodeInput(e);
-    },
-
-    onCouponCodeInput(e: WechatMiniprogram.CustomEvent) {
-        if (settlementHandler) settlementHandler.onCouponCodeInput(e);
     },
 
     async confirmSettlement() {
@@ -554,19 +523,10 @@ Page({
         });
     },
 
-    stopBubble() { },
-
     // 跳转到主页
     goToHome() {
         wx.navigateTo({
             url: "/pages/store-config/store-config",
-        });
-    },
-
-    // 跳转到抽奖页面
-    goToLottery() {
-        wx.navigateTo({
-            url: "/pages/lottery/lottery",
         });
     },
 

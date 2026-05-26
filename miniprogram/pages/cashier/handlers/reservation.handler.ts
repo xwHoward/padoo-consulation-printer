@@ -374,27 +374,6 @@ export class ReservationHandler {
 	}
 
 	/**
-	 * 切换点钟状态
-	 */
-	toggleReserveClockIn(e: WechatMiniprogram.CustomEvent): void {
-		const { _id } = e.detail;
-		const selectedTechnicians = [...this.page.data.reserveForm.selectedTechnicians];
-		const tech = selectedTechnicians.find(t => t._id === _id);
-		if (tech) {
-			tech.isClockIn = !tech.isClockIn;
-			this.page.setData({ 'reserveForm.selectedTechnicians': selectedTechnicians });
-		}
-
-		const staffAvailability = this.page.data.staffAvailability.map(staff => {
-			if (staff._id === _id) {
-				return { ...staff, isClockIn: !staff.isClockIn };
-			}
-			return staff;
-		});
-		this.page.setData({ staffAvailability });
-	}
-
-	/**
 	 * 选择项目
 	 */
 	async selectReserveProject(e: WechatMiniprogram.CustomEvent): Promise<void> {

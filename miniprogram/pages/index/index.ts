@@ -586,55 +586,6 @@ Page({
     });
   },
 
-  // 跳转到门店配置页面
-  goToStoreConfig() {
-    wx.navigateTo({
-      url: "/pages/store-config/store-config",
-    });
-  },
-
-  // 保存编辑（不复制报钟信息）
-  async saveEdit() {
-    const { consultationInfo, editId } = this.data;
-
-    if (!consultationInfo.gender) {
-      wx.showToast({ title: "请选择称呼", icon: "none" });
-      return;
-    }
-    if (!consultationInfo.project) {
-      wx.showToast({ title: "请选择项目", icon: "none" });
-      return;
-    }
-    if (!consultationInfo.technician) {
-      wx.showToast({ title: "请选择技师", icon: "none" });
-      return;
-    }
-    if (!consultationInfo.room) {
-      wx.showToast({ title: "请选择房间", icon: "none" });
-      return;
-    }
-
-    const success = await this.saveConsultation(consultationInfo, editId);
-
-    if (success) {
-      wx.showToast({
-        title: "保存成功",
-        icon: "success",
-        success: () => {
-          // 延迟返回，让用户看到提示
-          setTimeout(() => {
-            wx.navigateBack();
-          }, 1000);
-        }
-      });
-    } else {
-      wx.showToast({
-        title: "保存失败",
-        icon: "error"
-      });
-    }
-  },
-
   // 时间选择器确认
   onTimePickerConfirm() {
     this.modalHandler?.onTimePickerConfirm();
