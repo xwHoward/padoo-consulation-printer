@@ -450,6 +450,49 @@ Page({
         if (pushHandler) pushHandler.openRotationPushModal();
     },
 
+    async copyTechnicianSlot(e: WechatMiniprogram.CustomEvent) {
+        const { name, slots } = e.currentTarget.dataset;
+if(slots === '已满'){
+        wx.setClipboardData({
+            data: `您好，${name}老师今日预约已满，无法预约了哦`,
+            success: () => {
+                wx.showToast({
+                    title: '已复制到剪贴板',
+                    icon: 'success',
+                    duration: 2000
+                });
+            },
+            fail: () => {
+                wx.showToast({
+                    title: '复制失败',
+                    icon: 'error',
+                    duration: 2000
+                });
+            }
+        });
+        return;
+}
+        const message = `您好，目前${name}老师可预约时段为${slots}哦，您可以告诉小趴到店时间，小趴给您保留预约哦~`;
+
+        wx.setClipboardData({
+            data: message,
+            success: () => {
+                wx.showToast({
+                    title: '已复制到剪贴板',
+                    icon: 'success',
+                    duration: 2000
+                });
+            },
+            fail: () => {
+                wx.showToast({
+                    title: '复制失败',
+                    icon: 'error',
+                    duration: 2000
+                });
+            }
+        });
+    },
+
     async resetRotation() {
         const { selectedDate } = this.data;
         if (!selectedDate) return;

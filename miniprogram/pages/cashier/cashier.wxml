@@ -28,7 +28,7 @@
         <!-- 员工排钟表 -->
         <view class="section timeline-section">
             <view class="section-header">
-                <view class="section-title">排钟进度</view>
+                <view class="section-title">排钟</view>
                 <!-- 日期快速导航 -->
                 <date-picker initialDate="{{dateSelector.selectedDate}}" bind:change="onDatePickerChange" />
                 <view class="reserve-btn" wx:if="{{canCreateReservation}}" bindtap="openReserveModal">
@@ -42,7 +42,7 @@
         <!-- 快速预约 -->
         <view class="section quick-reservation-section">
             <view class="section-header">
-                <view class="section-title">快速预约</view>
+                <view class="section-title">预约</view>
             </view>
             <!-- 技师数量计数器 -->
             <view class="quick-reservation-counters">
@@ -93,27 +93,10 @@
                 {{quickReservationSlots.emptyReason || '暂无可约时段'}}
             </view>
         </view>
-        <!-- 房间状态 -->
-        <view class="section">
-            <view class="section-title">房间状态</view>
-            <view class="room-grid">
-                <view class="room-item {{item.isOccupied ? 'occupied' : 'empty'}}" wx:for="{{rooms}}" wx:key="name">
-                    <view class="room-name">{{item.name}}</view>
-                    <view class="room-detail" wx:if="{{item.isOccupied}}">
-                        <view class="occupied-record" wx:for="{{item.occupiedRecords}}" wx:for-item="record"
-                            wx:key="endTime">
-                            <view class="customer-tag">{{record.customerName}}</view>
-                            <view class="staff-tag">{{record.technician}}</view>
-                            <view class="time-tag">{{record.endTime}}下</view>
-                        </view>
-                    </view>
-                </view>
-            </view>
-        </view>
         <!-- 员工轮牌 -->
         <view class="section">
             <view class="section-header">
-                <view class="section-title">今日轮牌</view>
+                <view class="section-title">轮牌</view>
                 <view class="push-rotation-btn" bindtap="resetRotation" wx:if="{{canPushRotation}}">
                     重置
                 </view>
@@ -135,6 +118,9 @@
                         <view class="available-slots" wx:if="{{item.availableSlots}}">
                             <view class="slots-label">可约:</view>
                             <view class="slots-time">{{item.availableSlots}}</view>
+                            <view class="slots-copy-btn" bindtap="copyTechnicianSlot" data-name="{{item.name}}" data-slots="{{item.availableSlots}}">
+                                复制
+                            </view>
                         </view>
                     </view>
                     <view class="action-btns" wx:if="{{canPushRotation}}">
@@ -150,6 +136,23 @@
                 </view>
             </view>
             <view class="empty-hint" wx:else>今日暂无上班排班</view>
+        </view>
+                <!-- 房间状态 -->
+        <view class="section">
+            <view class="section-title">房间</view>
+            <view class="room-grid">
+                <view class="room-item {{item.isOccupied ? 'occupied' : 'empty'}}" wx:for="{{rooms}}" wx:key="name">
+                    <view class="room-name">{{item.name}}</view>
+                    <view class="room-detail" wx:if="{{item.isOccupied}}">
+                        <view class="occupied-record" wx:for="{{item.occupiedRecords}}" wx:for-item="record"
+                            wx:key="endTime">
+                            <view class="customer-tag">{{record.customerName}}</view>
+                            <view class="staff-tag">{{record.technician}}</view>
+                            <view class="time-tag">{{record.endTime}}下</view>
+                        </view>
+                    </view>
+                </view>
+            </view>
         </view>
     </view>
 </scroll-view>

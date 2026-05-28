@@ -206,26 +206,23 @@ function calculateAvailableSlotsText(staffConsultations, staffReservations, shif
         .filter(r => r.startTime && r.endTime && r.startTime < shiftEnd && r.endTime > shiftStart)
         .sort((a, b) => a.startTime.localeCompare(b.startTime))
 
-    // 计算搜索起始时间（与前端逻辑一致：向上取整到下一个半小时）
+    // 计算搜索起始时间（向上取整到下一个5分钟）
     let startTime = shiftStart
     if (isToday) {
         const shiftStartHour = parseInt(shiftStart.substring(0, 2))
         const shiftStartMinute = parseInt(shiftStart.substring(3))
         if (currentHour > shiftStartHour || (currentHour === shiftStartHour && currentMinute >= shiftStartMinute)) {
-            const nextMinute = currentMinute < 30 ? 30 : 60
+            const nextMinute = Math.ceil(currentMinute / 5) * 5
             const nextHour = nextMinute === 60 ? currentHour + 1 : currentHour
-            if (nextMinute === 60) {
-                startTime = `${String(nextHour).padStart(2, '0')}:00`
-            } else {
-                startTime = `${String(nextHour).padStart(2, '0')}:${String(nextMinute).padStart(2, '0')}`
-            }
+            const displayMinute = nextMinute === 60 ? 0 : nextMinute
+            startTime = `${String(nextHour).padStart(2, '0')}:${String(displayMinute).padStart(2, '0')}`
         }
     }
 
     if (occupiedSlots.length === 0) {
         if (startTime >= shiftEnd) return '已满'
         const duration = parseTimeToMinutes(shiftEnd) - parseTimeToMinutes(startTime)
-        return `${startTime}-${shiftEnd} (${duration}分)`
+        return `${startTime}-${shiftEnd} (${duration}分钟)`
     }
 
     const availableSlots = []
@@ -242,7 +239,7 @@ function calculateAvailableSlotsText(staffConsultations, staffReservations, shif
 
         const gap = parseTimeToMinutes(actualEnd) - parseTimeToMinutes(actualStart)
         if (gap >= 60) {
-            availableSlots.push(`${actualStart}-${actualEnd} (${gap}分)`)
+            availableSlots.push(`${actualStart}-${actualEnd} (${gap}分钟)`)
         }
     }
 
@@ -365,7 +362,7 @@ function buildQuickReservationSlots(rotationItems, allConsultations, allReservat
             staffList.forEach(staff => {
                 const slots = staffAvailableSlots.get(staff._id) || []
                 slots.forEach(slot => {
-                    const slotText = `${formatMinutesToTime(slot.start)}-${formatMinutesToTime(slot.end)} (${slot.duration}分)`
+                    const slotText = `${formatMinutesToTime(slot.start)}-${formatMinutesToTime(slot.end)} (${slot.duration}分钟)`
                     if (!slotMap.has(slotText)) slotMap.set(slotText, [])
                     slotMap.get(slotText).push(staff.name)
                 })
@@ -387,7 +384,7 @@ function buildQuickReservationSlots(rotationItems, allConsultations, allReservat
                         const overlapEnd = Math.min(slot1.end, slot2.end)
                         const overlapDuration = overlapEnd - overlapStart
                         if (overlapDuration >= 60) {
-                            const slotText = `${formatMinutesToTime(overlapStart)}-${formatMinutesToTime(overlapEnd)} (${overlapDuration}分)`
+                            const slotText = `${formatMinutesToTime(overlapStart)}-${formatMinutesToTime(overlapEnd)} (${overlapDuration}分钟)`
                             if (!commonSlotsMap.has(slotText)) {
                                 commonSlotsMap.set(slotText, [staffList[i].name, staffList[j].name])
                             }
@@ -738,7 +735,7 @@ async function getQuickSlots(date, maleCount, femaleCount) {
 
         // 转换为 QuickReservation 格式，按性别分列技师名字（只收集用户实际需要的性别）
         const slots = combinedSlots.map(slot => {
-            const timeText = `${formatMinutesToTime(slot.start)}-${formatMinutesToTime(slot.end)} (${slot.duration}分)`
+            const timeText = `${formatMinutesToTime(slot.start)}-${formatMinutesToTime(slot.end)} (${slot.duration}分钟)`
             const maleStaffNames = []
             const femaleStaffNames = []
             if (maleCount > 0) {
