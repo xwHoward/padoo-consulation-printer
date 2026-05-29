@@ -32,7 +32,8 @@ Component({
 			try {
 				const app = getApp<IAppOption>();
 				const allProjects = await app.getProjects();
-				const normalProjects = allProjects.filter((p) => p.status === 'normal' || !p.status);
+				//  && !p.name.includes('[加]')
+				const normalProjects = allProjects.filter((p) => p.status === 'normal');
 				const projectNames = normalProjects.map((p) => p.name);
 				this.setData({projects: projectNames});
 			} catch (error) {

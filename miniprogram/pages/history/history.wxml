@@ -88,8 +88,8 @@
                   <button class="action-btn early-finish-btn" bindtap="onEarlyFinish" data-record="{{record}}" wx:if="{{record.isInProgress && !record.isVoided}}">
                     提前下钟
                   </button>
-                  <button class="action-btn extra-btn {{record.extraTime ? 'active' : ''}}" bindtap="onExtraTime" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
-                    加钟{{record.extraTime ? '(' + record.extraTime + ')' : ''}}
+                  <button class="action-btn extra-btn {{record.isExtraTime ? 'active' : ''}}" bindtap="onExtraTime" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
+                    加钟{{record.isExtraTime ? '✓' : ''}}
                   </button>
                   <button class="action-btn guasha-btn {{record.guasha ? 'active' : ''}}" bindtap="onGuasha" data-record="{{record}}" data-date="{{group.date}}" wx:if="{{!record.isVoided}}">
                     刮痧{{record.guasha ? '(1)' : '(0)'}}
@@ -111,18 +111,32 @@
     </view>
   </view>
 </scroll-view>
-<!-- 数字输入弹窗 -->
-<modal show="{{numberInputModal.show}}" title="设置{{numberInputModal.title}}数" size="small" bind:cancel="onModalCancel" bind:confirm="onModalConfirm">
-  <view class="number-input-wrapper">
-    <view class="step-btn minus-btn {{numberInputModal.inputValue <= 0 ? 'disabled' : ''}}" bindtap="onStepMinus">
-      <text>-</text>
+<!-- 加钟弹窗 -->
+<modal show="{{extraTimeModal.show}}" title="加钟" bind:cancel="closeExtraTimeModal" bind:confirm="confirmExtraTime" confirm-text="确认加钟">
+  <view class="extra-time-modal">
+    <view class="extra-time-section">
+      <view class="extra-time-label">选择项目</view>
+      <view class="extra-time-project-list">
+        <view class="extra-time-project-item {{extraTimeModal.selectedProject === item._id ? 'selected' : ''}}"
+          wx:for="{{extraTimeModal.projects}}" wx:key="_id" bindtap="selectExtraTimeProject" data-id="{{item._id}}"
+          data-name="{{item.name}}">
+          <view class="extra-time-project-check">
+            <view class="extra-time-checkbox {{extraTimeModal.selectedProject === item._id ? 'checked' : ''}}"></view>
+          </view>
+          <view class="extra-time-project-name">{{item.name}}</view>
+        </view>
+      </view>
+      <view class="extra-time-empty" wx:if="{{extraTimeModal.projects.length === 0}}">暂无可加钟项目</view>
     </view>
-    <input class="number-input" type="number" value="{{numberInputModal.inputValue}}" bindinput="onNumberInput" />
-    <view class="step-btn plus-btn" bindtap="onStepPlus">
-      <text>+</text>
+    <view class="extra-time-section">
+      <view class="extra-time-label">加钟数量</view>
+      <view class="extra-time-quantity">
+        <view class="extra-time-qty-btn {{extraTimeModal.quantity <= 1 ? 'disabled' : ''}}" bindtap="onExtraTimeQuantityChange" data-action="decrease">-</view>
+        <view class="extra-time-qty-value">{{extraTimeModal.quantity}}</view>
+        <view class="extra-time-qty-btn" bindtap="onExtraTimeQuantityChange" data-action="increase">+</view>
+      </view>
     </view>
   </view>
-  <view class="modal-unit">单位：半小时</view>
 </modal>
 <!-- 提前下钟确认弹窗 -->
 <modal show="{{earlyFinishModal.show}}" title="提前下钟" bind:cancel="onEarlyFinishModalCancel" bind:confirm="onEarlyFinishModalConfirm">

@@ -7,21 +7,13 @@ cloud.init({
 
 const db = cloud.database();
 
-const OVERTIME_DURATION_MAP = {
-  30: 0.5,
-  45: 0.5,
-  60: 1,
-  70: 1,
-  80: 1,
-  90: 1.5,
-  120: 2
-};
-
+/**
+ * 计算加班时间
+ * @param {*} duration 咨询时间（分钟）
+ * @returns 加班个数（单位：半小时）  
+ */
 function calculateOvertime(duration) {
-  if (OVERTIME_DURATION_MAP[duration] !== undefined) {
-    return OVERTIME_DURATION_MAP[duration];
-  }
-  return Math.round(duration / 60 * 10) / 10;
+  return Math.floor(duration / 30);
 }
 
 function isToday(date) {
@@ -253,7 +245,7 @@ exports.main = async (event) => {
       }
 
       const [recordsResult, schedulesResult, staffResult] = await Promise.all([
-        db.collection('consultation_records').where({ date: targetDate }).field({ isVoided: true, technician: true, project: true, isClockIn: true, extraTime: true, guasha: true, overtime: true, startTime: true, endTime: true }).limit(1000).get(),
+        db.collection('consultation_records').where({ date: targetDate }).field({ isVoided: true, technician: true, project: true, isClockIn: true, extraTime: true, isExtraTime: true, guasha: true, overtime: true, startTime: true, endTime: true }).limit(1000).get(),
         db.collection('schedule').where({ date: targetDate }).field({ staffId: true, shift: true }).limit(1000).get(),
         db.collection('staff').where({ status: 'active' }).field({ name: true }).limit(1000).get()
       ]);
@@ -308,6 +300,10 @@ exports.main = async (event) => {
           if (record.extraTime && record.extraTime > 0) {
             technicianStats[technician].extraTimeCount++;
             technicianStats[technician].extraTimeTotal += record.extraTime;
+          }
+
+          if (record.isExtraTime) {
+            technicianStats[technician].extraTimeCount++;
           }
 
           if (record.guasha) {
@@ -371,8 +367,8 @@ exports.main = async (event) => {
           if (times.lastEndMins > boundary.end) {
             overtimeMins += times.lastEndMins - boundary.end;
           }
-
           technicianStats[technician].overtime = calculateOvertime(overtimeMins);
+          console.log(technician, overtimeMins, technicianStats[technician].overtime)
         }
       }
 

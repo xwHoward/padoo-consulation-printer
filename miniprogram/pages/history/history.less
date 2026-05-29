@@ -369,67 +369,127 @@
   margin-bottom: 15px;
 }
 
-.number-input-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
+/* 加钟弹窗 */
+.extra-time-modal {
+  .extra-time-section {
+    margin-bottom: 16px;
 
-.step-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 300;
-  transition: all 0.2s ease;
-}
+    .extra-time-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: @text-color;
+      margin-bottom: 8px;
+    }
+  }
 
-.minus-btn {
-  background-color: @bg-color-light;
-  color: @text-color;
-  border: 1px solid @border-color;
-}
+  .extra-time-project-list {
+    max-height: 240px;
+    overflow-y: auto;
 
-.minus-btn:active {
-  background-color: @border-color;
-}
+    .extra-time-project-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      margin-bottom: 4px;
+      background-color: @bg-color-light;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
 
-.minus-btn.disabled {
-  opacity: 0.4;
-  pointer-events: none;
-}
+      &.selected {
+        border-color: @primary-color;
+        background-color: rgba(255, 107, 0, 0.05);
+      }
 
-.plus-btn {
-  background-color: @primary-color;
-  color: #fff;
-  border: none;
-}
+      &:active {
+        opacity: 0.8;
+      }
 
-.plus-btn:active {
-  background-color: #E05D00;
-}
+      .extra-time-project-check {
+        flex-shrink: 0;
 
-.number-input {
-  width: 80px;
-  height: 40px;
-  text-align: center;
-  font-size: 24px;
-  font-weight: 600;
-  color: @text-color;
-  border: 1px solid @border-color;
-  border-radius: 6px;
-  background-color: @bg-color;
-}
+        .extra-time-checkbox {
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          border: 2px solid @border-color;
+          box-sizing: border-box;
+          transition: all 0.2s;
 
-.modal-unit {
-  text-align: center;
-  font-size: 12px;
-  color: @text-color-secondary;
-  margin-top: 8px;
+          &.checked {
+            border-color: @primary-color;
+            background-color: @primary-color;
+            position: relative;
+
+            &::after {
+              content: '';
+              position: absolute;
+              top: 2px;
+              left: 4px;
+              width: 4px;
+              height: 8px;
+              border: 2px solid #fff;
+              border-top: none;
+              border-left: none;
+              transform: rotate(45deg);
+            }
+          }
+        }
+      }
+
+      .extra-time-project-name {
+        font-size: 14px;
+        color: @text-color;
+      }
+    }
+  }
+
+  .extra-time-empty {
+    font-size: 13px;
+    color: @text-color-secondary;
+    text-align: center;
+    padding: 16px;
+  }
+
+  .extra-time-quantity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .extra-time-qty-btn {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 600;
+      color: @primary-color;
+      background-color: @bg-color-light;
+      border: 1px solid @border-color;
+      border-radius: 8px;
+      cursor: pointer;
+
+      &.disabled {
+        opacity: 0.3;
+        pointer-events: none;
+      }
+
+      &:active {
+        background-color: rgba(255, 107, 0, 0.1);
+      }
+    }
+
+    .extra-time-qty-value {
+      min-width: 40px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      color: @text-color;
+    }
+  }
 }
 
 /* 结算信息区域 */

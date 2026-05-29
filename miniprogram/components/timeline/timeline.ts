@@ -45,6 +45,7 @@ interface TimeBlock {
 	isSettled: boolean
 	isInProgress: boolean
 	isClockIn: boolean
+	isExtraTime: boolean
 	extraTime: number
 	technician: string
 	requirement: string;
@@ -253,6 +254,7 @@ Component({
 							isInProgress,
 							isClockIn: r.isClockIn || false,
 							extraTime: (r as ConsultationRecord).extraTime || 0,
+							isExtraTime: (r as ConsultationRecord).isExtraTime || false,
 							technician: r.technician!,
 							requirement: parseGenderRequirement(r as Update<ReservationRecord>),
 							rearrangeConflict: (r as Update<ReservationRecord>).rearrangeConflict || false,

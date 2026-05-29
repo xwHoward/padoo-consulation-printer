@@ -3,13 +3,14 @@ import { checkLogin } from '../../utils/auth';
 import { loadingService, LockKeys } from '../../utils/loading-service';
 import { hasButtonPermission, requirePagePermission } from '../../utils/permission';
 import { COUPON_PLATFORM_NAMES } from '../../utils/constants';
-import { formatDate, getCurrentDate } from '../../utils/util';
+import { calculateProjectEndTime, formatDate, formatTime, getCurrentDate, parseProjectDuration } from '../../utils/util';
 import type { CashierPage, PaymentMethodItem } from './cashier.types';
 import { ReservationHandler } from './handlers/reservation.handler';
 import { SettlementHandler } from './handlers/settlement.handler';
 import { PushHandler } from './handlers/push.handler';
 import { CashierDataLoaderService } from './services/data-loader.service';
 import { searchCustomer, applyMatchedCustomer, clearMatchedCustomer } from './utils/customer-match';
+import { cloudDb, Collections } from '../../utils/cloud-db';
 
 const app = getApp<IAppOption>();
 
@@ -118,7 +119,16 @@ Page({
             slots: [] as QuickReservation[],
             emptyReason: ''
         },
-        quickReservationLoading: false
+        quickReservationLoading: false,
+        // 加钟弹窗
+        extraTimeModal: {
+            show: false,
+            sourceRecordId: '' as string,
+            projects: [] as Project[],
+            selectedProject: '' as string,
+            selectedProjectName: '' as string,
+            quantity: 1
+        }
     },
 
     // ========== 生命周期 ==========
@@ -370,6 +380,109 @@ Page({
         if (reservationHandler) await reservationHandler.handleEarlyFinish(recordId);
     },
 
+    // ========== 加钟 ==========
+    async openExtraTimeModal(recordId: string) {
+        const projects = (this.data.projects || []).filter((p: Project) => p.name && p.name.includes('[加]'));
+        this.setData({
+            extraTimeModal: {
+                show: true,
+                sourceRecordId: recordId,
+                projects,
+                selectedProject: '',
+                selectedProjectName: '',
+                quantity: 1
+            }
+        });
+    },
+
+    closeExtraTimeModal() {
+        this.setData({
+            'extraTimeModal.show': false
+        });
+    },
+
+    selectExtraTimeProject(e: WechatMiniprogram.CustomEvent) {
+        const { id, name } = e.currentTarget.dataset;
+        this.setData({
+            'extraTimeModal.selectedProject': id,
+            'extraTimeModal.selectedProjectName': name
+        });
+    },
+
+    onExtraTimeQuantityChange(e: WechatMiniprogram.CustomEvent) {
+        const { action } = e.currentTarget.dataset;
+        const current = this.data.extraTimeModal.quantity;
+        if (action === 'increase') {
+            this.setData({ 'extraTimeModal.quantity': current + 1 });
+        } else if (action === 'decrease' && current > 1) {
+            this.setData({ 'extraTimeModal.quantity': current - 1 });
+        }
+    },
+
+    async confirmExtraTime() {
+        const { sourceRecordId, selectedProject, selectedProjectName, quantity } = this.data.extraTimeModal;
+        if (!selectedProject) {
+            wx.showToast({ title: '请选择一个加钟项目', icon: 'none' });
+            return;
+        }
+
+        this.setData({ loading: true, loadingText: '加钟中...' });
+        try {
+            const record = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, sourceRecordId);
+            if (!record) {
+                wx.showToast({ title: '未找到原始单据', icon: 'error' });
+                return;
+            }
+
+            const [endH, endM] = record.endTime.split(':').map(Number);
+            const [year, month, day] = record.date.split('-').map(Number);
+            const startTimeDate = new Date(year, month - 1, day, endH, endM, 0, 0);
+            const startTime = formatTime(startTimeDate, false);
+
+            const duration = parseProjectDuration(selectedProjectName) || 90;
+            const totalDuration = duration * quantity;
+            const endTimeDate = new Date(startTimeDate.getTime() + totalDuration * 60 * 1000);
+            const endTime = formatTime(endTimeDate, false);
+
+            const extraRecord: Add<ConsultationRecord> = {
+                surname: record.surname,
+                gender: record.gender,
+                project: selectedProjectName,
+                technician: record.technician,
+                room: record.room,
+                massageStrength: record.massageStrength,
+                essentialOil: record.essentialOil,
+                selectedParts: record.selectedParts || {},
+                isClockIn: false,
+                remarks: record.remarks || '',
+                phone: record.phone || '',
+                couponCode: '',
+                couponPlatform: record.couponPlatform || 'meituan',
+                extraTime: 0,
+                date: record.date,
+                startTime,
+                endTime,
+                isVoided: false,
+                overtime: 0,
+                guasha: false,
+                isExtraTime: true
+            };
+
+            await cloudDb.saveConsultation(extraRecord);
+
+            this.closeExtraTimeModal();
+            await this.loadTimelineData();
+            wx.showToast({ title: '加钟成功', icon: 'success' });
+        } catch (error: any) {
+            wx.showToast({
+                title: error?.message || '加钟失败',
+                icon: 'error'
+            });
+        } finally {
+            this.setData({ loading: false });
+        }
+    },
+
     async onArrivalConfirmPush() {
         const { reserveId } = this.data.arrivalConfirmModal;
         this.setData({
@@ -541,7 +654,7 @@ if(slots === '已满'){
             itemList = ['编辑', '到店', '取消预约'];
         } else {
             if (inprogress) {
-                itemList = settled ? ['编辑', '修改结算', '提前下钟'] : ['编辑', '结算', '提前下钟'];
+                itemList = settled ? ['编辑', '修改结算', '提前下钟'] : ['编辑', '结算', '加钟', '提前下钟'];
             } else {
                 itemList = settled ? ['编辑', '修改结算'] : ['编辑', '结算'];
             }
@@ -565,6 +678,8 @@ if(slots === '已满'){
                     this.openSettlement(_id);
                 } else if (action === '提前下钟') {
                     this.handleEarlyFinish(_id);
+                } else if (action === '加钟') {
+                    this.openExtraTimeModal(_id);
                 }
             }
         });

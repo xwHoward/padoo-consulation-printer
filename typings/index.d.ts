@@ -86,6 +86,7 @@ interface ConsultationRecord extends ConsultationInfo {
   settlement?: SettlementInfo; // 结算信息（选填）
   amount?: number;
   date: string; // YYYY-MM-DD
+  isExtraTime?: boolean; // 是否为加钟单据
 }
 
 // 员工状态类型

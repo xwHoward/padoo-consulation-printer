@@ -290,6 +290,33 @@
         </view>
     </view>
 </modal>
+<!-- 加钟弹窗 -->
+<modal show="{{extraTimeModal.show}}" title="加钟" bind:cancel="closeExtraTimeModal" bind:confirm="confirmExtraTime" confirm-text="确认加钟">
+    <view class="extra-time-modal">
+        <view class="extra-time-section">
+            <view class="extra-time-label">选择项目</view>
+            <view class="extra-time-project-list">
+                <view class="extra-time-project-item {{extraTimeModal.selectedProject === item._id ? 'selected' : ''}}"
+                    wx:for="{{extraTimeModal.projects}}" wx:key="_id" bindtap="selectExtraTimeProject" data-id="{{item._id}}"
+                    data-name="{{item.name}}">
+                    <view class="extra-time-project-check">
+                        <view class="extra-time-checkbox {{extraTimeModal.selectedProject === item._id ? 'checked' : ''}}"></view>
+                    </view>
+                    <view class="extra-time-project-name">{{item.name}}</view>
+                </view>
+            </view>
+            <view class="extra-time-empty" wx:if="{{extraTimeModal.projects.length === 0}}">暂无可加钟项目</view>
+        </view>
+        <view class="extra-time-section">
+            <view class="extra-time-label">加钟数量</view>
+            <view class="extra-time-quantity">
+                <view class="extra-time-qty-btn {{extraTimeModal.quantity <= 1 ? 'disabled' : ''}}" bindtap="onExtraTimeQuantityChange" data-action="decrease">-</view>
+                <view class="extra-time-qty-value">{{extraTimeModal.quantity}}</view>
+                <view class="extra-time-qty-btn" bindtap="onExtraTimeQuantityChange" data-action="increase">+</view>
+            </view>
+        </view>
+    </view>
+</modal>
 <!-- 结算弹窗 -->
 <modal show="{{showSettlementModal}}" title="结算" size="large" bind:cancel="closeSettlementModal"
     bind:confirm="confirmSettlement">
