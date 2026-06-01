@@ -463,7 +463,7 @@ exports.main = async (event) => {
         rank: index + 1
       }));
 
-      const PERFORMANCE_START_DATE = '2026-05-01';
+      const PERFORMANCE_START_DATE = monthStartStr;
 
       const [allRecordsSinceStart, wechatRecords, fulfilledRenewals, allMembershipsSinceStart] = await Promise.all([
         db.collection('consultation_records')
