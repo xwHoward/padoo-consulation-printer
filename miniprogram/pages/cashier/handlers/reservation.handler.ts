@@ -639,13 +639,22 @@ export class ReservationHandler {
 				wx.showToast({ title: '请选择技师需求', icon: 'none' });
 				return;
 			}
-			if (reserveForm.genderRequirement.male > availableMaleCount) {
-				wx.showToast({ title: `可用男技师不足（仅${availableMaleCount}位）`, icon: 'none' });
+			const staffAvailability = this.page.data.staffAvailability || [];
+			const totalMales = staffAvailability.filter(s => s.gender === 'male').length;
+			const totalFemales = staffAvailability.filter(s => s.gender === 'female').length;
+			if (reserveForm.genderRequirement.male > totalMales) {
+				wx.showToast({ title: `男技师不足（共${totalMales}位）`, icon: 'none' });
 				return;
 			}
-			if (reserveForm.genderRequirement.female > availableFemaleCount) {
-				wx.showToast({ title: `可用女技师不足（仅${availableFemaleCount}位）`, icon: 'none' });
+			if (reserveForm.genderRequirement.female > totalFemales) {
+				wx.showToast({ title: `女技师不足（共${totalFemales}位）`, icon: 'none' });
 				return;
+			}
+			if (reserveForm.genderRequirement.male > availableMaleCount) {
+				wx.showToast({ title: '所选时段可用男技师不足，将自动分配', icon: 'none', duration: 2000 });
+			}
+			if (reserveForm.genderRequirement.female > availableFemaleCount) {
+				wx.showToast({ title: '所选时段可用女技师不足，将自动分配', icon: 'none', duration: 2000 });
 			}
 		}
 
@@ -957,47 +966,66 @@ export class ReservationHandler {
 		// 构建可用技师的ID集合
 		const availableTechnicianIds = new Set(availableTechnicians.map(t => t._id));
 
-		// 按轮牌顺序选择可用技师
+		// 按轮牌顺序选择技师：第一轮仅选空闲技师
 		const selectedMaleStaff: Array<{ _id: string; name: string; isClockIn: boolean }> = [];
 		const selectedFemaleStaff: Array<{ _id: string; name: string; isClockIn: boolean }> = [];
+		const selectedIds = new Set<string>();
 
 		for (const rotationItem of rotationStaffList) {
 			const staff = rotationItem.staff!;
 			const staffId = rotationItem.staffId;
 
-			// 检查技师是否可用
 			if (!availableTechnicianIds.has(staffId)) {
 				continue;
 			}
 
-			// 按性别分配
 			if (staff.gender === 'male' && selectedMaleStaff.length < male) {
-				selectedMaleStaff.push({
-					_id: staffId,
-					name: staff.name,
-					isClockIn: false
-				});
+				selectedMaleStaff.push({ _id: staffId, name: staff.name, isClockIn: false });
+				selectedIds.add(staffId);
 			} else if (staff.gender === 'female' && selectedFemaleStaff.length < female) {
-				selectedFemaleStaff.push({
-					_id: staffId,
-					name: staff.name,
-					isClockIn: false
-				});
+				selectedFemaleStaff.push({ _id: staffId, name: staff.name, isClockIn: false });
+				selectedIds.add(staffId);
 			}
 
-			// 已满足需求，退出循环
 			if (selectedMaleStaff.length === male && selectedFemaleStaff.length === female) {
 				break;
 			}
 		}
 
-		// 检查是否成功分配
+		// 第二轮：若空闲技师不足，从占用技师中补充
+		let hasConflict = false;
+		if (selectedMaleStaff.length < male || selectedFemaleStaff.length < female) {
+			hasConflict = true;
+			for (const rotationItem of rotationStaffList) {
+				const staff = rotationItem.staff!;
+				const staffId = rotationItem.staffId;
+
+				if (selectedIds.has(staffId)) continue;
+
+				if (staff.gender === 'male' && selectedMaleStaff.length < male) {
+					selectedMaleStaff.push({ _id: staffId, name: staff.name, isClockIn: false });
+					selectedIds.add(staffId);
+				} else if (staff.gender === 'female' && selectedFemaleStaff.length < female) {
+					selectedFemaleStaff.push({ _id: staffId, name: staff.name, isClockIn: false });
+					selectedIds.add(staffId);
+				}
+
+				if (selectedMaleStaff.length === male && selectedFemaleStaff.length === female) {
+					break;
+				}
+			}
+		}
+
 		if (selectedMaleStaff.length < male || selectedFemaleStaff.length < female) {
 			wx.showToast({
-				title: `可用技师不足（男${selectedMaleStaff.length}/${male}，女${selectedFemaleStaff.length}/${female}）`,
+				title: `技师不足（男${selectedMaleStaff.length}/${male}，女${selectedFemaleStaff.length}/${female}）`,
 				icon: 'none'
 			});
 			return;
+		}
+
+		if (hasConflict) {
+			wx.showToast({ title: '部分技师在所选时段有冲突，已自动分配', icon: 'none', duration: 2500 });
 		}
 
 		// 合并选中的技师（先生后女）
