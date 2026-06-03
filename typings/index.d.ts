@@ -382,6 +382,8 @@ interface AvailableSlot {
   width: string; // 宽度百分比
   durationMinutes: number; // 时长（分钟）
   displayText: string; // 显示文本
+  startTime: string; // 空闲时段起始时间 HH:MM
+  endTime: string; // 空闲时段结束时间 HH:MM
 }
 
 interface IndexPage<D> {

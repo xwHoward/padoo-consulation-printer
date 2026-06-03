@@ -479,7 +479,7 @@ Page({
 
     // ========== 加钟 ==========
     async openExtraTimeModal(recordId: string) {
-        const projects = (this.data.projects || []).filter((p: Project) => p.name && p.name.includes('[加]'));
+        const projects = (this.data.projects || []);
         this.setData({
             extraTimeModal: {
                 show: true,

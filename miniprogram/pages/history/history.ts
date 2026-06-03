@@ -541,7 +541,7 @@ Page({
   // 加钟操作 - 显示弹窗
   onExtraTime(e: WechatMiniprogram.TouchEvent) {
     const {record, date} = e.currentTarget.dataset;
-    const projects = (app.globalData.projects || []).filter((p: Project) => p.name && p.name.includes('[加]'));
+    const projects = (app.globalData.projects || []);
 
     this.setData({
       extraTimeModal: {

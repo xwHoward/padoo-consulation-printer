@@ -141,6 +141,15 @@ Component({
 				: (h + 24 - timelineStartHour) * 60 + m;
 		},
 
+		timelineMinutesToTime(timelineMinutes: number): string {
+			const timelineStartHour = parseInt(this.data.timeLabels[0]);
+			const totalMinutes = timelineStartHour * 60 + timelineMinutes;
+			const h = totalMinutes >= 24 * 60 ? (totalMinutes - 24 * 60) : totalMinutes;
+			const hh = String(Math.floor(h / 60)).padStart(2, '0');
+			const mm = String(Math.floor(h % 60)).padStart(2, '0');
+			return `${hh}:${mm}`;
+		},
+
 		loadAllStaffTimelineData(highlightStaffId?: string) {
 			// 更新加载标识，防止重复请求
 			const selectedDate = this.properties.selectedDate || getCurrentDate();
@@ -364,6 +373,22 @@ Component({
 		calculateAvailableSlotsBetweenBlocks(blocks: TimeBlock[], shift: ShiftType): AvailableSlot[] {
 			const availableSlots: AvailableSlot[] = [];
 
+			// 辅助：从 timeline 分钟数构建 slot 对象
+			const pushSlot = (startTimelineMinutes: number, gapMinutes: number): void => {
+				const startTime = this.timelineMinutesToTime(startTimelineMinutes);
+				const endTime = this.timelineMinutesToTime(startTimelineMinutes + gapMinutes);
+				const left = (startTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
+				const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
+				availableSlots.push({
+					left,
+					width,
+					startTime,
+					endTime,
+					displayText: `${startTime}-${endTime} (${gapMinutes}分钟)`,
+					durationMinutes: gapMinutes
+				});
+			};
+
 			const now = new Date();
 			const todayStr = getCurrentDate();
 			const selectedDate = this.properties.selectedDate;
@@ -391,16 +416,7 @@ Component({
 
 					if (firstStartTimelineMinutes > shiftStartTimelineMinutes) {
 						const gapMinutes = firstStartTimelineMinutes - shiftStartTimelineMinutes;
-
-						const left = (shiftStartTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							displayText: `${gapMinutes}分钟`,
-							durationMinutes: gapMinutes
-						});
+						pushSlot(shiftStartTimelineMinutes, gapMinutes);
 					}
 				}
 
@@ -417,15 +433,7 @@ Component({
 					const gapMinutes = nextStartTimelineMinutes - currentEndTimelineMinutes;
 
 					if (gapMinutes > 0) {
-						const left = (currentEndTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							displayText: `${gapMinutes}分钟`,
-							durationMinutes: gapMinutes
-						});
+						pushSlot(currentEndTimelineMinutes, gapMinutes);
 					}
 				}
 
@@ -436,16 +444,7 @@ Component({
 
 					if (lastEndTimelineMinutes < shiftEndTimelineMinutes) {
 						const gapMinutes = shiftEndTimelineMinutes - lastEndTimelineMinutes;
-
-						const left = (lastEndTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							displayText: `${gapMinutes}分钟`,
-							durationMinutes: gapMinutes
-						});
+						pushSlot(lastEndTimelineMinutes, gapMinutes);
 					}
 				}
 
@@ -483,29 +482,12 @@ Component({
 					const gapMinutes = nextStartTimelineMinutes - currentEndTimelineMinutes;
 
 					if (gapMinutes > 0) {
-						const left = (currentEndTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							displayText: `${gapMinutes}分钟`,
-							durationMinutes: gapMinutes
-						});
+						pushSlot(currentEndTimelineMinutes, gapMinutes);
 					}
 				} else {
 					if (currentEndTimelineMinutes < shiftEndTimelineMinutes) {
 						const gapMinutes = shiftEndTimelineMinutes - currentEndTimelineMinutes;
-
-						const left = (currentEndTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							displayText: `${gapMinutes}分钟`,
-							durationMinutes: gapMinutes
-						});
+						pushSlot(currentEndTimelineMinutes, gapMinutes);
 					}
 				}
 			} else {
@@ -529,30 +511,12 @@ Component({
 
 						if (nextStartTimelineMinutes > shiftStartTimelineMinutes) {
 							const gapMinutes = nextStartTimelineMinutes - shiftStartTimelineMinutes;
-
-							const left = (shiftStartTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-							availableSlots.push({
-								left,
-								width,
-								displayText: `${gapMinutes}分钟`,
-								durationMinutes: gapMinutes
-							});
+							pushSlot(shiftStartTimelineMinutes, gapMinutes);
 						}
 					} else {
 						if (shiftEndTimelineMinutes > shiftStartTimelineMinutes) {
 							const gapMinutes = shiftEndTimelineMinutes - shiftStartTimelineMinutes;
-
-							const left = (shiftStartTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-							availableSlots.push({
-								left,
-								width,
-								displayText: `${gapMinutes}分钟`,
-								durationMinutes: gapMinutes
-							});
+							pushSlot(shiftStartTimelineMinutes, gapMinutes);
 						}
 					}
 				} else {
@@ -563,30 +527,12 @@ Component({
 
 						if (nextStartTimelineMinutes > nowTimelineMinutes) {
 							const gapMinutes = nextStartTimelineMinutes - nowTimelineMinutes;
-
-							const left = (nowTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-							availableSlots.push({
-								left,
-								width,
-								displayText: `${gapMinutes}分钟`,
-								durationMinutes: gapMinutes
-							});
+							pushSlot(nowTimelineMinutes, gapMinutes);
 						}
 					} else {
 						if (shiftEndTimelineMinutes > nowTimelineMinutes) {
 							const gapMinutes = shiftEndTimelineMinutes - nowTimelineMinutes;
-
-							const left = (nowTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-							availableSlots.push({
-								left,
-								width,
-								displayText: `${gapMinutes}分钟`,
-								durationMinutes: gapMinutes
-							});
+							pushSlot(nowTimelineMinutes, gapMinutes);
 						}
 					}
 				}
