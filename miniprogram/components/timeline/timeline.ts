@@ -28,6 +28,8 @@ interface StaffTimelineItem {
 	availableSlots: AvailableSlot[]
 	highlighted?: boolean
 	rotationCount: number // 当日轮钟数量
+	rotationRank: number // 轮牌序号（1-based）
+	rotationOrderSize: number // 轮牌总人数
 }
 
 interface TimeBlock {
@@ -88,6 +90,14 @@ Component({
 		readonly: {
 			type: Boolean,
 			value: false
+		},
+		rotationOrder: {
+			type: Array,
+			value: [] as string[]  // 轮牌顺序的 staffId 数组
+		},
+		canAdjustRotation: {
+			type: Boolean,
+			value: false  // 是否允许调整轮牌
 		}
 	},
 
@@ -279,7 +289,9 @@ Component({
 						blocks,
 						availableSlots,
 						highlighted: highlightStaffId === staff._id,
-						rotationCount
+						rotationCount,
+						rotationRank: 0,
+						rotationOrderSize: 0
 					});
 				}
 				// 分配关联预约组颜色
@@ -306,6 +318,24 @@ Component({
 					}
 				}
 				staffTimeline.sort((a) => a.gender === 'male' ? 1 : -1);
+
+				// 按轮牌顺序重排
+				const rotationOrder = this.properties.rotationOrder as string[];
+				if (rotationOrder.length > 0) {
+					const orderMap = new Map(rotationOrder.map((id, i) => [id, i]));
+					staffTimeline.sort((a, b) => {
+						const posA = orderMap.has(a._id) ? orderMap.get(a._id)! : 999;
+						const posB = orderMap.has(b._id) ? orderMap.get(b._id)! : 999;
+						return posA - posB;
+					});
+				}
+
+				// 分配轮牌序号
+				const totalSize = staffTimeline.length;
+				staffTimeline.forEach((item, i) => {
+					item.rotationRank = i + 1;
+					item.rotationOrderSize = totalSize;
+				});
 
 				let currentTimePosition = '0%';
 				let showCurrentTimeLine = false;
@@ -577,6 +607,31 @@ Component({
 				settled,
 				inprogress
 			});
+		},
+
+		onSlotClick(e: WechatMiniprogram.CustomEvent) {
+			const { staffname, slots, staffid } = e.currentTarget.dataset;
+			this.triggerEvent('copyslot', {
+				staffName: staffname,
+				slots,
+				staffId: staffid
+			});
+		},
+
+		onAdjustRotation(e: WechatMiniprogram.CustomEvent) {
+			const { index, direction } = e.currentTarget.dataset;
+			this.triggerEvent('adjustrotation', {
+				index,
+				direction
+			});
+		},
+
+		onResetRotation() {
+			this.triggerEvent('resetrotation');
+		},
+
+		onPushRotation() {
+			this.triggerEvent('pushrotation');
 		}
 	}
 });

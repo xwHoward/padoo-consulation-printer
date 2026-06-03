@@ -26,6 +26,7 @@ Page({
         selectedDate: '',
         rooms: [] as Room[],
         rotationList: [] as RotationItem[],
+        rotationOrder: [] as string[],
         timelineRefreshTrigger: 0,
         _isFirstShow: true, // 用于防止首次加载时onLoad和onShow重复请求
         // 日期选择器状态
@@ -315,6 +316,102 @@ Page({
         });
     },
     
+    // ========== 时间轴轮牌事件（来自 timeline 组件） ==========
+    async onTimelineAdjustRotation(e: WechatMiniprogram.CustomEvent) {
+        const { index, direction } = e.detail;
+        const list = [...this.data.rotationList];
+
+        let fromIndex = index;
+        let toIndex = index;
+
+        if (direction === 'up' && index > 0) {
+            toIndex = index - 1;
+        } else if (direction === 'down' && index < list.length - 1) {
+            toIndex = index + 1;
+        } else {
+            return;
+        }
+
+        await loadingService.withLoading(this, async () => {
+            const result = await app.adjustRotationPosition(this.data.selectedDate, fromIndex, toIndex);
+
+            if (result) {
+                [list[fromIndex], list[toIndex]] = [list[toIndex], list[fromIndex]];
+                const rotationOrder = list.map(item => item._id);
+                this.setData({ 
+                    rotationList: list, 
+                    rotationOrder,
+                    timelineRefreshTrigger: this.data.timelineRefreshTrigger + 1
+                });
+                await app.loadGlobalData();
+                wx.showToast({ title: '调整成功', icon: 'success' });
+            } else {
+                throw new Error('调整失败');
+            }
+        }, {
+            loadingText: '调整中...',
+            lockKey: LockKeys.ADJUST_ROTATION,
+            errorText: '调整失败'
+        });
+    },
+
+    onTimelineCopySlot(e: WechatMiniprogram.CustomEvent) {
+        const { staffName, slots } = e.detail;
+        
+        if (slots === '已满') {
+            wx.setClipboardData({
+                data: `您好，${staffName}老师今日预约已满，无法预约了哦`,
+                success: () => {
+                    wx.showToast({ title: '已复制到剪贴板', icon: 'success', duration: 2000 });
+                },
+                fail: () => {
+                    wx.showToast({ title: '复制失败', icon: 'error', duration: 2000 });
+                }
+            });
+            return;
+        }
+        
+        const message = `您好，目前${staffName}老师可预约时段为${slots}哦，您可以告诉小趴到店时间，小趴给您保留预约哦~`;
+        
+        wx.setClipboardData({
+            data: message,
+            success: () => {
+                wx.showToast({ title: '已复制到剪贴板', icon: 'success', duration: 2000 });
+            },
+            fail: () => {
+                wx.showToast({ title: '复制失败', icon: 'error', duration: 2000 });
+            }
+        });
+    },
+
+    async onTimelineResetRotation() {
+        await this.resetRotation();
+    },
+
+    onTimelinePushRotation() {
+        const { rotationList, selectedDate } = this.data;
+        if (rotationList.length === 0) {
+            wx.showToast({ title: '暂无轮牌数据', icon: 'none' });
+            return;
+        }
+        
+        const rotationLines = rotationList.map((staff, idx) =>
+            `${idx + 1}. ${staff.name} (${staff.shift === 'morning' ? '早班' : '晚班'})`
+        ).join('\n');
+        
+        const message = `【今日轮牌】\n\n日期：${selectedDate}\n\n${rotationLines}\n\n请各位同事确认今日轮牌顺序，有问题与店长沟通！`;
+        
+        wx.setClipboardData({
+            data: message,
+            success: () => {
+                wx.showToast({ title: '已复制到剪贴板', icon: 'success', duration: 2000 });
+            },
+            fail: () => {
+                wx.showToast({ title: '复制失败，请重试', icon: 'none' });
+            }
+        });
+    },
+
     // ========== 预约相关（委托给 ReservationHandler） ==========
     async openReserveModal() {
         if (reservationHandler) await reservationHandler.openReserveModal();

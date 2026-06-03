@@ -75,23 +75,59 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	justify-content: center;
 	font-size: 14px;
 	font-weight: 500;
 	color: @text-color;
 	z-index: 10;
+	padding: 2px 4px;
+	box-sizing: border-box;
+
+	.staff-name-row {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+
+	.rotation-rank {
+		width: 20px;
+		height: 20px;
+		flex-shrink: 0;
+		background-color: @primary-color;
+		color: #fff;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 11px;
+		font-weight: 600;
+		line-height: 1;
+	}
+
+	.staff-name-text {
+		font-size: 13px;
+		font-weight: 500;
+		display: flex;
+		align-items: center;
+	}
 
 	.rotation-count {
-		font-size: 11px;
+		font-size: 10px;
 		color: @text-color-secondary;
 		font-weight: normal;
-		margin-left: 2px;
+	}
+
+	.staff-bottom-row {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		margin-top: 4px;
 	}
 
 	.shift-mini-tag {
 		font-size: 10px;
 		padding: 1px 4px;
 		border-radius: 3px;
-		margin-top: 4px;
 
 		&.morning {
 			background: rgba(52, 152, 219, 0.1);
@@ -106,6 +142,36 @@
 		&.overtime {
 			background: rgba(230, 126, 34, 0.1);
 			color: #e67e22;
+		}
+	}
+
+	.rotation-adjust-btns {
+		display: flex;
+		gap: 2px;
+
+		.adjust-btn {
+			width: 20px;
+			height: 20px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 12px;
+			background-color: @bg-color;
+			border: 1px solid @border-color;
+			border-radius: 4px;
+			color: @text-color;
+			cursor: pointer;
+
+			&:active {
+				background-color: @primary-color;
+				color: white;
+				border-color: @primary-color;
+			}
+
+			&.disabled {
+				opacity: 0.3;
+				pointer-events: none;
+			}
 		}
 	}
 }
@@ -130,14 +196,33 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		z-index: 0;
-		pointer-events: none;
+		gap: 4px;
+		z-index: 2;
+		cursor: pointer;
+		pointer-events: auto;
+		padding: 2px 4px;
+		border-radius: 3px;
+		transition: background-color 0.2s;
+		
+		&:active {
+			background-color: rgba(255, 107, 0, 0.1);
+		}
 
 		.slot-text {
 			font-size: 11px;
 			color: rgba(0, 0, 0, 0.25);
 			white-space: nowrap;
 		}
+
+		.slot-copy-icon {
+			font-size: 10px;
+			color: @primary-color;
+			background-color: rgba(255, 107, 0, 0.08);
+			padding: 1px 4px;
+			border-radius: 3px;
+			white-space: nowrap;
+		}
+
 	}
 }
 
@@ -229,9 +314,13 @@
 			line-height: 24px;
 			font-size: 12px;
 			font-weight: bold;
+			.block-phone {
+				display: inline-block;
+			}
 		}
 
 		.block-time {
+			display: flex;
 			font-size: 10px;
 			line-height: 18px;
 		}

@@ -34,9 +34,18 @@
                 <view class="reserve-btn" wx:if="{{canCreateReservation}}" bindtap="openReserveModal">
                     +预约
                 </view>
+                <view class="push-rotation-btn" wx:if="{{canPushRotation}}" bindtap="onTimelineResetRotation">
+                    重置
+                </view>
+                <view class="push-rotation-btn" wx:if="{{canPushRotation && rotationList.length > 0}}" bindtap="onTimelinePushRotation">
+                    推送轮牌
+                </view>
             </view>
             <timeline selectedDate="{{selectedDate}}" readonly="{{false}}" refreshTrigger="{{timelineRefreshTrigger}}"
-                bind:blockclick="onBlockClick" />
+                rotationOrder="{{rotationOrder}}" canAdjustRotation="{{canPushRotation}}"
+                bind:blockclick="onBlockClick" bind:adjustrotation="onTimelineAdjustRotation"
+                bind:copyslot="onTimelineCopySlot" bind:resetrotation="onTimelineResetRotation"
+                bind:pushrotation="onTimelinePushRotation" />
         </view>
 
         <!-- 快速预约 -->
@@ -92,50 +101,6 @@
                 wx:if="{{!quickReservationLoading && quickReservationSlots.slots.length === 0 && quickReservationSlots.maleCount + quickReservationSlots.femaleCount > 0}}">
                 {{quickReservationSlots.emptyReason || '暂无可约时段'}}
             </view>
-        </view>
-        <!-- 员工轮牌 -->
-        <view class="section">
-            <view class="section-header">
-                <view class="section-title">轮牌</view>
-                <view class="push-rotation-btn" bindtap="resetRotation" wx:if="{{canPushRotation}}">
-                    重置
-                </view>
-                <view class="push-rotation-btn" bindtap="openRotationPushModal"
-                    wx:if="{{rotationList.length > 0 && canPushRotation}}">
-                    推送
-                </view>
-            </view>
-            <view class="rotation-list" wx:if="{{rotationList.length > 0}}">
-                <view class="rotation-item" wx:for="{{rotationList}}" wx:key="_id">
-                    <view class="rank-num">{{index + 1}}</view>
-                    <view class="staff-info">
-                        <view class="staff-name-row">
-                            <view class="staff-name">{{item.name}}</view>
-                            <view class="shift-tag {{item.shift}}">
-                                {{item.shift === 'morning' ? '早班' : '晚班'}}
-                            </view>
-                        </view>
-                        <view class="available-slots" wx:if="{{item.availableSlots}}">
-                            <view class="slots-label">可约:</view>
-                            <view class="slots-time">{{item.availableSlots}}</view>
-                            <view class="slots-copy-btn" bindtap="copyTechnicianSlot" data-name="{{item.name}}" data-slots="{{item.availableSlots}}">
-                                复制
-                            </view>
-                        </view>
-                    </view>
-                    <view class="action-btns" wx:if="{{canPushRotation}}">
-                        <view class="btn move-up {{index === 0 ? 'disabled' : ''}}" bindtap="moveRotation"
-                            data-index="{{index}}" data-direction="up">
-                            <text>↑</text>
-                        </view>
-                        <view class="btn move-down {{index === rotationList.length - 1 ? 'disabled' : ''}}"
-                            bindtap="moveRotation" data-index="{{index}}" data-direction="down">
-                            <text>↓</text>
-                        </view>
-                    </view>
-                </view>
-            </view>
-            <view class="empty-hint" wx:else>今日暂无上班排班</view>
         </view>
                 <!-- 房间状态 -->
         <view class="section">
@@ -371,27 +336,6 @@
     </view>
     <view class="push-tips">
         <text class="tips-text">ℹ️确认后将推送到企业微信群聊</text>
-    </view>
-</modal>
-<!-- 轮牌推送确认弹窗 -->
-<modal show="{{rotationPushModal.show}}" title="复制今日轮牌" bind:cancel="onRotationPushModalCancel"
-    bind:confirm="onRotationPushModalConfirm" loading="{{rotationPushModal.loading}}" loading-text="复制中...">
-    <view class="push-preview">
-        <view class="preview-header">【今日轮牌】</view>
-        <view class="preview-row">
-            <text class="preview-label">日期：</text>
-            <text class="preview-value">{{selectedDate}}</text>
-        </view>
-        <block wx:for="{{rotationList}}" wx:key="_id" wx:for-index="idx">
-            <view class="preview-row">
-                <text class="preview-value">
-                    {{idx + 1}}. {{item.name}} ({{item.shift === 'morning' ? '早班' : '晚班'}})
-                </text>
-            </view>
-        </block>
-    </view>
-    <view class="push-tips">
-        <text class="tips-text">ℹ️确认后将轮牌内容复制到剪贴板</text>
     </view>
 </modal>
 <modal show="{{arrivalConfirmModal.show}}" show-footer="{{false}}" title="确认到店">

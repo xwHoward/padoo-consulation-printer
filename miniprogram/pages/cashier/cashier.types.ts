@@ -67,6 +67,7 @@ export interface CashierPageData {
 	selectedDate: string;
 	rooms: Room[];
 	rotationList: RotationItem[];
+	rotationOrder: string[];
 	timelineRefreshTrigger: number;
 	dateSelector: DateSelectorState;
 	canCreateReservation: boolean;
