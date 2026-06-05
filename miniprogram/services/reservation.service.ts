@@ -381,7 +381,7 @@ export class ReservationService {
 			}
 
 			// 获取所有员工
-			const allStaff = await app.getStaffs();
+			const allStaff = (await app.getStaffs()).filter(s => s.role === 'technician');
 			const staffMap = new Map(allStaff.map(s => [s._id, s]));
 
 			// 按轮牌顺序排序

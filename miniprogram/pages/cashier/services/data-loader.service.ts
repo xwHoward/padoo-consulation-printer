@@ -84,7 +84,7 @@ export class CashierDataLoaderService {
 
 			this.page.setData({
 				rooms,
-				activeStaffList: allStaff.filter(s => s.status === 'active'),
+				activeStaffList: allStaff.filter(s => s.status === 'active'&&s.role === 'technician'),
 				dateSelector,
 				rotationList,
 				rotationOrder: rotationList.map(item => item._id),

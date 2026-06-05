@@ -75,7 +75,12 @@
           <image class="avatar-img" src="{{item.avatar || '/assets/default-avatar.jpg'}}" mode="aspectFill" />
         </view>
         <view class="staff-info" bindtap="onEditStaff" data-id="{{item._id}}">
-          <view class="staff-name">{{item.name}}</view>
+          <view class="staff-name-row">
+            <view class="staff-name">{{item.name}}</view>
+            <view class="staff-role-tag {{item.role || 'technician'}}">
+              {{item.role === 'cashier' ? '收银员' : '技师'}}
+            </view>
+          </view>
           <view class="staff-gender">{{item.gender === 'male' ? '先生' : '女士'}}</view>
           <view class="staff-status {{item.status}}">
             {{item.status === 'active' ? '正常' : '禁用'}}
@@ -118,6 +123,17 @@
       </view>
       <view class="gender-option {{inputGender === 'female' ? 'selected' : ''}}" bindtap="onGenderSelect" data-gender="female">
         <view>女士</view>
+      </view>
+    </view>
+  </view>
+  <view class="form-item">
+    <view class="form-label">角色</view>
+    <view class="gender-selector">
+      <view class="gender-option {{inputRole === 'technician' ? 'selected' : ''}}" bindtap="onRoleSelect" data-role="technician">
+        <view>技师</view>
+      </view>
+      <view class="gender-option {{inputRole === 'cashier' ? 'selected' : ''}}" bindtap="onRoleSelect" data-role="cashier">
+        <view>收银员</view>
       </view>
     </view>
   </view>

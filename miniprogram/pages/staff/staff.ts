@@ -19,6 +19,7 @@ Page({
 		inputGender: 'male' as StaffGender,
 		inputAvatar: '',
 		inputPhone: '',
+		inputRole: 'technician' as StaffRole,
 		inputStatus: 'active' as StaffStatus,
 		inputWechatWorkId: '',
 		// 排班相关
@@ -222,6 +223,7 @@ Page({
 			inputName: '',
 			inputGender: 'male',
 			inputAvatar: '',
+			inputRole: 'technician',
 			inputStatus: 'active',
 		});
 	},
@@ -242,6 +244,7 @@ Page({
 					inputAvatar: staff.avatar || '',
 					inputPhone: staff.phone || '',
 					inputWechatWorkId: staff.wechatWorkId || '',
+					inputRole: staff.role || 'technician',
 					inputStatus: staff.status,
 					loading: false
 				});
@@ -498,7 +501,7 @@ Page({
 				const day = String(date.getDate()).padStart(2, '0');
 				tableHeader.push(`${day}`);
 			});
-			const weekHeader = ['技师'];
+			const weekHeader = ['员工'];
 			dateList.forEach(d => {
 				const date = new Date(d);
 				const weekDay = weekDays[date.getDay()];
@@ -562,6 +565,12 @@ Page({
 		this.setData({ inputGender: gender });
 	},
 
+	// 角色选择
+	onRoleSelect(e: WechatMiniprogram.TouchEvent) {
+		const role = e.currentTarget.dataset.role as StaffRole;
+		this.setData({ inputRole: role });
+	},
+
 	// 企业微信ID输入
 	onWechatWorkIdInput(e: WechatMiniprogram.Input) {
 		this.setData({ inputWechatWorkId: e.detail.value });
@@ -623,6 +632,7 @@ Page({
 			inputGender: 'male',
 			inputAvatar: '',
 			inputPhone: '',
+			inputRole: 'technician',
 			inputStatus: 'active',
 		});
 	},
@@ -630,7 +640,7 @@ Page({
 	// 确认弹窗
 	async onConfirmModal() {
 		try {
-			const { inputName, inputGender, inputAvatar, inputPhone, inputWechatWorkId, inputStatus, editingStaff } = this.data;
+			const { inputName, inputGender, inputAvatar, inputPhone, inputWechatWorkId, inputRole, inputStatus, editingStaff } = this.data;
 			const name = inputName.trim();
 			const phone = inputPhone.trim();
 			const wechatWorkId = inputWechatWorkId.trim();
@@ -666,6 +676,7 @@ Page({
 					avatar: inputAvatar,
 					phone,
 					wechatWorkId,
+					role: inputRole,
 					status: inputStatus,
 				});
 
@@ -689,6 +700,7 @@ Page({
 					avatar: inputAvatar,
 					phone,
 					wechatWorkId,
+					role: inputRole,
 					status: 'active',
 				}));
 

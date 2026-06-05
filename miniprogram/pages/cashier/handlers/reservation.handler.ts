@@ -935,7 +935,7 @@ export class ReservationHandler {
 		}
 
 		// 获取所有员工信息
-		const allStaff = await app.getStaffs();
+		const allStaff = (await app.getStaffs()).filter(s => s.role === 'technician');
 		const staffMap = new Map(allStaff.map(s => [s._id, s]));
 
 		// 按轮牌顺序排序的员工列表

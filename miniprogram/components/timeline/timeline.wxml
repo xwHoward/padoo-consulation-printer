@@ -44,8 +44,8 @@
               <view class="block-time">
                 {{block.startTime}}-{{block.endTime}}
                 <view wx:if="{{block.isClockIn}}">[点]</view>
+                <view wx:elif="{{block.extraTime > 0 || block.isExtraTime}}">[加]</view>
                 <view wx:else>[轮]</view>
-                <view wx:if="{{block.extraTime > 0 || block.isExtraTime}}">[加]</view>
                 <view wx:if="{{block.rearrangeConflict}}" class="conflict-tag">[冲突]</view>
                 <view wx:if="{{block.requirement}}">[{{block.requirement}}]</view>
               </view>

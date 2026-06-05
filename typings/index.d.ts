@@ -92,6 +92,7 @@ interface ConsultationRecord extends ConsultationInfo {
 // 员工状态类型
 type StaffStatus = "active" | "disabled";
 type StaffGender = "male" | "female";
+type StaffRole = "technician" | "cashier";
 
 // 员工数据结构
 interface StaffInfo extends BaseRecord {
@@ -101,6 +102,7 @@ interface StaffInfo extends BaseRecord {
   avatar: string;
   phone: string;
   wechatWorkId: string;
+  role?: StaffRole; // 角色：technician-技师, cashier-收银员，旧数据默认 technician
 }
 
 // 班次类型
