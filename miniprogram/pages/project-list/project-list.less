@@ -1,0 +1,283 @@
+@import "../../app.less";
+
+// 色彩变量
+@bg-page: #F5F3EF;
+@bg-banner: #1E3A2B;
+@color-banner-title: #8A9A5B;
+@color-banner-sub: #ffffff;
+@color-category-bg: #2E4A3B;
+@color-category-text: #ffffff;
+@color-service-title: #222222;
+@color-service-desc: #8A9A5B;
+@color-col-header: #4A4A4A;
+@color-value: #333333;
+@color-divider: #D8D2C8;
+@color-note: #999999;
+
+.project-list {
+  min-height: 100vh;
+  background-color: @bg-page;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ====== 顶部横幅 ====== */
+.header-banner {
+  position: relative;
+  background-color: @bg-banner;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 20% 50%, rgba(46, 74, 59, 0.9) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 80% at 80% 30%, rgba(30, 58, 43, 0.8) 0%, transparent 60%),
+    linear-gradient(135deg, #1a3325 0%, #234231 40%, #1a3325 100%);
+  padding: 48rpx 40rpx 44rpx;
+
+  /* 叶子纹理装饰层 */
+  .banner-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+      radial-gradient(ellipse 30% 50% at 10% 20%, rgba(100, 140, 90, 0.12) 0%, transparent 70%),
+      radial-gradient(ellipse 25% 40% at 85% 70%, rgba(80, 120, 70, 0.10) 0%, transparent 60%),
+      radial-gradient(ellipse 20% 30% at 50% 10%, rgba(120, 160, 100, 0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .banner-content {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    width: 100%;
+  }
+
+  .banner-left {
+    flex: 1;
+  }
+
+  .banner-title {
+    font-size: 72rpx;
+    font-weight: 300;
+    color: @color-banner-title;
+    letter-spacing: 16rpx;
+    text-transform: uppercase;
+    font-family: Georgia, 'Times New Roman', serif;
+    line-height: 1.1;
+    text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.25);
+  }
+
+  .banner-right {
+    text-align: right;
+    padding-bottom: 6rpx;
+  }
+
+  .banner-brand {
+    font-size: 26rpx;
+    color: @color-banner-sub;
+    font-weight: 500;
+    letter-spacing: 3rpx;
+    margin-bottom: 6rpx;
+  }
+
+  .banner-type {
+    font-size: 18rpx;
+    color: rgba(255, 255, 255, 0.75);
+    letter-spacing: 5rpx;
+    text-transform: uppercase;
+  }
+}
+
+/* ====== 内容区域 ====== */
+.content {
+  flex: 1;
+  padding: 28rpx 28rpx 40rpx;
+  box-sizing: border-box;
+}
+
+/* ====== 分类区块 ====== */
+.category-section {
+  margin-bottom: 40rpx;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* ====== 分类标题栏 ====== */
+.category-header {
+  background-color: @color-category-bg;
+  border-radius: 10rpx;
+  padding: 18rpx 28rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(46, 74, 59, 0.35);
+
+  .category-title {
+    font-size: 26rpx;
+    font-weight: 600;
+    color: @color-category-text;
+    letter-spacing: 4rpx;
+  }
+}
+
+/* ====== 列表表头（时间 / 费用） ====== */
+.list-header {
+  display: flex;
+  align-items: center;
+  padding: 0 8rpx;
+  margin-bottom: 4rpx;
+
+  .list-header-left {
+    flex: 1;
+    padding-left: 4rpx;
+    /* 与数据行的 project-info 对齐：flex:1 自动撑满 */
+  }
+
+  .list-header-right {
+    display: flex;
+    align-items: center;
+    /* 与数据行的 time-col(140rpx) + price-col(160rpx) 对齐 */
+    width: 300rpx;
+    flex-shrink: 0;
+  }
+
+  .col-label-time {
+    width: 140rpx;
+    text-align: center;
+    font-size: 22rpx;
+    font-weight: 700;
+    color: @color-col-header;
+    letter-spacing: 2rpx;
+  }
+
+  .col-label-price {
+    width: 160rpx;
+    text-align: right;
+    font-size: 22rpx;
+    font-weight: 700;
+    color: @color-col-header;
+    letter-spacing: 2rpx;
+  }
+}
+
+.list-header-divider {
+  height: 1px;
+  background-color: @color-divider;
+  margin: 0 4rpx 16rpx;
+}
+
+/* ====== 项目行 ====== */
+.project-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 10rpx 8rpx;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+/* 项目信息（左列） */
+.project-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding-right: 16rpx;
+  min-width: 0;
+
+  .project-name {
+    font-size: 26rpx;
+    font-weight: 700;
+    color: @color-service-title;
+    line-height: 1.4;
+  }
+
+  .project-desc {
+    font-size: 20rpx;
+    color: @color-service-desc;
+    line-height: 1.6;
+    word-break: break-all;
+  }
+}
+
+/* 时间列 */
+.project-time-col {
+  width: 140rpx;
+  flex-shrink: 0;
+  text-align: center;
+  padding-top: 4rpx;
+
+  .time-value {
+    font-size: 24rpx;
+    font-weight: 700;
+    color: @color-value;
+    white-space: nowrap;
+  }
+}
+
+/* 费用列 */
+.project-price-col {
+  width: 160rpx;
+  flex-shrink: 0;
+  text-align: right;
+  padding-top: 4rpx;
+
+  .price-value {
+    font-size: 26rpx;
+    font-weight: 700;
+    color: @color-value;
+    white-space: nowrap;
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+}
+
+/* ====== 空状态 ====== */
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 40rpx;
+
+  .empty-text {
+    font-size: 28rpx;
+    color: @color-note;
+  }
+}
+
+/* ====== 加载遮罩 ====== */
+.loading-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(245, 243, 239, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+
+  .loading-spinner {
+    width: 52rpx;
+    height: 52rpx;
+    border: 4rpx solid rgba(46, 74, 59, 0.2);
+    border-top-color: @color-category-bg;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .loading-text {
+    margin-top: 20rpx;
+    font-size: 26rpx;
+    color: #666;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

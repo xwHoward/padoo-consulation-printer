@@ -212,12 +212,21 @@ interface TechnicianWechatRecord extends BaseRecord {
 
 interface Project extends BaseRecord {
   name: string;
+  subtitle: string;                  // 副标题
   duration: number;
   price?: number;
   isEssentialOilOnly?: boolean;
   status: ItemStatus;
   needEssentialOil?: boolean;
   commission: number;
+  categoryId: string;                // 所属分类ID
+  serviceFlow: string;               // 服务流程文本
+}
+
+interface ProjectCategory extends BaseRecord {
+  name: string;
+  order: number;
+  status: ItemStatus;
 }
 
 interface Room extends BaseRecord {
@@ -238,6 +247,7 @@ interface AppGlobalData {
   currentUser?: UserRecord | null;
   token?: string | null;
   projects: Project[];
+  projectCategories: ProjectCategory[];
   rooms: Room[];
   essentialOils: EssentialOil[];
   staffs: StaffInfo[];
@@ -256,6 +266,7 @@ interface IAppOption<T extends Record<string, any> = AppGlobalData> {
   checkUpdate: () => void;
   loadGlobalData: () => Promise<void>;
   getProjects: () => Promise<Project[]>;
+  getProjectCategories: () => Promise<ProjectCategory[]>;
   getRooms: () => Promise<Room[]>;
   getEssentialOils: () => Promise<EssentialOil[]>;
   initLogin: () => Promise<void>;

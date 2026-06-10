@@ -5,14 +5,18 @@ Page({
 		loading: false,
 		activeTab: 'projects',
 		projects: [] as Project[],
+		projectsWithCategory: [] as Array<Project & { categoryName: string }>,
+		projectCategories: [] as ProjectCategory[],
 		rooms: [] as Room[],
 		essentialOils: [] as EssentialOil[],
 		prizes: [] as LotteryPrize[],
-		editingItem: null as Project | Room | EssentialOil | LotteryPrize | null,
+		editingItem: null as Project | ProjectCategory | Room | EssentialOil | LotteryPrize | null,
 		showModal: false,
 		modalType: '',
+		formCategoryName: '',
 		formData: {
 			name: '',
+			subtitle: '',
 			duration: 60,
 			price: 0,
 			commission: 0,
@@ -20,12 +24,37 @@ Page({
 			status: 'normal' as ItemStatus,
 			isEssentialOilOnly: false,
 			needEssentialOil: false,
+			categoryId: '',
+			serviceFlow: '',
+			order: 0,
 			type: 'product' as LotteryPrize['type'],
 			value: 0,
 			probability: 0,
 			color: '#FF6B00',
 			description: ''
 		}
+	},
+
+	getDefaultFormData() {
+		return {
+			name: '',
+			subtitle: '',
+			duration: 60,
+			price: 0,
+			commission: 0,
+			effect: '',
+			status: 'normal' as ItemStatus,
+			isEssentialOilOnly: false,
+			needEssentialOil: false,
+			categoryId: '',
+			serviceFlow: '',
+			order: 0,
+			type: 'product' as LotteryPrize['type'],
+			value: 0,
+			probability: 0,
+			color: '#FF6B00',
+			description: ''
+		};
 	},
 
 	onTabChange(e: WechatMiniprogram.CustomEvent) {
@@ -38,9 +67,25 @@ Page({
 			this.setData({ loading: true });
 			const tab = this.data.activeTab;
 
-			if (tab === 'projects') {
-				const projects = await cloudDb.getAll<Project>(Collections.PROJECTS);
-				this.setData({ projects, loading: false });
+			if (tab === 'projects' || tab === 'categories') {
+				const [projects, projectCategories] = await Promise.all([
+					cloudDb.getAll<Project>(Collections.PROJECTS),
+					cloudDb.getAll<ProjectCategory>(Collections.PROJECT_CATEGORIES)
+				]);
+				const catMap = new Map<string, string>();
+				for (const c of projectCategories) {
+					catMap.set(c._id, c.name);
+				}
+				const projectsWithCategory = (projects || []).map(p => ({
+					...p,
+					categoryName: catMap.get(p.categoryId) || '未分类'
+				}));
+				this.setData({
+					projects,
+					projectsWithCategory,
+					projectCategories,
+					loading: false
+				});
 			} else if (tab === 'rooms') {
 				const rooms = await cloudDb.getAll<Room>(Collections.ROOMS);
 				this.setData({ rooms, loading: false });
@@ -60,36 +105,31 @@ Page({
 		}
 	},
 
+	/** 分类名称查找 */
+	getCategoryName(categoryId: string): string {
+		const cat = this.data.projectCategories.find(c => c._id === categoryId);
+		return cat ? cat.name : '未分类';
+	},
+
 	openAddModal(type: string) {
 		this.setData({
 			showModal: true,
 			modalType: type,
 			editingItem: null,
-			formData: {
-				name: '',
-				duration: 60,
-				price: 0,
-				commission: 0,
-				effect: '',
-				status: 'normal',
-				isEssentialOilOnly: false,
-				needEssentialOil: false,
-				type: 'product',
-				value: 0,
-				probability: 0,
-				color: '#FF6B00',
-				description: ''
-			}
+			formCategoryName: '',
+			formData: this.getDefaultFormData()
 		});
 	},
 
 	openEditModal(e: WechatMiniprogram.CustomEvent) {
 		const { type, index } = e.currentTarget.dataset;
 		const tab = this.data.activeTab;
-		let item: Project | Room | EssentialOil | LotteryPrize | null = null;
+		let item: Project | ProjectCategory | Room | EssentialOil | LotteryPrize | null = null;
 
 		if (tab === 'projects' && this.data.projects[index]) {
 			item = this.data.projects[index];
+		} else if (tab === 'categories' && this.data.projectCategories[index]) {
+			item = this.data.projectCategories[index];
 		} else if (tab === 'rooms' && this.data.rooms[index]) {
 			item = this.data.rooms[index];
 		} else if (tab === 'oils' && this.data.essentialOils[index]) {
@@ -99,19 +139,25 @@ Page({
 		}
 
 		if (item) {
+			const categoryId = (item as Project).categoryId || '';
 			this.setData({
 				showModal: true,
 				modalType: type,
 				editingItem: item,
+				formCategoryName: this.getCategoryName(categoryId),
 				formData: {
 					name: item.name,
-					duration: (item as Project).duration || 90,
+					subtitle: (item as Project).subtitle || '',
+					duration: (item as Project).duration || 60,
 					price: (item as Project).price || 0,
 					commission: (item as Project).commission || 0,
 					effect: (item as EssentialOil).effect || '',
 					status: item.status || 'normal',
 					isEssentialOilOnly: (item as Project).isEssentialOilOnly || false,
 					needEssentialOil: (item as Project).needEssentialOil || false,
+					categoryId: (item as Project).categoryId || '',
+					serviceFlow: (item as Project).serviceFlow || '',
+					order: (item as ProjectCategory).order || 0,
 					type: (item as LotteryPrize).type || 'product',
 					value: (item as LotteryPrize).value || 0,
 					probability: (item as LotteryPrize).probability || 0,
@@ -123,15 +169,20 @@ Page({
 	},
 
 	closeModal() {
-		this.setData({ showModal: false });
+		this.setData({ showModal: false, formCategoryName: '' });
 	},
 
+	// ========================= 通用表单输入 =========================
 	onNameInput(e: WechatMiniprogram.CustomEvent) {
 		this.setData({ 'formData.name': e.detail.value });
 	},
 
+	onSubtitleInput(e: WechatMiniprogram.CustomEvent) {
+		this.setData({ 'formData.subtitle': e.detail.value });
+	},
+
 	onDurationInput(e: WechatMiniprogram.CustomEvent) {
-		this.setData({ 'formData.duration': parseInt(e.detail.value) || 90 });
+		this.setData({ 'formData.duration': parseInt(e.detail.value) || 60 });
 	},
 
 	onPriceInput(e: WechatMiniprogram.CustomEvent) {
@@ -146,8 +197,21 @@ Page({
 		this.setData({ 'formData.effect': e.detail.value });
 	},
 
+	onOrderInput(e: WechatMiniprogram.CustomEvent) {
+		this.setData({ 'formData.order': parseInt(e.detail.value) || 0 });
+	},
+
 	onStatusChange(e: WechatMiniprogram.CustomEvent) {
 		this.setData({ 'formData.status': e.detail.value as ItemStatus });
+	},
+
+	onCategoryChange(e: WechatMiniprogram.CustomEvent) {
+		const idx = parseInt(e.detail.value);
+		const cat = this.data.projectCategories[idx];
+		this.setData({
+			'formData.categoryId': cat ? cat._id : '',
+			formCategoryName: cat ? cat.name : ''
+		});
 	},
 
 	onIsEssentialOilOnlyChange() {
@@ -158,6 +222,11 @@ Page({
 		this.setData({ 'formData.needEssentialOil': !this.data.formData.needEssentialOil });
 	},
 
+	onServiceFlowInput(e: WechatMiniprogram.CustomEvent) {
+		this.setData({ 'formData.serviceFlow': e.detail.value });
+	},
+
+	// ========================= 保存 =========================
 	async handleSave() {
 		try {
 			const { modalType, formData, editingItem, activeTab } = this.data;
@@ -189,15 +258,19 @@ Page({
 			}
 
 			this.setData({ loading: true });
+
 			if (activeTab === 'projects') {
 				const projectData: Update<Project> = {
 					name: formData.name,
+					subtitle: formData.subtitle,
 					duration: formData.duration,
 					price: formData.price,
 					commission: formData.commission,
 					status: formData.status,
 					isEssentialOilOnly: formData.isEssentialOilOnly,
-					needEssentialOil: formData.needEssentialOil
+					needEssentialOil: formData.needEssentialOil,
+					categoryId: formData.categoryId,
+					serviceFlow: formData.serviceFlow
 				};
 
 				if (editingItem) {
@@ -205,6 +278,20 @@ Page({
 					wx.showToast({ title: '更新成功', icon: 'success' });
 				} else {
 					await cloudDb.insert<Project>(Collections.PROJECTS, projectData);
+					wx.showToast({ title: '添加成功', icon: 'success' });
+				}
+			} else if (activeTab === 'categories') {
+				const categoryData: Update<ProjectCategory> = {
+					name: formData.name,
+					order: formData.order,
+					status: formData.status
+				};
+
+				if (editingItem) {
+					await cloudDb.updateById<ProjectCategory>(Collections.PROJECT_CATEGORIES, editingItem._id, categoryData);
+					wx.showToast({ title: '更新成功', icon: 'success' });
+				} else {
+					await cloudDb.insert<ProjectCategory>(Collections.PROJECT_CATEGORIES, categoryData);
 					wx.showToast({ title: '添加成功', icon: 'success' });
 				}
 			} else if (activeTab === 'rooms') {
@@ -257,10 +344,12 @@ Page({
 			this.closeModal();
 			await this.loadData();
 		} catch (error) {
+			this.setData({ loading: false });
 			wx.showToast({ title: '保存失败', icon: 'none' });
 		}
 	},
 
+	// ========================= 删除 =========================
 	async handleDelete(e: WechatMiniprogram.CustomEvent) {
 		const { index } = e.currentTarget.dataset;
 		const { activeTab } = this.data;
@@ -270,6 +359,9 @@ Page({
 		if (activeTab === 'projects' && this.data.projects[index]) {
 			_id = this.data.projects[index]._id;
 			collectionName = Collections.PROJECTS;
+		} else if (activeTab === 'categories' && this.data.projectCategories[index]) {
+			_id = this.data.projectCategories[index]._id;
+			collectionName = Collections.PROJECT_CATEGORIES;
 		} else if (activeTab === 'rooms' && this.data.rooms[index]) {
 			_id = this.data.rooms[index]._id;
 			collectionName = Collections.ROOMS;
@@ -301,6 +393,7 @@ Page({
 		});
 	},
 
+	// ========================= 状态切换 =========================
 	async handleToggleStatus(e: WechatMiniprogram.CustomEvent) {
 		const { index } = e.currentTarget.dataset;
 		const { activeTab } = this.data;
@@ -312,6 +405,11 @@ Page({
 				const newStatus = item.status === 'normal' ? 'disabled' : 'normal';
 				await cloudDb.updateById<Project>(Collections.PROJECTS, item._id, { status: newStatus });
 				this.setData({ [`projects[${index}].status`]: newStatus });
+			} else if (activeTab === 'categories' && this.data.projectCategories[index]) {
+				const item = this.data.projectCategories[index];
+				const newStatus = item.status === 'normal' ? 'disabled' : 'normal';
+				await cloudDb.updateById<ProjectCategory>(Collections.PROJECT_CATEGORIES, item._id, { status: newStatus });
+				this.setData({ [`projectCategories[${index}].status`]: newStatus });
 			} else if (activeTab === 'rooms' && this.data.rooms[index]) {
 				const item = this.data.rooms[index];
 				const newStatus = item.status === 'normal' ? 'disabled' : 'normal';
@@ -325,12 +423,18 @@ Page({
 			}
 			this.setData({ loading: false });
 		} catch (error) {
+			this.setData({ loading: false });
 			wx.showToast({ title: '更新失败', icon: 'none' });
 		}
 	},
 
+	// ========================= 添加按钮 =========================
 	onAddProject() {
 		this.openAddModal('project');
+	},
+
+	onAddCategory() {
+		this.openAddModal('category');
 	},
 
 	onAddRoom() {
@@ -346,24 +450,11 @@ Page({
 			showModal: true,
 			modalType: 'prize',
 			editingItem: null,
-			formData: {
-				name: '',
-				duration: 60,
-				price: 0,
-				commission: 0,
-				effect: '',
-				status: 'normal',
-				isEssentialOilOnly: false,
-				needEssentialOil: false,
-				type: 'product',
-				value: 0,
-				probability: 0,
-				color: '#FF6B00',
-				description: ''
-			}
+			formData: this.getDefaultFormData()
 		});
 	},
 
+	// ========================= 奖品独立方法 =========================
 	async handleDeletePrize(e: WechatMiniprogram.CustomEvent) {
 		const { index } = e.currentTarget.dataset;
 		const prize = this.data.prizes[index];
@@ -403,8 +494,8 @@ Page({
 			await cloudDb.updateById<LotteryPrize>(Collections.LOTTERY_PRIZES, prize._id, { status: newStatus });
 			this.setData({ [`prizes[${index}].status`]: newStatus, loading: false });
 		} catch (error) {
-			wx.showToast({ title: '更新失败', icon: 'none' });
 			this.setData({ loading: false });
+			wx.showToast({ title: '更新失败', icon: 'none' });
 		}
 	},
 

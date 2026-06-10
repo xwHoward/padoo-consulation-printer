@@ -807,4 +807,10 @@ if(slots === '已满'){
             url: "/pages/history/history",
         });
     },
+
+    goToProjectList() {
+        wx.navigateTo({
+            url: "/pages/project-list/project-list",
+        });
+    },
 });

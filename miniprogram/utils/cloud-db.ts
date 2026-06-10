@@ -407,6 +407,7 @@ export const Collections = {
 	ROTATION: 'rotation',
 	MEMBERSHIP_USAGE: 'membership_usage',
 	PROJECTS: 'projects',
+	PROJECT_CATEGORIES: 'project_categories',
 	ROOMS: 'rooms',
 	ESSENTIAL_OILS: 'essential_oils',
 	CONSULTATION: 'consultation_records',

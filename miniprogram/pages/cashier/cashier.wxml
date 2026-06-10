@@ -10,6 +10,9 @@
                 <view bindtap="onScreensaver" class="nav-btn" aria-role="button" aria-label="无人值守">
             <text class="nav-btn-text">无人值守</text>
         </view>
+        <view bindtap="goToProjectList" class="nav-btn" aria-role="button" aria-label="项目表">
+            <text class="nav-btn-text">项目表</text>
+        </view>
     </view>
     <view slot="right" class="nav-btns">
         <view bindtap="toggleLandscape" class="nav-btn" aria-role="button" aria-label="咨询单">
