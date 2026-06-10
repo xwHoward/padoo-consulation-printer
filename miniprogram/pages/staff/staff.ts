@@ -16,6 +16,7 @@ Page({
 		showModal: false,
 		editingStaff: null as StaffInfo | null,
 		inputName: '',
+		inputNameEn: '',
 		inputGender: 'male' as StaffGender,
 		inputAvatar: '',
 		inputPhone: '',
@@ -221,6 +222,7 @@ Page({
 			showModal: true,
 			editingStaff: null,
 			inputName: '',
+			inputNameEn: '',
 			inputGender: 'male',
 			inputAvatar: '',
 			inputRole: 'technician',
@@ -240,6 +242,7 @@ Page({
 					showModal: true,
 					editingStaff: staff,
 					inputName: staff.name,
+					inputNameEn: staff.nameEn || '',
 					inputGender: staff.gender || 'male',
 					inputAvatar: staff.avatar || '',
 					inputPhone: staff.phone || '',
@@ -554,6 +557,11 @@ Page({
 		this.setData({ inputName: e.detail.value });
 	},
 
+	// 英文名输入
+	onNameEnInput(e: WechatMiniprogram.Input) {
+		this.setData({ inputNameEn: e.detail.value });
+	},
+
 	// 手机号输入
 	onPhoneInput(e: WechatMiniprogram.Input) {
 		this.setData({ inputPhone: e.detail.value });
@@ -629,6 +637,7 @@ Page({
 			showModal: false,
 			editingStaff: null,
 			inputName: '',
+			inputNameEn: '',
 			inputGender: 'male',
 			inputAvatar: '',
 			inputPhone: '',
@@ -640,8 +649,9 @@ Page({
 	// 确认弹窗
 	async onConfirmModal() {
 		try {
-			const { inputName, inputGender, inputAvatar, inputPhone, inputWechatWorkId, inputRole, inputStatus, editingStaff } = this.data;
+			const { inputName, inputNameEn, inputGender, inputAvatar, inputPhone, inputWechatWorkId, inputRole, inputStatus, editingStaff } = this.data;
 			const name = inputName.trim();
+			const nameEn = inputNameEn.trim();
 			const phone = inputPhone.trim();
 			const wechatWorkId = inputWechatWorkId.trim();
 
@@ -672,6 +682,7 @@ Page({
 				const oldStatus = editingStaff.status;
 				await cloudDb.updateById<StaffInfo>(Collections.STAFF, editingStaff._id, {
 					name,
+					nameEn,
 					gender: inputGender,
 					avatar: inputAvatar,
 					phone,
@@ -696,6 +707,7 @@ Page({
 
 				const inserted = await (cloudDb.insert<StaffInfo>(Collections.STAFF, {
 					name,
+					nameEn,
 					gender: inputGender,
 					avatar: inputAvatar,
 					phone,

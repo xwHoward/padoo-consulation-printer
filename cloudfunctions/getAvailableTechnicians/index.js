@@ -81,7 +81,7 @@ exports.main = async (event, context) => {
             const staffRes = await db.collection('staff').where({
                 status: 'active',
                 _id: _.in(scheduledStaffIds)
-            }).field({ _id: true, name: true, gender: true, phone: true, wechatWorkId: true }).limit(1000).limit(1000).get()
+            }).field({ _id: true, name: true, nameEn: true, gender: true, phone: true, wechatWorkId: true }).limit(1000).limit(1000).get()
             activeStaff = staffRes.data || []
         }
 
@@ -155,6 +155,7 @@ exports.main = async (event, context) => {
             return {
                 _id: staff._id,
                 name: staff.name,
+                nameEn: staff.nameEn || '',
                 gender: staff.gender,
                 phone: staff.phone || '',
                 wechatWorkId: staff.wechatWorkId || '',
@@ -460,7 +461,7 @@ async function getRotationQuickSlots(date) {
         const staffRes = await db.collection('staff').where({
             status: 'active',
             _id: _.in(onDutyStaffIds)
-        }).field({ _id: true, name: true, gender: true, avatar: true }).limit(1000).limit(1000).get()
+        }).field({ _id: true, name: true, nameEn: true, gender: true, avatar: true }).limit(1000).limit(1000).get()
         const staffList = staffRes.data || []
         const staffMap = new Map(staffList.map(s => [s._id, s]))
 
@@ -492,6 +493,7 @@ async function getRotationQuickSlots(date) {
             return {
                 _id: item.staffId,
                 name: staff.name,
+                nameEn: staff.nameEn || '',
                 avatar: staff.avatar || '',
                 gender: staff.gender,
                 shift,
@@ -560,7 +562,7 @@ async function getQuickSlots(date, maleCount, femaleCount) {
         const staffRes = await db.collection('staff').where({
             status: 'active',
             _id: _.in(onDutyStaffIds)
-        }).field({ _id: true, name: true, gender: true }).limit(1000).get()
+        }).field({ _id: true, name: true, nameEn: true, gender: true }).limit(1000).get()
         const staffList = staffRes.data || []
 
         // 构建 rotationItems（含性别和班次信息）
@@ -857,7 +859,7 @@ async function getTechnicianAvailability(date) {
         const staffRes = await db.collection('staff').where({
             status: 'active',
             _id: _.in(onDutyStaffIds)
-        }).field({ _id: true, name: true, gender: true, avatar: true, phone: true, wechatWorkId: true }).limit(1000).limit(1000).get()
+        }).field({ _id: true, name: true, nameEn: true, gender: true, avatar: true, phone: true, wechatWorkId: true }).limit(1000).limit(1000).get()
         const onDutyStaff = staffRes.data || []
 
         const rotationData = rotationRes.data && rotationRes.data.length > 0 ? rotationRes.data[0] : null
@@ -883,6 +885,7 @@ async function getTechnicianAvailability(date) {
             return {
                 _id: staff._id,
                 name: staff.name,
+                nameEn: staff.nameEn || '',
                 avatar: staff.avatar,
                 gender: staff.gender,
                 phone: staff.phone || '',
@@ -1025,7 +1028,7 @@ async function rearrangeReservations(date) {
             db.collection('consultation_records').where({ date, isVoided: false }).field({ _id: true, technician: true, startTime: true, endTime: true }).limit(1000).limit(1000).get(),
             db.collection('reservations').where({ date, status: 'active' }).limit(1000).limit(1000).get(),
             db.collection('rotation_queue').where({ date }).field({ staffList: true }).limit(1000).limit(1000).get(),
-            db.collection('staff').where({ status: 'active' }).field({ _id: true, name: true, gender: true }).limit(1000).limit(1000).get()
+            db.collection('staff').where({ status: 'active' }).field({ _id: true, name: true, nameEn: true, gender: true }).limit(1000).limit(1000).get()
         ])
 
         const schedules = scheduleRes.data || []

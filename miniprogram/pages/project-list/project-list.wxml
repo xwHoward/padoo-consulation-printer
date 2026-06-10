@@ -11,6 +11,10 @@
         <view class="banner-type">SPA & MASSAGE</view>
       </view>
     </view>
+    <!-- 语言切换 -->
+    <view class="lang-toggle" bindtap="toggleLang">
+      <text class="lang-toggle-text">{{t.lang}}</text>
+    </view>
   </view>
   <!-- 项目列表 -->
   <scroll-view class="content" scroll-y>
@@ -25,16 +29,17 @@
           <text class="col-label-blank"></text>
         </view>
         <view class="list-header-right">
-          <text class="col-label-time">时间</text>
-          <text class="col-label-price">费用</text>
+          <text class="col-label-time">{{t.colTime}}</text>
+          <text class="col-label-price">{{t.colPrice}}</text>
         </view>
       </view>
       <view class="list-header-divider"></view>
       <!-- 项目行 -->
       <view class="project-row" wx:for="{{item.projects}}" wx:key="_id" wx:for-item="project">
         <view class="project-info">
-          <view class="project-name">{{project.subtitle}}</view>
-          <view class="project-desc" wx:if="{{project.serviceFlow}}">{{project.serviceFlow}}</view>
+          <view class="project-name">{{t.lang === '中' ? project.nameEn : project.subtitle}}</view>
+          <view class="project-desc" wx:if="{{t.lang === 'EN'&&project.serviceFlow}}">{{project.serviceFlow}}</view>
+          <view class="project-desc" wx:if="{{t.lang === '中'}}">{{project.name}}</view>
         </view>
         <view class="project-time-col">
           <text class="time-value">{{project.duration}} Min</text>
@@ -46,12 +51,12 @@
     </view>
     <!-- 空状态 -->
     <view class="empty-state" wx:if="{{groupedProjects.length === 0 && !loading}}">
-      <text class="empty-text">暂无项目数据</text>
+      <text class="empty-text">{{t.emptyData}}</text>
     </view>
   </scroll-view>
   <!-- 加载遮罩 -->
   <view class="loading-mask" wx:if="{{loading}}">
     <view class="loading-spinner"></view>
-    <text class="loading-text">加载中...</text>
+    <text class="loading-text">{{t.loading}}</text>
   </view>
 </view>

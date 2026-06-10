@@ -1,4 +1,5 @@
 import { cloudDb, Collections } from '../../utils/cloud-db';
+import { buildI18nData, toggleLang as toggleLangFn, t } from '../../utils/i18n';
 
 interface ProjectWithCategory extends Project {
   categoryName: string;
@@ -14,6 +15,7 @@ const app = getApp<IAppOption>();
 
 Page({
   data: {
+    t: buildI18nData('projectList'),
     projects: [] as ProjectWithCategory[],
     groupedProjects: [] as GroupedProjects[],
     loading: false,
@@ -22,6 +24,12 @@ Page({
 
   async onLoad() {
     await this.loadProjects();
+  },
+
+  toggleLang() {
+    toggleLangFn();
+    this.setData({ t: buildI18nData('projectList') });
+    this.loadProjects();
   },
 
   async loadProjects() {
@@ -73,7 +81,7 @@ Page({
       if (uncategorized.length > 0) {
         grouped.push({
           categoryId: '',
-          categoryName: '加钟',
+          categoryName: t('extraService'),
           projects: uncategorized
         });
       }
@@ -87,7 +95,7 @@ Page({
       console.error('[ProjectList] loadProjects 失败:', error);
       this.setData({ loading: false });
       wx.showToast({
-        title: '加载失败',
+        title: t('loadFailed'),
         icon: 'error'
       });
     }

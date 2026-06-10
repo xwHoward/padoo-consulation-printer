@@ -185,6 +185,12 @@
         <input class="form-input" value="{{formData.name}}" bindinput="onNameInput" placeholder="请输入名称" />
       </view>
 
+      <!-- 项目/房间：英文名称 -->
+      <view wx:if="{{activeTab === 'projects' || activeTab === 'rooms'}}" class="form-item">
+        <view class="form-label">英文名称</view>
+        <input class="form-input" value="{{formData.nameEn}}" bindinput="onNameEnInput" placeholder="请输入英文名称（英文模式显示）" />
+      </view>
+
       <!-- ===== 分类表单 ===== -->
       <view wx:if="{{activeTab === 'categories'}}">
         <view class="form-item">

@@ -1,27 +1,54 @@
+import { t, getLang, buildI18nData } from '../../utils/i18n';
+
 Component({
-	properties: {
-		selectedParts: {
-			type: Object,
-			value: {}
-		}
-	},
-	data: {
-		parts: [
-			{ _id: 'head', name: '头部' },
-			{ _id: 'neck', name: '颈部' },
-			{ _id: 'shoulder', name: '肩部' },
-			{ _id: 'back', name: '后背' },
-			{ _id: 'arm', name: '手臂' },
-			{ _id: 'abdomen', name: '腹部' },
-			{ _id: 'waist', name: '腰部' },
-			{ _id: 'thigh', name: '大腿' },
-			{ _id: 'calf', name: '小腿' }
-		]
-	},
-	methods: {
-		onPartTap(e: WechatMiniprogram.CustomEvent) {
-			const part = e.currentTarget.dataset.part;
-			this.triggerEvent('change', { part });
-		}
-	}
+  properties: {
+    selectedParts: {
+      type: Object,
+      value: {}
+    },
+    lang: {
+      type: String,
+      value: 'zh'
+    }
+  },
+  data: {
+    parts: [] as Array<{ _id: string; name: string }>,
+    t: {} as Record<string, string>
+  },
+
+  observers: {
+    'lang'() {
+      this.setData({ t: buildI18nData('bodySelector') });
+      this.updateParts();
+    }
+  },
+
+  methods: {
+    onPartTap(e: WechatMiniprogram.CustomEvent) {
+      const part = e.currentTarget.dataset.part;
+      this.triggerEvent('change', { part });
+    },
+
+    updateParts() {
+      const parts = [
+        { _id: 'head',     name: t('head') },
+        { _id: 'neck',     name: t('neck') },
+        { _id: 'shoulder', name: t('shoulder') },
+        { _id: 'back',     name: t('back') },
+        { _id: 'arm',      name: t('arm') },
+        { _id: 'abdomen',  name: t('abdomen') },
+        { _id: 'waist',    name: t('waist') },
+        { _id: 'thigh',    name: t('thigh') },
+        { _id: 'calf',     name: t('calf') }
+      ];
+      this.setData({ parts });
+    }
+  },
+
+  lifetimes: {
+    attached() {
+      this.setData({ t: buildI18nData('bodySelector') });
+      this.updateParts();
+    }
+  }
 });

@@ -97,6 +97,7 @@ type StaffRole = "technician" | "cashier";
 // 员工数据结构
 interface StaffInfo extends BaseRecord {
   name: string;
+  nameEn?: string;
   status: StaffStatus;
   gender: StaffGender;
   avatar: string;
@@ -212,6 +213,7 @@ interface TechnicianWechatRecord extends BaseRecord {
 
 interface Project extends BaseRecord {
   name: string;
+  nameEn?: string;                   // 英文名称
   subtitle: string;                  // 副标题
   duration: number;
   price?: number;
@@ -225,12 +227,14 @@ interface Project extends BaseRecord {
 
 interface ProjectCategory extends BaseRecord {
   name: string;
+  nameEn?: string;
   order: number;
   status: ItemStatus;
 }
 
 interface Room extends BaseRecord {
   name: string;
+  nameEn?: string;                   // 英文名称
   status: ItemStatus;
 }
 
@@ -238,7 +242,9 @@ type ItemStatus = 'normal' | 'disabled';
 
 interface EssentialOil extends BaseRecord {
   name: string;
+  nameEn?: string;
   effect: string;
+  effectEn?: string;
   status: ItemStatus;
 }
 

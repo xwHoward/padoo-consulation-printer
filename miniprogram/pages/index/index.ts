@@ -6,6 +6,7 @@ import { cloudDb } from "../../utils/cloud-db";
 import { requirePagePermission } from "../../utils/permission";
 import { calculateProjectEndTime, formatDate, formatTime } from "../../utils/util";
 import { showValidationError, validateConsultationForPrint } from "../../utils/validators";
+import { buildI18nData, toggleLang, t, getLang } from "../../utils/i18n";
 import { FormHandler } from "./handlers/form.handler";
 import { ModalHandler } from "./handlers/modal.handler";
 import { DataLoaderService } from "./services/data-loader.service";
@@ -76,6 +77,8 @@ function ensureConsultationInfoCompatibility(data: ConsultationInfo, projects: P
 
 Page({
   data: {
+    t: buildI18nData('index'),
+    lang: getLang(),
     projects: [] as Project[],
     consultationInfo: { ...DefaultConsultationInfo, selectedParts: {} },
     editId: "", // 正在编辑的记录ID
@@ -83,7 +86,7 @@ Page({
     currentReservationIds: [] as string[], // 当前加载的预约ID列表（用于冲突检查时排除）
     loadingTechnicians: false, // 加载技师状态
     loading: false, // 全局loading状态
-    loadingText: '加载中...', // loading提示文字
+    loadingText: t('loading'), // loading提示文字
     // 专用精油相关
     currentProjectIsEssentialOilOnly: false, // 当前项目是否为专用精油项目
     currentProjectNeedEssentialOil: false, // 当前项目是否需要精油
@@ -129,6 +132,8 @@ Page({
 
   onShow() {
     this.dataLoader?.loadTechnicianList();
+    // 每次显示页面时刷新 i18n（确保语言切换后生效）
+    this.setData({ t: buildI18nData('index'), lang: getLang() });
   },
 
   // 页面加载
@@ -343,7 +348,7 @@ Page({
       await printerService.printMultiple(printContents);
     } catch (error) {
       wx.showToast({
-        title: "打印失败",
+        title: t('printFailed'),
         icon: "none",
       });
     }
@@ -352,8 +357,8 @@ Page({
   // 刷新表单内容
   onRefresh() {
     wx.showModal({
-      title: "确认刷新",
-      content: "确定要重置咨询单内容吗？",
+      title: t('confirmRefresh'),
+      content: t('confirmReset'),
       success: (res) => {
         if (res.confirm) {
           this.resetForm();
@@ -385,7 +390,7 @@ Page({
       currentProjectNeedEssentialOil: false
     });
     wx.showToast({
-      title: "咨询单已重置",
+      title: t('formReset'),
       icon: "success",
     });
   },
@@ -415,7 +420,7 @@ Page({
       // 检查提交锁，防止重复提交
       if (this.data.submitting && !editId) {
         wx.showToast({
-          title: '正在提交中，请勿重复点击',
+          title: t('submitting'),
           icon: 'none'
         });
         return false;
@@ -462,7 +467,7 @@ Page({
         if (isDuplicate) {
           this.setData({ submitting: false });
           wx.showToast({
-            title: '该技师在同一时间已有相同项目的记录，请勿重复报钟',
+            title: t('duplicateRecord'),
             icon: 'none'
           });
           return false;
@@ -534,7 +539,7 @@ Page({
 
     } catch (error: any) {
       this.setData({ loading: false, submitting: false });
-      const errorMessage = error?.message || '保存失败';
+      const errorMessage = error?.message || t('saveFailed');
       wx.showToast({
         title: errorMessage,
         icon: 'none'
@@ -586,6 +591,12 @@ Page({
     });
   },
 
+  // 切换语言
+  toggleLang() {
+    const newLang = toggleLang();
+    this.setData({ t: buildI18nData('index'), lang: newLang });
+  },
+
   // 时间选择器确认
   onTimePickerConfirm() {
     this.modalHandler?.onTimePickerConfirm();
@@ -623,7 +634,7 @@ Page({
     this.setData(updates);
 
     wx.showToast({
-      title: '已应用顾客信息',
+      title: t('customerApplied'),
       icon: 'success'
     });
   },
@@ -707,7 +718,7 @@ Page({
     for (let i = 0; i < infos.length; i++) {
       const success = await this.saveConsultation(infos[i], editId);
       if (!success) {
-        wx.showToast({ title: `保存顾客${i + 1}失败`, icon: 'error' });
+        wx.showToast({ title: t('saveGuestFailed', { n: i + 1 }), icon: 'error' });
         return;
       }
     }
@@ -723,7 +734,7 @@ Page({
         'plateReminderModal.licensePlate': licensePlate
       });
     } else {
-      wx.showToast({ title: '报钟成功', icon: 'success' });
+      wx.showToast({ title: t('clockInSuccess'), icon: 'success' });
       setTimeout(() => {
         wx.navigateBack();
       }, 1000);
@@ -785,5 +796,11 @@ Page({
       'plateReminderModal.licensePlate': ''
     });
     this.resetForm();
-  }
+  },
+  // 跳转价目表
+  goToPriceList() {
+    wx.navigateTo({
+      url: '/pages/project-list/project-list'
+    });
+  },
 });

@@ -1,4 +1,5 @@
 import { DataLoaderService } from "../services/data-loader.service";
+import { t } from "../../../utils/i18n";
 
 export class FormHandler {
   private page: IndexPage<DataLoaderService>;
@@ -56,9 +57,9 @@ export class FormHandler {
     
     // 新建咋询场景下，即使有占用也允许选择，只显示提示
     if (occupied) {
-      wx.showToast({ title: reason || '该技师当前时段已有安排，请注意协调', icon: 'none', duration: 2500 });
+      wx.showToast({ title: reason || t('techOccupied'), icon: 'none', duration: 2500 });
     } else if (hasNonClockInConflict) {
-      wx.showToast({ title: '该技师有非点钟预约冲突，请注意协调', icon: 'none', duration: 2500 });
+      wx.showToast({ title: t('techConflict'), icon: 'none', duration: 2500 });
     }
     
     const { guestCount, activeGuest } = this.page.data;

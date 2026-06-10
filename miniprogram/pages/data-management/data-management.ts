@@ -16,6 +16,7 @@ Page({
 		formCategoryName: '',
 		formData: {
 			name: '',
+			nameEn: '',
 			subtitle: '',
 			duration: 60,
 			price: 0,
@@ -38,6 +39,7 @@ Page({
 	getDefaultFormData() {
 		return {
 			name: '',
+			nameEn: '',
 			subtitle: '',
 			duration: 60,
 			price: 0,
@@ -139,33 +141,34 @@ Page({
 		}
 
 		if (item) {
-			const categoryId = (item as Project).categoryId || '';
-			this.setData({
-				showModal: true,
-				modalType: type,
-				editingItem: item,
-				formCategoryName: this.getCategoryName(categoryId),
-				formData: {
-					name: item.name,
-					subtitle: (item as Project).subtitle || '',
-					duration: (item as Project).duration || 60,
-					price: (item as Project).price || 0,
-					commission: (item as Project).commission || 0,
-					effect: (item as EssentialOil).effect || '',
-					status: item.status || 'normal',
-					isEssentialOilOnly: (item as Project).isEssentialOilOnly || false,
-					needEssentialOil: (item as Project).needEssentialOil || false,
-					categoryId: (item as Project).categoryId || '',
-					serviceFlow: (item as Project).serviceFlow || '',
-					order: (item as ProjectCategory).order || 0,
-					type: (item as LotteryPrize).type || 'product',
-					value: (item as LotteryPrize).value || 0,
-					probability: (item as LotteryPrize).probability || 0,
-					color: (item as LotteryPrize).color || '#FF6B00',
-					description: (item as LotteryPrize).description || ''
-				}
-			});
-		}
+				const categoryId = (item as Project).categoryId || '';
+				this.setData({
+					showModal: true,
+					modalType: type,
+					editingItem: item,
+					formCategoryName: this.getCategoryName(categoryId),
+					formData: {
+						name: item.name,
+						nameEn: (item as Project).nameEn || (item as Room).nameEn || '',
+						subtitle: (item as Project).subtitle || '',
+						duration: (item as Project).duration || 60,
+						price: (item as Project).price || 0,
+						commission: (item as Project).commission || 0,
+						effect: (item as EssentialOil).effect || '',
+						status: item.status || 'normal',
+						isEssentialOilOnly: (item as Project).isEssentialOilOnly || false,
+						needEssentialOil: (item as Project).needEssentialOil || false,
+						categoryId: (item as Project).categoryId || '',
+						serviceFlow: (item as Project).serviceFlow || '',
+						order: (item as ProjectCategory).order || 0,
+						type: (item as LotteryPrize).type || 'product',
+						value: (item as LotteryPrize).value || 0,
+						probability: (item as LotteryPrize).probability || 0,
+						color: (item as LotteryPrize).color || '#FF6B00',
+						description: (item as LotteryPrize).description || ''
+					}
+				});
+			}
 	},
 
 	closeModal() {
@@ -175,6 +178,10 @@ Page({
 	// ========================= 通用表单输入 =========================
 	onNameInput(e: WechatMiniprogram.CustomEvent) {
 		this.setData({ 'formData.name': e.detail.value });
+	},
+
+	onNameEnInput(e: WechatMiniprogram.CustomEvent) {
+		this.setData({ 'formData.nameEn': e.detail.value });
 	},
 
 	onSubtitleInput(e: WechatMiniprogram.CustomEvent) {
@@ -262,6 +269,7 @@ Page({
 			if (activeTab === 'projects') {
 				const projectData: Update<Project> = {
 					name: formData.name,
+					nameEn: formData.nameEn,
 					subtitle: formData.subtitle,
 					duration: formData.duration,
 					price: formData.price,
@@ -297,6 +305,7 @@ Page({
 			} else if (activeTab === 'rooms') {
 				const roomData: Update<Room> = {
 					name: formData.name,
+					nameEn: formData.nameEn,
 					status: formData.status
 				};
 

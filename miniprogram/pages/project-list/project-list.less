@@ -31,6 +31,25 @@
     linear-gradient(135deg, #1a3325 0%, #234231 40%, #1a3325 100%);
   padding: 48rpx 40rpx 44rpx;
 
+  /* 语言切换按钮 */
+  .lang-toggle {
+    position: absolute;
+    top: 24rpx;
+    right: 28rpx;
+    z-index: 10;
+
+    .lang-toggle-text {
+      display: inline-block;
+      font-size: 24rpx;
+      font-weight: 600;
+      color: @color-banner-sub;
+      border: 2rpx solid rgba(255, 255, 255, 0.6);
+      border-radius: 8rpx;
+      padding: 6rpx 16rpx;
+      letter-spacing: 2rpx;
+    }
+  }
+
   /* 叶子纹理装饰层 */
   .banner-overlay {
     position: absolute;
