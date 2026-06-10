@@ -9,7 +9,7 @@
 						</picker>
 						<view class="form-label"></view>
 						<view class="form-label">开始时间</view>
-						<picker mode="time" value="{{reserveForm.startTime}}" bindchange="onTimeChange">
+						<picker mode="multiSelector" range="{{[hours, minutes]}}" value="{{[startTimeHourIndex, startTimeMinuteIndex]}}" bindchange="onTimeChange">
 								<view class="picker-val">{{reserveForm.startTime}}</view>
 						</picker>
 				</view>

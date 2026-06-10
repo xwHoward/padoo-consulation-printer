@@ -82,9 +82,10 @@ export class ModalHandler {
 
   onTimePickerChange(e: WechatMiniprogram.CustomEvent) {
     const { value } = e.detail;
-    const now = new Date();
-    now.setHours(value[0], value[1], 0, 0);
-    const currentTime = `${String(value[0]).padStart(2, '0')}:${String(value[1]).padStart(2, '0')}`;
+    const hourIndex = value[0] as number;
+    const minuteIndex = value[1] as number;
+    const actualMinute = minuteIndex * 5;
+    const currentTime = `${String(hourIndex).padStart(2, '0')}:${String(actualMinute).padStart(2, '0')}`;
     this.page.setData({ 'timePickerModal.currentTime': currentTime });
   }
 

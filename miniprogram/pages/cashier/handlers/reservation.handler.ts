@@ -156,7 +156,7 @@ export class ReservationHandler {
 						customerName: record.customerName,
 						gender: record.gender,
 						project: record.project,
-						projects: record.project ? record.project.split('&') : [],
+						projects: record.project ? record.project.split('&').filter(p => p !== '待定') : [],
 						phone: record.phone,
 						requirementType,
 						selectedTechnicians,
@@ -379,11 +379,18 @@ export class ReservationHandler {
 	async selectReserveProject(e: WechatMiniprogram.CustomEvent): Promise<void> {
 		const { projects, project } = e.detail;
 		if (projects !== undefined) {
-			this.page.setData({ 'reserveForm.projects': projects });
+			// 过滤掉占位项目"待定"，防止旧数据残留影响时长计算
+			const filtered = projects.filter((p: string) => p !== '待定');
+			this.page.setData({
+				'reserveForm.projects': filtered,
+				'reserveForm.project': filtered.join('&')
+			});
 		} else {
 			const currentProject = this.page.data.reserveForm.project;
+			const newProject = currentProject === project ? '' : project;
 			this.page.setData({
-				'reserveForm.project': currentProject === project ? '' : project
+				'reserveForm.project': newProject,
+				'reserveForm.projects': newProject ? [newProject] : []
 			});
 		}
 		await this.page.checkStaffAvailability();

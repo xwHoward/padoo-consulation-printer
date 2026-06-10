@@ -26,8 +26,10 @@ function visualWidth(s: string): number {
   return w;
 }
 
+
 function padVisual(s: string, targetWidth: number): string {
-  return s + ' '.repeat(Math.max(0, targetWidth - visualWidth(s)));
+  // return s.padStart(2,'0');
+  return isNaN(Number(s))?s:s.padStart(2,'0') + ' '.repeat(Math.max(0, targetWidth - visualWidth(s)));
 }
 
 function buildTableRow(cols: string[], widths: number[], sep: string): string {
@@ -488,7 +490,7 @@ Page({
         const colWidths = [ 2, 1, 1, 1, 1, 1, 1];
         const headers = ['代号', '卡', '点', '回', '微', '总'];
 
-        summaryText += buildTableRow(headers, colWidths, '┃') + '\n';
+        summaryText += buildTableRow(headers, colWidths, '|') + '\n';
 
         monthlyScoreRanking.rankings.forEach((item) => {
           const perf = (performanceMetrics && performanceMetrics.technicians) ? performanceMetrics.technicians[item.technician] : null;
@@ -502,7 +504,7 @@ Page({
             String(item.totalScore),
           ];
 
-          summaryText += buildTableRow(cells, colWidths, '┃') + '\n';
+          summaryText += buildTableRow(cells, colWidths, '|') + '\n';
         });
 
       }

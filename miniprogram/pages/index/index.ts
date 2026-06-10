@@ -101,7 +101,7 @@ Page({
       currentDate: ''  // 当前选择的日期 YYYY-MM-DD
     },
     hours: Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')),
-    minutes: Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')),
+    minutes: Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0')),
     selectedHour: 0,
     selectedMinute: 0,
     licensePlate: '',
@@ -655,13 +655,14 @@ Page({
       defaultTime = consultationInfo.startTime;
       defaultDate = consultationInfo.date;
       defaultHour = h;
-      defaultMinute = m;
+      defaultMinute = Math.floor(m / 5);
     } else {
       const now = new Date();
-      defaultTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const roundedMinute = Math.floor(now.getMinutes() / 5) * 5;
+      defaultTime = `${String(now.getHours()).padStart(2, '0')}:${String(roundedMinute).padStart(2, '0')}`;
       defaultDate = consultationInfo.date || formatDate(now);
       defaultHour = now.getHours();
-      defaultMinute = now.getMinutes();
+      defaultMinute = Math.floor(now.getMinutes() / 5);
     }
 
     this.setData({

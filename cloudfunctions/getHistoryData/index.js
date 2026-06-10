@@ -368,7 +368,6 @@ exports.main = async (event) => {
             overtimeMins += times.lastEndMins - boundary.end;
           }
           technicianStats[technician].overtime = calculateOvertime(overtimeMins);
-          console.log(technician, overtimeMins, technicianStats[technician].overtime)
         }
       }
 
@@ -471,7 +470,7 @@ exports.main = async (event) => {
             date: db.command.gte(PERFORMANCE_START_DATE),
             isVoided: false
           })
-          .field({ technician: true, phone: true, _id: true })
+          .field({ technician: true, phone: true, _id: true, date: true })
           .limit(1000).get(),
         db.collection('technician_wechat')
           .field({ technician: true, customerId: true })
@@ -522,17 +521,20 @@ exports.main = async (event) => {
           performanceData[tech]._customerMap = {};
         }
         if (!performanceData[tech]._customerMap[key]) {
-          performanceData[tech]._customerMap[key] = { count: 0 };
+          performanceData[tech]._customerMap[key] = new Set();
         }
-        performanceData[tech]._customerMap[key].count++;
+        // 按自然日去重：同一顾客同一天消费多单只计一个日期
+        performanceData[tech]._customerMap[key].add(record.date);
         performanceData[tech].uniqueCustomers.add(record.phone || record._id);
       });
 
       for (const [tech, data] of Object.entries(performanceData)) {
         if (data._customerMap) {
-          for (const [, info] of Object.entries(data._customerMap)) {
-            if (info.count >= 2) {
-              data.returnOrders += info.count - 1;
+          for (const [key, dates] of Object.entries(data._customerMap)) {
+            const distinctDays = dates.size;
+            if (distinctDays >= 2) {
+              // 回头客 = 不同自然日数 - 1（第一天不算回头）
+              data.returnOrders += distinctDays - 1;
             }
           }
         }
@@ -598,7 +600,7 @@ exports.main = async (event) => {
       rankedScores.forEach((item) => {
         const perf = performanceData[item.technician];
         if (perf) {
-          const score = perf.returnOrders * 2 + perf.wechatAdds * 2 + perf.renewalFulfilled * 2;
+          const score = perf.returnOrders * 5 + perf.wechatAdds * 2 + perf.renewalFulfilled * 2;
           item.totalScore += score;
         }
       });

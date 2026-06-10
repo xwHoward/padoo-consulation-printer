@@ -177,7 +177,6 @@ Component({
 				const activeStaffList = activeStaff.filter(s => scheduledStaff.includes(s._id));
 
 				const staffTimeline: StaffTimelineItem[] = [];
-				const timelineWidth = (this.data.timeLabels.length) * TIMELINE_HOUR_WIDTH;
 
 				for (const staff of activeStaffList) {
 					const schedule = allSchedules.find(s => s.date === today && s.staffId === staff._id);
@@ -351,11 +350,17 @@ Component({
 				if (isToday) {
 					const now = new Date();
 					const timeInTimeline = this.toMinutesFromTimelineStart(now.getHours(), now.getMinutes());
-					if (timeInTimeline >= 0 && timeInTimeline <= timelineWidth) {
-						currentTimePosition = (timeInTimeline / this.data.timeLabels.length / 60 * 100) + '%';
+					const totalTimelineMinutes = this.data.timeLabels.length * 60;
+					if (timeInTimeline >= 0 && timeInTimeline <= totalTimelineMinutes) {
+						currentTimePosition = (timeInTimeline / totalTimelineMinutes * 100) + '%';
 						showCurrentTimeLine = true;
+						this.setData({ scrollLeft: timeInTimeline * (TIMELINE_HOUR_WIDTH / 60) });
+					} else {
+						// 当前时间不在时间轴范围内，显示在起始位置
+						currentTimePosition = '0%';
+						showCurrentTimeLine = true;
+						this.setData({ scrollLeft: 0 });
 					}
-					this.setData({ scrollLeft: timeInTimeline });
 				}
 
 				this.setData({
