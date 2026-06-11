@@ -52,10 +52,10 @@
               <view class="block-info">{{block.project}} | {{block.room}}</view>
             </view>
           </view>
-          <!-- 空闲时段标记（仅显示>=60分钟的空隙，可点击复制） -->
-          <view class="available-slot-label" wx:for="{{item.availableSlots}}" wx:for-item="slot" wx:key="left" wx:if="{{slot.durationMinutes >= 60}}" style="left: {{slot.left}}; width: {{slot.width}};" bindtap="onSlotClick" data-staffname="{{item.name}}" data-slots="{{slot.displayText}}" data-staffid="{{item._id}}">
+          <!-- 空闲时段标记（仅显示>=60分钟，可点击复制） -->
+          <view class="available-slot-label" wx:for="{{item.availableSlots}}" wx:for-item="slot" wx:key="left" style="left: {{slot.left}}; width: {{slot.width}};" bindtap="onSlotClick" data-staffname="{{item.name}}" data-slots="{{slot.displayText}}" data-staffid="{{item._id}}">
             <view class="slot-text">{{slot.displayText}}</view>
-            <view class="slot-copy-icon">复制</view>
+            <image class="slot-copy-icon" src="/assets/copy.png" mode="aspectFit" />
           </view>
         </view>
       </view>

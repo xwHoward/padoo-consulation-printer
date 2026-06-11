@@ -378,8 +378,8 @@ Component({
 		calculateAvailableSlotsBetweenBlocks(blocks: TimeBlock[], shift: ShiftType): AvailableSlot[] {
 			const availableSlots: AvailableSlot[] = [];
 
-			// 辅助：从 timeline 分钟数构建 slot 对象
 			const pushSlot = (startTimelineMinutes: number, gapMinutes: number): void => {
+				if (gapMinutes <= 45) return;
 				const startTime = this.timelineMinutesToTime(startTimelineMinutes);
 				const endTime = this.timelineMinutesToTime(startTimelineMinutes + gapMinutes);
 				const left = (startTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
@@ -413,134 +413,47 @@ Component({
 			const shiftStartTimelineMinutes = this.toMinutesFromTimelineStart(shiftStartH, shiftStartM);
 			const shiftEndTimelineMinutes = this.toMinutesFromTimelineStart(shiftEndH, shiftEndM);
 
-			if (!isToday) {
-				if (blocks.length > 0) {
-					const firstBlock = blocks[0];
-					const [firstStartH, firstStartM] = firstBlock.startTime.split(':').map(Number);
-					const firstStartTimelineMinutes = this.toMinutesFromTimelineStart(firstStartH, firstStartM);
-
-					if (firstStartTimelineMinutes > shiftStartTimelineMinutes) {
-						const gapMinutes = firstStartTimelineMinutes - shiftStartTimelineMinutes;
-						pushSlot(shiftStartTimelineMinutes, gapMinutes);
-					}
-				}
-
-				for (let i = 0; i < blocks.length - 1; i++) {
-					const currentBlock = blocks[i];
-					const nextBlock = blocks[i + 1];
-
-					const [currentEndH, currentEndM] = currentBlock.endTime.split(':').map(Number);
-					const currentEndTimelineMinutes = this.toMinutesFromTimelineStart(currentEndH, currentEndM);
-
-					const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-					const nextStartTimelineMinutes = this.toMinutesFromTimelineStart(nextStartH, nextStartM);
-
-					const gapMinutes = nextStartTimelineMinutes - currentEndTimelineMinutes;
-
-					if (gapMinutes > 0) {
-						pushSlot(currentEndTimelineMinutes, gapMinutes);
-					}
-				}
-
-				if (blocks.length > 0) {
-					const lastBlock = blocks[blocks.length - 1];
-					const [lastEndH, lastEndM] = lastBlock.endTime.split(':').map(Number);
-					const lastEndTimelineMinutes = this.toMinutesFromTimelineStart(lastEndH, lastEndM);
-
-					if (lastEndTimelineMinutes < shiftEndTimelineMinutes) {
-						const gapMinutes = shiftEndTimelineMinutes - lastEndTimelineMinutes;
-						pushSlot(lastEndTimelineMinutes, gapMinutes);
-					}
-				}
-
-				return availableSlots;
+			// --- 统一算法：收集所有时间点，划分区间，过滤占用区间 ---
+			// 1. 收集所有 block 的 start/end + 班次起止
+			const timePointsSet = new Set<number>([shiftStartTimelineMinutes, shiftEndTimelineMinutes]);
+			for (const block of blocks) {
+				const [sH, sM] = block.startTime.split(':').map(Number);
+				const [eH, eM] = block.endTime.split(':').map(Number);
+				const sTM = this.toMinutesFromTimelineStart(sH, sM);
+				const eTM = this.toMinutesFromTimelineStart(eH, eM);
+				// clamp 到班次范围
+				if (sTM >= shiftStartTimelineMinutes && sTM <= shiftEndTimelineMinutes) timePointsSet.add(sTM);
+				if (eTM >= shiftStartTimelineMinutes && eTM <= shiftEndTimelineMinutes) timePointsSet.add(eTM);
 			}
+			const sortedPoints = [...timePointsSet].sort((a, b) => a - b);
 
-			if (nowTimelineMinutes >= shiftEndTimelineMinutes) {
-				return availableSlots;
-			}
-
-			let currentBlockIndex = -1;
-			for (let i = 0; i < blocks.length; i++) {
-				const block = blocks[i];
-				const [startH, startM] = block.startTime.split(':').map(Number);
-				const [endH, endM] = block.endTime.split(':').map(Number);
-				const startTimelineMinutes = this.toMinutesFromTimelineStart(startH, startM);
-				const endTimelineMinutes = this.toMinutesFromTimelineStart(endH, endM);
-
-				if (nowTimelineMinutes >= startTimelineMinutes && nowTimelineMinutes < endTimelineMinutes) {
-					currentBlockIndex = i;
-					break;
-				}
-			}
-
-			if (currentBlockIndex !== -1) {
-				const currentBlock = blocks[currentBlockIndex];
-				const [currentEndH, currentEndM] = currentBlock.endTime.split(':').map(Number);
-				const currentEndTimelineMinutes = this.toMinutesFromTimelineStart(currentEndH, currentEndM);
-
-				if (currentBlockIndex < blocks.length - 1) {
-					const nextBlock = blocks[currentBlockIndex + 1];
-					const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-					const nextStartTimelineMinutes = this.toMinutesFromTimelineStart(nextStartH, nextStartM);
-
-					const gapMinutes = nextStartTimelineMinutes - currentEndTimelineMinutes;
-
-					if (gapMinutes > 0) {
-						pushSlot(currentEndTimelineMinutes, gapMinutes);
-					}
-				} else {
-					if (currentEndTimelineMinutes < shiftEndTimelineMinutes) {
-						const gapMinutes = shiftEndTimelineMinutes - currentEndTimelineMinutes;
-						pushSlot(currentEndTimelineMinutes, gapMinutes);
-					}
-				}
-			} else {
-				let nextBlockIndex = -1;
-				for (let i = 0; i < blocks.length; i++) {
-					const block = blocks[i];
-					const [startH, startM] = block.startTime.split(':').map(Number);
-					const startTimelineMinutes = this.toMinutesFromTimelineStart(startH, startM);
-
-					if (startTimelineMinutes > nowTimelineMinutes) {
-						nextBlockIndex = i;
-						break;
-					}
+			// 2. 遍历区间，标记被占用区间
+			for (let i = 1; i < sortedPoints.length; i++) {
+				const segStart = sortedPoints[i - 1];
+				const segEnd = sortedPoints[i];
+				let occupied = false;
+				for (const block of blocks) {
+					const [sH, sM] = block.startTime.split(':').map(Number);
+					const [eH, eM] = block.endTime.split(':').map(Number);
+					const bStart = this.toMinutesFromTimelineStart(sH, sM);
+					const bEnd = this.toMinutesFromTimelineStart(eH, eM);
+					// 区间完全在 block 内则为占用
+					if (segStart >= bStart && segEnd <= bEnd) { occupied = true; break; }
 				}
 
-				if (nowTimelineMinutes < shiftStartTimelineMinutes) {
-					if (nextBlockIndex !== -1) {
-						const nextBlock = blocks[nextBlockIndex];
-						const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-						const nextStartTimelineMinutes = this.toMinutesFromTimelineStart(nextStartH, nextStartM);
+				if (occupied) continue;
+				const gapMinutes = segEnd - segStart;
+				if (gapMinutes <= 0) continue;
 
-						if (nextStartTimelineMinutes > shiftStartTimelineMinutes) {
-							const gapMinutes = nextStartTimelineMinutes - shiftStartTimelineMinutes;
-							pushSlot(shiftStartTimelineMinutes, gapMinutes);
-						}
-					} else {
-						if (shiftEndTimelineMinutes > shiftStartTimelineMinutes) {
-							const gapMinutes = shiftEndTimelineMinutes - shiftStartTimelineMinutes;
-							pushSlot(shiftStartTimelineMinutes, gapMinutes);
-						}
-					}
-				} else {
-					if (nextBlockIndex !== -1) {
-						const nextBlock = blocks[nextBlockIndex];
-						const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-						const nextStartTimelineMinutes = this.toMinutesFromTimelineStart(nextStartH, nextStartM);
+				// 今天：跳过已结束的区间
+				if (isToday && segEnd <= nowTimelineMinutes) continue;
 
-						if (nextStartTimelineMinutes > nowTimelineMinutes) {
-							const gapMinutes = nextStartTimelineMinutes - nowTimelineMinutes;
-							pushSlot(nowTimelineMinutes, gapMinutes);
-						}
-					} else {
-						if (shiftEndTimelineMinutes > nowTimelineMinutes) {
-							const gapMinutes = shiftEndTimelineMinutes - nowTimelineMinutes;
-							pushSlot(nowTimelineMinutes, gapMinutes);
-						}
-					}
-				}
+				// 今天：区间起点修正为 now（不晚于 now）
+				const effectiveStart = isToday ? Math.max(segStart, nowTimelineMinutes) : segStart;
+				const effectiveGap = segEnd - effectiveStart;
+				if (effectiveGap <= 0) continue;
+
+				pushSlot(effectiveStart, effectiveGap);
 			}
 
 			return availableSlots;

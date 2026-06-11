@@ -15,9 +15,9 @@
         </view>
     </view>
     <view slot="right" class="nav-btns">
-        <view bindtap="toggleLandscape" class="nav-btn" aria-role="button" aria-label="咨询单">
+        <!-- <view bindtap="toggleLandscape" class="nav-btn" aria-role="button" aria-label="咨询单">
             <text class="nav-btn-text">{{isLandscape ? '竖屏' : '横屏'}}</text>
-        </view>
+        </view> -->
         <view bindtap="goToIndex" class="nav-btn" aria-role="button" aria-label="咨询单">
             <text class="nav-btn-text">咨询单</text>
         </view>
