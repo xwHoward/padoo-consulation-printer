@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sidebar Dev Preview</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .dev-container {
+      width: 100%;
+      max-width: 400px;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+      border-left: 1px solid #e8e8e8;
+    }
+  </style>
+</head>
+<body>
+  <div class="dev-container">
+    <div id="app"></div>
+  </div>
+  <script type="module" src="/src/sidebar/main.js"></script>
+</body>
+</html>
