@@ -1,12 +1,19 @@
 <navigation-bar title="" back="{{true}}" color="black" background="#FFF">
   <view slot="left" class="nav-btns" wx:if="{{!editId&&currentReservationIds.length===0}}">
-    <view bindtap="onRefresh" class="nav-btn" aria-role="button" aria-label="刷新">
-      <text class="nav-btn-text">刷新</text>
+    <view bindtap="onRefresh" class="nav-btn" aria-role="button" aria-label="{{t.refresh}}">
+      <text class="nav-btn-text">{{t.refresh}}</text>
     </view>
   </view>
   <view slot="right" class="nav-btns" wx:if="{{!editId&&currentReservationIds.length===0}}">
+    <view bindtap="toggleLang" class="nav-btn" aria-role="button" aria-label="language">
+      <text class="nav-btn-text lang-btn">{{t.lang}}</text>
+    </view>
     <view bindtap="goToHistory" class="nav-btn" aria-role="button" aria-label="单据">
       <text class="nav-btn-text">单据</text>
+    </view>
+    <!-- 价目表 -->
+    <view bindtap="goToPriceList" class="nav-btn" aria-role="button" aria-label="{{t.priceList}}">
+      <text class="nav-btn-text">{{t.priceList}}</text>
     </view>
   </view>
 </navigation-bar>
@@ -31,20 +38,23 @@
       <!-- 多人模式顾客切换标签 -->
       <view class="guest-tabs" wx:if="{{guestCount > 1}}">
         <view wx:for="{{guestInfos}}" wx:key="index" class="guest-tab {{activeGuest === index + 1 ? 'active' : ''}}" bindtap="switchGuest" data-guest="{{index + 1}}">
-          <view class="tab-text">顾客{{index + 1}}</view>
+          <view class="tab-text">{{t.guestLabel}}{{index + 1}}</view>
           <view class="guest-name" wx:if="{{item.surname}}">
-            {{item.surname}}{{item.gender === 'male' ? '先生' : '女士'}}
+            {{item.surname}}{{item.gender === 'male' ? t.mr : t.ms}}
           </view>
           <view class="guest-tech" wx:if="{{item.technician}}">{{item.technician}}</view>
         </view>
       </view>
       <view class="form-item">
-        <view class="form-label">项目</view>
-        <project-selector selectedProject="{{(guestCount > 1 ? guestInfos[activeGuest - 1].project : consultationInfo.project)}}" bind:change="onProjectSelect" />
+        <view class="form-label">{{t.project}}</view>
+        <project-selector selectedProject="{{(guestCount > 1 ? guestInfos[activeGuest - 1].project : consultationInfo.project)}}" lang="{{lang}}" bind:change="onProjectSelect" />
+        <navigator wx:if="{{t.lang === '中'}}" url="/pages/project-list/project-list" class="project-list-nav">
+          {{t.priceList}}
+        </navigator>
       </view>
       <!-- 加强部位 -->
-      <view class="section-title">加强部位</view>
-      <body-selector selectedParts="{{guestCount > 1 ? guestInfos[activeGuest - 1].selectedParts : consultationInfo.selectedParts}}" bind:change="onBodyPartSelect" />
+      <view class="section-title">{{t.bodyParts}}</view>
+      <body-selector selectedParts="{{guestCount > 1 ? guestInfos[activeGuest - 1].selectedParts : consultationInfo.selectedParts}}" lang="{{lang}}" bind:change="onBodyPartSelect" />
     </view>
     <!-- 按摩力度 -->
     <!-- <view class="section">
@@ -53,20 +63,20 @@
     </view> -->
     <!-- 精油选择 -->
     <view class="section" wx:if="{{!currentProjectIsEssentialOilOnly && currentProjectNeedEssentialOil}}">
-      <view class="section-title">精油选择</view>
-      <oil-selector selectedOil="{{guestCount > 1 ? guestInfos[activeGuest - 1].essentialOil : consultationInfo.essentialOil}}" bind:change="onEssentialOilSelect" />
+      <view class="section-title">{{t.essentialOil}}</view>
+      <oil-selector selectedOil="{{guestCount > 1 ? guestInfos[activeGuest - 1].essentialOil : consultationInfo.essentialOil}}" lang="{{lang}}" bind:change="onEssentialOilSelect" />
     </view>
     <!-- 专属精油显示 -->
     <view class="section" wx:if="{{currentProjectIsEssentialOilOnly && currentProjectNeedEssentialOil}}">
-      <view class="section-title">专属精油</view>
+      <view class="section-title">{{t.exclusiveOil}}</view>
       <image class="exclusive-oil-image" src="/assets/essential-oil.jpg" mode="aspectFill" />
     </view>
     <!-- 免费停车区域 -->
     <view class="section">
-      <view class="section-title">免费停车</view>
+      <view class="section-title">{{t.freeParking}}</view>
       <view class="parking-form">
         <view class="form-item" style="flex-wrap: wrap;">
-          <text class="form-label">车牌号</text>
+          <text class="form-label">{{t.licensePlate}}</text>
           <view class="plate-input-container" bindtap="showPlateInputModal">
             <view class="plate-inputs">
               <view class="plate-input {{isNoPlate && index === 0 ? 'fixed' : ''}}" wx:for="{{plateNumber}}" wx:key="index">
@@ -74,16 +84,16 @@
               </view>
             </view>
           </view>
-          <view class="parking-tips">*免费停车2小时，超时1元/小时</view>
+          <view class="parking-tips">{{t.parkingTips}}</view>
         </view>
       </view>
     </view>
     <!-- 上钟信息 -->
     <view class="section">
-      <view class="section-title">上钟信息</view>
+      <view class="section-title">{{t.clockInfo}}</view>
       <view class="form-item">
-        <text class="form-label">技师</text>
-        <technician-selector selectedTechnician="{{(guestCount > 1 ? guestInfos[activeGuest - 1].technician : consultationInfo.technician)}}" technicianList="{{technicianList}}" bind:change="onTechnicianSelect" />
+        <text class="form-label">{{t.technician}}</text>
+        <technician-selector selectedTechnician="{{(guestCount > 1 ? guestInfos[activeGuest - 1].technician : consultationInfo.technician)}}" technicianList="{{technicianList}}" lang="{{lang}}" bind:change="onTechnicianSelect" />
         <view class="checkbox-group">
           <label class="checkbox-item {{(guestCount > 1 ? guestInfos[activeGuest - 1].isClockIn : consultationInfo.isClockIn) ? 'selected' : ''}}" bindtap="onClockInSelect">
             点
@@ -91,60 +101,60 @@
         </view>
       </view>
       <view class="form-item">
-        <text class="form-label">房间</text>
-        <room-selector selectedRoom="{{guestCount > 1 ? guestInfos[activeGuest - 1].room : consultationInfo.room}}" bind:change="onRoomSelect" />
+        <text class="form-label">{{t.room}}</text>
+        <room-selector selectedRoom="{{guestCount > 1 ? guestInfos[activeGuest - 1].room : consultationInfo.room}}" lang="{{lang}}" bind:change="onRoomSelect" />
       </view>
     </view>
     <!-- 备注信息 -->
     <view class="section">
-      <view class="section-title">其他</view>
+      <view class="section-title">{{t.others}}</view>
       <!-- 个人信息（合并一行） -->
       <view wx:if="{{!matchedCustomerApplied}}" class="form-item combined-form-item customer-info-row">
         <view class="form-field surname-field">
-          <text class="form-label">姓氏</text>
-          <input class="form-input" placeholder="选填" bind:input="onSurnameInput" value="{{guestCount > 1 ? guestInfos[activeGuest - 1].surname : consultationInfo.surname}}" />
+          <text class="form-label">{{t.surname}}</text>
+          <input class="form-input" placeholder="{{t.optional}}" bind:input="onSurnameInput" value="{{guestCount > 1 ? guestInfos[activeGuest - 1].surname : consultationInfo.surname}}" />
         </view>
         <view class="form-field gender-field">
-          <gender-selector selectedGender="{{(guestCount > 1 ? guestInfos[activeGuest - 1].gender : consultationInfo.gender)}}" bind:change="onGenderSelect" />
+          <gender-selector selectedGender="{{(guestCount > 1 ? guestInfos[activeGuest - 1].gender : consultationInfo.gender)}}" lang="{{lang}}" bind:change="onGenderSelect" />
         </view>
         <view class="form-field phone-field {{guestCount > 1 && activeGuest > 1 ? 'shared-field-disabled' : ''}}">
-          <text class="form-label">手机号{{guestCount > 1 ? '（共享）' : ''}}</text>
-          <input class="form-input" type="number" placeholder="选填" maxlength="11" bind:input="onPhoneInput" value="{{consultationInfo.phone}}" disabled="{{guestCount > 1 && activeGuest > 1}}" />
+          <text class="form-label">{{guestCount > 1 ? t.phoneShared : t.phone}}</text>
+          <input class="form-input" type="number" placeholder="{{t.optional}}" maxlength="11" bind:input="onPhoneInput" value="{{consultationInfo.phone}}" disabled="{{guestCount > 1 && activeGuest > 1}}" />
         </view>
       </view>
       <!-- 顾客匹配结果 -->
       <view class="customer-match-result" wx:if="{{matchedCustomer}}">
         <view class="match-info">
-          <view class="match-label">匹配顾客：</view>
+          <view class="match-label">{{t.matchedCustomer}}</view>
           <view class="match-name">
-            {{matchedCustomer.name}}{{matchedCustomer.gender === 'male' ? '先生' : '女士'}}
+            {{matchedCustomer.name}}{{matchedCustomer.gender === 'male' ? t.mr : t.ms}}
           </view>
-          <view class="match-phone">{{matchedCustomer.phone || '无手机号'}}</view>
+          <view class="match-phone">{{matchedCustomer.phone || t.noPhone}}</view>
           <view class="match-tech" wx:if="{{matchedCustomer.responsibleTechnician}}">
-            责任技师：{{matchedCustomer.responsibleTechnician}}
+            {{t.responsibleTech}}{{matchedCustomer.responsibleTechnician}}
           </view>
           <view wx:if="{{matchedCustomer.remark}}" class="match-remark">
             {{matchedCustomer.remark}}
           </view>
           <view class="match-actions">
             <view wx:if="{{!matchedCustomerApplied}}" class="match-btn apply-btn" bindtap="applyMatchedCustomer">
-              应用
+              {{t.apply}}
             </view>
-            <view class="match-btn clear-btn" bindtap="clearMatchedCustomer">清除</view>
+            <view class="match-btn clear-btn" bindtap="clearMatchedCustomer">{{t.clear}}</view>
           </view>
         </view>
       </view>
       <!-- 券码 -->
-      <view class="form-item coupon-form-item">
-        <text class="form-label">券码</text>
+      <!-- <view class="form-item coupon-form-item">
+        <text class="form-label">{{t.couponCode}}</text>
         <view class="coupon-container">
-          <input class="form-input coupon-input" type="number" placeholder="选填" bind:input="onCouponCodeInput" value="{{guestCount > 1 ? guestInfos[activeGuest - 1].couponCode : consultationInfo.couponCode}}" />
+          <input class="form-input coupon-input" type="number" placeholder="{{t.optional}}" bind:input="onCouponCodeInput" value="{{guestCount > 1 ? guestInfos[activeGuest - 1].couponCode : consultationInfo.couponCode}}" />
         </view>
-        <platform-selector selectedPlatform="{{(guestCount > 1 ? guestInfos[activeGuest - 1].couponPlatform : consultationInfo.couponPlatform)}}" bind:change="onCouponPlatformSelect" />
-      </view>
+        <platform-selector selectedPlatform="{{(guestCount > 1 ? guestInfos[activeGuest - 1].couponPlatform : consultationInfo.couponPlatform)}}" lang="{{lang}}" bind:change="onCouponPlatformSelect" />
+      </view> -->
       <view class="form-item">
-        <text class="form-label">备注</text>
-        <input class="form-input" placeholder="选填" bind:input="onRemarksInput" value="{{guestCount > 1 ? guestInfos[activeGuest - 1].remarks : consultationInfo.remarks}}" />
+        <text class="form-label">{{t.remarks}}</text>
+        <input class="form-input" placeholder="{{t.optional}}" bind:input="onRemarksInput" value="{{guestCount > 1 ? guestInfos[activeGuest - 1].remarks : consultationInfo.remarks}}" />
       </view>
     </view>
     <!-- 提交和打印按钮 -->
@@ -170,16 +180,16 @@
   <view class="loading-text">{{loadingText}}</view>
 </view>
 <!-- 时间选择器弹窗 -->
-<modal show="{{timePickerModal.show}}" title="选择上钟开始时间" show-close="{{true}}" bind:cancel="onTimePickerCancel" bind:confirm="onTimePickerConfirm">
+<modal show="{{timePickerModal.show}}" title="{{t.selectStartTime}}" show-close="{{true}}" bind:cancel="onTimePickerCancel" bind:confirm="onTimePickerConfirm">
   <view class="date-time-picker-container">
     <!-- 日期选择 -->
     <view class="date-picker-section">
-      <view class="section-label">日期</view>
+      <view class="section-label">{{t.date}}</view>
       <date-picker initialDate="{{timePickerModal.currentDate}}" bind:change="onDatePickerChange" />
     </view>
     <!-- 时间选择 -->
     <view class="time-picker-section">
-      <view class="section-label">时间</view>
+      <view class="section-label">{{t.time}}</view>
       <picker mode="multiSelector" range="{{[hours, minutes]}}" value="{{[selectedHour, selectedMinute]}}" bindchange="onTimePickerChange" bindcolumnchange="onTimeColumnChange">
         <view class="time-picker-display">
           <text class="time-value">{{timePickerModal.currentTime}}</text>
@@ -191,15 +201,15 @@
 <!-- 车牌号输入弹窗 -->
 <license-plate-input visible="{{licensePlateInputVisible}}" value="{{licensePlate}}" bind:cancel="hidePlateInputModal" bind:confirm="onPlateConfirm" />
 <!-- 报钟推送确认弹窗 -->
-<modal show="{{clockInModal.show}}" title="确认报钟信息" show-close="{{true}}" bind:cancel="onClockInModalCancel" bind:confirm="onClockInModalConfirm" loading="{{clockInModal.loading}}" loading-text="推送中..." cancel-text="不推送">
-  <textarea class="clockin-textarea" value="{{clockInModal.content}}" bindinput="onClockInContentInput" placeholder="请输入报钟内容" maxlength="1000" auto-height show-confirm-bar="{{false}}" />
+<modal show="{{clockInModal.show}}" title="{{t.confirmClockIn}}" show-close="{{true}}" bind:cancel="onClockInModalCancel" bind:confirm="onClockInModalConfirm" loading="{{clockInModal.loading}}" loading-text="{{t.pushing}}" cancel-text="{{t.noPush}}">
+  <textarea class="clockin-textarea" value="{{clockInModal.content}}" bindinput="onClockInContentInput" placeholder="{{t.clockInPlaceholder}}" maxlength="1000" auto-height show-confirm-bar="{{false}}" />
   <text class="char-count">{{clockInModal.content.length}}/1000</text>
 </modal>
 <!-- 车牌号录入提醒弹窗 -->
-<modal show="{{plateReminderModal.show}}" title="车牌号录入提醒" show-close="{{false}}" show-cancel="{{false}}" bind:confirm="onPlateReminderConfirm" confirm-text="已录入">
+<modal show="{{plateReminderModal.show}}" title="{{t.plateReminderTitle}}" show-close="{{false}}" show-cancel="{{false}}" bind:confirm="onPlateReminderConfirm" confirm-text="{{t.plateEntered}}">
   <view class="plate-reminder-content">
     <view class="reminder-icon">⚠️</view>
-    <view class="reminder-text">请在系统中及时为顾客录入车牌！</view>
-    <view class="plate-display">车牌号：{{plateReminderModal.licensePlate}}</view>
+    <view class="reminder-text">{{t.plateReminderText}}</view>
+    <view class="plate-display">{{t.plateLabel}}{{plateReminderModal.licensePlate}}</view>
   </view>
 </modal>

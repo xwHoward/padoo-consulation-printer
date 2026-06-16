@@ -7,21 +7,13 @@ cloud.init({
 
 const db = cloud.database();
 
-const OVERTIME_DURATION_MAP = {
-  30: 0.5,
-  45: 0.5,
-  60: 1,
-  70: 1,
-  80: 1,
-  90: 1.5,
-  120: 2
-};
-
+/**
+ * 计算加班时间
+ * @param {*} duration 咨询时间（分钟）
+ * @returns 加班个数（单位：半小时）  
+ */
 function calculateOvertime(duration) {
-  if (OVERTIME_DURATION_MAP[ duration ] !== undefined) {
-    return OVERTIME_DURATION_MAP[ duration ];
-  }
-  return Math.round(duration / 60 * 10) / 10;
+  return Math.floor(duration / 30);
 }
 
 function isToday(date) {
@@ -36,7 +28,7 @@ function isToday(date) {
 
 function parseProjectDuration(project) {
   const match = project.match(/(\d+)min/);
-  return match ? parseInt(match[ 1 ], 10) : 60;
+  return match ? parseInt(match[1], 10) : 90;
 }
 
 /**
@@ -70,18 +62,18 @@ async function getDailyRecordsWithCount(date) {
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   const processedRecords = records.map(record => {
-    if (!technicianCounts[ record.technician ]) {
-      technicianCounts[ record.technician ] = 0;
+    if (!technicianCounts[record.technician]) {
+      technicianCounts[record.technician] = 0;
     }
 
     if (!record.isVoided) {
-      technicianCounts[ record.technician ]++;
+      technicianCounts[record.technician]++;
     }
 
     const { startTime: startTimeStr, endTime: endTimeStr } = processRecord(record);
 
-    const [ startHour, startMinute ] = startTimeStr.split(':').map(Number);
-    const [ endHour, endMinute ] = endTimeStr.split(':').map(Number);
+    const [startHour, startMinute] = startTimeStr.split(':').map(Number);
+    const [endHour, endMinute] = endTimeStr.split(':').map(Number);
     const startMinutes = startHour * 60 + startMinute;
     const endMinutes = endHour * 60 + endMinute;
 
@@ -89,7 +81,7 @@ async function getDailyRecordsWithCount(date) {
 
     return {
       ...record,
-      dailyCount: record.isVoided ? 0 : technicianCounts[ record.technician ],
+      dailyCount: record.isVoided ? 0 : technicianCounts[record.technician],
       startTime: startTimeStr,
       endTime: endTimeStr,
       collapsed: record.isVoided,
@@ -115,10 +107,10 @@ exports.main = async (event) => {
       }
 
       const records = await getDailyRecordsWithCount(targetDate);
-      const historyData = [ {
+      const historyData = [{
         date: targetDate,
         records: records
-      } ];
+      }];
 
       return {
         code: 0,
@@ -136,23 +128,23 @@ exports.main = async (event) => {
       const dateMap = {};
       allRecordsResult.data.forEach(record => {
         const date = record.date || record.createdAt.substring(0, 10);
-        if (!dateMap[ date ]) {
-          dateMap[ date ] = 0;
+        if (!dateMap[date]) {
+          dateMap[date] = 0;
         }
-        dateMap[ date ]++;
+        dateMap[date]++;
       });
 
       const allDates = Object.keys(dateMap).sort((a, b) => new Date(b) - new Date(a));
 
-      const selectedDate = targetDate || allDates[ 0 ];
+      const selectedDate = targetDate || allDates[0];
       let historyData = [];
 
       if (selectedDate) {
         const records = await getDailyRecordsWithCount(selectedDate);
-        historyData = [ {
+        historyData = [{
           date: selectedDate,
           records: records
-        } ];
+        }];
       }
 
       return {
@@ -179,17 +171,17 @@ exports.main = async (event) => {
       const consultationHistory = {};
       allRecordsResult.data.forEach(record => {
         const date = record.createdAt.substring(0, 10);
-        if (!consultationHistory[ date ]) {
-          consultationHistory[ date ] = [];
+        if (!consultationHistory[date]) {
+          consultationHistory[date] = [];
         }
-        consultationHistory[ date ].push(record);
+        consultationHistory[date].push(record);
       });
 
       const historyData = [];
       const datesToProcess = Object.keys(consultationHistory).sort((a, b) => new Date(b) - new Date(a));
 
       for (const date of datesToProcess) {
-        const records = consultationHistory[ date ];
+        const records = consultationHistory[date];
         const customerRecords = records.filter(record => {
           const recordKey = record.phone || record._id;
           return recordKey === customerId && !record.isVoided;
@@ -205,19 +197,19 @@ exports.main = async (event) => {
           });
 
           sortedByTime.forEach(record => {
-            if (!technicianCounts[ record.technician ]) {
-              technicianCounts[ record.technician ] = 0;
+            if (!technicianCounts[record.technician]) {
+              technicianCounts[record.technician] = 0;
             }
 
             if (!record.isVoided) {
-              technicianCounts[ record.technician ]++;
+              technicianCounts[record.technician]++;
             }
 
             const { startTime: startTimeStr, endTime: endTimeStr } = processRecord(record);
 
             processedRecords.push({
               ...record,
-              dailyCount: technicianCounts[ record.technician ],
+              dailyCount: technicianCounts[record.technician],
               startTime: startTimeStr,
               endTime: endTimeStr,
               collapsed: record.isVoided
@@ -252,8 +244,8 @@ exports.main = async (event) => {
         };
       }
 
-      const [ recordsResult, schedulesResult, staffResult ] = await Promise.all([
-        db.collection('consultation_records').where({ date: targetDate }).field({ isVoided: true, technician: true, project: true, isClockIn: true, extraTime: true, guasha: true, overtime: true, startTime: true, endTime: true }).limit(1000).get(),
+      const [recordsResult, schedulesResult, staffResult] = await Promise.all([
+        db.collection('consultation_records').where({ date: targetDate }).field({ isVoided: true, technician: true, project: true, isClockIn: true, extraTime: true, isExtraTime: true, guasha: true, overtime: true, startTime: true, endTime: true }).limit(1000).get(),
         db.collection('schedule').where({ date: targetDate }).field({ staffId: true, shift: true }).limit(1000).get(),
         db.collection('staff').where({ status: 'active' }).field({ name: true }).limit(1000).get()
       ]);
@@ -261,13 +253,13 @@ exports.main = async (event) => {
       const records = recordsResult.data;
       const scheduleMap = {};
       schedulesResult.data.forEach(s => {
-        scheduleMap[ s.staffId ] = s.shift;
+        scheduleMap[s.staffId] = s.shift;
       });
 
       const staffIdMap = {};
       const activeStaffNames = new Set();
       staffResult.data.forEach(s => {
-        staffIdMap[ s.name ] = s._id;
+        staffIdMap[s.name] = s._id;
         activeStaffNames.add(s.name);
       });
 
@@ -282,8 +274,8 @@ exports.main = async (event) => {
             return;
           }
 
-          if (!technicianStats[ technician ]) {
-            technicianStats[ technician ] = {
+          if (!technicianStats[technician]) {
+            technicianStats[technician] = {
               projects: {},
               clockInCount: 0,
               totalCount: 0,
@@ -293,31 +285,35 @@ exports.main = async (event) => {
               guashaCount: 0,
               shift: ''
             };
-            technicianTimes[ technician ] = { firstStartMins: Infinity, lastEndMins: -Infinity };
+            technicianTimes[technician] = { firstStartMins: Infinity, lastEndMins: -Infinity };
           }
 
-          if (!technicianStats[ technician ].projects[ record.project ]) {
-            technicianStats[ technician ].projects[ record.project ] = 0;
+          if (!technicianStats[technician].projects[record.project]) {
+            technicianStats[technician].projects[record.project] = 0;
           }
-          technicianStats[ technician ].projects[ record.project ]++;
+          technicianStats[technician].projects[record.project]++;
 
           if (record.isClockIn) {
-            technicianStats[ technician ].clockInCount++;
+            technicianStats[technician].clockInCount++;
           }
 
           if (record.extraTime && record.extraTime > 0) {
-            technicianStats[ technician ].extraTimeCount++;
-            technicianStats[ technician ].extraTimeTotal += record.extraTime;
+            technicianStats[technician].extraTimeCount++;
+            technicianStats[technician].extraTimeTotal += record.extraTime;
+          }
+
+          if (record.isExtraTime) {
+            technicianStats[technician].extraTimeCount++;
           }
 
           if (record.guasha) {
-            technicianStats[ technician ].guashaCount++;
+            technicianStats[technician].guashaCount++;
           }
 
           // 记录时间范围：第一个开始时间、最后一个结束时间
           if (record.startTime && record.endTime) {
-            const [ sh, sm ] = record.startTime.split(':').map(Number);
-            const [ eh, em ] = record.endTime.split(':').map(Number);
+            const [sh, sm] = record.startTime.split(':').map(Number);
+            const [eh, em] = record.endTime.split(':').map(Number);
             const startMins = sh * 60 + sm;
             let endMins = eh * 60 + em;
 
@@ -325,24 +321,24 @@ exports.main = async (event) => {
               endMins += 24 * 60;
             }
 
-            technicianTimes[ technician ].firstStartMins = Math.min(
-              technicianTimes[ technician ].firstStartMins, startMins
+            technicianTimes[technician].firstStartMins = Math.min(
+              technicianTimes[technician].firstStartMins, startMins
             );
-            technicianTimes[ technician ].lastEndMins = Math.max(
-              technicianTimes[ technician ].lastEndMins, endMins
+            technicianTimes[technician].lastEndMins = Math.max(
+              technicianTimes[technician].lastEndMins, endMins
             );
           }
 
           // 记录班次信息
-          if (!technicianStats[ technician ].shift) {
-            const staffId = staffIdMap[ technician ];
-            const shift = staffId ? scheduleMap[ staffId ] : null;
+          if (!technicianStats[technician].shift) {
+            const staffId = staffIdMap[technician];
+            const shift = staffId ? scheduleMap[staffId] : null;
             if (shift) {
-              technicianStats[ technician ].shift = shift;
+              technicianStats[technician].shift = shift;
             }
           }
 
-          technicianStats[ technician ].totalCount++;
+          technicianStats[technician].totalCount++;
         }
       });
 
@@ -353,16 +349,16 @@ exports.main = async (event) => {
       };
 
       for (const technician of Object.keys(technicianStats)) {
-        const times = technicianTimes[ technician ];
+        const times = technicianTimes[technician];
         if (!times || times.firstStartMins === Infinity) continue;
 
-        const shift = technicianStats[ technician ].shift;
+        const shift = technicianStats[technician].shift;
 
         if (shift === 'overtime') {
           const totalMins = times.lastEndMins - times.firstStartMins;
-          technicianStats[ technician ].overtime = calculateOvertime(totalMins);
+          technicianStats[technician].overtime = calculateOvertime(totalMins);
         } else {
-          const boundary = SHIFT_BOUNDARIES[ shift ] || SHIFT_BOUNDARIES.evening;
+          const boundary = SHIFT_BOUNDARIES[shift] || SHIFT_BOUNDARIES.evening;
           let overtimeMins = 0;
 
           if (times.firstStartMins < boundary.start) {
@@ -371,8 +367,7 @@ exports.main = async (event) => {
           if (times.lastEndMins > boundary.end) {
             overtimeMins += times.lastEndMins - boundary.end;
           }
-
-          technicianStats[ technician ].overtime = calculateOvertime(overtimeMins);
+          technicianStats[technician].overtime = calculateOvertime(overtimeMins);
         }
       }
 
@@ -381,13 +376,13 @@ exports.main = async (event) => {
       const currentMonth = currentDate.getMonth();
       // const monthStart = new Date(currentYear, currentMonth, 1);
       const monthEnd = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
-      const monthStartStr = `${ currentYear }-${ String(currentMonth + 1).padStart(2, '0') }-01`;
-      const monthEndStr = `${ currentYear }-${ String(currentMonth + 1).padStart(2, '0') }-${ String(monthEnd.getDate()).padStart(2, '0') }`;
+      const monthStartStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+      const monthEndStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(monthEnd.getDate()).padStart(2, '0')}`;
 
       const monthlyMemberships = await db.collection('customer_membership')
         .where({
           createdAt: db.RegExp({
-            regexp: `^(${ currentYear }-${ String(currentMonth + 1).padStart(2, '0') })`
+            regexp: `^(${currentYear}-${String(currentMonth + 1).padStart(2, '0')})`
           })
         })
         .field({ salesStaff: true, cardName: true })
@@ -398,16 +393,16 @@ exports.main = async (event) => {
         const salesStaff = membership.salesStaff;
         if (salesStaff) {
           // TODO: 使用更准确的方式判断次卡数量
-          const cardTimes = parseInt(membership.cardName) || 0;
+          const cardTimes = membership.cardName.includes('2988') ? 20 : parseInt(membership.cardName) || 0;
 
           const staffCount = salesStaff.length;
           const timesPerStaff = Math.floor(cardTimes / staffCount);
           salesStaff.forEach(staff => {
             if (staff) {
-              if (!membershipSales[ staff ]) {
-                membershipSales[ staff ] = 0;
+              if (!membershipSales[staff]) {
+                membershipSales[staff] = 0;
               }
-              membershipSales[ staff ] += timesPerStaff;
+              membershipSales[staff] += timesPerStaff;
             }
           });
 
@@ -417,7 +412,7 @@ exports.main = async (event) => {
       const monthlyClockIns = await db.collection('consultation_records')
         .where({
           date: db.RegExp({
-            regexp: `^(${ currentYear }-${ String(currentMonth + 1).padStart(2, '0') })`
+            regexp: `^(${currentYear}-${String(currentMonth + 1).padStart(2, '0')})`
           }),
           isClockIn: true,
           isVoided: false
@@ -429,10 +424,10 @@ exports.main = async (event) => {
       monthlyClockIns.data.forEach(record => {
         const technician = record.technician;
         if (technician) {
-          if (!clockInCounts[ technician ]) {
-            clockInCounts[ technician ] = 0;
+          if (!clockInCounts[technician]) {
+            clockInCounts[technician] = 0;
           }
-          clockInCounts[ technician ]++;
+          clockInCounts[technician]++;
         }
       });
 
@@ -447,9 +442,9 @@ exports.main = async (event) => {
         if (!activeStaffNames.has(technician)) {
           return;
         }
-        
-        const salesCount = membershipSales[ technician ] || 0;
-        const clockInCount = clockInCounts[ technician ] || 0;
+
+        const salesCount = membershipSales[technician] || 0;
+        const clockInCount = clockInCounts[technician] || 0;
         const totalScore = salesCount + clockInCount;
 
         monthlyScores.push({
@@ -467,6 +462,154 @@ exports.main = async (event) => {
         rank: index + 1
       }));
 
+      const PERFORMANCE_START_DATE = monthStartStr;
+
+      const [allRecordsSinceStart, wechatRecords, fulfilledRenewals, allMembershipsSinceStart] = await Promise.all([
+        db.collection('consultation_records')
+          .where({
+            date: db.command.gte(PERFORMANCE_START_DATE),
+            isVoided: false
+          })
+          .field({ technician: true, phone: true, _id: true, date: true })
+          .limit(1000).get(),
+        db.collection('technician_wechat')
+          .field({ technician: true, customerId: true })
+          .limit(1000).get(),
+        db.collection('reservations')
+          .where({
+            date: db.command.gte(PERFORMANCE_START_DATE),
+            isRenewal: true,
+            isFulfilled: true
+          })
+          .field({ technicianName: true, _id: true })
+          .limit(1000).get(),
+        db.collection('customer_membership')
+          .where({
+            createdAt: db.command.gte(PERFORMANCE_START_DATE)
+          })
+          .field({ salesStaff: true, _id: true })
+          .limit(1000).get()
+      ]);
+
+      const performanceData = {};
+
+      allTechnicians.forEach(technician => {
+        if (!activeStaffNames.has(technician)) {
+          return;
+        }
+        performanceData[technician] = {
+          returnOrders: 0,
+          totalOrders: 0,
+          wechatAdds: 0,
+          uniqueCustomers: new Set(),
+          renewalFulfilled: 0,
+          packageSales: 0,
+          bonusReturn: 0,
+          bonusWechat: 0,
+          bonusPackage: 0,
+          bonusRenewal: 0,
+          totalBonus: 0
+        };
+      });
+
+      allRecordsSinceStart.data.forEach(record => {
+        const tech = record.technician;
+        if (!performanceData[tech]) return;
+        performanceData[tech].totalOrders++;
+        const key = tech + '_' + (record.phone || record._id);
+        if (performanceData[tech]._customerMap === undefined) {
+          performanceData[tech]._customerMap = {};
+        }
+        if (!performanceData[tech]._customerMap[key]) {
+          performanceData[tech]._customerMap[key] = new Set();
+        }
+        // 按自然日去重：同一顾客同一天消费多单只计一个日期
+        performanceData[tech]._customerMap[key].add(record.date);
+        performanceData[tech].uniqueCustomers.add(record.phone || record._id);
+      });
+
+      for (const [tech, data] of Object.entries(performanceData)) {
+        if (data._customerMap) {
+          for (const [key, dates] of Object.entries(data._customerMap)) {
+            const distinctDays = dates.size;
+            if (distinctDays >= 2) {
+              // 回头客 = 不同自然日数 - 1（第一天不算回头）
+              data.returnOrders += distinctDays - 1;
+            }
+          }
+        }
+      }
+
+      wechatRecords.data.forEach(record => {
+        const tech = record.technician;
+        if (!performanceData[tech]) return;
+        performanceData[tech].wechatAdds++;
+      });
+
+      fulfilledRenewals.data.forEach(record => {
+        const tech = record.technicianName;
+        if (!tech) return;
+        if (!performanceData[tech]) return;
+        performanceData[tech].renewalFulfilled++;
+      });
+
+      allMembershipsSinceStart.data.forEach(record => {
+        if (record.salesStaff && record.salesStaff.length > 0) {
+          record.salesStaff.forEach(staff => {
+            if (!performanceData[staff]) return;
+            performanceData[staff].packageSales++;
+          });
+        }
+      });
+
+      for (const [tech, data] of Object.entries(performanceData)) {
+        const returnRate = data.totalOrders > 0 ? data.returnOrders / data.totalOrders : 0;
+        const wechatRate = data.uniqueCustomers.size > 0 ? data.wechatAdds / data.uniqueCustomers.size : 0;
+
+        if (returnRate >= 0.45) {
+          data.bonusReturn = 200;
+        } else if (returnRate >= 0.35) {
+          data.bonusReturn = 100;
+        } else if (returnRate >= 0.25) {
+          data.bonusReturn = 50;
+        }
+
+        if (wechatRate >= 0.60) {
+          data.bonusWechat = 50;
+        }
+
+        if (data.packageSales > 0) {
+          data.bonusPackage = data.packageSales * 20;
+          if (data.packageSales > 4) {
+            data.bonusPackage += (data.packageSales - 4) * 10;
+          }
+        }
+
+        data.bonusRenewal = data.renewalFulfilled * 5;
+
+        data.totalBonus = data.bonusReturn + data.bonusWechat + data.bonusPackage + data.bonusRenewal;
+
+        data.returnRate = Math.round(returnRate * 10000) / 100;
+        data.wechatRate = Math.round(wechatRate * 10000) / 100;
+        data.uniqueCustomerCount = data.uniqueCustomers.size;
+
+        delete data._customerMap;
+        delete data.uniqueCustomers;
+      }
+
+      rankedScores.forEach((item) => {
+        const perf = performanceData[item.technician];
+        if (perf) {
+          const score = perf.returnOrders * 5 + perf.wechatAdds * 2 + perf.renewalFulfilled * 2;
+          item.totalScore += score;
+        }
+      });
+
+      rankedScores.sort((a, b) => b.totalScore - a.totalScore);
+      rankedScores.forEach((item, index) => {
+        item.rank = index + 1;
+      });
+
       return {
         code: 0,
         data: {
@@ -479,6 +622,10 @@ exports.main = async (event) => {
               endDate: monthEndStr
             },
             rankings: rankedScores
+          },
+          performanceMetrics: {
+            startDate: PERFORMANCE_START_DATE,
+            technicians: performanceData
           }
         }
       };

@@ -2,6 +2,7 @@ import { cloudDb, Collections } from '../../utils/cloud-db';
 import { SHIFT_END_TIME, SHIFT_START_TIME, ShiftType } from '../../utils/constants';
 import { loadingService, LockKeys } from '../../utils/loading-service';
 import { getCurrentDate } from '../../utils/util';
+import { authManager } from '../../utils/auth';
 
 const app = getApp<IAppOption>();
 
@@ -27,6 +28,8 @@ interface StaffTimelineItem {
 	availableSlots: AvailableSlot[]
 	highlighted?: boolean
 	rotationCount: number // 当日轮钟数量
+	rotationRank: number // 轮牌序号（1-based）
+	rotationOrderSize: number // 轮牌总人数
 }
 
 interface TimeBlock {
@@ -44,10 +47,12 @@ interface TimeBlock {
 	isSettled: boolean
 	isInProgress: boolean
 	isClockIn: boolean
+	isExtraTime: boolean
 	extraTime: number
 	technician: string
 	requirement: string;
 	rearrangeConflict?: boolean
+	isCancelled?: boolean
 	groupKey: string
 	groupColorIndex: number
 	groupSize: number
@@ -85,11 +90,19 @@ Component({
 		readonly: {
 			type: Boolean,
 			value: false
+		},
+		rotationOrder: {
+			type: Array,
+			value: [] as string[]  // 轮牌顺序的 staffId 数组
+		},
+		canAdjustRotation: {
+			type: Boolean,
+			value: false  // 是否允许调整轮牌
 		}
 	},
 
 	data: {
-		timeLabels: ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '00', '01', '02'],
+		timeLabels: ['10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '00', '01'],
 		staffTimeline: [],
 		showCurrentTimeLine: false,
 		currentTimePosition: '0%',
@@ -128,6 +141,15 @@ Component({
 				: (h + 24 - timelineStartHour) * 60 + m;
 		},
 
+		timelineMinutesToTime(timelineMinutes: number): string {
+			const timelineStartHour = parseInt(this.data.timeLabels[0]);
+			const totalMinutes = timelineStartHour * 60 + timelineMinutes;
+			const h = totalMinutes >= 24 * 60 ? (totalMinutes - 24 * 60) : totalMinutes;
+			const hh = String(Math.floor(h / 60)).padStart(2, '0');
+			const mm = String(Math.floor(h % 60)).padStart(2, '0');
+			return `${hh}:${mm}`;
+		},
+
 		loadAllStaffTimelineData(highlightStaffId?: string) {
 			// 更新加载标识，防止重复请求
 			const selectedDate = this.properties.selectedDate || getCurrentDate();
@@ -143,14 +165,18 @@ Component({
 				const activeRecords = todayRecords.filter(r => !r.isVoided);
 				const reservations = (await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today, status: 'active' }));
 
+				let cancelledReservations: ReservationRecord[] = [];
+				if (authManager.isAdmin()) {
+					cancelledReservations = (await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today, status: 'cancelled' }));
+				}
+
 				const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
 				const allStaff = await app.getStaffs();
-				const activeStaff = allStaff.filter(s => s.status === 'active');
+				const activeStaff = allStaff.filter(s => s.status === 'active'&&s.role === 'technician');
 				const scheduledStaff = allSchedules.map(s => s.staffId);
 				const activeStaffList = activeStaff.filter(s => scheduledStaff.includes(s._id));
 
 				const staffTimeline: StaffTimelineItem[] = [];
-				const timelineWidth = (this.data.timeLabels.length) * TIMELINE_HOUR_WIDTH;
 
 				for (const staff of activeStaffList) {
 					const schedule = allSchedules.find(s => s.date === today && s.staffId === staff._id);
@@ -162,6 +188,7 @@ Component({
 
 					const staffRecords = activeRecords.filter(r => r.technician === staff.name);
 					const staffReservations = reservations.filter(r => r.technicianName === staff.name || r.technicianId === staff._id);
+					const staffCancelledReservations = cancelledReservations.filter(r => r.technicianName === staff.name || r.technicianId === staff._id);
 
 					const rawBlocks = [
 						...staffRecords.map(r => ({ ...r, isReservation: false })),
@@ -180,6 +207,28 @@ Component({
 							extraTime: 0,
 							isClockIn: r.isClockIn || false,
 							isReservation: true,
+							technician: r.technicianName,
+							requirementType: r.requirementType,
+							requiredMaleCount: r.requiredMaleCount,
+							requiredFemaleCount: r.requiredFemaleCount,
+							groupKey: r.groupKey || ''
+						})),
+						...staffCancelledReservations.map(r => ({
+							_id: r._id,
+							surname: r.customerName,
+							phone: r.phone || '',
+							gender: r.gender,
+							project: r.project,
+							room: '已取消',
+							date: r.date,
+							customerName: r.customerName,
+							status: r.status,
+							startTime: r.startTime,
+							endTime: r.endTime,
+							extraTime: 0,
+							isClockIn: r.isClockIn || false,
+							isReservation: true,
+							isCancelled: true,
 							technician: r.technicianName,
 							requirementType: r.requirementType,
 							requiredMaleCount: r.requiredMaleCount,
@@ -223,19 +272,22 @@ Component({
 							isInProgress,
 							isClockIn: r.isClockIn || false,
 							extraTime: (r as ConsultationRecord).extraTime || 0,
+							isExtraTime: (r as ConsultationRecord).isExtraTime || false,
 							technician: r.technician!,
 							requirement: parseGenderRequirement(r as Update<ReservationRecord>),
 							rearrangeConflict: (r as Update<ReservationRecord>).rearrangeConflict || false,
+							isCancelled: (r as any).isCancelled || false,
 							groupKey: r.isReservation ? (r as any).groupKey || '' : '',
 							groupColorIndex: 0,
 							groupSize: 1,
 						};
 					});
 
-					const availableSlots = this.calculateAvailableSlotsBetweenBlocks(blocks, shift);
+					const activeBlocks = blocks.filter(b => !b.isCancelled);
+					const availableSlots = this.calculateAvailableSlotsBetweenBlocks(activeBlocks, shift);
 					
 					// 计算当日轮钟数量（非点钟且非预约的记录）
-					const rotationCount = blocks.filter(b => !b.isClockIn && !b.isReservation).length;
+					const rotationCount = blocks.filter(b => !b.isClockIn && !b.isReservation && !b.isCancelled).length;
 					
 					staffTimeline.push({
 						_id: staff._id,
@@ -245,7 +297,9 @@ Component({
 						blocks,
 						availableSlots,
 						highlighted: highlightStaffId === staff._id,
-						rotationCount
+						rotationCount,
+						rotationRank: 0,
+						rotationOrderSize: 0
 					});
 				}
 				// 分配关联预约组颜色
@@ -273,16 +327,40 @@ Component({
 				}
 				staffTimeline.sort((a) => a.gender === 'male' ? 1 : -1);
 
+				// 按轮牌顺序重排
+				const rotationOrder = this.properties.rotationOrder as string[];
+				if (rotationOrder.length > 0) {
+					const orderMap = new Map(rotationOrder.map((id, i) => [id, i]));
+					staffTimeline.sort((a, b) => {
+						const posA = orderMap.has(a._id) ? orderMap.get(a._id)! : 999;
+						const posB = orderMap.has(b._id) ? orderMap.get(b._id)! : 999;
+						return posA - posB;
+					});
+				}
+
+				// 分配轮牌序号
+				const totalSize = staffTimeline.length;
+				staffTimeline.forEach((item, i) => {
+					item.rotationRank = i + 1;
+					item.rotationOrderSize = totalSize;
+				});
+
 				let currentTimePosition = '0%';
 				let showCurrentTimeLine = false;
 				if (isToday) {
 					const now = new Date();
 					const timeInTimeline = this.toMinutesFromTimelineStart(now.getHours(), now.getMinutes());
-					if (timeInTimeline >= 0 && timeInTimeline <= timelineWidth) {
-						currentTimePosition = (timeInTimeline / this.data.timeLabels.length / 60 * 100) + '%';
+					const totalTimelineMinutes = this.data.timeLabels.length * 60;
+					if (timeInTimeline >= 0 && timeInTimeline <= totalTimelineMinutes) {
+						currentTimePosition = (timeInTimeline / totalTimelineMinutes * 100) + '%';
 						showCurrentTimeLine = true;
+						this.setData({ scrollLeft: timeInTimeline * (TIMELINE_HOUR_WIDTH / 60) });
+					} else {
+						// 当前时间不在时间轴范围内，显示在起始位置
+						currentTimePosition = '0%';
+						showCurrentTimeLine = true;
+						this.setData({ scrollLeft: 0 });
 					}
-					this.setData({ scrollLeft: timeInTimeline });
 				}
 
 				this.setData({
@@ -299,6 +377,22 @@ Component({
 
 		calculateAvailableSlotsBetweenBlocks(blocks: TimeBlock[], shift: ShiftType): AvailableSlot[] {
 			const availableSlots: AvailableSlot[] = [];
+
+			const pushSlot = (startTimelineMinutes: number, gapMinutes: number): void => {
+				if (gapMinutes <= 45) return;
+				const startTime = this.timelineMinutesToTime(startTimelineMinutes);
+				const endTime = this.timelineMinutesToTime(startTimelineMinutes + gapMinutes);
+				const left = (startTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
+				const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
+				availableSlots.push({
+					left,
+					width,
+					startTime,
+					endTime,
+					displayText: `${startTime}-${endTime} (${gapMinutes}分钟)`,
+					durationMinutes: gapMinutes
+				});
+			};
 
 			const now = new Date();
 			const todayStr = getCurrentDate();
@@ -319,213 +413,47 @@ Component({
 			const shiftStartTimelineMinutes = this.toMinutesFromTimelineStart(shiftStartH, shiftStartM);
 			const shiftEndTimelineMinutes = this.toMinutesFromTimelineStart(shiftEndH, shiftEndM);
 
-			if (!isToday) {
-				if (blocks.length > 0) {
-					const firstBlock = blocks[0];
-					const [firstStartH, firstStartM] = firstBlock.startTime.split(':').map(Number);
-					const firstStartTimelineMinutes = this.toMinutesFromTimelineStart(firstStartH, firstStartM);
-
-					if (firstStartTimelineMinutes > shiftStartTimelineMinutes) {
-						const gapMinutes = firstStartTimelineMinutes - shiftStartTimelineMinutes;
-
-						const left = (shiftStartTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							displayText: `${gapMinutes}分钟`,
-							durationMinutes: gapMinutes
-						});
-					}
-				}
-
-				for (let i = 0; i < blocks.length - 1; i++) {
-					const currentBlock = blocks[i];
-					const nextBlock = blocks[i + 1];
-
-					const [currentEndH, currentEndM] = currentBlock.endTime.split(':').map(Number);
-					const currentEndTimelineMinutes = this.toMinutesFromTimelineStart(currentEndH, currentEndM);
-
-					const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-					const nextStartTimelineMinutes = this.toMinutesFromTimelineStart(nextStartH, nextStartM);
-
-					const gapMinutes = nextStartTimelineMinutes - currentEndTimelineMinutes;
-
-					if (gapMinutes > 0) {
-						const left = (currentEndTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							displayText: `${gapMinutes}分钟`,
-							durationMinutes: gapMinutes
-						});
-					}
-				}
-
-				if (blocks.length > 0) {
-					const lastBlock = blocks[blocks.length - 1];
-					const [lastEndH, lastEndM] = lastBlock.endTime.split(':').map(Number);
-					const lastEndTimelineMinutes = this.toMinutesFromTimelineStart(lastEndH, lastEndM);
-
-					if (lastEndTimelineMinutes < shiftEndTimelineMinutes) {
-						const gapMinutes = shiftEndTimelineMinutes - lastEndTimelineMinutes;
-
-						const left = (lastEndTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							displayText: `${gapMinutes}分钟`,
-							durationMinutes: gapMinutes
-						});
-					}
-				}
-
-				return availableSlots;
+			// --- 统一算法：收集所有时间点，划分区间，过滤占用区间 ---
+			// 1. 收集所有 block 的 start/end + 班次起止
+			const timePointsSet = new Set<number>([shiftStartTimelineMinutes, shiftEndTimelineMinutes]);
+			for (const block of blocks) {
+				const [sH, sM] = block.startTime.split(':').map(Number);
+				const [eH, eM] = block.endTime.split(':').map(Number);
+				const sTM = this.toMinutesFromTimelineStart(sH, sM);
+				const eTM = this.toMinutesFromTimelineStart(eH, eM);
+				// clamp 到班次范围
+				if (sTM >= shiftStartTimelineMinutes && sTM <= shiftEndTimelineMinutes) timePointsSet.add(sTM);
+				if (eTM >= shiftStartTimelineMinutes && eTM <= shiftEndTimelineMinutes) timePointsSet.add(eTM);
 			}
+			const sortedPoints = [...timePointsSet].sort((a, b) => a - b);
 
-			if (nowTimelineMinutes >= shiftEndTimelineMinutes) {
-				return availableSlots;
-			}
-
-			let currentBlockIndex = -1;
-			for (let i = 0; i < blocks.length; i++) {
-				const block = blocks[i];
-				const [startH, startM] = block.startTime.split(':').map(Number);
-				const [endH, endM] = block.endTime.split(':').map(Number);
-				const startTimelineMinutes = this.toMinutesFromTimelineStart(startH, startM);
-				const endTimelineMinutes = this.toMinutesFromTimelineStart(endH, endM);
-
-				if (nowTimelineMinutes >= startTimelineMinutes && nowTimelineMinutes < endTimelineMinutes) {
-					currentBlockIndex = i;
-					break;
-				}
-			}
-
-			if (currentBlockIndex !== -1) {
-				const currentBlock = blocks[currentBlockIndex];
-				const [currentEndH, currentEndM] = currentBlock.endTime.split(':').map(Number);
-				const currentEndTimelineMinutes = this.toMinutesFromTimelineStart(currentEndH, currentEndM);
-
-				if (currentBlockIndex < blocks.length - 1) {
-					const nextBlock = blocks[currentBlockIndex + 1];
-					const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-					const nextStartTimelineMinutes = this.toMinutesFromTimelineStart(nextStartH, nextStartM);
-
-					const gapMinutes = nextStartTimelineMinutes - currentEndTimelineMinutes;
-
-					if (gapMinutes > 0) {
-						const left = (currentEndTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							displayText: `${gapMinutes}分钟`,
-							durationMinutes: gapMinutes
-						});
-					}
-				} else {
-					if (currentEndTimelineMinutes < shiftEndTimelineMinutes) {
-						const gapMinutes = shiftEndTimelineMinutes - currentEndTimelineMinutes;
-
-						const left = (currentEndTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-						const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-						availableSlots.push({
-							left,
-							width,
-							displayText: `${gapMinutes}分钟`,
-							durationMinutes: gapMinutes
-						});
-					}
-				}
-			} else {
-				let nextBlockIndex = -1;
-				for (let i = 0; i < blocks.length; i++) {
-					const block = blocks[i];
-					const [startH, startM] = block.startTime.split(':').map(Number);
-					const startTimelineMinutes = this.toMinutesFromTimelineStart(startH, startM);
-
-					if (startTimelineMinutes > nowTimelineMinutes) {
-						nextBlockIndex = i;
-						break;
-					}
+			// 2. 遍历区间，标记被占用区间
+			for (let i = 1; i < sortedPoints.length; i++) {
+				const segStart = sortedPoints[i - 1];
+				const segEnd = sortedPoints[i];
+				let occupied = false;
+				for (const block of blocks) {
+					const [sH, sM] = block.startTime.split(':').map(Number);
+					const [eH, eM] = block.endTime.split(':').map(Number);
+					const bStart = this.toMinutesFromTimelineStart(sH, sM);
+					const bEnd = this.toMinutesFromTimelineStart(eH, eM);
+					// 区间完全在 block 内则为占用
+					if (segStart >= bStart && segEnd <= bEnd) { occupied = true; break; }
 				}
 
-				if (nowTimelineMinutes < shiftStartTimelineMinutes) {
-					if (nextBlockIndex !== -1) {
-						const nextBlock = blocks[nextBlockIndex];
-						const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-						const nextStartTimelineMinutes = this.toMinutesFromTimelineStart(nextStartH, nextStartM);
+				if (occupied) continue;
+				const gapMinutes = segEnd - segStart;
+				if (gapMinutes <= 0) continue;
 
-						if (nextStartTimelineMinutes > shiftStartTimelineMinutes) {
-							const gapMinutes = nextStartTimelineMinutes - shiftStartTimelineMinutes;
+				// 今天：跳过已结束的区间
+				if (isToday && segEnd <= nowTimelineMinutes) continue;
 
-							const left = (shiftStartTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
+				// 今天：区间起点修正为 now（不晚于 now）
+				const effectiveStart = isToday ? Math.max(segStart, nowTimelineMinutes) : segStart;
+				const effectiveGap = segEnd - effectiveStart;
+				if (effectiveGap <= 0) continue;
 
-							availableSlots.push({
-								left,
-								width,
-								displayText: `${gapMinutes}分钟`,
-								durationMinutes: gapMinutes
-							});
-						}
-					} else {
-						if (shiftEndTimelineMinutes > shiftStartTimelineMinutes) {
-							const gapMinutes = shiftEndTimelineMinutes - shiftStartTimelineMinutes;
-
-							const left = (shiftStartTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-							availableSlots.push({
-								left,
-								width,
-								displayText: `${gapMinutes}分钟`,
-								durationMinutes: gapMinutes
-							});
-						}
-					}
-				} else {
-					if (nextBlockIndex !== -1) {
-						const nextBlock = blocks[nextBlockIndex];
-						const [nextStartH, nextStartM] = nextBlock.startTime.split(':').map(Number);
-						const nextStartTimelineMinutes = this.toMinutesFromTimelineStart(nextStartH, nextStartM);
-
-						if (nextStartTimelineMinutes > nowTimelineMinutes) {
-							const gapMinutes = nextStartTimelineMinutes - nowTimelineMinutes;
-
-							const left = (nowTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-							availableSlots.push({
-								left,
-								width,
-								displayText: `${gapMinutes}分钟`,
-								durationMinutes: gapMinutes
-							});
-						}
-					} else {
-						if (shiftEndTimelineMinutes > nowTimelineMinutes) {
-							const gapMinutes = shiftEndTimelineMinutes - nowTimelineMinutes;
-
-							const left = (nowTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-							const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-
-							availableSlots.push({
-								left,
-								width,
-								displayText: `${gapMinutes}分钟`,
-								durationMinutes: gapMinutes
-							});
-						}
-					}
-				}
+				pushSlot(effectiveStart, effectiveGap);
 			}
 
 			return availableSlots;
@@ -534,13 +462,40 @@ Component({
 		onBlockClick(e: WechatMiniprogram.CustomEvent) {
 			if (this.data.readonly) return;
 
-			const { id, reservation, settled, inprogress } = e.currentTarget.dataset;
+			const { id, reservation, settled, inprogress, cancelled } = e.currentTarget.dataset;
+			if (cancelled) return;
+
 			this.triggerEvent('blockclick', {
 				id,
 				reservation,
 				settled,
 				inprogress
 			});
+		},
+
+		onSlotClick(e: WechatMiniprogram.CustomEvent) {
+			const { staffname, slots, staffid } = e.currentTarget.dataset;
+			this.triggerEvent('copyslot', {
+				staffName: staffname,
+				slots,
+				staffId: staffid
+			});
+		},
+
+		onAdjustRotation(e: WechatMiniprogram.CustomEvent) {
+			const { index, direction } = e.currentTarget.dataset;
+			this.triggerEvent('adjustrotation', {
+				index,
+				direction
+			});
+		},
+
+		onResetRotation() {
+			this.triggerEvent('resetrotation');
+		},
+
+		onPushRotation() {
+			this.triggerEvent('pushrotation');
 		}
 	}
 });

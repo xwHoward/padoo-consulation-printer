@@ -3,13 +3,14 @@ import { checkLogin } from '../../utils/auth';
 import { loadingService, LockKeys } from '../../utils/loading-service';
 import { hasButtonPermission, requirePagePermission } from '../../utils/permission';
 import { COUPON_PLATFORM_NAMES } from '../../utils/constants';
-import { formatDate, getCurrentDate } from '../../utils/util';
+import { calculateProjectEndTime, formatDate, formatTime, getCurrentDate, parseProjectDuration } from '../../utils/util';
 import type { CashierPage, PaymentMethodItem } from './cashier.types';
 import { ReservationHandler } from './handlers/reservation.handler';
 import { SettlementHandler } from './handlers/settlement.handler';
 import { PushHandler } from './handlers/push.handler';
 import { CashierDataLoaderService } from './services/data-loader.service';
 import { searchCustomer, applyMatchedCustomer, clearMatchedCustomer } from './utils/customer-match';
+import { cloudDb, Collections } from '../../utils/cloud-db';
 
 const app = getApp<IAppOption>();
 
@@ -25,6 +26,7 @@ Page({
         selectedDate: '',
         rooms: [] as Room[],
         rotationList: [] as RotationItem[],
+        rotationOrder: [] as string[],
         timelineRefreshTrigger: 0,
         _isFirstShow: true, // 用于防止首次加载时onLoad和onShow重复请求
         // 日期选择器状态
@@ -50,6 +52,7 @@ Page({
             customerName: '',
             gender: 'male' as 'male' | 'female',
             project: '',
+            projects: [] as string[],
             phone: '',
             requirementType: 'gender' as 'specific' | 'gender',
             selectedTechnicians: [] as Array<{ _id: string; name: string; phone: string; isClockIn: boolean }>,
@@ -58,6 +61,8 @@ Page({
             technicianId: '',
             technicianName: '',
         },
+        startTimeMultiIndex: [0, 0],
+        startTimeRange: [] as string[][],
         originalReservation: null as ReservationRecord | null,
         editingGroupIds: [] as string[],
         // 结算弹窗相关
@@ -115,7 +120,16 @@ Page({
             slots: [] as QuickReservation[],
             emptyReason: ''
         },
-        quickReservationLoading: false
+        quickReservationLoading: false,
+        // 加钟弹窗
+        extraTimeModal: {
+            show: false,
+            sourceRecordId: '' as string,
+            projects: [] as Project[],
+            selectedProject: '' as string,
+            selectedProjectName: '' as string,
+            quantity: 1
+        }
     },
 
     // ========== 生命周期 ==========
@@ -125,8 +139,11 @@ Page({
 
         if (!requirePagePermission('cashier')) return;
 
-        // 初始化处理器
         this.initHandlers();
+
+        const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+        const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+        this.setData({ startTimeRange: [hours, minutes] });
 
         const today = getCurrentDate();
         this.setData({ selectedDate: today });
@@ -201,11 +218,6 @@ Page({
     },
 
     // ========== 日期选择 ==========
-    async onDateChange(e: WechatMiniprogram.CustomEvent) {
-        const date = e.detail.date;
-        this.setData({ selectedDate: date });
-    },
-
     onDatePickerChange(e: WechatMiniprogram.CustomEvent) {
         const date = e.detail.date;
         this.setData({ selectedDate: date });
@@ -303,23 +315,101 @@ Page({
             errorText: '调整失败'
         });
     },
+    
+    // ========== 时间轴轮牌事件（来自 timeline 组件） ==========
+    async onTimelineAdjustRotation(e: WechatMiniprogram.CustomEvent) {
+        const { index, direction } = e.detail;
+        const list = [...this.data.rotationList];
 
-    // ========== 手动重排预约 ==========
-    async rearrangeReservations() {
-        const { selectedDate } = this.data;
-        if (!selectedDate) return;
+        let fromIndex = index;
+        let toIndex = index;
 
-        if (reservationHandler) {
-            await loadingService.withLoading(this, async () => {
-                await reservationHandler!.triggerRearrange(selectedDate);
-                await this.loadTimelineData();
-                wx.showToast({ title: '重排完成', icon: 'success' });
-            }, {
-                loadingText: '重排中...',
-                lockKey: LockKeys.ADJUST_ROTATION,
-                errorText: '重排失败'
-            });
+        if (direction === 'up' && index > 0) {
+            toIndex = index - 1;
+        } else if (direction === 'down' && index < list.length - 1) {
+            toIndex = index + 1;
+        } else {
+            return;
         }
+
+        await loadingService.withLoading(this, async () => {
+            const result = await app.adjustRotationPosition(this.data.selectedDate, fromIndex, toIndex);
+
+            if (result) {
+                [list[fromIndex], list[toIndex]] = [list[toIndex], list[fromIndex]];
+                const rotationOrder = list.map(item => item._id);
+                this.setData({ 
+                    rotationList: list, 
+                    rotationOrder,
+                    timelineRefreshTrigger: this.data.timelineRefreshTrigger + 1
+                });
+                await app.loadGlobalData();
+                wx.showToast({ title: '调整成功', icon: 'success' });
+            } else {
+                throw new Error('调整失败');
+            }
+        }, {
+            loadingText: '调整中...',
+            lockKey: LockKeys.ADJUST_ROTATION,
+            errorText: '调整失败'
+        });
+    },
+
+    onTimelineCopySlot(e: WechatMiniprogram.CustomEvent) {
+        const { staffName, slots } = e.detail;
+        
+        if (slots === '已满') {
+            wx.setClipboardData({
+                data: `您好，${staffName}老师今日预约已满，无法预约了哦`,
+                success: () => {
+                    wx.showToast({ title: '已复制到剪贴板', icon: 'success', duration: 2000 });
+                },
+                fail: () => {
+                    wx.showToast({ title: '复制失败', icon: 'error', duration: 2000 });
+                }
+            });
+            return;
+        }
+        
+        const message = `您好，目前${staffName}老师可预约时段为${slots}哦，您可以告诉小趴到店时间，小趴给您保留预约哦~`;
+        
+        wx.setClipboardData({
+            data: message,
+            success: () => {
+                wx.showToast({ title: '已复制到剪贴板', icon: 'success', duration: 2000 });
+            },
+            fail: () => {
+                wx.showToast({ title: '复制失败', icon: 'error', duration: 2000 });
+            }
+        });
+    },
+
+    async onTimelineResetRotation() {
+        await this.resetRotation();
+    },
+
+    onTimelinePushRotation() {
+        const { rotationList, selectedDate } = this.data;
+        if (rotationList.length === 0) {
+            wx.showToast({ title: '暂无轮牌数据', icon: 'none' });
+            return;
+        }
+        
+        const rotationLines = rotationList.map((staff, idx) =>
+            `${idx + 1}. ${staff.name} (${staff.shift === 'morning' ? '早班' : '晚班'})`
+        ).join('\n');
+        
+        const message = `【今日轮牌】\n\n日期：${selectedDate}\n\n${rotationLines}\n\n请各位同事确认今日轮牌顺序，有问题与店长沟通！`;
+        
+        wx.setClipboardData({
+            data: message,
+            success: () => {
+                wx.showToast({ title: '已复制到剪贴板', icon: 'success', duration: 2000 });
+            },
+            fail: () => {
+                wx.showToast({ title: '复制失败，请重试', icon: 'none' });
+            }
+        });
     },
 
     // ========== 预约相关（委托给 ReservationHandler） ==========
@@ -347,12 +437,12 @@ Page({
         if (reservationHandler) reservationHandler.onReserveFieldChange(e);
     },
 
-    selectReserveTechnician(e: WechatMiniprogram.CustomEvent) {
-        if (reservationHandler) reservationHandler.selectReserveTechnician(e);
+    onStartTimeChange(e: WechatMiniprogram.CustomEvent) {
+        if (reservationHandler) reservationHandler.onStartTimeChange(e);
     },
 
-    toggleReserveClockIn(e: WechatMiniprogram.CustomEvent) {
-        if (reservationHandler) reservationHandler.toggleReserveClockIn(e);
+    selectReserveTechnician(e: WechatMiniprogram.CustomEvent) {
+        if (reservationHandler) reservationHandler.selectReserveTechnician(e);
     },
 
     async selectReserveProject(e: WechatMiniprogram.CustomEvent) {
@@ -361,6 +451,10 @@ Page({
 
     onReserveGenderChange(e: WechatMiniprogram.CustomEvent) {
         if (reservationHandler) reservationHandler.onReserveGenderChange(e);
+    },
+
+    onRenewalToggle(e: WechatMiniprogram.CustomEvent) {
+        if (reservationHandler) reservationHandler.onRenewalToggle(e);
     },
 
     async confirmReserve() {
@@ -381,6 +475,109 @@ Page({
 
     async handleEarlyFinish(recordId: string) {
         if (reservationHandler) await reservationHandler.handleEarlyFinish(recordId);
+    },
+
+    // ========== 加钟 ==========
+    async openExtraTimeModal(recordId: string) {
+        const projects = (this.data.projects || []);
+        this.setData({
+            extraTimeModal: {
+                show: true,
+                sourceRecordId: recordId,
+                projects,
+                selectedProject: '',
+                selectedProjectName: '',
+                quantity: 1
+            }
+        });
+    },
+
+    closeExtraTimeModal() {
+        this.setData({
+            'extraTimeModal.show': false
+        });
+    },
+
+    selectExtraTimeProject(e: WechatMiniprogram.CustomEvent) {
+        const { id, name } = e.currentTarget.dataset;
+        this.setData({
+            'extraTimeModal.selectedProject': id,
+            'extraTimeModal.selectedProjectName': name
+        });
+    },
+
+    onExtraTimeQuantityChange(e: WechatMiniprogram.CustomEvent) {
+        const { action } = e.currentTarget.dataset;
+        const current = this.data.extraTimeModal.quantity;
+        if (action === 'increase') {
+            this.setData({ 'extraTimeModal.quantity': current + 1 });
+        } else if (action === 'decrease' && current > 1) {
+            this.setData({ 'extraTimeModal.quantity': current - 1 });
+        }
+    },
+
+    async confirmExtraTime() {
+        const { sourceRecordId, selectedProject, selectedProjectName, quantity } = this.data.extraTimeModal;
+        if (!selectedProject) {
+            wx.showToast({ title: '请选择一个加钟项目', icon: 'none' });
+            return;
+        }
+
+        this.setData({ loading: true, loadingText: '加钟中...' });
+        try {
+            const record = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, sourceRecordId);
+            if (!record) {
+                wx.showToast({ title: '未找到原始单据', icon: 'error' });
+                return;
+            }
+
+            const [endH, endM] = record.endTime.split(':').map(Number);
+            const [year, month, day] = record.date.split('-').map(Number);
+            const startTimeDate = new Date(year, month - 1, day, endH, endM, 0, 0);
+            const startTime = formatTime(startTimeDate, false);
+
+            const duration = parseProjectDuration(selectedProjectName) || 90;
+            const totalDuration = duration * quantity;
+            const endTimeDate = new Date(startTimeDate.getTime() + totalDuration * 60 * 1000);
+            const endTime = formatTime(endTimeDate, false);
+
+            const extraRecord: Add<ConsultationRecord> = {
+                surname: record.surname,
+                gender: record.gender,
+                project: selectedProjectName,
+                technician: record.technician,
+                room: record.room,
+                massageStrength: record.massageStrength,
+                essentialOil: record.essentialOil,
+                selectedParts: record.selectedParts || {},
+                isClockIn: false,
+                remarks: record.remarks || '',
+                phone: record.phone || '',
+                couponCode: '',
+                couponPlatform: record.couponPlatform || 'meituan',
+                extraTime: 0,
+                date: record.date,
+                startTime,
+                endTime,
+                isVoided: false,
+                overtime: 0,
+                guasha: false,
+                isExtraTime: true
+            };
+
+            await cloudDb.saveConsultation(extraRecord);
+
+            this.closeExtraTimeModal();
+            await this.loadTimelineData();
+            wx.showToast({ title: '加钟成功', icon: 'success' });
+        } catch (error: any) {
+            wx.showToast({
+                title: error?.message || '加钟失败',
+                icon: 'error'
+            });
+        } finally {
+            this.setData({ loading: false });
+        }
     },
 
     async onArrivalConfirmPush() {
@@ -441,10 +638,6 @@ Page({
         if (settlementHandler) settlementHandler.onPaymentCouponCodeInput(e);
     },
 
-    onCouponCodeInput(e: WechatMiniprogram.CustomEvent) {
-        if (settlementHandler) settlementHandler.onCouponCodeInput(e);
-    },
-
     async confirmSettlement() {
         if (settlementHandler) await settlementHandler.confirmSettlement();
     },
@@ -465,6 +658,49 @@ Page({
 
     openRotationPushModal() {
         if (pushHandler) pushHandler.openRotationPushModal();
+    },
+
+    async copyTechnicianSlot(e: WechatMiniprogram.CustomEvent) {
+        const { name, slots } = e.currentTarget.dataset;
+if(slots === '已满'){
+        wx.setClipboardData({
+            data: `您好，${name}老师今日预约已满，无法预约了哦`,
+            success: () => {
+                wx.showToast({
+                    title: '已复制到剪贴板',
+                    icon: 'success',
+                    duration: 2000
+                });
+            },
+            fail: () => {
+                wx.showToast({
+                    title: '复制失败',
+                    icon: 'error',
+                    duration: 2000
+                });
+            }
+        });
+        return;
+}
+        const message = `您好，目前${name}老师可预约时段为${slots}哦，您可以告诉小趴到店时间，小趴给您保留预约哦~`;
+
+        wx.setClipboardData({
+            data: message,
+            success: () => {
+                wx.showToast({
+                    title: '已复制到剪贴板',
+                    icon: 'success',
+                    duration: 2000
+                });
+            },
+            fail: () => {
+                wx.showToast({
+                    title: '复制失败',
+                    icon: 'error',
+                    duration: 2000
+                });
+            }
+        });
     },
 
     async resetRotation() {
@@ -515,7 +751,7 @@ Page({
             itemList = ['编辑', '到店', '取消预约'];
         } else {
             if (inprogress) {
-                itemList = settled ? ['编辑', '修改结算', '提前下钟'] : ['编辑', '结算', '提前下钟'];
+                itemList = settled ? ['编辑', '修改结算', '提前下钟'] : ['编辑', '结算', '加钟', '提前下钟'];
             } else {
                 itemList = settled ? ['编辑', '修改结算'] : ['编辑', '结算'];
             }
@@ -539,24 +775,17 @@ Page({
                     this.openSettlement(_id);
                 } else if (action === '提前下钟') {
                     this.handleEarlyFinish(_id);
+                } else if (action === '加钟') {
+                    this.openExtraTimeModal(_id);
                 }
             }
         });
     },
 
-    stopBubble() { },
-
     // 跳转到主页
     goToHome() {
         wx.navigateTo({
             url: "/pages/store-config/store-config",
-        });
-    },
-
-    // 跳转到抽奖页面
-    goToLottery() {
-        wx.navigateTo({
-            url: "/pages/lottery/lottery",
         });
     },
 
@@ -576,6 +805,12 @@ Page({
     goToHistory() {
         wx.navigateTo({
             url: "/pages/history/history",
+        });
+    },
+
+    goToProjectList() {
+        wx.navigateTo({
+            url: "/pages/project-list/project-list",
         });
     },
 });

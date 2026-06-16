@@ -1,6 +1,16 @@
 /**index.less**/
 @import "../../app.less";
 
+/* 语言切换按钮 */
+.lang-btn {
+    font-size: 13px !important;
+    font-weight: 600;
+    border: 1.5px solid @primary-color;
+    border-radius: 4px;
+    padding: 2px 7px;
+    line-height: 1.2;
+}
+
 .container {
     padding: 10px;
     box-sizing: border-box;
@@ -118,26 +128,6 @@
     background-size: 9px;
     background-repeat: no-repeat;
     background-position: center;
-}
-
-/* 精油功效小字样式 */
-.oil-effect {
-    display: block;
-    margin-left: auto;
-    font-size: 12px;
-    color: @text-color-secondary;
-    margin-top: 2px;
-    font-weight: normal;
-}
-
-.checkbox-item.selected .oil-effect {
-    color: @primary-color;
-    opacity: 0.8;
-}
-
-/* 身体图像容器 */
-.body-image-container {
-    display: none;
 }
 
 /* 按钮容器 */
@@ -641,5 +631,13 @@
     font-size: 14px;
     font-weight: 600;
     color: @text-color;
+    margin-bottom: 10px;
+}
+
+.project-list-nav {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: @primary-color;
     margin-bottom: 10px;
 }

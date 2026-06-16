@@ -16,9 +16,11 @@ Page({
 		showModal: false,
 		editingStaff: null as StaffInfo | null,
 		inputName: '',
+		inputNameEn: '',
 		inputGender: 'male' as StaffGender,
 		inputAvatar: '',
 		inputPhone: '',
+		inputRole: 'technician' as StaffRole,
 		inputStatus: 'active' as StaffStatus,
 		inputWechatWorkId: '',
 		// 排班相关
@@ -30,7 +32,13 @@ Page({
 		showSchedulePushModal: false,
 		pushStartDate: '',
 		pushEndDate: '',
-		pushLoading: false
+		pushLoading: false,
+		// 一键初始化排班相关
+		showInitScheduleModal: false,
+		initScheduleDaysIndex: 2,
+		initScheduleDaysOptions: [1, 3, 7, 14, 30],
+		initScheduleShiftIndex: 1,
+		initScheduleLoading: false
 	},
 
 	onShow() {
@@ -214,8 +222,10 @@ Page({
 			showModal: true,
 			editingStaff: null,
 			inputName: '',
+			inputNameEn: '',
 			inputGender: 'male',
 			inputAvatar: '',
+			inputRole: 'technician',
 			inputStatus: 'active',
 		});
 	},
@@ -232,10 +242,12 @@ Page({
 					showModal: true,
 					editingStaff: staff,
 					inputName: staff.name,
+					inputNameEn: staff.nameEn || '',
 					inputGender: staff.gender || 'male',
 					inputAvatar: staff.avatar || '',
 					inputPhone: staff.phone || '',
 					inputWechatWorkId: staff.wechatWorkId || '',
+					inputRole: staff.role || 'technician',
 					inputStatus: staff.status,
 					loading: false
 				});
@@ -320,6 +332,88 @@ Page({
 		} catch (error) {
 			this.setData({ loading: false });
 			wx.showToast({ title: '操作失败', icon: 'none' });
+		}
+	},
+
+	// ========== 一键初始化排班 ==========
+	openInitScheduleModal() {
+		this.setData({ showInitScheduleModal: true });
+	},
+
+	onInitScheduleModalCancel() {
+		this.setData({
+			showInitScheduleModal: false,
+			initScheduleLoading: false
+		});
+	},
+
+	onInitScheduleDaysChange(e: WechatMiniprogram.CustomEvent) {
+		this.setData({ initScheduleDaysIndex: parseInt(e.detail.value) });
+	},
+
+	onInitScheduleShiftChange(e: WechatMiniprogram.CustomEvent) {
+		this.setData({ initScheduleShiftIndex: parseInt(e.detail.value) });
+	},
+
+	async onInitScheduleModalConfirm() {
+		const { initScheduleDaysOptions, initScheduleDaysIndex, initScheduleShiftIndex, today } = this.data;
+		const totalDays = initScheduleDaysOptions[initScheduleDaysIndex];
+		const shiftType = SHIFT_TYPES[initScheduleShiftIndex];
+
+		this.setData({ initScheduleLoading: true });
+
+		try {
+			const dateList: string[] = [];
+			const start = new Date(today);
+			for (let i = 0; i < totalDays; i++) {
+				dateList.push(formatDate(start));
+				start.setDate(start.getDate() + 1);
+			}
+			const endDate = dateList[dateList.length - 1];
+
+			const activeStaff = this.data.staffList.filter(s => s.status === 'active');
+
+			const _ = cloudDb.getCommand();
+			const existingSchedules = await cloudDb.find<ScheduleRecord>(Collections.SCHEDULE, {
+				date: _.gte(today).and(_.lte(endDate))
+			});
+
+			const existingKeys = new Set(existingSchedules.map(s => `${s.staffId}_${s.date}`));
+
+			let insertedCount = 0;
+			let skippedCount = 0;
+
+			for (const staff of activeStaff) {
+				for (const date of dateList) {
+					if (existingKeys.has(`${staff._id}_${date}`)) {
+						skippedCount++;
+						continue;
+					}
+
+					const ok = await cloudDb.insert<ScheduleRecord>(Collections.SCHEDULE, {
+						date,
+						staffId: staff._id,
+						shift: shiftType
+					});
+					if (ok) insertedCount++;
+				}
+			}
+
+			this.setData({
+				showInitScheduleModal: false,
+				initScheduleLoading: false
+			});
+
+			await this.initSchedule();
+
+			wx.showToast({
+				title: `新增${insertedCount}条，跳过${skippedCount}条`,
+				icon: 'success',
+				duration: 2500
+			});
+		} catch (error) {
+			this.setData({ initScheduleLoading: false });
+			wx.showToast({ title: '初始化失败', icon: 'none' });
 		}
 	},
 
@@ -410,7 +504,7 @@ Page({
 				const day = String(date.getDate()).padStart(2, '0');
 				tableHeader.push(`${day}`);
 			});
-			const weekHeader = ['技师'];
+			const weekHeader = ['员工'];
 			dateList.forEach(d => {
 				const date = new Date(d);
 				const weekDay = weekDays[date.getDay()];
@@ -463,6 +557,11 @@ Page({
 		this.setData({ inputName: e.detail.value });
 	},
 
+	// 英文名输入
+	onNameEnInput(e: WechatMiniprogram.Input) {
+		this.setData({ inputNameEn: e.detail.value });
+	},
+
 	// 手机号输入
 	onPhoneInput(e: WechatMiniprogram.Input) {
 		this.setData({ inputPhone: e.detail.value });
@@ -472,6 +571,12 @@ Page({
 	onGenderSelect(e: WechatMiniprogram.TouchEvent) {
 		const gender = e.currentTarget.dataset.gender as StaffGender;
 		this.setData({ inputGender: gender });
+	},
+
+	// 角色选择
+	onRoleSelect(e: WechatMiniprogram.TouchEvent) {
+		const role = e.currentTarget.dataset.role as StaffRole;
+		this.setData({ inputRole: role });
 	},
 
 	// 企业微信ID输入
@@ -532,9 +637,11 @@ Page({
 			showModal: false,
 			editingStaff: null,
 			inputName: '',
+			inputNameEn: '',
 			inputGender: 'male',
 			inputAvatar: '',
 			inputPhone: '',
+			inputRole: 'technician',
 			inputStatus: 'active',
 		});
 	},
@@ -542,8 +649,9 @@ Page({
 	// 确认弹窗
 	async onConfirmModal() {
 		try {
-			const { inputName, inputGender, inputAvatar, inputPhone, inputWechatWorkId, inputStatus, editingStaff } = this.data;
+			const { inputName, inputNameEn, inputGender, inputAvatar, inputPhone, inputWechatWorkId, inputRole, inputStatus, editingStaff } = this.data;
 			const name = inputName.trim();
+			const nameEn = inputNameEn.trim();
 			const phone = inputPhone.trim();
 			const wechatWorkId = inputWechatWorkId.trim();
 
@@ -574,10 +682,12 @@ Page({
 				const oldStatus = editingStaff.status;
 				await cloudDb.updateById<StaffInfo>(Collections.STAFF, editingStaff._id, {
 					name,
+					nameEn,
 					gender: inputGender,
 					avatar: inputAvatar,
 					phone,
 					wechatWorkId,
+					role: inputRole,
 					status: inputStatus,
 				});
 
@@ -597,10 +707,12 @@ Page({
 
 				const inserted = await (cloudDb.insert<StaffInfo>(Collections.STAFF, {
 					name,
+					nameEn,
 					gender: inputGender,
 					avatar: inputAvatar,
 					phone,
 					wechatWorkId,
+					role: inputRole,
 					status: 'active',
 				}));
 

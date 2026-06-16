@@ -407,12 +407,14 @@ export const Collections = {
 	ROTATION: 'rotation',
 	MEMBERSHIP_USAGE: 'membership_usage',
 	PROJECTS: 'projects',
+	PROJECT_CATEGORIES: 'project_categories',
 	ROOMS: 'rooms',
 	ESSENTIAL_OILS: 'essential_oils',
 	CONSULTATION: 'consultation_records',
 	USERS: 'users',
 	LOTTERY_PRIZES: 'lottery_prizes',
 	STORE_EXPENSE: 'store_expense',
+	TECHNICIAN_WECHAT: 'technician_wechat',
 } as const;
 
 export type CollectionName = typeof Collections[keyof typeof Collections];

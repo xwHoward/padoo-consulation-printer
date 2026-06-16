@@ -1,6 +1,7 @@
-import {cloudDb, Collections} from "../../../utils/cloud-db";
-import {buildPlateNumberUpdates} from "../../../services/customer.service";
-import {formatDate, formatTime, parseProjectDuration} from "../../../utils/util";
+import { cloudDb, Collections } from "../../../utils/cloud-db";
+import { buildPlateNumberUpdates } from "../../../services/customer.service";
+import { formatDate, formatTime, parseProjectDuration } from "../../../utils/util";
+import { t } from "../../../utils/i18n";
 
 const app = getApp<IAppOption>();
 
@@ -51,7 +52,7 @@ export class DataLoaderService {
         this.page.setData({technicianList: list, loadingTechnicians: false});
       } else {
         wx.showToast({
-          title: res.result.message || '加载技师列表失败',
+          title: res.result.message || t('loadTechFailed'),
           icon: 'none'
         });
         this.page.setData({loadingTechnicians: false});
@@ -59,7 +60,7 @@ export class DataLoaderService {
     } catch (error) {
       this.page.setData({loadingTechnicians: false});
       wx.showToast({
-        title: '加载技师列表失败',
+        title: t('loadTechFailed'),
         icon: 'none'
       });
     }
@@ -75,7 +76,7 @@ export class DataLoaderService {
   }
 
   async loadEditData(editId: string, ensureConsultationInfoCompatibilityFn: EnsureConsultationInfoCompatibilityFn) {
-    this.page.setData({loading: true, loadingText: '加载中...'});
+    this.page.setData({ loading: true, loadingText: t('loading') });
 
     try {
       const foundRecord = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, editId);
@@ -106,13 +107,13 @@ export class DataLoaderService {
         await this.loadTechnicianList();
       } else {
         wx.showToast({
-          title: "编辑记录不存在",
+          title: t('editNotFound'),
           icon: "error",
         });
       }
     } catch (error) {
       wx.showToast({
-        title: "加载失败",
+        title: t('loadFailed'),
         icon: "error",
       });
     } finally {
@@ -125,7 +126,7 @@ export class DataLoaderService {
     DefaultConsultationInfo: Add<ConsultationInfo>,
     DefaultGuestInfo: GuestInfo
   ) {
-    this.page.setData({loading: true, loadingText: '加载中...'});
+    this.page.setData({ loading: true, loadingText: t('loading') });
 
     try {
       const reserveIds = reserveIdOrIds.includes(',') ? reserveIdOrIds.split(',') : [reserveIdOrIds];

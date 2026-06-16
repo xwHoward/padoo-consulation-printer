@@ -84,9 +84,10 @@ export class CashierDataLoaderService {
 
 			this.page.setData({
 				rooms,
-				activeStaffList: allStaff.filter(s => s.status === 'active'),
+				activeStaffList: allStaff.filter(s => s.status === 'active'&&s.role === 'technician'),
 				dateSelector,
 				rotationList,
+				rotationOrder: rotationList.map(item => item._id),
 				quickReservationSlots,
 				timelineRefreshTrigger: this.page.data.timelineRefreshTrigger + 1
 			});
@@ -126,6 +127,7 @@ export class CashierDataLoaderService {
 			this.page.setData({
 				dateSelector,
 				rotationList,
+				rotationOrder: rotationList.map(item => item._id),
 				quickReservationSlots: {
 					maleCount: qs.maleCount,
 					femaleCount: qs.femaleCount,

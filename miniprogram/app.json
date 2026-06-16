@@ -11,6 +11,7 @@
     "pages/customers/customers",
     "pages/membership-cards/membership-cards",
     "pages/data-management/data-management",
+    "pages/project-list/project-list",
     "pages/lottery/lottery",
     "pages/screensaver/screensaver",
     "pages/analytics/analytics",

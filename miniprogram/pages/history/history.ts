@@ -3,8 +3,7 @@ import {ReservationService} from '../../services/reservation.service';
 import {BODY_PART_MAP, COUPON_PLATFORM_NAMES, COUPON_PLATFORMS, GENDERS, MASSAGE_STRENGTHS} from "../../utils/constants";
 import {loadingService, LockKeys} from '../../utils/loading-service';
 import {hasButtonPermission} from '../../utils/permission';
-import {formatTime, getCurrentDate, getPreviousDate, getNextDate} from "../../utils/util";
-import {formatMention} from '../../utils/wechat-work';
+import {formatTime, getCurrentDate, getPreviousDate, getNextDate, parseProjectDuration} from "../../utils/util";
 
 // 扩展记录类型，添加折叠状态
 interface DisplayRecord extends ConsultationRecord {
@@ -17,6 +16,24 @@ interface DisplayRecord extends ConsultationRecord {
 interface DailyGroup {
   date: string;
   records: DisplayRecord[];
+}
+
+function visualWidth(s: string): number {
+  let w = 0;
+  for (const ch of s) {
+    w += ch.charCodeAt(0) > 127 ? 2 : 1;
+  }
+  return w;
+}
+
+
+function padVisual(s: string, targetWidth: number): string {
+  // return s.padStart(2,'0');
+  return isNaN(Number(s))?s:s.padStart(2,'0') + ' '.repeat(Math.max(0, targetWidth - visualWidth(s)));
+}
+
+function buildTableRow(cols: string[], widths: number[], sep: string): string {
+  return sep + cols.map((c, i) => padVisual(c, widths[i])).join(sep) + sep;
 }
 
 const app = getApp<IAppOption>();
@@ -32,14 +49,15 @@ Page({
     customerId: '', // 顾客ID
     loading: false, // 全局loading状态
     loadingText: '加载中...', // loading提示文字
-    // 数字输入弹窗状态
-    numberInputModal: {
+    // 加钟弹窗
+    extraTimeModal: {
       show: false,
-      title: '',
-      currentValue: 0,
-      inputValue: 1,
-      record: null as DisplayRecord | null,
-      date: ''
+      sourceRecordId: '' as string,
+      sourceDate: '' as string,
+      projects: [] as Project[],
+      selectedProject: '' as string,
+      selectedProjectName: '' as string,
+      quantity: 1
     },
     // 日期选择器状态
     dateSelector: {
@@ -406,9 +424,10 @@ Page({
         return;
       }
 
-      const {technicianStats, monthlyScoreRanking} = res.result.data as {technicianStats: Record<string, TechnicianStats>; monthlyScoreRanking: MonthlyScoreRanking;} || {
+      const {technicianStats, monthlyScoreRanking, performanceMetrics} = res.result.data as {technicianStats: Record<string, TechnicianStats>; monthlyScoreRanking: MonthlyScoreRanking; performanceMetrics?: { technicians: Record<string, any> };} || {
         technicianStats: {},
-        monthlyScoreRanking: []
+        monthlyScoreRanking: {} as MonthlyScoreRanking,
+        performanceMetrics: undefined
       };
 
       if (Object.keys(technicianStats).length === 0) {
@@ -427,8 +446,8 @@ Page({
         summaryText += `  总单数: ${ stats.totalCount }\n`;
         summaryText += `  点钟数: ${ stats.clockInCount }\n`;
 
-        if (stats.extraTimeTotal > 0) {
-          summaryText += `  加钟: ${ stats.extraTimeCount }\n`;
+        if (stats.extraTimeCount > 0) {
+          summaryText += `  加钟数: ${ stats.extraTimeCount }\n`;
         }
 
         if (stats.overtime > 0) {
@@ -449,7 +468,7 @@ Page({
 
       const totalRecords = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.totalCount, 0);
       const totalClockIn = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.clockInCount, 0);
-      const totalExtraTime = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.extraTimeTotal, 0);
+      const totalExtraTime = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + (stats.extraTimeCount || 0), 0);
       const totalOvertime = Object.values(technicianStats).reduce((sum: number, stats: TechnicianStats) => sum + stats.overtime, 0);
 
       summaryText += `${'='.repeat(20)}\n`;
@@ -458,7 +477,7 @@ Page({
       summaryText += `  总点钟数: ${ totalClockIn }\n`;
 
       if (totalExtraTime > 0) {
-        summaryText += `  总加钟: ${ totalExtraTime }\n`;
+        summaryText += `  总加钟数: ${ totalExtraTime }\n`;
       }
       if (totalOvertime > 0) {
         summaryText += `  总加班: ${ totalOvertime/2 }小时\n`;
@@ -468,11 +487,26 @@ Page({
         summaryText += `\n${'='.repeat(20)}\n`;
         summaryText += `${ monthlyScoreRanking.period.month }月排名\n\n`;
 
+        const colWidths = [ 2, 1, 1, 1, 1, 1, 1];
+        const headers = ['代号', '卡', '点', '回', '微', '总'];
+
+        summaryText += buildTableRow(headers, colWidths, '|') + '\n';
+
         monthlyScoreRanking.rankings.forEach((item) => {
-          const rankLabel = item.rank === 1 ? '第1名' : item.rank === 2 ? '第2名' : item.rank === 3 ? '第3名' : `第${ item.rank }名`;
-          summaryText += `  ${ rankLabel } ${ item.technician }: ${ item.totalScore }分`;
-          summaryText += ` (${ item.salesCount }次卡 | 点钟${ item.clockInCount }次)\n`;
+          const perf = (performanceMetrics && performanceMetrics.technicians) ? performanceMetrics.technicians[item.technician] : null;
+
+          const cells = [
+            item.technician,
+            String(item.salesCount),
+            String(item.clockInCount),
+            String(perf ? (perf.returnOrders || 0) : '-'),
+            String(perf ? (perf.wechatAdds || 0) : '-'),
+            String(item.totalScore),
+          ];
+
+          summaryText += buildTableRow(cells, colWidths, '|') + '\n';
         });
+
       }
 
       this.setData({
@@ -509,122 +543,107 @@ Page({
   // 加钟操作 - 显示弹窗
   onExtraTime(e: WechatMiniprogram.TouchEvent) {
     const {record, date} = e.currentTarget.dataset;
-    const currentValue = record.extraTime || 0;
+    const projects = (app.globalData.projects || []);
 
     this.setData({
-      numberInputModal: {
+      extraTimeModal: {
         show: true,
-        title: '加钟',
-        currentValue: currentValue,
-        inputValue: currentValue, // 默认显示当前值
-        record: record,
-        date: date
+        sourceRecordId: record._id,
+        sourceDate: date,
+        projects,
+        selectedProject: '',
+        selectedProjectName: '',
+        quantity: 1
       }
     });
   },
 
-  // 步进按钮 - 减少
-  onStepMinus() {
-    const currentInput = this.data.numberInputModal.inputValue;
-    if (currentInput > 0) { // 最小值为0
-      this.setData({
-        'numberInputModal.inputValue': currentInput - 1
-      });
-    }
-  },
-
-  // 步进按钮 - 增加
-  onStepPlus() {
-    const currentInput = this.data.numberInputModal.inputValue;
+  closeExtraTimeModal() {
     this.setData({
-      'numberInputModal.inputValue': currentInput + 1
+      'extraTimeModal.show': false
     });
   },
 
-  // 输入框输入
-  onNumberInput(e: WechatMiniprogram.Input) {
-    const value = parseInt(e.detail.value, 10);
-    if (!isNaN(value) && value >= 0) { // 允许输入0
-      this.setData({
-        'numberInputModal.inputValue': value
-      });
-    } else if (e.detail.value === '') {
-      this.setData({
-        'numberInputModal.inputValue': 0
-      });
-    }
-  },
-
-  // 弹窗取消
-  onModalCancel() {
+  selectExtraTimeProject(e: WechatMiniprogram.CustomEvent) {
+    const { id, name } = e.currentTarget.dataset;
     this.setData({
-      'numberInputModal.show': false
+      'extraTimeModal.selectedProject': id,
+      'extraTimeModal.selectedProjectName': name
     });
   },
 
-  // 弹窗确认
-  async onModalConfirm() {
-    const {inputValue, record, date} = this.data.numberInputModal;
+  onExtraTimeQuantityChange(e: WechatMiniprogram.CustomEvent) {
+    const { action } = e.currentTarget.dataset;
+    const current = this.data.extraTimeModal.quantity;
+    if (action === 'increase') {
+      this.setData({ 'extraTimeModal.quantity': current + 1 });
+    } else if (action === 'decrease' && current > 1) {
+      this.setData({ 'extraTimeModal.quantity': current - 1 });
+    }
+  },
 
-    if (!record || inputValue < 0) {
-      wx.showToast({
-        title: '请输入有效数值',
-        icon: 'none'
-      });
+  async confirmExtraTime() {
+    const { sourceRecordId, sourceDate, selectedProject, selectedProjectName, quantity } = this.data.extraTimeModal;
+    if (!selectedProject) {
+      wx.showToast({ title: '请选择一个加钟项目', icon: 'none' });
       return;
     }
 
-    await this.updateExtraTimeOrOvertime(record._id, date, inputValue);
-
-    // 加钟后触发重排
-    await this.triggerRearrange(date);
-
-    this.setData({
-      'numberInputModal.show': false
-    });
-
-    if (inputValue > 0) {
-      wx.showToast({
-        title: `已加钟${ inputValue }分钟`,
-        icon: 'success'
-      });
-    } else {
-      wx.showToast({
-        title: '已清除',
-        icon: 'success'
-      });
-    }
-  },
-
-  // 更新加钟或加班数值
-  async updateExtraTimeOrOvertime(recordId: string, date: string, value: number) {
-    this.setData({loading: true, loadingText: '更新中...'});
+    this.setData({ loading: true, loadingText: '加钟中...' });
     try {
-      const updateData: {extraTime: number; endTime?: string;} = {extraTime: value};
-
-      if (value > 0) {
-        const record = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, recordId) as ConsultationRecord | null;
-        if (record) {
-          const [hours, minutes] = record.endTime.split(':').map(Number);
-          // 使用记录的日期构建Date对象，避免跨日计算错误
-          const [year, month, day] = record.date.split('-').map(Number);
-          const endDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
-
-          const newEndDate = new Date(endDate.getTime() + value * 30 * 60 * 1000);
-          updateData.endTime = formatTime(newEndDate, false);
-        }
+      const record = await cloudDb.findById<ConsultationRecord>(Collections.CONSULTATION, sourceRecordId);
+      if (!record) {
+        wx.showToast({ title: '未找到原始单据', icon: 'error' });
+        return;
       }
 
-      await cloudDb.updateById(Collections.CONSULTATION, recordId, updateData);
+      const [endH, endM] = record.endTime.split(':').map(Number);
+      const [year, month, day] = record.date.split('-').map(Number);
+      const startTimeDate = new Date(year, month - 1, day, endH, endM, 0, 0);
+      const startTime = formatTime(startTimeDate, false);
 
-      await this.loadHistoryData(date);
-    } catch (error) {
+      const duration = parseProjectDuration(selectedProjectName) || 90;
+      const totalDuration = duration * quantity;
+      const endTimeDate = new Date(startTimeDate.getTime() + totalDuration * 60 * 1000);
+      const endTime = formatTime(endTimeDate, false);
+
+      const extraRecord: Add<ConsultationRecord> = {
+        surname: record.surname,
+        gender: record.gender,
+        project: selectedProjectName,
+        technician: record.technician,
+        room: record.room,
+        massageStrength: record.massageStrength,
+        essentialOil: record.essentialOil,
+        selectedParts: record.selectedParts || {},
+        isClockIn: false,
+        remarks: record.remarks || '',
+        phone: record.phone || '',
+        couponCode: '',
+        couponPlatform: record.couponPlatform || 'meituan',
+        extraTime: 0,
+        date: record.date,
+        startTime,
+        endTime,
+        isVoided: false,
+        overtime: 0,
+        guasha: false,
+        isExtraTime: true
+      };
+
+      await cloudDb.saveConsultation(extraRecord);
+
+      this.closeExtraTimeModal();
+      await this.loadHistoryData(sourceDate);
+      await this.triggerRearrange(sourceDate);
+      wx.showToast({ title: '加钟成功', icon: 'success' });
+    } catch (error: any) {
       wx.showToast({
-        title: '更新失败',
+        title: error?.message || '加钟失败',
         icon: 'error'
       });
     } finally {
-      this.setData({loading: false});
+      this.setData({ loading: false });
     }
   },
 

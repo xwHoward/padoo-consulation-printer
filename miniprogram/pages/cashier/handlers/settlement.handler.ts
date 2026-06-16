@@ -188,13 +188,6 @@ export class SettlementHandler {
 	}
 
 	/**
-	 * 输入券码
-	 */
-	onCouponCodeInput(e: WechatMiniprogram.CustomEvent): void {
-		this.page.setData({ settlementCouponCode: e.detail.value });
-	}
-
-	/**
 	 * 确认结算
 	 */
 	async confirmSettlement(): Promise<void> {

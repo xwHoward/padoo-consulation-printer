@@ -39,7 +39,7 @@ export class ReservationUtils {
       const rotationData = await app.getRotationQueue(date);
       if (!rotationData?.staffList?.length) return;
 
-      const allStaff = await app.getStaffs();
+      const allStaff = (await app.getStaffs()).filter(s => s.role === 'technician');
       const staffMap = new Map(allStaff.map(s => [s._id, s]));
 
       // 严格按轮钟位置排序，过滤掉不在岗的技师

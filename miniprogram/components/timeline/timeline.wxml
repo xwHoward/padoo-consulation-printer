@@ -5,18 +5,28 @@
       <view class="time-axis">
         <view class="time-axis-spacer"></view>
         <view class="time-mark" wx:for="{{timeLabels}}" wx:key="*this">
-          <text style="margin-left: -6px;">{{item}}</text>
+          <view style="margin-left: -6px;">{{item}}</view>
         </view>
       </view>
       <!-- 员工行 -->
       <view class="staff-timeline-row {{item.highlighted ? 'highlighted' : ''}}" wx:for="{{staffTimeline}}" wx:key="_id">
         <view class="staff-name-col" style="width: {{TIMELINE_HOUR_WIDTH}}px;">
-          <view>
-            {{item.name}}
-            <text class="rotation-count">(轮{{item.rotationCount}})</text>
+          <view class="staff-name-row">
+            <view class="rotation-rank">{{item.rotationRank}}</view>
+            <view class="staff-name-text">
+              {{item.name}}
+              <view class="rotation-count">(轮{{item.rotationCount}})</view>
+            </view>
           </view>
-          <view class="shift-mini-tag {{item.shift}}">
-            {{item.shift === 'morning' ? '早' : item.shift === 'evening' ? '晚' : '加'}}
+          <view class="staff-bottom-row">
+            <view class="shift-mini-tag {{item.shift}}">
+              {{item.shift === 'morning' ? '早' : item.shift === 'evening' ? '晚' : '加'}}
+            </view>
+            <!-- 轮牌调整按钮 -->
+            <view class="rotation-adjust-btns" wx:if="{{canAdjustRotation}}">
+              <view class="adjust-btn {{item.rotationRank === 1 ? 'disabled' : ''}}" bindtap="onAdjustRotation" data-index="{{index}}" data-direction="up">↑</view>
+              <view class="adjust-btn {{item.rotationRank === item.rotationOrderSize ? 'disabled' : ''}}" bindtap="onAdjustRotation" data-index="{{index}}" data-direction="down">↓</view>
+            </view>
           </view>
         </view>
         <view class="timeline-track">
@@ -25,28 +35,27 @@
           <!-- 当前时间线 -->
           <view class="current-time-line" wx:if="{{showCurrentTimeLine}}" style="left: {{currentTimePosition}};"></view>
           <!-- 占用块 -->
-          <view wx:for="{{item.blocks}}" wx:for-item="block" wx:key="startTime" class="time-block {{block.isReservation ? 'reservation' : ''}} {{block.gender}} {{block.isInProgress ? 'in-progress' : ''}} {{block.isSettled ? 'settled' : ''}} {{block.rearrangeConflict ? 'rearrange-conflict' : ''}} {{block.groupSize > 1 ? 'group-color-' + block.groupColorIndex : ''}}" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block._id}}" data-reservation="{{block.isReservation}}" data-settled="{{block.isSettled}}" data-inprogress="{{block.isInProgress}}">
+          <view wx:for="{{item.blocks}}" wx:for-item="block" wx:key="_id" class="time-block {{block.isReservation ? 'reservation' : ''}} {{block.gender}} {{block.isInProgress ? 'in-progress' : ''}} {{block.isSettled ? 'settled' : ''}} {{block.rearrangeConflict ? 'rearrange-conflict' : ''}} {{block.isCancelled ? 'cancelled' : ''}} {{block.groupSize > 1 ? 'group-color-' + block.groupColorIndex : ''}}" style="left: {{block.left}}; width: {{block.width}};" bindtap="onBlockClick" data-id="{{block._id}}" data-reservation="{{block.isReservation}}" data-settled="{{block.isSettled}}" data-inprogress="{{block.isInProgress}}" data-cancelled="{{block.isCancelled}}">
             <view class="block-content">
               <view class="block-customer">
                 {{block.customerName}}
-                <text style="font-size: 10px;font-weight: normal;">| {{block.phone || '无号码'}}</text>
+                <view class="block-phone">| {{block.phone || '无号码'}}</view>
               </view>
               <view class="block-time">
                 {{block.startTime}}-{{block.endTime}}
-                <text wx:if="{{block.isClockIn}}">[点]</text>
-                <text wx:else>[轮]</text>
-                <text wx:if="{{block.extraTime > 0}}">[加钟]</text>
-                <text wx:if="{{block.rearrangeConflict}}" style="color: #ffff00; font-weight: bold;">
-                  [冲突]
-                </text>
-                <text wx:if="{{block.requirement}}">[{{block.requirement}}]</text>
+                <view wx:if="{{block.isClockIn}}">[点]</view>
+                <view wx:elif="{{block.extraTime > 0 || block.isExtraTime}}">[加]</view>
+                <view wx:else>[轮]</view>
+                <view wx:if="{{block.rearrangeConflict}}" class="conflict-tag">[冲突]</view>
+                <view wx:if="{{block.requirement}}">[{{block.requirement}}]</view>
               </view>
               <view class="block-info">{{block.project}} | {{block.room}}</view>
             </view>
           </view>
-          <!-- 空闲时段标记 -->
-          <view class="available-slot-label" wx:for="{{item.availableSlots}}" wx:for-item="slot" wx:key="left" style="left: {{slot.left}}; width: {{slot.width}};">
-            <text class="slot-text">{{slot.displayText}}</text>
+          <!-- 空闲时段标记（仅显示>=60分钟，可点击复制） -->
+          <view class="available-slot-label" wx:for="{{item.availableSlots}}" wx:for-item="slot" wx:key="left" style="left: {{slot.left}}; width: {{slot.width}};" bindtap="onSlotClick" data-staffname="{{item.name}}" data-slots="{{slot.displayText}}" data-staffid="{{item._id}}">
+            <view class="slot-text">{{slot.displayText}}</view>
+            <image class="slot-copy-icon" src="/assets/copy.png" mode="aspectFit" />
           </view>
         </view>
       </view>

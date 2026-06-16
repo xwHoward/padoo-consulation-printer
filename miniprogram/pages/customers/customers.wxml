@@ -34,6 +34,9 @@
           </view>
         </view>
         <view class="action-buttons">
+          <view class="action-btn wechat" catch:tap="showWechatModal" data-customer="{{item}}">
+            加微信
+          </view>
           <view class="action-btn open-card" catch:tap="showOpenCardModal" data-customer="{{item}}">
             开卡
           </view>
@@ -250,6 +253,33 @@
         </view>
       </view>
     </view>
+  </view>
+</modal>
+<modal show="{{showWechatAddModal}}" title="加微信" bind:cancel="onWechatModalCancel" bind:confirm="onWechatModalConfirm">
+  <view class="form-group">
+    <view class="form-label">顾客信息</view>
+    <view class="customer-info-display">
+      <view class="info-row">
+        <view class="info-label">姓名:</view>
+        <view class="info-value">{{selectedCustomerForWechat.name}}{{selectedCustomerForWechat.gender === 'male' ? '先生' : (selectedCustomerForWechat.gender === 'female' ? '女士' : '')}}</view>
+      </view>
+      <view wx:if="{{selectedCustomerForWechat.phone}}" class="info-row">
+        <view class="info-label">手机号:</view>
+        <view class="info-value">{{selectedCustomerForWechat.phone}}</view>
+      </view>
+    </view>
+  </view>
+  <view class="form-group">
+    <view class="form-label">技师</view>
+    <view class="technician-selector">
+      <label wx:for="{{technicianList}}" wx:key="_id" wx:for-item="tech" class="technician-option {{formWechatTechnician === tech.name ? 'selected' : ''}}" bindtap="onWechatTechnicianSelect" data-technician="{{tech.name}}">
+        {{tech.name}}
+      </label>
+    </view>
+  </view>
+  <view class="form-group">
+    <view class="form-label">顾客微信号</view>
+    <input class="form-input" type="text" placeholder="请输入顾客微信号" bindinput="onWechatIdInput" value="{{formWechatId}}" />
   </view>
 </modal>
 <!-- Loading 遮罩 -->

@@ -81,7 +81,7 @@ exports.main = async (event, context) => {
             const staffRes = await db.collection('staff').where({
                 status: 'active',
                 _id: _.in(scheduledStaffIds)
-            }).field({ _id: true, name: true, gender: true, phone: true, wechatWorkId: true }).limit(1000).limit(1000).get()
+            }).field({ _id: true, name: true, nameEn: true, gender: true, phone: true, wechatWorkId: true }).limit(1000).limit(1000).get()
             activeStaff = staffRes.data || []
         }
 
@@ -155,6 +155,7 @@ exports.main = async (event, context) => {
             return {
                 _id: staff._id,
                 name: staff.name,
+                nameEn: staff.nameEn || '',
                 gender: staff.gender,
                 phone: staff.phone || '',
                 wechatWorkId: staff.wechatWorkId || '',
@@ -206,26 +207,23 @@ function calculateAvailableSlotsText(staffConsultations, staffReservations, shif
         .filter(r => r.startTime && r.endTime && r.startTime < shiftEnd && r.endTime > shiftStart)
         .sort((a, b) => a.startTime.localeCompare(b.startTime))
 
-    // 计算搜索起始时间（与前端逻辑一致：向上取整到下一个半小时）
+    // 计算搜索起始时间（向上取整到下一个5分钟）
     let startTime = shiftStart
     if (isToday) {
         const shiftStartHour = parseInt(shiftStart.substring(0, 2))
         const shiftStartMinute = parseInt(shiftStart.substring(3))
         if (currentHour > shiftStartHour || (currentHour === shiftStartHour && currentMinute >= shiftStartMinute)) {
-            const nextMinute = currentMinute < 30 ? 30 : 60
+            const nextMinute = Math.ceil(currentMinute / 5) * 5
             const nextHour = nextMinute === 60 ? currentHour + 1 : currentHour
-            if (nextMinute === 60) {
-                startTime = `${String(nextHour).padStart(2, '0')}:00`
-            } else {
-                startTime = `${String(nextHour).padStart(2, '0')}:${String(nextMinute).padStart(2, '0')}`
-            }
+            const displayMinute = nextMinute === 60 ? 0 : nextMinute
+            startTime = `${String(nextHour).padStart(2, '0')}:${String(displayMinute).padStart(2, '0')}`
         }
     }
 
     if (occupiedSlots.length === 0) {
         if (startTime >= shiftEnd) return '已满'
         const duration = parseTimeToMinutes(shiftEnd) - parseTimeToMinutes(startTime)
-        return `${startTime}-${shiftEnd} (${duration}分)`
+        return `${startTime}-${shiftEnd} (${duration}分钟)`
     }
 
     const availableSlots = []
@@ -242,7 +240,7 @@ function calculateAvailableSlotsText(staffConsultations, staffReservations, shif
 
         const gap = parseTimeToMinutes(actualEnd) - parseTimeToMinutes(actualStart)
         if (gap >= 60) {
-            availableSlots.push(`${actualStart}-${actualEnd} (${gap}分)`)
+            availableSlots.push(`${actualStart}-${actualEnd} (${gap}分钟)`)
         }
     }
 
@@ -365,7 +363,7 @@ function buildQuickReservationSlots(rotationItems, allConsultations, allReservat
             staffList.forEach(staff => {
                 const slots = staffAvailableSlots.get(staff._id) || []
                 slots.forEach(slot => {
-                    const slotText = `${formatMinutesToTime(slot.start)}-${formatMinutesToTime(slot.end)} (${slot.duration}分)`
+                    const slotText = `${formatMinutesToTime(slot.start)}-${formatMinutesToTime(slot.end)} (${slot.duration}分钟)`
                     if (!slotMap.has(slotText)) slotMap.set(slotText, [])
                     slotMap.get(slotText).push(staff.name)
                 })
@@ -387,7 +385,7 @@ function buildQuickReservationSlots(rotationItems, allConsultations, allReservat
                         const overlapEnd = Math.min(slot1.end, slot2.end)
                         const overlapDuration = overlapEnd - overlapStart
                         if (overlapDuration >= 60) {
-                            const slotText = `${formatMinutesToTime(overlapStart)}-${formatMinutesToTime(overlapEnd)} (${overlapDuration}分)`
+                            const slotText = `${formatMinutesToTime(overlapStart)}-${formatMinutesToTime(overlapEnd)} (${overlapDuration}分钟)`
                             if (!commonSlotsMap.has(slotText)) {
                                 commonSlotsMap.set(slotText, [staffList[i].name, staffList[j].name])
                             }
@@ -463,7 +461,7 @@ async function getRotationQuickSlots(date) {
         const staffRes = await db.collection('staff').where({
             status: 'active',
             _id: _.in(onDutyStaffIds)
-        }).field({ _id: true, name: true, gender: true, avatar: true }).limit(1000).limit(1000).get()
+        }).field({ _id: true, name: true, nameEn: true, gender: true, avatar: true }).limit(1000).limit(1000).get()
         const staffList = staffRes.data || []
         const staffMap = new Map(staffList.map(s => [s._id, s]))
 
@@ -495,6 +493,7 @@ async function getRotationQuickSlots(date) {
             return {
                 _id: item.staffId,
                 name: staff.name,
+                nameEn: staff.nameEn || '',
                 avatar: staff.avatar || '',
                 gender: staff.gender,
                 shift,
@@ -563,7 +562,7 @@ async function getQuickSlots(date, maleCount, femaleCount) {
         const staffRes = await db.collection('staff').where({
             status: 'active',
             _id: _.in(onDutyStaffIds)
-        }).field({ _id: true, name: true, gender: true }).limit(1000).get()
+        }).field({ _id: true, name: true, nameEn: true, gender: true }).limit(1000).get()
         const staffList = staffRes.data || []
 
         // 构建 rotationItems（含性别和班次信息）
@@ -738,7 +737,7 @@ async function getQuickSlots(date, maleCount, femaleCount) {
 
         // 转换为 QuickReservation 格式，按性别分列技师名字（只收集用户实际需要的性别）
         const slots = combinedSlots.map(slot => {
-            const timeText = `${formatMinutesToTime(slot.start)}-${formatMinutesToTime(slot.end)} (${slot.duration}分)`
+            const timeText = `${formatMinutesToTime(slot.start)}-${formatMinutesToTime(slot.end)} (${slot.duration}分钟)`
             const maleStaffNames = []
             const femaleStaffNames = []
             if (maleCount > 0) {
@@ -860,7 +859,7 @@ async function getTechnicianAvailability(date) {
         const staffRes = await db.collection('staff').where({
             status: 'active',
             _id: _.in(onDutyStaffIds)
-        }).field({ _id: true, name: true, gender: true, avatar: true, phone: true, wechatWorkId: true }).limit(1000).limit(1000).get()
+        }).field({ _id: true, name: true, nameEn: true, gender: true, avatar: true, phone: true, wechatWorkId: true }).limit(1000).limit(1000).get()
         const onDutyStaff = staffRes.data || []
 
         const rotationData = rotationRes.data && rotationRes.data.length > 0 ? rotationRes.data[0] : null
@@ -886,6 +885,7 @@ async function getTechnicianAvailability(date) {
             return {
                 _id: staff._id,
                 name: staff.name,
+                nameEn: staff.nameEn || '',
                 avatar: staff.avatar,
                 gender: staff.gender,
                 phone: staff.phone || '',
@@ -1014,8 +1014,9 @@ function calculateOverlapMinutes(proposedStart, proposedEnd, staffConsultations,
  * 2. 严格按照性别要求匹配技师
  * 3. 轮钟预约按以下优先级分配：
  *    - 优先级1：重叠度越低越优先（0分钟重叠最优，允许≤10分钟的轻微重叠）
- *    - 优先级2：轮牌队列位置越靠前越优先
- *    - 优先级3：空闲时间越多越优先（均匀化微调）
+ *    - 优先级2：已分配轮钟数越少越优先（均匀分配，数量相同时再按轮牌位置）
+ *    - 优先级3：轮牌队列位置越靠前越优先
+ *    - 优先级4：空闲时间越多越优先（均匀化微调）
  *    - 超过10分钟重叠的技师不参与分配
  * @param {string} date - 日期（YYYY-MM-DD）
  * @returns {{ code: number, message: string, data: { unchanged: Array, rearranged: Array, unassigned: Array } }}
@@ -1027,7 +1028,7 @@ async function rearrangeReservations(date) {
             db.collection('consultation_records').where({ date, isVoided: false }).field({ _id: true, technician: true, startTime: true, endTime: true }).limit(1000).limit(1000).get(),
             db.collection('reservations').where({ date, status: 'active' }).limit(1000).limit(1000).get(),
             db.collection('rotation_queue').where({ date }).field({ staffList: true }).limit(1000).limit(1000).get(),
-            db.collection('staff').where({ status: 'active' }).field({ _id: true, name: true, gender: true }).limit(1000).limit(1000).get()
+            db.collection('staff').where({ status: 'active' }).field({ _id: true, name: true, nameEn: true, gender: true }).limit(1000).limit(1000).get()
         ])
 
         const schedules = scheduleRes.data || []
@@ -1058,6 +1059,8 @@ async function rearrangeReservations(date) {
         const staffConsultationsMap = new Map()
         const staffReservationsMap = new Map()
         
+        const staffRotationCount = new Map()
+
         onDutyStaff.forEach(staff => {
             staffConsultationsMap.set(staff._id, consultations.filter(c => c.technician === staff.name))
             // 重排时只保留点钟预约作为固定占用，轮钟预约全部重新分配
@@ -1065,6 +1068,7 @@ async function rearrangeReservations(date) {
                 (r.technicianId === staff._id || r.technicianName === staff.name)
             )
             staffReservationsMap.set(staff._id, [...clockInResvs])
+            staffRotationCount.set(staff._id, 0)
         })
         
         const result = {
@@ -1093,11 +1097,13 @@ async function rearrangeReservations(date) {
             // 获取技师性别要求（优先使用新增字段，兼容旧数据）
             const requiredGenders = []
             if (res.requirementType === 'gender') {
-                if (res.requiredMaleCount > 0) {
-                    requiredGenders.push('male')
-                }
-                if (res.requiredFemaleCount > 0) {
-                    requiredGenders.push('female')
+                const assignedStaff = staffMap.get(res.technicianId)
+                    || staffList.find(s => s.name === res.technicianName)
+                if (assignedStaff && assignedStaff.gender) {
+                    requiredGenders.push(assignedStaff.gender)
+                } else {
+                    if (res.requiredMaleCount > 0) requiredGenders.push('male')
+                    if (res.requiredFemaleCount > 0) requiredGenders.push('female')
                 }
             } else if (res.genderRequirement) {
                 requiredGenders.push(res.genderRequirement)
@@ -1127,12 +1133,13 @@ async function rearrangeReservations(date) {
                 const schedule = scheduleMap.get(staff._id)
                 const shift = schedule ? schedule.shift : 'evening'
                 const freeMinutes = calculateFreeMinutes(staff, staffConsults, staffResvs, shift)
-                // 使用轮牌队列位置作为排序依据之一
                 const position = staffPositionMap.has(staff._id) ? staffPositionMap.get(staff._id) : 999
-                
+                const currentRotationCount = staffRotationCount.get(staff._id) || 0
+
                 availableTechnicians.push({
                     staff,
                     position,
+                    rotationCount: currentRotationCount,
                     freeMinutes,
                     overlapMinutes,
                     reason: overlapMinutes === 0 ? '空闲' : `重叠${overlapMinutes}分钟`
@@ -1149,33 +1156,39 @@ async function rearrangeReservations(date) {
                 return
             }
             
-            // 排序优先级：重叠度（越低越优先）→ 轮牌位置 → 空闲时间（多的优先）
+            // 排序优先级：重叠度 → 已分配轮钟数 → 轮牌位置 → 空闲时间
             availableTechnicians.sort((a, b) => {
                 // 优先级1：重叠度，0重叠的绝对优先
                 if (a.overlapMinutes !== b.overlapMinutes) {
                     return a.overlapMinutes - b.overlapMinutes
                 }
-                // 优先级2：轮牌队列位置
+                // 优先级2：已分配轮钟数少的优先（均匀分配）
+                if (a.rotationCount !== b.rotationCount) {
+                    return a.rotationCount - b.rotationCount
+                }
+                // 优先级3：轮牌队列位置
                 if (a.position !== b.position) {
                     return a.position - b.position
                 }
-                // 优先级3：空闲时间多的优先
+                // 优先级4：空闲时间多的优先
                 return b.freeMinutes - a.freeMinutes
             })
             
             const bestTech = availableTechnicians[0]
-            
+
             result.rearranged.push({
                 ...res,
                 originalTechnician: res.technicianName || '未分配',
                 newTechnician: bestTech.staff.name,
                 newTechnicianId: bestTech.staff._id,
-                reason: `轮牌位${bestTech.position + 1}，重叠${bestTech.overlapMinutes}分钟，空闲${bestTech.freeMinutes}分钟`
+                reason: `轮牌位${bestTech.position + 1}，重叠${bestTech.overlapMinutes}分钟，轮钟数${bestTech.rotationCount}，空闲${bestTech.freeMinutes}分钟`
             })
-            
+
             // 更新该技师的占用时段（供后续预约冲突检测使用）
             const currentResvs = staffReservationsMap.get(bestTech.staff._id) || []
             staffReservationsMap.set(bestTech.staff._id, [...currentResvs, res])
+            // 更新轮钟计数（供均匀分配排序使用）
+            staffRotationCount.set(bestTech.staff._id, (staffRotationCount.get(bestTech.staff._id) || 0) + 1)
         })
         
         try {

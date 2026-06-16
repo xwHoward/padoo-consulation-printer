@@ -86,20 +86,24 @@ interface ConsultationRecord extends ConsultationInfo {
   settlement?: SettlementInfo; // 结算信息（选填）
   amount?: number;
   date: string; // YYYY-MM-DD
+  isExtraTime?: boolean; // 是否为加钟单据
 }
 
 // 员工状态类型
 type StaffStatus = "active" | "disabled";
 type StaffGender = "male" | "female";
+type StaffRole = "technician" | "cashier";
 
 // 员工数据结构
 interface StaffInfo extends BaseRecord {
   name: string;
+  nameEn?: string;
   status: StaffStatus;
   gender: StaffGender;
   avatar: string;
   phone: string;
   wechatWorkId: string;
+  role?: StaffRole; // 角色：technician-技师, cashier-收银员，旧数据默认 technician
 }
 
 // 班次类型
@@ -126,6 +130,8 @@ interface ReservationRecord extends BaseRecord {
   isClockIn?: boolean; // 点钟标记
   status: "active" | "cancelled" | 'arrived'; // 状态
   genderRequirement?: "male" | "female"; // 兼容旧数据
+  isRenewal?: boolean; // 是否续约预约
+  isFulfilled?: boolean; // 是否已履约到店
   
   // 新增字段 - 完整记录预约需求约束
   requirementType?: 'specific' | 'gender'; // 预约类型：指定技师/性别需求
@@ -197,18 +203,38 @@ interface MembershipUsageRecord extends BaseRecord {
   consultationId: string; // 关联的咨询单ID
 }
 
+interface TechnicianWechatRecord extends BaseRecord {
+  technician: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  wechatId: string;
+}
+
 interface Project extends BaseRecord {
   name: string;
+  nameEn?: string;                   // 英文名称
+  subtitle: string;                  // 副标题
   duration: number;
   price?: number;
   isEssentialOilOnly?: boolean;
   status: ItemStatus;
   needEssentialOil?: boolean;
   commission: number;
+  categoryId: string;                // 所属分类ID
+  serviceFlow: string;               // 服务流程文本
+}
+
+interface ProjectCategory extends BaseRecord {
+  name: string;
+  nameEn?: string;
+  order: number;
+  status: ItemStatus;
 }
 
 interface Room extends BaseRecord {
   name: string;
+  nameEn?: string;                   // 英文名称
   status: ItemStatus;
 }
 
@@ -216,7 +242,9 @@ type ItemStatus = 'normal' | 'disabled';
 
 interface EssentialOil extends BaseRecord {
   name: string;
+  nameEn?: string;
   effect: string;
+  effectEn?: string;
   status: ItemStatus;
 }
 
@@ -225,6 +253,7 @@ interface AppGlobalData {
   currentUser?: UserRecord | null;
   token?: string | null;
   projects: Project[];
+  projectCategories: ProjectCategory[];
   rooms: Room[];
   essentialOils: EssentialOil[];
   staffs: StaffInfo[];
@@ -243,6 +272,7 @@ interface IAppOption<T extends Record<string, any> = AppGlobalData> {
   checkUpdate: () => void;
   loadGlobalData: () => Promise<void>;
   getProjects: () => Promise<Project[]>;
+  getProjectCategories: () => Promise<ProjectCategory[]>;
   getRooms: () => Promise<Room[]>;
   getEssentialOils: () => Promise<EssentialOil[]>;
   initLogin: () => Promise<void>;
@@ -371,6 +401,8 @@ interface AvailableSlot {
   width: string; // 宽度百分比
   durationMinutes: number; // 时长（分钟）
   displayText: string; // 显示文本
+  startTime: string; // 空闲时段起始时间 HH:MM
+  endTime: string; // 空闲时段结束时间 HH:MM
 }
 
 interface IndexPage<D> {
@@ -511,6 +543,24 @@ interface TechnicianSalary {
   workDays: number;
   offDays: number;
   leaveDays: number;
+  /** 绩效-回头率 */
+  returnRate?: number;
+  /** 绩效-加微信率 */
+  wechatRate?: number;
+  /** 绩效-续约成功数 */
+  renewalFulfilled?: number;
+  /** 绩效-次卡推销数 */
+  packageSales?: number;
+  /** 绩效-回头奖金 */
+  bonusReturn?: number;
+  /** 绩效-加微信奖金 */
+  bonusWechat?: number;
+  /** 绩效-次卡奖金 */
+  bonusPackage?: number;
+  /** 绩效-续约奖金 */
+  bonusRenewal?: number;
+  /** 绩效-奖金合计 */
+  totalPerformanceBonus?: number;
 }
 
 

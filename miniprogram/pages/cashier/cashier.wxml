@@ -10,11 +10,14 @@
                 <view bindtap="onScreensaver" class="nav-btn" aria-role="button" aria-label="无人值守">
             <text class="nav-btn-text">无人值守</text>
         </view>
+        <view bindtap="goToProjectList" class="nav-btn" aria-role="button" aria-label="项目表">
+            <text class="nav-btn-text">项目表</text>
+        </view>
     </view>
     <view slot="right" class="nav-btns">
-        <view bindtap="toggleLandscape" class="nav-btn" aria-role="button" aria-label="咨询单">
+        <!-- <view bindtap="toggleLandscape" class="nav-btn" aria-role="button" aria-label="咨询单">
             <text class="nav-btn-text">{{isLandscape ? '竖屏' : '横屏'}}</text>
-        </view>
+        </view> -->
         <view bindtap="goToIndex" class="nav-btn" aria-role="button" aria-label="咨询单">
             <text class="nav-btn-text">咨询单</text>
         </view>
@@ -28,24 +31,30 @@
         <!-- 员工排钟表 -->
         <view class="section timeline-section">
             <view class="section-header">
-                <view class="section-title">排钟进度</view>
+                <view class="section-title">排钟</view>
                 <!-- 日期快速导航 -->
                 <date-picker initialDate="{{dateSelector.selectedDate}}" bind:change="onDatePickerChange" />
-                <view class="reserve-btn" wx:if="{{canCreateReservation}}" bindtap="rearrangeReservations">
-                    重排
-                </view>
                 <view class="reserve-btn" wx:if="{{canCreateReservation}}" bindtap="openReserveModal">
                     +预约
                 </view>
+                <view class="push-rotation-btn" wx:if="{{canPushRotation}}" bindtap="onTimelineResetRotation">
+                    重置
+                </view>
+                <view class="push-rotation-btn" wx:if="{{canPushRotation && rotationList.length > 0}}" bindtap="onTimelinePushRotation">
+                    推送轮牌
+                </view>
             </view>
             <timeline selectedDate="{{selectedDate}}" readonly="{{false}}" refreshTrigger="{{timelineRefreshTrigger}}"
-                bind:blockclick="onBlockClick" />
+                rotationOrder="{{rotationOrder}}" canAdjustRotation="{{canPushRotation}}"
+                bind:blockclick="onBlockClick" bind:adjustrotation="onTimelineAdjustRotation"
+                bind:copyslot="onTimelineCopySlot" bind:resetrotation="onTimelineResetRotation"
+                bind:pushrotation="onTimelinePushRotation" />
         </view>
 
         <!-- 快速预约 -->
         <view class="section quick-reservation-section">
             <view class="section-header">
-                <view class="section-title">快速预约</view>
+                <view class="section-title">预约</view>
             </view>
             <!-- 技师数量计数器 -->
             <view class="quick-reservation-counters">
@@ -96,9 +105,9 @@
                 {{quickReservationSlots.emptyReason || '暂无可约时段'}}
             </view>
         </view>
-        <!-- 房间状态 -->
+                <!-- 房间状态 -->
         <view class="section">
-            <view class="section-title">房间状态</view>
+            <view class="section-title">房间</view>
             <view class="room-grid">
                 <view class="room-item {{item.isOccupied ? 'occupied' : 'empty'}}" wx:for="{{rooms}}" wx:key="name">
                     <view class="room-name">{{item.name}}</view>
@@ -112,47 +121,6 @@
                     </view>
                 </view>
             </view>
-        </view>
-        <!-- 员工轮牌 -->
-        <view class="section">
-            <view class="section-header">
-                <view class="section-title">今日轮牌</view>
-                <view class="push-rotation-btn" bindtap="resetRotation" wx:if="{{canPushRotation}}">
-                    重置
-                </view>
-                <view class="push-rotation-btn" bindtap="openRotationPushModal"
-                    wx:if="{{rotationList.length > 0 && canPushRotation}}">
-                    推送
-                </view>
-            </view>
-            <view class="rotation-list" wx:if="{{rotationList.length > 0}}">
-                <view class="rotation-item" wx:for="{{rotationList}}" wx:key="_id">
-                    <view class="rank-num">{{index + 1}}</view>
-                    <view class="staff-info">
-                        <view class="staff-name-row">
-                            <view class="staff-name">{{item.name}}</view>
-                            <view class="shift-tag {{item.shift}}">
-                                {{item.shift === 'morning' ? '早班' : '晚班'}}
-                            </view>
-                        </view>
-                        <view class="available-slots" wx:if="{{item.availableSlots}}">
-                            <view class="slots-label">可约:</view>
-                            <view class="slots-time">{{item.availableSlots}}</view>
-                        </view>
-                    </view>
-                    <view class="action-btns" wx:if="{{canPushRotation}}">
-                        <view class="btn move-up {{index === 0 ? 'disabled' : ''}}" bindtap="moveRotation"
-                            data-index="{{index}}" data-direction="up">
-                            <text>↑</text>
-                        </view>
-                        <view class="btn move-down {{index === rotationList.length - 1 ? 'disabled' : ''}}"
-                            bindtap="moveRotation" data-index="{{index}}" data-direction="down">
-                            <text>↓</text>
-                        </view>
-                    </view>
-                </view>
-            </view>
-            <view class="empty-hint" wx:else>今日暂无上班排班</view>
         </view>
     </view>
 </scroll-view>
@@ -172,8 +140,8 @@
             </picker>
             <view class="form-label"></view>
             <view class="form-label">开始时间</view>
-            <picker mode="time" value="{{reserveForm.startTime}}" bindchange="onReserveFieldChange"
-                data-field="startTime">
+            <picker mode="multiSelector" value="{{startTimeMultiIndex}}" range="{{startTimeRange}}"
+                bindchange="onStartTimeChange">
                 <view class="picker-val">{{reserveForm.startTime}}</view>
             </picker>
         </view>
@@ -216,7 +184,7 @@
         </view>
         <view class="form-item project-item">
             <view class="form-label">项目</view>
-            <project-selector selectedProject="{{reserveForm.project}}" bind:change="selectReserveProject" />
+            <project-selector multi="{{true}}" selectedProjects="{{reserveForm.projects}}" bind:change="selectReserveProject" />
         </view>
         <!-- 技师需求类型 -->
         <view class="form-item requirement-type-item">
@@ -282,6 +250,39 @@
                 </view>
             </view>
         </view>
+        <view class="form-item renewal-item">
+            <label class="renewal-checkbox">
+                <checkbox checked="{{reserveForm.isRenewal}}" bindchange="onRenewalToggle" />
+                <text class="renewal-label">是否续约</text>
+            </label>
+        </view>
+    </view>
+</modal>
+<!-- 加钟弹窗 -->
+<modal show="{{extraTimeModal.show}}" title="加钟" bind:cancel="closeExtraTimeModal" bind:confirm="confirmExtraTime" confirm-text="确认加钟">
+    <view class="extra-time-modal">
+        <view class="extra-time-section">
+            <view class="extra-time-label">选择项目</view>
+            <view class="extra-time-project-list">
+                <view class="extra-time-project-item {{extraTimeModal.selectedProject === item._id ? 'selected' : ''}}"
+                    wx:for="{{extraTimeModal.projects}}" wx:key="_id" bindtap="selectExtraTimeProject" data-id="{{item._id}}"
+                    data-name="{{item.name}}">
+                    <view class="extra-time-project-check">
+                        <view class="extra-time-checkbox {{extraTimeModal.selectedProject === item._id ? 'checked' : ''}}"></view>
+                    </view>
+                    <view class="extra-time-project-name">{{item.name}}</view>
+                </view>
+            </view>
+            <view class="extra-time-empty" wx:if="{{extraTimeModal.projects.length === 0}}">暂无可加钟项目</view>
+        </view>
+        <view class="extra-time-section">
+            <view class="extra-time-label">加钟数量</view>
+            <view class="extra-time-quantity">
+                <view class="extra-time-qty-btn {{extraTimeModal.quantity <= 1 ? 'disabled' : ''}}" bindtap="onExtraTimeQuantityChange" data-action="decrease">-</view>
+                <view class="extra-time-qty-value">{{extraTimeModal.quantity}}</view>
+                <view class="extra-time-qty-btn" bindtap="onExtraTimeQuantityChange" data-action="increase">+</view>
+            </view>
+        </view>
     </view>
 </modal>
 <!-- 结算弹窗 -->
@@ -338,27 +339,6 @@
     </view>
     <view class="push-tips">
         <text class="tips-text">ℹ️确认后将推送到企业微信群聊</text>
-    </view>
-</modal>
-<!-- 轮牌推送确认弹窗 -->
-<modal show="{{rotationPushModal.show}}" title="复制今日轮牌" bind:cancel="onRotationPushModalCancel"
-    bind:confirm="onRotationPushModalConfirm" loading="{{rotationPushModal.loading}}" loading-text="复制中...">
-    <view class="push-preview">
-        <view class="preview-header">【今日轮牌】</view>
-        <view class="preview-row">
-            <text class="preview-label">日期：</text>
-            <text class="preview-value">{{selectedDate}}</text>
-        </view>
-        <block wx:for="{{rotationList}}" wx:key="_id" wx:for-index="idx">
-            <view class="preview-row">
-                <text class="preview-value">
-                    {{idx + 1}}. {{item.name}} ({{item.shift === 'morning' ? '早班' : '晚班'}})
-                </text>
-            </view>
-        </block>
-    </view>
-    <view class="push-tips">
-        <text class="tips-text">ℹ️确认后将轮牌内容复制到剪贴板</text>
     </view>
 </modal>
 <modal show="{{arrivalConfirmModal.show}}" show-footer="{{false}}" title="确认到店">

@@ -56,6 +56,25 @@ Component({
 		},
 	},
 
+	data: {
+		hours: Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')),
+		minutes: Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0')),
+		startTimeHourIndex: 0,
+		startTimeMinuteIndex: 0,
+	},
+
+	observers: {
+		'reserveForm.startTime'(startTime: string) {
+			if (startTime) {
+				const [h, m] = startTime.split(':').map(Number);
+				this.setData({
+					startTimeHourIndex: h,
+					startTimeMinuteIndex: Math.floor(m / 5),
+				});
+			}
+		},
+	},
+
 	methods: {
 		/** 关闭弹窗 */
 		onCancel() {
@@ -75,8 +94,11 @@ Component({
 
 		/** 时间变更 */
 		onTimeChange(e: WechatMiniprogram.PickerChange) {
-			const value = e.detail.value as string;
-			this.triggerEvent('field-change', { field: 'startTime', value });
+			const [hourIndex, minuteIndex] = e.detail.value as [number, number];
+			const hours = this.data.hours;
+			const minutes = this.data.minutes;
+			const startTime = `${hours[hourIndex]}:${minutes[minuteIndex]}`;
+			this.triggerEvent('field-change', { field: 'startTime', value: startTime });
 		},
 
 		/** 姓名输入 */
@@ -130,6 +152,11 @@ Component({
 		/** 清除匹配顾客 */
 		onClearCustomer() {
 			this.triggerEvent('clear-customer');
+		},
+
+		onRenewalToggle(e: WechatMiniprogram.CustomEvent) {
+			const isRenewal = (e.detail.value as string[]).length > 0;
+			this.triggerEvent('field-change', { field: 'isRenewal', value: isRenewal });
 		},
 	},
 });

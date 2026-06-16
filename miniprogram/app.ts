@@ -89,13 +89,15 @@ App<IAppOption<AppGlobalData>>({
 		this.globalData.loadPromise = (async () => {
 			try {
 				const database = cloudDb;
-				const [projects, rooms, essentialOils, staff] = await Promise.all([
+				const [projects, projectCategories, rooms, essentialOils, staff] = await Promise.all([
 					database.getAll<Project>(Collections.PROJECTS),
+					database.getAll<ProjectCategory>(Collections.PROJECT_CATEGORIES),
 					database.getAll<Room>(Collections.ROOMS),
 					database.getAll<EssentialOil>(Collections.ESSENTIAL_OILS),
 					database.getAll<StaffInfo>(Collections.STAFF)
 				]);
 				this.globalData.projects = (projects || []) as Project[];
+				this.globalData.projectCategories = (projectCategories || []) as ProjectCategory[];
 				this.globalData.rooms = (rooms || []) as Room[];
 				this.globalData.essentialOils = (essentialOils || []) as EssentialOil[];
 				this.globalData.staffs = (staff || []) as StaffInfo[];
@@ -116,6 +118,13 @@ App<IAppOption<AppGlobalData>>({
 			await this.loadGlobalData();
 		}
 		return this.globalData.projects;
+	},
+
+	async getProjectCategories(): Promise<ProjectCategory[]> {
+		if (!this.globalData.isDataLoaded) {
+			await this.loadGlobalData();
+		}
+		return this.globalData.projectCategories;
 	},
 
 	async getRooms(): Promise<Room[]> {

@@ -1,6 +1,7 @@
-import {buildPlateNumberUpdates} from "../../../services/customer.service";
-import {formatDate, formatTime, parseProjectDuration} from "../../../utils/util";
-import {DataLoaderService} from "../services/data-loader.service";
+import { buildPlateNumberUpdates } from "../../../services/customer.service";
+import { formatDate, formatTime, parseProjectDuration } from "../../../utils/util";
+import { t } from "../../../utils/i18n";
+import { DataLoaderService } from "../services/data-loader.service";
 
 const SPARE_TIME = 10; // 10分钟准备+休息时间
 
@@ -31,7 +32,7 @@ export class ModalHandler {
       startTimeDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
     }
 
-    this.page.setData({loading: true, loadingText: '报钟中...'});
+    this.page.setData({ loading: true, loadingText: t('clockInLoading') });
     try {
       if (guestCount > 1) {
         await this.page.doMultiClockIn(startTimeDate, editId);
@@ -64,7 +65,7 @@ export class ModalHandler {
               'plateReminderModal.licensePlate': licensePlate
             });
           } else {
-            wx.showToast({title: '报钟成功', icon: 'success'});
+            wx.showToast({ title: t('clockInSuccess'), icon: 'success' });
             setTimeout(() => {
               wx.navigateBack();
             }, 1000);
@@ -81,11 +82,12 @@ export class ModalHandler {
   }
 
   onTimePickerChange(e: WechatMiniprogram.CustomEvent) {
-    const {value} = e.detail;
-    const now = new Date();
-    now.setHours(value[0], value[1], 0, 0);
-    const currentTime = `${ String(value[0]).padStart(2, '0') }:${ String(value[1]).padStart(2, '0') }`;
-    this.page.setData({'timePickerModal.currentTime': currentTime});
+    const { value } = e.detail;
+    const hourIndex = value[0] as number;
+    const minuteIndex = value[1] as number;
+    const actualMinute = minuteIndex * 5;
+    const currentTime = `${String(hourIndex).padStart(2, '0')}:${String(actualMinute).padStart(2, '0')}`;
+    this.page.setData({ 'timePickerModal.currentTime': currentTime });
   }
 
   onTimeColumnChange(e: WechatMiniprogram.CustomEvent) {
@@ -164,7 +166,7 @@ export class ModalHandler {
       this.page.setData({'clockInModal.loading': false});
 
       if (success) {
-        wx.showToast({title: '推送成功', icon: 'success'});
+        wx.showToast({ title: t('pushSuccess'), icon: 'success' });
 
         setTimeout(() => {
           this.page.setData({
@@ -188,11 +190,11 @@ export class ModalHandler {
           }
         }, 1500);
       } else {
-        wx.showToast({title: '推送失败，请重试', icon: 'error'});
+        wx.showToast({ title: t('pushFailed'), icon: 'error' });
       }
     } catch (error) {
-      this.page.setData({'clockInModal.loading': false});
-      wx.showToast({title: '推送失败，请重试', icon: 'error'});
+      this.page.setData({ 'clockInModal.loading': false });
+      wx.showToast({ title: t('pushFailed'), icon: 'error' });
     }
   }
 }

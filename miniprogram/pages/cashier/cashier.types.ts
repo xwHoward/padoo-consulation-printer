@@ -19,6 +19,7 @@ export interface ReserveForm {
 	customerName: string;
 	gender: 'male' | 'female';
 	project: string;
+	projects: string[];
 	phone: string;
 	requirementType: 'specific' | 'gender';
 	selectedTechnicians: Array<{ _id: string; name: string; phone: string; wechatWorkId?: string; isClockIn: boolean }>;
@@ -26,6 +27,7 @@ export interface ReserveForm {
 	startTime: string;
 	technicianId: string;
 	technicianName: string;
+	isRenewal?: boolean;
 }
 
 export interface PushModalState {
@@ -65,6 +67,7 @@ export interface CashierPageData {
 	selectedDate: string;
 	rooms: Room[];
 	rotationList: RotationItem[];
+	rotationOrder: string[];
 	timelineRefreshTrigger: number;
 	dateSelector: DateSelectorState;
 	canCreateReservation: boolean;
@@ -76,6 +79,8 @@ export interface CashierPageData {
 	availableMaleCount: number;
 	availableFemaleCount: number;
 	reserveForm: ReserveForm;
+	startTimeMultiIndex: number[];
+	startTimeRange: string[][];
 	originalReservation: ReservationRecord | null;
 	editingGroupIds: string[]; // 编辑分组预约时，该组所有成员的ID
 	showSettlementModal: boolean;

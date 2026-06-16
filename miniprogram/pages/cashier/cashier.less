@@ -81,13 +81,14 @@ page {
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
-			padding: 10px 15px;
+			padding: 10px;
 			background-color: @bg-color-light;
 			border-radius: 8px;
 			border: 1px solid @border-color-light;
 
 			.quick-counter-label {
-				font-size: 14px;
+				flex: none;
+				font-size: 12px;
 				color: @text-color;
 				font-weight: 500;
 			}
@@ -95,7 +96,7 @@ page {
 			.quick-counter-controls {
 				display: flex;
 				align-items: center;
-				gap: 12px;
+				gap: 2px;
 
 				.quick-counter-btn {
 					width: 30px;
@@ -301,111 +302,6 @@ page {
 	background-color: rgba(255, 107, 0, 0.1);
 	padding: 2px 6px;
 	border-radius: 4px;
-}
-
-/* 轮牌列表 */
-.rotation-list {
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-}
-
-.rotation-item {
-	display: flex;
-	align-items: center;
-	padding: 12px;
-	background-color: @bg-color-light;
-	border-radius: 10px;
-	border: 1px solid @border-color-light;
-}
-
-.rank-num {
-	width: 24px;
-	height: 24px;
-	background-color: @primary-color;
-	color: #fff;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 12px;
-	font-weight: 600;
-	margin-right: 12px;
-}
-
-.staff-info {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-}
-
-.staff-name-row {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.staff-name {
-	font-size: 16px;
-	font-weight: 500;
-	color: @text-color;
-}
-
-.available-slots {
-	display: flex;
-	align-items: center;
-	gap: 4px;
-	font-size: 12px;
-
-	.slots-label {
-		color: @text-color-secondary;
-	}
-
-	.slots-time {
-		color: #27ae60;
-		font-weight: 500;
-	}
-}
-
-
-
-
-
-
-
-.action-btns {
-	display: flex;
-	gap: 8px;
-}
-
-.btn {
-	width: 32px;
-	height: 32px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background-color: @bg-color;
-	border: 1px solid @border-color;
-	border-radius: 6px;
-	color: @text-color;
-	font-size: 18px;
-}
-
-.btn:active {
-	background-color: @bg-color-light;
-}
-
-.btn.disabled {
-	opacity: 0.3;
-	pointer-events: none;
-}
-
-.empty-hint {
-	text-align: center;
-	padding: 30px 0;
-	color: @text-color-secondary;
-	font-size: 14px;
 }
 
 .project-info-section {
@@ -700,6 +596,30 @@ page {
 			}
 		}
 	}
+
+	.renewal-item {
+		margin-top: 15px;
+		padding: 10px 15px;
+		background-color: @bg-color;
+		border-radius: 6px;
+
+		.renewal-checkbox {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			cursor: pointer;
+
+			checkbox {
+				transform: scale(1.1);
+			}
+
+			.renewal-label {
+				font-size: 14px;
+				color: @text-color;
+				font-weight: 500;
+			}
+		}
+	}
 }
 
 // 结算弹窗样式
@@ -943,6 +863,129 @@ page {
 					background-color: @border-color-light;
 				}
 			}
+		}
+	}
+}
+
+/* 加钟弹窗 */
+.extra-time-modal {
+	.extra-time-section {
+		margin-bottom: 16px;
+
+		.extra-time-label {
+			font-size: 14px;
+			font-weight: 600;
+			color: @text-color;
+			margin-bottom: 8px;
+		}
+	}
+
+	.extra-time-project-list {
+		max-height: 240px;
+		overflow-y: auto;
+
+		.extra-time-project-item {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			padding: 10px 12px;
+			margin-bottom: 4px;
+			background-color: @bg-color-light;
+			border-radius: 8px;
+			border: 1px solid transparent;
+			cursor: pointer;
+			transition: all 0.2s;
+
+			&.selected {
+				border-color: @primary-color;
+				background-color: rgba(255, 107, 0, 0.05);
+			}
+
+			&:active {
+				opacity: 0.8;
+			}
+
+			.extra-time-project-check {
+				flex-shrink: 0;
+
+				.extra-time-checkbox {
+					width: 18px;
+					height: 18px;
+					border-radius: 50%;
+					border: 2px solid @border-color;
+					box-sizing: border-box;
+					transition: all 0.2s;
+
+					&.checked {
+						border-color: @primary-color;
+						background-color: @primary-color;
+						position: relative;
+
+						&::after {
+							content: '';
+							position: absolute;
+							top: 2px;
+							left: 4px;
+							width: 4px;
+							height: 8px;
+							border: 2px solid #fff;
+							border-top: none;
+							border-left: none;
+							transform: rotate(45deg);
+						}
+					}
+				}
+			}
+
+			.extra-time-project-name {
+				font-size: 14px;
+				color: @text-color;
+			}
+		}
+	}
+
+	.extra-time-empty {
+		font-size: 13px;
+		color: @text-color-secondary;
+		text-align: center;
+		padding: 16px;
+	}
+
+	.extra-time-quantity {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+
+		.extra-time-qty-btn {
+			width: 36px;
+			height: 36px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 20px;
+			font-weight: 600;
+			color: @primary-color;
+			background-color: @bg-color-light;
+			border: 1px solid @border-color;
+			border-radius: 8px;
+			cursor: pointer;
+
+			&.disabled {
+				opacity: 0.3;
+				pointer-events: none;
+			}
+
+			&:active {
+				background-color: rgba(255, 107, 0, 0.1);
+			}
+		}
+
+		.extra-time-qty-value {
+			min-width: 40px;
+			text-align: center;
+			font-size: 18px;
+			font-weight: 600;
+			color: @text-color;
 		}
 	}
 }

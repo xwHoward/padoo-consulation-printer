@@ -23,11 +23,25 @@
         "miniprogram": {
             "list": [
                 {
-                    "name": "store-expense",
-                    "pathName": "pages/store-expense/store-expense",
+                    "name": "index",
+                    "pathName": "pages/index/index",
                     "query": "",
                     "scene": null,
                     "launchMode": "default"
+                },
+                {
+                    "name": "project-list",
+                    "pathName": "pages/project-list/project-list",
+                    "query": "",
+                    "launchMode": "default",
+                    "scene": null
+                },
+                {
+                    "name": "store-expense",
+                    "pathName": "pages/store-expense/store-expense",
+                    "query": "",
+                    "launchMode": "default",
+                    "scene": null
                 },
                 {
                     "name": "history",
