@@ -56,53 +56,22 @@
             <view class="section-header">
                 <view class="section-title">预约</view>
             </view>
-            <!-- 技师数量计数器 -->
-            <view class="quick-reservation-counters">
-                <view class="quick-counter">
-                    <view class="quick-counter-label">男技师</view>
-                    <view class="quick-counter-controls">
-                        <view class="quick-counter-btn" bindtap="onQuickReservationGenderChange" data-gender="male"
-                            data-action="decrease">-</view>
-                        <view class="quick-counter-value">{{quickReservationSlots.maleCount}}</view>
-                        <view class="quick-counter-btn" bindtap="onQuickReservationGenderChange" data-gender="male"
-                            data-action="increase">+</view>
-                    </view>
-                </view>
-                <view class="quick-counter">
-                    <view class="quick-counter-label">女技师</view>
-                    <view class="quick-counter-controls">
-                        <view class="quick-counter-btn" bindtap="onQuickReservationGenderChange" data-gender="female"
-                            data-action="decrease">-</view>
-                        <view class="quick-counter-value">{{quickReservationSlots.femaleCount}}</view>
-                        <view class="quick-counter-btn" bindtap="onQuickReservationGenderChange" data-gender="female"
-                            data-action="increase">+</view>
-                    </view>
-                </view>
-            </view>
-            <!-- 最快可预约时间 -->
-            <view class="quick-earliest" wx:if="{{quickReservationSlots.earliestTime && !quickReservationLoading}}">
-                <text class="earliest-label">最快可约：</text>
-                <text class="earliest-value">{{quickReservationSlots.earliestTime}}</text>
-            </view>
             <!-- 加载中 -->
             <view class="quick-loading" wx:if="{{quickReservationLoading}}">
-                <text class="quick-loading-text">查询中...</text>
+                查询中...
             </view>
-            <!-- 可用时段列表 -->
-            <view class="quick-slots-list"
-                wx:if="{{!quickReservationLoading && quickReservationSlots.slots.length > 0}}">
-                <view class="quick-slot-item" wx:for="{{quickReservationSlots.slots}}" wx:key="time"
-                    bindtap="copyReservationSlot" data-text="{{item.time}}">
-                    <view class="slot-time-text">{{item.time}}</view>
-                    <view class="slot-staff-by-gender">
-                        <text class="staff-gender-tag male" wx:if="{{item.maleStaff.length > 0}}">男：{{item.maleStaff}}</text>
-                        <text class="staff-gender-tag female" wx:if="{{item.femaleStaff.length > 0}}">女：{{item.femaleStaff}}</text>
-                    </view>
+            <!-- 5种固定组合 -->
+            <view class="quick-groups" wx:if="{{!quickReservationLoading && quickReservationGroups.length > 0}}">
+                <view class="quick-group-item" wx:for="{{quickReservationGroups}}" wx:key="key"
+                    bindtap="copyReservationSlot" data-text="{{item.earliestTime}}" data-label="{{item.label}}"
+                    data-malecount="{{item.maleCount}}" data-femalecount="{{item.femaleCount}}">
+                    <view class="group-label">{{item.label}}</view>
+                    <view class="group-time" wx:if="{{item.earliestTime}}">{{item.earliestTime}}</view>
+                    <view class="group-empty" wx:else>{{item.emptyReason || '暂无'}}</view>
                 </view>
             </view>
-            <view class="quick-slots-empty"
-                wx:if="{{!quickReservationLoading && quickReservationSlots.slots.length === 0 && quickReservationSlots.maleCount + quickReservationSlots.femaleCount > 0}}">
-                {{quickReservationSlots.emptyReason || '暂无可约时段'}}
+            <view class="quick-slots-empty" wx:if="{{!quickReservationLoading && quickReservationGroups.length === 0}}">
+                暂无可约时段
             </view>
         </view>
                 <!-- 房间状态 -->

@@ -77,8 +77,8 @@ import { computed, ref } from "vue";
 import type { ConsultationRecord, ReservationRecord } from "./cashier.types";
 
 const HOUR_WIDTH = 90;
-const TIMELINE_START = 10;
-const timeLabels = ["10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "00", "01"];
+const timeLabels: string[] = ["10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "00", "01"];
+const TIMELINE_START = parseInt(timeLabels[0]!);
 
 const props = defineProps<{
   consultations: ConsultationRecord[];

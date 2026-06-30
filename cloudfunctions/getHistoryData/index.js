@@ -42,7 +42,7 @@ function processRecord(record) {
     const createdDate = new Date(record.createdAt);
     startTimeStr = formatTime(createdDate);
     const projectDuration = parseProjectDuration(record.project);
-    const totalDuration = projectDuration + (record.extraTime || 0) + 10;
+    const totalDuration = projectDuration + (record.extraTime || 0);
     const endDate = new Date(createdDate.getTime() + totalDuration * 60 * 1000);
     endTimeStr = formatTime(endDate);
   }

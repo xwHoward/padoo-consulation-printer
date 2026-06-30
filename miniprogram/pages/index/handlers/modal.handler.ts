@@ -3,7 +3,7 @@ import { formatDate, formatTime, parseProjectDuration } from "../../../utils/uti
 import { t } from "../../../utils/i18n";
 import { DataLoaderService } from "../services/data-loader.service";
 
-const SPARE_TIME = 10; // 10分钟准备+休息时间
+const SPARE_TIME = 0; // 10分钟准备+休息时间
 
 export class ModalHandler {
   private page: IndexPage<DataLoaderService>;

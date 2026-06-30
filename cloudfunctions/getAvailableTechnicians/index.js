@@ -222,8 +222,7 @@ function calculateAvailableSlotsText(staffConsultations, staffReservations, shif
 
     if (occupiedSlots.length === 0) {
         if (startTime >= shiftEnd) return '已满'
-        const duration = parseTimeToMinutes(shiftEnd) - parseTimeToMinutes(startTime)
-        return `${startTime}-${shiftEnd} (${duration}分钟)`
+        return `${startTime}-${shiftEnd}`
     }
 
     const availableSlots = []
@@ -240,7 +239,7 @@ function calculateAvailableSlotsText(staffConsultations, staffReservations, shif
 
         const gap = parseTimeToMinutes(actualEnd) - parseTimeToMinutes(actualStart)
         if (gap >= 60) {
-            availableSlots.push(`${actualStart}-${actualEnd} (${gap}分钟)`)
+            availableSlots.push(`${actualStart}-${actualEnd}`)
         }
     }
 
@@ -254,7 +253,7 @@ function calculateAvailableSlotsText(staffConsultations, staffReservations, shif
  * @param {Array}   allReservations  - 当日所有活跃预约
  * @param {boolean} isToday          - 是否为今天
  * @param {number}  currentMins      - 今日当前分钟数（isToday时使用）
- * @returns {{ oneMale, oneFemale, twoMale, twoFemale }}
+ * @returns {{ oneMale, oneFemale, oneMaleOneFemale, twoMale, twoFemale }}
  */
 function buildQuickReservationSlots(rotationItems, allConsultations, allReservations, isToday, currentMins) {
     const staffByGender = { male: [], female: [] }
@@ -309,17 +308,15 @@ function buildQuickReservationSlots(rotationItems, allConsultations, allReservat
         staffOccupiedSlots.set(staff._id, mergedSlots)
     })
 
-    // 找出指定性别、指定人数的所有可用时段
-    const findAllAvailableSlots = (staffList, requiredCount) => {
-        if (staffList.length < requiredCount) return []
-
-        const staffAvailableSlots = new Map()
+    // 预计算每位技师的可用时段（供后续查找复用）
+    const computeAvailableSlots = (staffList) => {
+        const map = new Map()
         staffList.forEach(staff => {
             const shiftStart = SHIFT_START_TIME[staff.shift]
             const shiftEnd = SHIFT_END_TIME[staff.shift]
 
             if (!shiftStart || !shiftEnd) {
-                staffAvailableSlots.set(staff._id, [])
+                map.set(staff._id, [])
                 return
             }
 
@@ -355,15 +352,29 @@ function buildQuickReservationSlots(rotationItems, allConsultations, allReservat
                 if (nextOccupied) cur = nextOccupied.end
             }
 
-            staffAvailableSlots.set(staff._id, availableSlots)
+            map.set(staff._id, availableSlots)
+        })
+        return map
+    }
+
+    const allAvailableSlots = computeAvailableSlots(rotationItems)
+
+    // 找出指定性别、指定人数的所有可用时段
+    const findAllAvailableSlots = (staffList, requiredCount) => {
+        if (staffList.length < requiredCount) return []
+
+        // 从预计算的 map 中提取该性别技师的可用时段
+        const filteredSlots = new Map()
+        staffList.forEach(staff => {
+            filteredSlots.set(staff._id, allAvailableSlots.get(staff._id) || [])
         })
 
         if (requiredCount === 1) {
             const slotMap = new Map()
             staffList.forEach(staff => {
-                const slots = staffAvailableSlots.get(staff._id) || []
+                const slots = filteredSlots.get(staff._id) || []
                 slots.forEach(slot => {
-                    const slotText = `${formatMinutesToTime(slot.start)}-${formatMinutesToTime(slot.end)} (${slot.duration}分钟)`
+                    const slotText = `${formatMinutesToTime(slot.start)}-${formatMinutesToTime(slot.end)}`
                     if (!slotMap.has(slotText)) slotMap.set(slotText, [])
                     slotMap.get(slotText).push(staff.name)
                 })
@@ -377,15 +388,15 @@ function buildQuickReservationSlots(rotationItems, allConsultations, allReservat
         const commonSlotsMap = new Map()
         for (let i = 0; i < staffList.length; i++) {
             for (let j = i + 1; j < staffList.length; j++) {
-                const slots1 = staffAvailableSlots.get(staffList[i]._id) || []
-                const slots2 = staffAvailableSlots.get(staffList[j]._id) || []
+                const slots1 = filteredSlots.get(staffList[i]._id) || []
+                const slots2 = filteredSlots.get(staffList[j]._id) || []
                 slots1.forEach(slot1 => {
                     slots2.forEach(slot2 => {
                         const overlapStart = Math.max(slot1.start, slot2.start)
                         const overlapEnd = Math.min(slot1.end, slot2.end)
                         const overlapDuration = overlapEnd - overlapStart
                         if (overlapDuration >= 60) {
-                            const slotText = `${formatMinutesToTime(overlapStart)}-${formatMinutesToTime(overlapEnd)} (${overlapDuration}分钟)`
+                            const slotText = `${formatMinutesToTime(overlapStart)}-${formatMinutesToTime(overlapEnd)}`
                             if (!commonSlotsMap.has(slotText)) {
                                 commonSlotsMap.set(slotText, [staffList[i].name, staffList[j].name])
                             }
@@ -399,9 +410,39 @@ function buildQuickReservationSlots(rotationItems, allConsultations, allReservat
             .sort((a, b) => a.time.localeCompare(b.time))
     }
 
+    // 计算跨性别可用时段（至少 1 男 + 1 女同时空闲）
+    const findAllCrossGenderAvailableSlots = (maleList, femaleList) => {
+        if (maleList.length === 0 || femaleList.length === 0) return []
+
+        const crossSlotsMap = new Map()
+        for (const male of maleList) {
+            const maleSlots = allAvailableSlots.get(male._id) || []
+            for (const female of femaleList) {
+                const femaleSlots = allAvailableSlots.get(female._id) || []
+                maleSlots.forEach(mSlot => {
+                    femaleSlots.forEach(fSlot => {
+                        const overlapStart = Math.max(mSlot.start, fSlot.start)
+                        const overlapEnd = Math.min(mSlot.end, fSlot.end)
+                        const overlapDuration = overlapEnd - overlapStart
+                        if (overlapDuration >= 60) {
+                            const slotText = `${formatMinutesToTime(overlapStart)}-${formatMinutesToTime(overlapEnd)}`
+                            if (!crossSlotsMap.has(slotText)) {
+                                crossSlotsMap.set(slotText, [male.name, female.name])
+                            }
+                        }
+                    })
+                })
+            }
+        }
+        return Array.from(crossSlotsMap.entries())
+            .map(([time, staffNames]) => ({ time, staffNames }))
+            .sort((a, b) => a.time.localeCompare(b.time))
+    }
+
     return {
         oneMale: findAllAvailableSlots(staffByGender.male, 1),
         oneFemale: findAllAvailableSlots(staffByGender.female, 1),
+        oneMaleOneFemale: findAllCrossGenderAvailableSlots(staffByGender.male, staffByGender.female),
         twoMale: findAllAvailableSlots(staffByGender.male, 2),
         twoFemale: findAllAvailableSlots(staffByGender.female, 2)
     }
@@ -437,7 +478,7 @@ async function getRotationQuickSlots(date) {
                 message: '获取成功',
                 data: {
                     rotationItems: [],
-                    quickReservationSlots: { oneMale: [], oneFemale: [], twoMale: [], twoFemale: [] }
+                    quickReservationSlots: { oneMale: [], oneFemale: [], oneMaleOneFemale: [], twoMale: [], twoFemale: [] }
                 }
             }
         }
@@ -453,7 +494,7 @@ async function getRotationQuickSlots(date) {
                 message: '获取成功',
                 data: {
                     rotationItems: [],
-                    quickReservationSlots: { oneMale: [], oneFemale: [], twoMale: [], twoFemale: [] }
+                    quickReservationSlots: { oneMale: [], oneFemale: [], oneMaleOneFemale: [], twoMale: [], twoFemale: [] }
                 }
             }
         }
@@ -737,7 +778,7 @@ async function getQuickSlots(date, maleCount, femaleCount) {
 
         // 转换为 QuickReservation 格式，按性别分列技师名字（只收集用户实际需要的性别）
         const slots = combinedSlots.map(slot => {
-            const timeText = `${formatMinutesToTime(slot.start)}-${formatMinutesToTime(slot.end)} (${slot.duration}分钟)`
+            const timeText = `${formatMinutesToTime(slot.start)}-${formatMinutesToTime(slot.end)}`
             const maleStaffNames = []
             const femaleStaffNames = []
             if (maleCount > 0) {
@@ -946,39 +987,6 @@ function calculateFreeMinutes(technician, staffConsultations, staffReservations,
 }
 
 /**
- * 检查技师在指定时间是否可用（考虑5分钟重叠容差）
- * @param {number} proposedStart - 预约开始时间（分钟）
- * @param {number} proposedEnd - 预约结束时间（分钟）
- * @param {Array} staffConsultations - 技师的咨询单记录
- * @param {Array} staffReservations - 技师的预约记录
- * @returns {{ available: boolean, reason: string }}
- */
-function checkTechnicianAvailability(proposedStart, proposedEnd, staffConsultations, staffReservations) {
-    const OVERLAP_TOLERANCE = 5
-    
-    const allAppointments = [...staffConsultations, ...staffReservations]
-    if (allAppointments.length === 0) {
-        return { available: true, reason: '空闲' }
-    }
-    
-    const mergedRanges = mergeTimeRanges(allAppointments)
-    
-    const effectiveStart = proposedStart + OVERLAP_TOLERANCE
-    const effectiveEnd = proposedEnd - OVERLAP_TOLERANCE
-    
-    for (const range of mergedRanges) {
-        if (effectiveStart < range.end && effectiveEnd > range.start) {
-            return { 
-                available: false, 
-                reason: `与 ${formatMinutesToTime(range.start)}-${formatMinutesToTime(range.end)} 冲突` 
-            }
-        }
-    }
-    
-    return { available: true, reason: '空闲' }
-}
-
-/**
  * 计算技师与拟分配时段的最大重叠分钟数（用于智能重排排序）
  * 重叠度 = 所有已占用时段与拟分配时段的实际重叠分钟数之和
  * 返回0表示完全不重叠
@@ -1125,8 +1133,7 @@ async function rearrangeReservations(date) {
                 const overlapMinutes = calculateOverlapMinutes(proposedStart, proposedEnd, staffConsults, staffResvs)
                 
                 // 允许最多10分钟重叠（首尾交接），超过则不分配
-                const MAX_OVERLAP_ALLOWED = 10
-                if (overlapMinutes > MAX_OVERLAP_ALLOWED) {
+                if (overlapMinutes > OVERLAP_TOLERANCE) {
                     return
                 }
                 

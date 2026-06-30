@@ -7,6 +7,7 @@ import { authManager } from '../../utils/auth';
 const app = getApp<IAppOption>();
 
 const TIMELINE_HOUR_WIDTH = 90;
+const SPARE_TIME = 20; // 20休息时间;
 
 interface TimelineData {
 	timeLabels: string[]
@@ -287,7 +288,7 @@ Component({
 					const availableSlots = this.calculateAvailableSlotsBetweenBlocks(activeBlocks, shift);
 					
 					// 计算当日轮钟数量（非点钟且非预约的记录）
-					const rotationCount = blocks.filter(b => !b.isClockIn && !b.isReservation && !b.isCancelled).length;
+					const rotationCount = blocks.filter(b => !b.isClockIn && !b.isReservation && !b.isCancelled&&!b.isExtraTime).length;
 					
 					staffTimeline.push({
 						_id: staff._id,
@@ -377,11 +378,25 @@ Component({
 
 		calculateAvailableSlotsBetweenBlocks(blocks: TimeBlock[], shift: ShiftType): AvailableSlot[] {
 			const availableSlots: AvailableSlot[] = [];
+			const RESERVE_GAP_MINUTES = 60; // 可预约时段与下一个预约之间至少保留60分钟（用于排钟）
 
-			const pushSlot = (startTimelineMinutes: number, gapMinutes: number): void => {
+			/**
+			 * 记录一个可预约时段
+			 * @param startTimelineMinutes 时段起点（timeline 分钟）
+			 * @param rawEndTimelineMinutes 时段原始结束点（下一个 block 起点或班次结束）
+			 * @param isShiftEnd 时段结束是否为班次结束（是则不扣减间隔）
+			 */
+			const pushSlot = (startTimelineMinutes: number, rawEndTimelineMinutes: number, isShiftEnd: boolean): void => {
+				// 非班次结束：为下一个预约留出排钟间隔
+				const effectiveEnd = isShiftEnd
+					? rawEndTimelineMinutes
+					: rawEndTimelineMinutes - RESERVE_GAP_MINUTES;
+
+				const gapMinutes = effectiveEnd - startTimelineMinutes;
 				if (gapMinutes <= 45) return;
+
 				const startTime = this.timelineMinutesToTime(startTimelineMinutes);
-				const endTime = this.timelineMinutesToTime(startTimelineMinutes + gapMinutes);
+				const endTime = this.timelineMinutesToTime(effectiveEnd);
 				const left = (startTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 				const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
 				availableSlots.push({
@@ -389,7 +404,7 @@ Component({
 					width,
 					startTime,
 					endTime,
-					displayText: `${startTime}-${endTime} (${gapMinutes}分钟)`,
+					displayText: `${startTime}-${endTime}`,
 					durationMinutes: gapMinutes
 				});
 			};
@@ -450,10 +465,10 @@ Component({
 
 				// 今天：区间起点修正为 now（不晚于 now）
 				const effectiveStart = isToday ? Math.max(segStart, nowTimelineMinutes) : segStart;
-				const effectiveGap = segEnd - effectiveStart;
-				if (effectiveGap <= 0) continue;
 
-				pushSlot(effectiveStart, effectiveGap);
+				// 判断是否是班次结束（最后一个点 = 下班时间）
+				const isShiftEnd = segEnd === shiftEndTimelineMinutes;
+				pushSlot(effectiveStart+SPARE_TIME, segEnd, isShiftEnd);
 			}
 
 			return availableSlots;

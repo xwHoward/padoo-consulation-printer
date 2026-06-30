@@ -1,14 +1,14 @@
+import {
+	calculateEndTime,
+	DEFAULT_PUSH_MODAL,
+	DEFAULT_RESERVE_FORM,
+	getNextHalfHourTime,
+	ReservationService,
+} from '../../services/reservation.service';
+import type { PushModalState, ReserveForm } from '../../types/reservation.types';
 import { checkLogin } from '../../utils/auth';
 import { cloudDb, Collections } from '../../utils/cloud-db';
-import { earlierThan, getCurrentDate, laterOrEqualTo, parseProjectDuration } from '../../utils/util';
-import {
-	ReservationService,
-	DEFAULT_RESERVE_FORM,
-	DEFAULT_PUSH_MODAL,
-	getNextHalfHourTime,
-	calculateEndTime,
-} from '../../services/reservation.service';
-import type { ReserveForm, PushModalState } from '../../types/reservation.types';
+import { earlierThan, getCurrentDate, laterOrEqualTo } from '../../utils/util';
 
 interface Room {
 	_id: string

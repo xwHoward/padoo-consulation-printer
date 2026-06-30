@@ -1,3 +1,26 @@
+/** 云函数返回的原始快速预约时段 */
+export interface QuickSlotRaw {
+	time: string;
+	staffNames: string[];
+}
+
+/** 前端使用的快速预约时段（补充 gender 分类） */
+export interface QuickSlot extends QuickSlotRaw {
+	maleStaff: string[];
+	femaleStaff: string[];
+}
+
+/** 快速预约组合（5种固定组合之一） */
+export interface QuickReservationGroup {
+	key: string;         // 'oneFemale' | 'oneMale' | 'twoFemale' | 'oneMaleOneFemale' | 'twoMale'
+	label: string;       // '1位女技师' | '1位男技师' | '2位女技师' | '1男1女' | '2位男技师'
+	maleCount: number;
+	femaleCount: number;
+	earliestTime: string;
+	slots: QuickSlot[];
+	emptyReason?: string;
+}
+
 export interface PaymentMethodItem {
 	key: string;
 	label: string;
@@ -97,13 +120,8 @@ export interface CashierPageData {
 	rotationPushModal: RotationPushModalState;
 	pushModalLocked: boolean;
 	arrivalConfirmModal: ArrivalConfirmModalState;
-	quickReservationSlots: {
-		maleCount: number;
-		femaleCount: number;
-		earliestTime: string;
-		slots: QuickReservation[];
-		emptyReason?: string;
-	};
+	/** 快速预约——5种固定组合的时段数据 */
+	quickReservationGroups: QuickReservationGroup[];
 	quickReservationLoading: boolean;
 }
 

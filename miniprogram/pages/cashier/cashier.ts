@@ -4,7 +4,7 @@ import { loadingService, LockKeys } from '../../utils/loading-service';
 import { hasButtonPermission, requirePagePermission } from '../../utils/permission';
 import { COUPON_PLATFORM_NAMES } from '../../utils/constants';
 import { calculateProjectEndTime, formatDate, formatTime, getCurrentDate, parseProjectDuration } from '../../utils/util';
-import type { CashierPage, PaymentMethodItem } from './cashier.types';
+import type { CashierPage, PaymentMethodItem, QuickReservationGroup } from './cashier.types';
 import { ReservationHandler } from './handlers/reservation.handler';
 import { SettlementHandler } from './handlers/settlement.handler';
 import { PushHandler } from './handlers/push.handler';
@@ -112,14 +112,8 @@ Page({
             project: '',
             technicianName: ''
         },
-        // 快速预约时段
-        quickReservationSlots: {
-            maleCount: 0,
-            femaleCount: 2,
-            earliestTime: '',
-            slots: [] as QuickReservation[],
-            emptyReason: ''
-        },
+        // 快速预约时段（5种固定组合）
+        quickReservationGroups: [] as QuickReservationGroup[],
         quickReservationLoading: false,
         // 加钟弹窗
         extraTimeModal: {
@@ -224,17 +218,18 @@ Page({
     },
 
     copyReservationSlot(e: WechatMiniprogram.CustomEvent) {
-        const { text } = e.currentTarget.dataset;
+        const { text, label, malecount, femalecount } = e.currentTarget.dataset;
 
         const timeRange = text.match(/^(\d{2}:\d{2}-\d{2}:\d{2})/)?.[1] || text;
-        const { maleCount, femaleCount } = this.data.quickReservationSlots;
 
         const parts: string[] = [];
-        if (maleCount > 0) parts.push(`${maleCount}位男技师`);
-        if (femaleCount > 0) parts.push(`${femaleCount}位女技师`);
-        const label = parts.join('+') || '';
+        const mc = parseInt(malecount) || 0;
+        const fc = parseInt(femalecount) || 0;
+        if (mc > 0) parts.push(`${mc}位男技师`);
+        if (fc > 0) parts.push(`${fc}位女技师`);
+        const staffLabel = parts.join('+') || label || '';
 
-        const message = `您好，目前${label}可预约时段为${timeRange}哦，您可以告诉小趴到店时间，小趴给您保留预约哦~`;
+        const message = `您好，目前${staffLabel}可预约时段为${timeRange}哦，您可以告诉小趴到店时间，小趴给您保留预约哦~`;
 
         wx.setClipboardData({
             data: message,
@@ -253,33 +248,6 @@ Page({
                 });
             }
         });
-    },
-
-    async onQuickReservationGenderChange(e: WechatMiniprogram.CustomEvent) {
-        const { gender, action } = e.currentTarget.dataset;
-        const qs = { ...this.data.quickReservationSlots };
-
-        if (action === 'increase') {
-            if (gender === 'male') qs.maleCount++;
-            else qs.femaleCount++;
-        } else if (action === 'decrease') {
-            if (gender === 'male' && qs.maleCount > 0) qs.maleCount--;
-            else if (gender === 'female' && qs.femaleCount > 0) qs.femaleCount--;
-        }
-
-        this.setData({ quickReservationSlots: qs, quickReservationLoading: true });
-        await this.fetchQuickReservationSlots();
-    },
-
-    async fetchQuickReservationSlots() {
-        const { maleCount, femaleCount } = this.data.quickReservationSlots;
-        if (dataLoader) {
-            const { earliestTime, slots, emptyReason='' } = await dataLoader.loadQuickReservationSlots(maleCount, femaleCount);
-            this.setData({
-                quickReservationSlots: { maleCount, femaleCount, earliestTime, slots, emptyReason },
-                quickReservationLoading: false
-            });
-        }
     },
 
     // ========== 轮牌相关 ==========

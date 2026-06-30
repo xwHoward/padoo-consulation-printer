@@ -65,7 +65,7 @@ export function calculateEndTime(startTime: string, project: string): string {
 		duration = parseProjectDuration(project);
 		if (duration === 0) duration = 60;
 	}
-	const endTotal = startTotal + duration + 20;
+	const endTotal = startTotal + duration + 30;
 	const endH = Math.floor(endTotal / 60);
 	const endM = endTotal % 60;
 	return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;

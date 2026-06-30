@@ -3,7 +3,7 @@ import { formatDate, formatTime, parseProjectDuration } from "../../../utils/uti
 import { SHIFT_START_TIME, SHIFT_END_TIME, calculateOvertimeHours } from "../../../utils/constants";
 
 const app = getApp<IAppOption>();
-const SPARE_TIME = 10; // 10分钟准备+休息时间
+const SPARE_TIME = 0; // 10分钟准备+休息时间
 
 export class ClockInUtils {
   static async calculateOvertime(record: Add<ConsultationRecord>): Promise<number> {

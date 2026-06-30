@@ -35,7 +35,7 @@ export function useReservation(data, setData, loadTimelineData) {
       return match ? parseInt(match[1]) : 90
     })
     const sorted = [...durations].sort((a, b) => b - a)
-    return sorted.reduce((sum, d) => sum + d, 0) + 20
+    return sorted.reduce((sum, d) => sum + d, 0) + 30
   }
 
   /**
@@ -217,7 +217,6 @@ export function useReservation(data, setData, loadTimelineData) {
 
   return {
     createDefaultReserveForm,
-    calcTotalDuration,
     checkStaffAvailability,
     confirmReserve,
     cancelReservation,

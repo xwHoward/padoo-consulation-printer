@@ -1,4 +1,4 @@
-export const SPARE_TIME = 10; // 10分钟准备+休息时间
+export const SPARE_TIME = 0; // 10分钟准备+休息时间
 
 export function formatTime(date: Date, withDate = true): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");

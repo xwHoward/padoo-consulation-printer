@@ -40,18 +40,6 @@ function laterOrEqualTo(timeA, timeB) {
 }
 
 export function useDataLoader(data, setData) {
-  /**
-   * 计算项目总时长
-   */
-  function calcTotalDuration(projectNames) {
-    if (!projectNames || projectNames.length === 0) return 90
-    const durations = projectNames.map(p => {
-      const match = p.match(/(\d+)/)
-      return match ? parseInt(match[1]) : 90
-    })
-    const sorted = [...durations].sort((a, b) => b - a)
-    return sorted.reduce((sum, d) => sum + d, 0) + 20
-  }
 
   /**
    * 加载项目列表
@@ -294,7 +282,6 @@ export function useDataLoader(data, setData) {
   }
 
   return {
-    calcTotalDuration,
     loadProjects,
     loadRooms,
     loadStaffs,
