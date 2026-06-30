@@ -14,7 +14,7 @@ export class DataLoaderService {
 
   async loadTechnicianList() {
     try {
-      const { editId, consultationInfo } = this.page.data;
+      const {editId, consultationInfo} = this.page.data;
 
       let targetDate: string;
       let currentTimeStr: string;
@@ -28,7 +28,7 @@ export class DataLoaderService {
         currentTimeStr = formatTime(now, false);
       }
 
-      this.page.setData({ loadingTechnicians: true });
+      this.page.setData({loadingTechnicians: true});
 
       const projectDuration = parseProjectDuration(this.page.data.consultationInfo.project) || 90;
 
@@ -49,16 +49,16 @@ export class DataLoaderService {
 
       if (res.result.code === 0) {
         const list = res.result.data;
-        this.page.setData({ technicianList: list, loadingTechnicians: false });
+        this.page.setData({technicianList: list, loadingTechnicians: false});
       } else {
         wx.showToast({
           title: res.result.message || t('loadTechFailed'),
           icon: 'none'
         });
-        this.page.setData({ loadingTechnicians: false });
+        this.page.setData({loadingTechnicians: false});
       }
     } catch (error) {
-      this.page.setData({ loadingTechnicians: false });
+      this.page.setData({loadingTechnicians: false});
       wx.showToast({
         title: t('loadTechFailed'),
         icon: 'none'
@@ -69,9 +69,9 @@ export class DataLoaderService {
   async loadProjects() {
     try {
       const allProjects = await app.getProjects();
-      this.page.setData({ projects: allProjects });
+      this.page.setData({projects: allProjects});
     } catch (error) {
-      this.page.setData({ projects: [] });
+      this.page.setData({projects: []});
     }
   }
 
@@ -96,7 +96,7 @@ export class DataLoaderService {
 
         const licensePlate = foundRecord.licensePlate || '';
         const isNewEnergyVehicle = licensePlate.length === 8;
-        const { plateNumber } = buildPlateNumberUpdates(licensePlate);
+        const {plateNumber} = buildPlateNumberUpdates(licensePlate);
 
         updateData.licensePlate = licensePlate;
         updateData.isNoPlate = licensePlate.startsWith('临');
@@ -117,7 +117,7 @@ export class DataLoaderService {
         icon: "error",
       });
     } finally {
-      this.page.setData({ loading: false });
+      this.page.setData({loading: false});
     }
   }
 
@@ -200,7 +200,7 @@ export class DataLoaderService {
     } catch (error) {
       console.error('[DataLoader] loadReservationData 失败:', error);
     } finally {
-      this.page.setData({ loading: false });
+      this.page.setData({loading: false});
     }
   }
 }

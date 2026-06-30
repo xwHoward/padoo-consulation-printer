@@ -2,11 +2,11 @@
  * 预约服务类
  * 封装预约相关的核心业务逻辑，供多个页面复用
  */
-import { cloudDb, Collections } from '../utils/cloud-db';
-import { getCurrentDate, parseProjectDuration, formatDaysFromNow, formatTime } from '../utils/util';
-import { hasButtonPermission } from '../utils/permission';
-import { formatMention } from '../utils/wechat-work';
-import type { ReserveForm, PushModalState } from '../types/reservation.types';
+import {cloudDb, Collections} from '../utils/cloud-db';
+import {getCurrentDate, parseProjectDuration, formatDaysFromNow, formatTime} from '../utils/util';
+import {hasButtonPermission} from '../utils/permission';
+import {formatMention} from '../utils/wechat-work';
+import type {ReserveForm, PushModalState} from '../types/reservation.types';
 
 const app = getApp<IAppOption>();
 
@@ -20,7 +20,7 @@ export const DEFAULT_RESERVE_FORM: ReserveForm = {
 	phone: '',
 	requirementType: 'specific',
 	selectedTechnicians: [],
-	genderRequirement: { male: 0, female: 0 },
+	genderRequirement: {male: 0, female: 0},
 	startTime: '',
 	technicianId: '',
 	technicianName: '',
@@ -51,7 +51,7 @@ export function getNextHalfHourTime(): string {
 	} else {
 		startTime.setMinutes(30);
 	}
-	return `${String(startTime.getHours()).padStart(2, '0')}:${String(startTime.getMinutes()).padStart(2, '0')}`;
+	return `${ String(startTime.getHours()).padStart(2, '0') }:${ String(startTime.getMinutes()).padStart(2, '0') }`;
 }
 
 /**
@@ -68,7 +68,7 @@ export function calculateEndTime(startTime: string, project: string): string {
 	const endTotal = startTotal + duration + 30;
 	const endH = Math.floor(endTotal / 60);
 	const endM = endTotal % 60;
-	return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+	return `${ String(endH).padStart(2, '0') }:${ String(endM).padStart(2, '0') }`;
 }
 
 /**
@@ -109,11 +109,11 @@ export class ReservationService {
 			phone: record.phone,
 			requirementType: requirementType as 'specific' | 'gender',
 			selectedTechnicians: record.technicianId
-				? [{ _id: record.technicianId, name: record.technicianName || '', phone: '', isClockIn: record.isClockIn || false }]
+				? [{_id: record.technicianId, name: record.technicianName || '', phone: '', isClockIn: record.isClockIn || false}]
 				: [],
 			genderRequirement: hasGenderRequirement
-				? { male: record.genderRequirement === 'male' ? 1 : 0, female: record.genderRequirement === 'female' ? 1 : 0 }
-				: { male: 0, female: 0 },
+				? {male: record.genderRequirement === 'male' ? 1 : 0, female: record.genderRequirement === 'female' ? 1 : 0}
+				: {male: 0, female: 0},
 			startTime: record.startTime,
 			technicianId: record.technicianId || '',
 			technicianName: record.technicianName || '',
@@ -129,32 +129,32 @@ export class ReservationService {
 		requirementType: 'specific' | 'gender',
 		availableMaleCount: number,
 		availableFemaleCount: number
-	): { valid: boolean; message?: string } {
+	): {valid: boolean; message?: string;} {
 		if (!form.startTime) {
-			return { valid: false, message: '开始时间必填' };
+			return {valid: false, message: '开始时间必填'};
 		}
 
 		if (requirementType === 'specific') {
 			if (form.selectedTechnicians.length === 0) {
-				return { valid: false, message: '请选择技师' };
+				return {valid: false, message: '请选择技师'};
 			}
 		} else if (requirementType === 'gender') {
 			const totalRequired = form.genderRequirement.male + form.genderRequirement.female;
 			if (totalRequired === 0) {
-				return { valid: false, message: '请选择技师需求' };
+				return {valid: false, message: '请选择技师需求'};
 			}
 			if (form.genderRequirement.male > availableMaleCount) {
-				return { valid: false, message: `可用男技师不足（仅${availableMaleCount}位）` };
+				return {valid: false, message: `可用男技师不足（仅${ availableMaleCount }位）`};
 			}
 			if (form.genderRequirement.female > availableFemaleCount) {
-				return { valid: false, message: `可用女技师不足（仅${availableFemaleCount}位）` };
+				return {valid: false, message: `可用女技师不足（仅${ availableFemaleCount }位）`};
 			}
 			if (totalRequired > 2) {
-				return { valid: false, message: '最多只能预约2位技师' };
+				return {valid: false, message: '最多只能预约2位技师'};
 			}
 		}
 
-		return { valid: true };
+		return {valid: true};
 	}
 
 	/**
@@ -165,7 +165,7 @@ export class ReservationService {
 		startTime: string,
 		project: string,
 		editingReservationId?: string
-	): Promise<{ success: boolean; data?: StaffAvailability[]; maleCount?: number; femaleCount?: number; message?: string }> {
+	): Promise<{success: boolean; data?: StaffAvailability[]; maleCount?: number; femaleCount?: number; message?: string;}> {
 		try {
 			const projectDuration = parseProjectDuration(project) || 90;
 			const currentReservationIds = editingReservationId ? [editingReservationId] : [];
@@ -181,19 +181,19 @@ export class ReservationService {
 			});
 
 			if (!res.result || typeof res.result !== 'object') {
-				return { success: false, message: '获取技师列表失败' };
+				return {success: false, message: '获取技师列表失败'};
 			}
 
-			const result = res.result as { code: number; data: StaffAvailability[] };
+			const result = res.result as {code: number; data: StaffAvailability[];};
 			if (result.code === 0 && result.data) {
 				const maleCount = result.data.filter(s => !s.isOccupied && s.gender === 'male').length;
 				const femaleCount = result.data.filter(s => !s.isOccupied && s.gender === 'female').length;
-				return { success: true, data: result.data, maleCount, femaleCount };
+				return {success: true, data: result.data, maleCount, femaleCount};
 			}
 
-			return { success: false, message: '获取技师列表失败' };
+			return {success: false, message: '获取技师列表失败'};
 		} catch (error) {
-			return { success: false, message: '获取技师列表失败' };
+			return {success: false, message: '获取技师列表失败'};
 		}
 	}
 
@@ -203,7 +203,7 @@ export class ReservationService {
 	static async createReservation(
 		form: ReserveForm,
 		endTime: string
-	): Promise<{ success: boolean; recordId?: string; message?: string }> {
+	): Promise<{success: boolean; recordId?: string; message?: string;}> {
 		try {
 			const record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'> = {
 				date: form.date,
@@ -221,11 +221,11 @@ export class ReservationService {
 
 			const insertResult = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
 			if (insertResult) {
-				return { success: true, recordId: insertResult._id };
+				return {success: true, recordId: insertResult._id};
 			}
-			return { success: false, message: '创建失败' };
+			return {success: false, message: '创建失败'};
 		} catch (error) {
-			return { success: false, message: '创建失败' };
+			return {success: false, message: '创建失败'};
 		}
 	}
 
@@ -234,9 +234,9 @@ export class ReservationService {
 	 */
 	static async createReservations(
 		form: ReserveForm,
-		technicians: Array<{ _id: string; name: string; isClockIn: boolean }>,
+		technicians: Array<{_id: string; name: string; isClockIn: boolean;}>,
 		endTime: string
-	): Promise<{ successCount: number; totalCount: number; recordIds: string[] }> {
+	): Promise<{successCount: number; totalCount: number; recordIds: string[];}> {
 		const recordIds: string[] = [];
 		let successCount = 0;
 
@@ -263,7 +263,7 @@ export class ReservationService {
 			}
 		}
 
-		return { successCount, totalCount: technicians.length, recordIds };
+		return {successCount, totalCount: technicians.length, recordIds};
 	}
 
 	/**
@@ -273,12 +273,12 @@ export class ReservationService {
 		reserveId: string,
 		form: ReserveForm,
 		endTime: string
-	): Promise<{ success: boolean; message?: string }> {
+	): Promise<{success: boolean; message?: string;}> {
 		try {
 			let record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>;
 
 			if (form.requirementType === 'gender') {
-				const { male, female } = form.genderRequirement;
+				const {male, female} = form.genderRequirement;
 				record = {
 					date: form.date,
 					customerName: form.customerName || '',
@@ -313,9 +313,9 @@ export class ReservationService {
 			}
 
 			const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveId, record);
-			return { success };
+			return {success};
 		} catch (error) {
-			return { success: false, message: '更新失败' };
+			return {success: false, message: '更新失败'};
 		}
 	}
 
@@ -324,11 +324,11 @@ export class ReservationService {
 	 */
 	static async cancelReservation(
 		reserveId: string
-	): Promise<{ success: boolean; reservation?: ReservationRecord; relatedReservations?: ReservationRecord[] }> {
+	): Promise<{success: boolean; reservation?: ReservationRecord; relatedReservations?: ReservationRecord[];}> {
 		try {
 			const reservation = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
 			if (!reservation) {
-				return { success: false };
+				return {success: false};
 			}
 
 			// 查找关联预约
@@ -350,9 +350,9 @@ export class ReservationService {
 				});
 			}
 
-			return { success: true, reservation, relatedReservations: toCancel };
+			return {success: true, reservation, relatedReservations: toCancel};
 		} catch (error) {
-			return { success: false };
+			return {success: false};
 		}
 	}
 
@@ -372,12 +372,12 @@ export class ReservationService {
 		project: string,
 		maleCount: number,
 		femaleCount: number
-	): Promise<{ success: boolean; technicians?: Array<{ _id: string; name: string; isClockIn: boolean }>; message?: string }> {
+	): Promise<{success: boolean; technicians?: Array<{_id: string; name: string; isClockIn: boolean;}>; message?: string;}> {
 		try {
 			// 获取轮牌数据
 			const rotationData = await app.getRotationQueue(date);
 			if (!rotationData?.staffList?.length) {
-				return { success: false, message: '无法获取轮牌数据' };
+				return {success: false, message: '无法获取轮牌数据'};
 			}
 
 			// 获取所有员工
@@ -407,7 +407,7 @@ export class ReservationService {
 
 			let availableTechnicians: StaffAvailability[] = [];
 			if (technicianRes.result && typeof technicianRes.result === 'object') {
-				const result = technicianRes.result as { code: number; data: StaffAvailability[] };
+				const result = technicianRes.result as {code: number; data: StaffAvailability[];};
 				if (result.code === 0 && result.data) {
 					availableTechnicians = result.data;
 				}
@@ -416,8 +416,8 @@ export class ReservationService {
 			const availableTechnicianIds = new Set(availableTechnicians.map(t => t._id));
 
 			// 按轮牌顺序选择
-			const selectedMaleStaff: Array<{ _id: string; name: string; isClockIn: boolean }> = [];
-			const selectedFemaleStaff: Array<{ _id: string; name: string; isClockIn: boolean }> = [];
+			const selectedMaleStaff: Array<{_id: string; name: string; isClockIn: boolean;}> = [];
+			const selectedFemaleStaff: Array<{_id: string; name: string; isClockIn: boolean;}> = [];
 
 			for (const rotationItem of rotationStaffList) {
 				const staff = rotationItem.staff!;
@@ -426,9 +426,9 @@ export class ReservationService {
 				if (!availableTechnicianIds.has(staffId)) continue;
 
 				if (staff.gender === 'male' && selectedMaleStaff.length < maleCount) {
-					selectedMaleStaff.push({ _id: staffId, name: staff.name, isClockIn: false });
+					selectedMaleStaff.push({_id: staffId, name: staff.name, isClockIn: false});
 				} else if (staff.gender === 'female' && selectedFemaleStaff.length < femaleCount) {
-					selectedFemaleStaff.push({ _id: staffId, name: staff.name, isClockIn: false });
+					selectedFemaleStaff.push({_id: staffId, name: staff.name, isClockIn: false});
 				}
 
 				if (selectedMaleStaff.length === maleCount && selectedFemaleStaff.length === femaleCount) {
@@ -440,13 +440,13 @@ export class ReservationService {
 			if (selectedMaleStaff.length < maleCount || selectedFemaleStaff.length < femaleCount) {
 				return {
 					success: false,
-					message: `可用技师不足（男${selectedMaleStaff.length}/${maleCount}，女${selectedFemaleStaff.length}/${femaleCount}）`,
+					message: `可用技师不足（男${ selectedMaleStaff.length }/${ maleCount }，女${ selectedFemaleStaff.length }/${ femaleCount }）`,
 				};
 			}
 
-			return { success: true, technicians: [...selectedMaleStaff, ...selectedFemaleStaff] };
+			return {success: true, technicians: [...selectedMaleStaff, ...selectedFemaleStaff]};
 		} catch (error) {
-			return { success: false, message: '分配技师失败' };
+			return {success: false, message: '分配技师失败'};
 		}
 	}
 	/**
@@ -456,12 +456,12 @@ export class ReservationService {
 		try {
 			const res = await wx.cloud.callFunction({
 				name: "getAvailableTechnicians",
-				data: { date, mode: "rearrange" }
+				data: {date, mode: "rearrange"}
 			});
-			if (res.result && (res.result as { code: number }).code === 0) {
-				console.log("[重排] 完成:", (res.result as { data: { summary: any } }).data.summary);
+			if (res.result && (res.result as {code: number;}).code === 0) {
+				console.log("[重排] 完成:", (res.result as {data: {summary: any;};}).data.summary);
 			} else {
-				console.warn("[重排] 失败:", (res.result as { message?: string }).message);
+				console.warn("[重排] 失败:", (res.result as {message?: string;}).message);
 			}
 		} catch (error) {
 			console.error("[重排] 调用失败:", error);
