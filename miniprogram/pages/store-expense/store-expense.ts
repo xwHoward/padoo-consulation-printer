@@ -390,7 +390,6 @@ Page({
             const staffSchedules = scheduleByStaff[staff._id] || [];
             const staffConsultations = consultationByStaff[staff._id] || [];
 
-            let workDays = 0;
             let offDays = 0;
             let leaveDays = 0;
 
@@ -400,11 +399,6 @@ Page({
 
                 if (schedule) {
                     switch (schedule.shift) {
-                        case 'morning':
-                        case 'evening':
-                        case 'overtime':
-                            workDays++;
-                            break;
                         case 'off':
                             offDays++;
                             break;
@@ -412,10 +406,10 @@ Page({
                             leaveDays++;
                             break;
                     }
-                } else {
-                    workDays++;
                 }
             }
+            // 上班天数 = 当月天数 - 请假天数 - 休息天数
+            const workDays = daysInMonth - leaveDays - offDays;
 
             let commission = 0;
             let extraTime = 0; // 加钟
@@ -452,19 +446,12 @@ Page({
             // 同一天多个加班单只取最大单笔，不同日期之间正常累加
             const overtime = Array.from(overtimeByDate.values()).reduce((sum, v) => sum + v, 0);
 
-            const n = offDays + leaveDays;
             let mealAllowance = 0;
             let attendanceBonus = 0;
 
-            if (workDays === 0) {
-                mealAllowance = 0;
-                attendanceBonus = 0;
-            } else if (n > 4) {
-                const calculatedMealAllowance = Math.round(600 - 600 / 26 * n);
-                mealAllowance = Math.max(0, calculatedMealAllowance);
-                attendanceBonus = 0;
-            } else {
-                mealAllowance = 600;
+            if (workDays > 0) {
+                // 餐补+全勤 = 上班天数 * 600 / 26 + 200
+                mealAllowance = Math.round(workDays * 600 / 26);
                 attendanceBonus = 200;
             }
 

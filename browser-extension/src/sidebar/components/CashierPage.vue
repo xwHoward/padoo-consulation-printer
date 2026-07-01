@@ -43,37 +43,23 @@
       <div class="cp-section-header">
         <span class="cp-section-title">预约</span>
       </div>
-      <div class="cp-quick-counters">
-        <div class="cp-qc-item">
-          <span class="cp-qc-label">男技师</span>
-          <div class="cp-qc-ctrls">
-            <button @click="quickGenderChange('male', -1)">-</button>
-            <span class="cp-qc-val">{{ qrSlots.maleCount }}</span>
-            <button @click="quickGenderChange('male', 1)">+</button>
-          </div>
-        </div>
-        <div class="cp-qc-item">
-          <span class="cp-qc-label">女技师</span>
-          <div class="cp-qc-ctrls">
-            <button @click="quickGenderChange('female', -1)">-</button>
-            <span class="cp-qc-val">{{ qrSlots.femaleCount }}</span>
-            <button @click="quickGenderChange('female', 1)">+</button>
-          </div>
+      <!-- 加载中 -->
+      <div class="cp-qr-loading" v-if="quickReservationLoading">查询中...</div>
+      <!-- 5种固定组合 -->
+      <div class="cp-quick-groups" v-if="!quickReservationLoading && quickReservationGroups.length > 0">
+        <div
+          v-for="group in quickReservationGroups"
+          :key="group.key"
+          class="cp-quick-group-item"
+          @click="copyGroupSlot(group)"
+        >
+          <span class="cp-group-label">{{ group.label }}</span>
+          <span v-if="group.earliestTime" class="cp-group-time">{{ group.earliestTime }}</span>
+          <span v-else class="cp-group-empty">{{ group.emptyReason || '暂无' }}</span>
         </div>
       </div>
-      <div v-if="qrSlots.earliestTime && !qrLoading" class="cp-qr-earliest">
-        最快可约：{{ qrSlots.earliestTime }}
-      </div>
-      <div v-if="qrLoading" class="cp-qr-loading">查询中...</div>
-      <div v-if="!qrLoading && qrSlots.slots.length > 0" class="cp-qr-slots">
-        <div v-for="slot in qrSlots.slots" :key="slot.time" class="cp-qr-slot" @click="copySlot(slot)">
-          <span>{{ slot.time }}</span>
-          <span v-if="slot.maleStaff?.length" class="cp-qr-staff cp-qr-staff--male">男：{{ slot.maleStaff.join(',') }}</span>
-          <span v-if="slot.femaleStaff?.length" class="cp-qr-staff cp-qr-staff--female">女：{{ slot.femaleStaff.join(',') }}</span>
-        </div>
-      </div>
-      <div v-if="!qrLoading && qrSlots.slots.length === 0 && (qrSlots.maleCount + qrSlots.femaleCount > 0)" class="cp-qr-empty">
-        {{ qrSlots.emptyReason || '暂无可约时段' }}
+      <div v-if="!quickReservationLoading && quickReservationGroups.length === 0" class="cp-qr-empty">
+        暂无可约时段
       </div>
     </div>
 
@@ -117,10 +103,12 @@
       :show="extraTimeModal.show"
       :projects="projects"
       :selectedProject="extraTimeModal.selectedProject"
-      :selectedProjectName="extraTimeModal.selectedProjectName"
       :quantity="extraTimeModal.quantity"
       @close="closeExtraTimeModal"
       @confirm="confirmExtraTime"
+      @update:selectedProject="val => extraTimeModal.selectedProject = val"
+      @update:selectedProjectName="val => extraTimeModal.selectedProjectName = val"
+      @update:quantity="val => extraTimeModal.quantity = val"
     />
 
     <ArrivalConfirmModal
@@ -148,6 +136,7 @@ import { useDataLoader } from '../composables/useDataLoader.js'
 import { useReservation } from '../composables/useReservation.js'
 import { usePush } from '../composables/usePush.js'
 import { useCustomerMatch } from '../composables/useCustomerMatch.js'
+import { callFunction as callCloudFunction, collection } from '../services/cloudbase.js'
 
 // --- State ---
 const loading = ref(true)
@@ -163,9 +152,9 @@ const availableFemaleCount = ref(0)
 const canCreateReservation = ref(true)
 const canPushRotation = ref(true)
 
-// Quick reservation
-const qrSlots = reactive({ maleCount: 0, femaleCount: 2, earliestTime: '', slots: [], emptyReason: '' })
-const qrLoading = ref(false)
+// Quick reservation - 5 fixed groups
+const quickReservationGroups = ref([])
+const quickReservationLoading = ref(false)
 
 // Reservation
 const showReserveModal = ref(false)
@@ -190,7 +179,8 @@ const extraTimeModal = reactive({
 
 // Arrival confirm
 const arrivalConfirmModal = reactive({
-  show: false, reserveId: '', customerName: '', project: '', technicianName: ''
+  show: false, reserveId: '', customerName: '', project: '', technicianName: '',
+  reservations: [] // store related reservations for processing
 })
 
 // --- Composables ---
@@ -198,19 +188,35 @@ const dataLoaderComposable = useDataLoader()
 const reservationComposable = useReservation()
 const pushComposable = usePush()
 
+// --- Helpers ---
+function parseProjectDuration(name) {
+  const match = String(name).match(/(\d+)min/)
+  return match ? parseInt(match[1]) : 0
+}
+
+function formatTimeStr(date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
 // --- Methods ---
-async function loadInitialData() {
+async function loadInitialData(retryCount = 0) {
   loading.value = true
   try {
     const result = await dataLoaderComposable.loadInitialData(selectedDate.value)
     if (result) {
-      Object.assign(qrSlots, result.quickReservationSlots)
+      quickReservationGroups.value = result.quickReservationGroups || []
       rooms.value = result.rooms
       rotationList.value = result.rotationList
       activeStaffList.value = result.activeStaffList
     }
   } catch (e) {
     console.error('[Cashier] loadInitialData failed:', e)
+    // 首次失败可能是 CloudBase SDK 尚未就绪，等待 3 秒后重试一次
+    if (retryCount === 0 && e.message?.includes('timeout')) {
+      console.log('[Cashier] Retrying in 3s...')
+      await new Promise(r => setTimeout(r, 3000))
+      return loadInitialData(1)
+    }
   } finally {
     loading.value = false
   }
@@ -218,48 +224,28 @@ async function loadInitialData() {
 
 async function onDateChange(date) {
   selectedDate.value = date
-  await dataLoaderComposable.loadTimelineData(selectedDate.value, {
-    maleCount: qrSlots.maleCount,
-    femaleCount: qrSlots.femaleCount
-  }).then(result => {
+  await dataLoaderComposable.loadTimelineData(selectedDate.value).then(result => {
     if (result) {
       rotationList.value = result.rotationList
-      Object.assign(qrSlots, result.quickReservationSlots)
+      quickReservationGroups.value = result.quickReservationGroups || []
     }
   }).catch(() => {})
 }
 
-// Quick reservation
-async function quickGenderChange(gender, delta) {
-  if (gender === 'male') {
-    qrSlots.maleCount = Math.max(0, qrSlots.maleCount + delta)
-  } else {
-    qrSlots.femaleCount = Math.max(0, qrSlots.femaleCount + delta)
-  }
-  qrLoading.value = true
-  try {
-    const result = await dataLoaderComposable.loadQuickReservationSlots(
-      selectedDate.value, qrSlots.maleCount, qrSlots.femaleCount
-    )
-    qrSlots.earliestTime = result.earliestTime
-    qrSlots.slots = result.slots
-    qrSlots.emptyReason = result.emptyReason || ''
-  } catch { /* ignore */ }
-  qrLoading.value = false
-}
+// Quick reservation - copy group slot
+async function copyGroupSlot(group) {
+  if (!group.earliestTime) return
 
-async function copySlot(slot) {
-  const timeStr = slot.time || ''
+  const timeRange = group.earliestTime.match(/^(\d{2}:\d{2}-\d{2}:\d{2})/)?.[1] || group.earliestTime
   const parts = []
-  if (qrSlots.maleCount > 0) parts.push(`${qrSlots.maleCount}位男技师`)
-  if (qrSlots.femaleCount > 0) parts.push(`${qrSlots.femaleCount}位女技师`)
-  const label = parts.join('+') || ''
-  const message = `您好，目前${label}可预约时段为${timeStr}哦，您可以告诉小趴到店时间，小趴给您保留预约哦~`
+  if (group.maleCount > 0) parts.push(`${group.maleCount}位男技师`)
+  if (group.femaleCount > 0) parts.push(`${group.femaleCount}位女技师`)
+  const staffLabel = parts.join('+') || group.label
+
+  const message = `您好，目前${staffLabel}可预约时段为${timeRange}哦，您可以告诉小趴到店时间，小趴给您保留预约哦~`
 
   const success = await pushComposable.copyToClipboard(message)
-  if (success) {
-    alert('已复制到剪贴板')
-  }
+  if (success) alert('已复制到剪贴板')
 }
 
 // Reservation
@@ -357,21 +343,243 @@ function onMatchClear() {
   reservationComposable.clearMatchedCustomer()
 }
 
-// Timeline actions
-function onTimelineAdjustRotation({ index, direction }) {
+// ========== Extra Time ==========
+function openExtraTimeModal(recordId) {
+  extraTimeModal.show = true
+  extraTimeModal.sourceRecordId = recordId
+  extraTimeModal.selectedProject = ''
+  extraTimeModal.selectedProjectName = ''
+  extraTimeModal.quantity = 1
+  extraTimeModal.projects = projects.value || []
+}
+
+function closeExtraTimeModal() {
+  extraTimeModal.show = false
+}
+
+async function confirmExtraTime() {
+  const { sourceRecordId, selectedProject, selectedProjectName, quantity } = extraTimeModal
+  if (!selectedProject) {
+    alert('请选择一个加钟项目')
+    return
+  }
+
+  loading.value = true
+  loadingText.value = '加钟中...'
+  try {
+    // 查询原始咨询单
+    const col = collection('consultation')
+    const res = await col.doc(sourceRecordId).get()
+    const record = res.data?.[0]
+    if (!record) {
+      alert('未找到原始单据')
+      return
+    }
+
+    const [endH, endM] = record.endTime.split(':').map(Number)
+    const [year, month, day] = record.date.split('-').map(Number)
+    const startTimeDate = new Date(year, month - 1, day, endH, endM, 0, 0)
+    const startTime = formatTimeStr(startTimeDate)
+
+    const duration = parseProjectDuration(selectedProjectName) || 90
+    const totalDuration = duration * quantity
+    const endTimeDate = new Date(startTimeDate.getTime() + totalDuration * 60 * 1000)
+    const endTime = formatTimeStr(endTimeDate)
+
+    // 创建加钟咨询单
+    const extraRecord = {
+      surname: record.surname,
+      gender: record.gender,
+      project: selectedProjectName,
+      technician: record.technician,
+      room: record.room,
+      massageStrength: record.massageStrength || '',
+      essentialOil: record.essentialOil || '',
+      selectedParts: record.selectedParts || {},
+      isClockIn: false,
+      remarks: record.remarks || '',
+      phone: record.phone || '',
+      couponCode: '',
+      couponPlatform: record.couponPlatform || 'meituan',
+      extraTime: 0,
+      date: record.date,
+      startTime,
+      endTime,
+      isVoided: false,
+      overtime: 0,
+      guasha: false,
+      isExtraTime: true
+    }
+
+    await col.add(extraRecord)
+
+    closeExtraTimeModal()
+    await loadInitialData()
+    alert('加钟成功')
+  } catch (e) {
+    alert(e.message || '加钟失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// ========== Arrival ==========
+async function handleArrival(reserveId) {
+  loading.value = true
+  loadingText.value = '加载中...'
+  try {
+    const col = collection('reservations')
+    const res = await col.doc(reserveId).get()
+    const record = res.data?.[0]
+    if (!record) {
+      alert('预约不存在')
+      return
+    }
+    if (record.status === 'cancelled') {
+      alert('该预约已取消')
+      return
+    }
+
+    // 查找关联预约（同组或同客户同时段）
+    let reservations = []
+    if (record.groupKey) {
+      const groupRes = await col.where({ groupKey: record.groupKey, status: 'active' }).get()
+      reservations = groupRes.data || []
+    } else {
+      const sameRes = await col.where({
+        date: record.date,
+        customerName: record.customerName,
+        startTime: record.startTime,
+        project: record.project,
+        status: 'active'
+      }).get()
+      reservations = sameRes.data || []
+    }
+    if (reservations.length === 0) reservations = [record]
+
+    arrivalConfirmModal.show = true
+    arrivalConfirmModal.reserveId = reserveId
+    arrivalConfirmModal.customerName = record.customerName + (record.gender === 'male' ? '先生' : '女士')
+    arrivalConfirmModal.project = record.project
+    arrivalConfirmModal.technicianName = record.technicianName || '未指定'
+    arrivalConfirmModal.reservations = reservations
+  } catch (e) {
+    alert('加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function confirmArrivalWithPush() {
+  const reservations = arrivalConfirmModal.reservations || []
+  arrivalConfirmModal.show = false
+  loading.value = true
+  loadingText.value = '处理中...'
+  try {
+    // 推送通知
+    await pushComposable.sendArrivalNotification(reservations)
+
+    // 标记到店
+    const col = collection('reservations')
+    for (const r of reservations) {
+      await col.doc(r._id).update({ data: { isFulfilled: true } })
+    }
+
+    alert('到店通知已推送')
+    await loadInitialData()
+  } catch (e) {
+    alert('处理失败: ' + (e.message || ''))
+  } finally {
+    loading.value = false
+  }
+}
+
+async function confirmArrivalWithoutPush() {
+  const reservations = arrivalConfirmModal.reservations || []
+  arrivalConfirmModal.show = false
+  loading.value = true
+  loadingText.value = '处理中...'
+  try {
+    const col = collection('reservations')
+    for (const r of reservations) {
+      await col.doc(r._id).update({ data: { isFulfilled: true } })
+    }
+    alert('已标记到店')
+    await loadInitialData()
+  } catch (e) {
+    alert('处理失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// ========== Cancel Reservation ==========
+async function cancelReservation(id) {
+  if (!confirm('确定要取消此预约吗？')) return
+
+  loading.value = true
+  loadingText.value = '取消中...'
+  try {
+    await reservationComposable.cancelReservation(id)
+    await loadInitialData()
+    alert('已取消预约')
+  } catch (e) {
+    alert(e.message || '取消失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// ========== Timeline / Rotation ==========
+async function onTimelineAdjustRotation({ index, direction }) {
   const list = [...rotationList.value]
   let toIdx = index
   if (direction === 'up' && index > 0) toIdx = index - 1
   else if (direction === 'down' && index < list.length - 1) toIdx = index + 1
   else return
 
-  ;[list[index], list[toIdx]] = [list[toIdx], list[index]]
-  rotationList.value = list
-  alert('轮牌已调整（开发模式下本地生效）')
+  try {
+    const result = await callCloudFunction('manageRotation', {
+      action: 'adjustPosition',
+      date: selectedDate.value,
+      fromIndex: index,
+      toIndex: toIdx
+    })
+
+    if (result?.code === 0) {
+      [list[index], list[toIdx]] = [list[toIdx], list[index]]
+      rotationList.value = list
+      alert('调整成功')
+    } else {
+      alert(result?.message || '调整失败')
+    }
+  } catch (e) {
+    alert('调整失败: ' + (e.message || ''))
+  }
 }
 
-function onTimelineResetRotation() {
-  alert('重置轮牌（需云函数支持）')
+async function onTimelineResetRotation() {
+  if (!confirm('确定要重置轮牌吗？')) return
+
+  loading.value = true
+  loadingText.value = '重置中...'
+  try {
+    const result = await callCloudFunction('manageRotation', {
+      action: 'init',
+      date: selectedDate.value
+    })
+
+    if (result?.code === 0) {
+      await loadInitialData()
+      alert('重置成功')
+    } else {
+      alert(result?.message || '重置失败')
+    }
+  } catch (e) {
+    alert('重置失败: ' + (e.message || ''))
+  } finally {
+    loading.value = false
+  }
 }
 
 function onTimelinePushRotation() {
@@ -402,14 +610,6 @@ async function onPushConfirm() {
     pushModal.loading = false
   }
 }
-
-// Extra time
-function closeExtraTimeModal() { extraTimeModal.show = false }
-function confirmExtraTime() { alert('加钟功能开发中'); extraTimeModal.show = false }
-
-// Arrival
-function confirmArrivalWithPush() { arrivalConfirmModal.show = false; alert('到店通知已推送') }
-function confirmArrivalWithoutPush() { arrivalConfirmModal.show = false }
 
 // --- Init ---
 loadInitialData()
@@ -483,74 +683,45 @@ loadInitialData()
   &:hover { background: #eef1ff; }
 }
 
-// Quick reservation
-.cp-quick-counters {
+// Quick reservation groups
+.cp-quick-groups {
   display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
+  flex-direction: column;
+  gap: 4px;
 
-  .cp-qc-item {
-    flex: 1;
+  .cp-quick-group-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 10px;
+    padding: 8px 12px;
     background: #f8f9fb;
-    border-radius: 6px;
     border: 1px solid #ebeef5;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
 
-    .cp-qc-label {
-      font-size: 12px;
-      color: #666;
-      font-weight: 500;
+    &:hover {
+      border-color: #4a6cf7;
+      background: #eef1ff;
     }
 
-    .cp-qc-ctrls {
-      display: flex;
-      align-items: center;
-      gap: 4px;
+    .cp-group-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #333;
+    }
 
-      button {
-        width: 26px;
-        height: 26px;
-        border: 1px solid #d0d5dd;
-        background: #fff;
-        border-radius: 4px;
-        font-size: 15px;
-        color: #666;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.15s;
+    .cp-group-time {
+      font-size: 12px;
+      font-weight: 600;
+      color: #00A86B;
+    }
 
-        &:hover {
-          background: #4a6cf7;
-          color: #fff;
-          border-color: #4a6cf7;
-        }
-      }
-
-      .cp-qc-val {
-        min-width: 20px;
-        text-align: center;
-        font-size: 16px;
-        font-weight: 600;
-        color: #4a6cf7;
-      }
+    .cp-group-empty {
+      font-size: 12px;
+      color: #999;
     }
   }
-}
-
-.cp-qr-earliest {
-  padding: 8px 12px;
-  background: rgba(0, 168, 107, 0.08);
-  border: 1px solid rgba(0, 168, 107, 0.2);
-  border-radius: 6px;
-  margin-bottom: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #00A86B;
 }
 
 .cp-qr-loading {
@@ -558,38 +729,6 @@ loadInitialData()
   padding: 12px;
   color: #999;
   font-size: 12px;
-}
-
-.cp-qr-slots {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 160px;
-  overflow-y: auto;
-
-  .cp-qr-slot {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 12px;
-    color: #4a6cf7;
-    padding: 6px 10px;
-    background: rgba(74, 108, 247, 0.05);
-    border-radius: 4px;
-    border: 1px solid rgba(74, 108, 247, 0.12);
-    cursor: pointer;
-    transition: all 0.15s;
-
-    &:hover {
-      background: rgba(74, 108, 247, 0.1);
-    }
-
-    .cp-qr-staff {
-      font-size: 10px;
-      &--male { color: #1890ff; }
-      &--female { color: #eb2f96; }
-    }
-  }
 }
 
 .cp-qr-empty {

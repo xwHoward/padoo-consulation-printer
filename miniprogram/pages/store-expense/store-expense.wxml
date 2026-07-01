@@ -3,7 +3,6 @@
     <view class="nav-btn-text">新增支出</view>
   </view>
 </navigation-bar>
-
 <scroll-view class="scrollarea" scroll-y type="list">
   <view class="container">
     <view class="month-selector">
@@ -14,7 +13,6 @@
         <view class="picker-btn">{{monthSelector.selectedMonth}}月</view>
       </picker>
     </view>
-
     <view class="section">
       <view class="section-header">
         <view class="section-title">门店支出</view>
@@ -40,8 +38,12 @@
               <view class="expense-right">
                 <view class="expense-amount">¥{{expense.amount}}</view>
                 <view class="expense-actions">
-                  <view class="action-btn edit-btn" catchtap="onEditExpense" data-expense="{{expense}}">编辑</view>
-                  <view class="action-btn delete-btn" catchtap="onDeleteExpense" data-expense="{{expense}}">删除</view>
+                  <view class="action-btn edit-btn" catchtap="onEditExpense" data-expense="{{expense}}">
+                    编辑
+                  </view>
+                  <view class="action-btn delete-btn" catchtap="onDeleteExpense" data-expense="{{expense}}">
+                    删除
+                  </view>
                 </view>
               </view>
             </view>
@@ -52,12 +54,13 @@
         <view>暂无支出记录</view>
       </view>
     </view>
-
     <view class="section">
       <view class="section-header">
         <view class="section-title">工资计算</view>
         <view class="section-total">薪酬: ¥{{totalSalary}}</view>
-        <view class="section-total performance-total" wx:if="{{totalPerformanceBonus > 0}}">绩效奖金: ¥{{totalPerformanceBonus}}</view>
+        <view class="section-total performance-total" wx:if="{{totalPerformanceBonus > 0}}">
+          绩效奖金: ¥{{totalPerformanceBonus}}
+        </view>
       </view>
       <view class="salary-table-wrapper" wx:if="{{salaryList.length > 0}}">
         <scroll-view class="table-scroll-view" scroll-x="{{true}}" scroll-y="{{false}}">
@@ -69,6 +72,7 @@
                 <view class="table-cell">加班</view>
                 <view class="table-cell">加钟</view>
                 <view class="table-cell">点钟</view>
+                <view class="table-cell">上班天数</view>
                 <view class="table-cell">餐补+全勤</view>
                 <view class="table-cell">售卡提成</view>
                 <view class="table-cell">回头率</view>
@@ -86,13 +90,18 @@
                 <view class="table-cell">{{item.overtime*7.5}} ({{item.overtime/2}}h)</view>
                 <view class="table-cell">{{item.extraTime*25}} ({{item.extraTime}}次)</view>
                 <view class="table-cell">{{item.clockIn}}次</view>
+                <view class="table-cell">{{item.workDays}}</view>
                 <view class="table-cell">{{item.mealAllowance}} + {{item.attendanceBonus}}</view>
                 <view class="table-cell">{{item.salesCommission}}</view>
-                <view class="table-cell">{{item.returnOrders}}/{{item.totalOrders}} ({{item.returnRate || '-'}}%)</view>
+                <view class="table-cell">
+                  {{item.returnOrders}}/{{item.totalOrders}} ({{item.returnRate || '-'}}%)
+                </view>
                 <view class="table-cell">{{item.wechatRate || '-'}}%</view>
                 <view class="table-cell">{{item.renewalFulfilled || 0}}次</view>
                 <view class="table-cell">{{item.packageSales || 0}}张</view>
-                <view class="table-cell {{item.totalPerformanceBonus ? 'bonus-cell' : ''}}">{{item.totalPerformanceBonus || 0}}</view>
+                <view class="table-cell {{item.totalPerformanceBonus ? 'bonus-cell' : ''}}">
+                  {{item.totalPerformanceBonus || 0}}
+                </view>
                 <view class="table-cell total-cell">{{item.totalSalary}}</view>
               </view>
             </view>
@@ -105,28 +114,17 @@
     </view>
   </view>
 </scroll-view>
-
 <view class="loading-mask" wx:if="{{loading}}">
   <view class="loading-content">
     <view class="loading-spinner"></view>
     <view class="loading-text">{{loadingText}}</view>
   </view>
 </view>
-
-<modal
-  show="{{showExpenseModal}}"
-  title="{{editingExpense ? '编辑支出' : '新增支出'}}"
-  bind:cancel="onExpenseModalCancel"
-  bind:confirm="onExpenseModalConfirm">
+<modal show="{{showExpenseModal}}" title="{{editingExpense ? '编辑支出' : '新增支出'}}" bind:cancel="onExpenseModalCancel" bind:confirm="onExpenseModalConfirm">
   <view class="form-item">
     <view class="form-label">分类</view>
     <view class="category-selector">
-      <view 
-        class="category-option {{expenseForm.category === item.key ? 'selected' : ''}}" 
-        wx:for="{{expenseCategories}}" 
-        wx:key="key"
-        bindtap="onCategorySelect"
-        data-category="{{item.key}}">
+      <view class="category-option {{expenseForm.category === item.key ? 'selected' : ''}}" wx:for="{{expenseCategories}}" wx:key="key" bindtap="onCategorySelect" data-category="{{item.key}}">
         <view>{{item.name}}</view>
       </view>
     </view>

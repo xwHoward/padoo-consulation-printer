@@ -1,5 +1,12 @@
 // composables/usePush.js - 推送消息处理
-import { callFunction, collection } from '../services/cloudbase'
+import { callFunction, collection, getDatabase } from '../services/cloudbase'
+
+/** 身体部位标签映射 */
+const BODY_PART_LABELS = {
+  head: '头部', neck: '颈部', shoulder: '肩部', back: '后背',
+  arm: '手臂', abdomen: '腹部', waist: '腰部',
+  thigh: '大腿', calf: '小腿'
+}
 
 export function usePush() {
   /**
@@ -121,6 +128,79 @@ export function usePush() {
     return `【📋 今日轮牌】\n\n日期：${date}\n\n${lines}\n\n请各位同事确认今日轮牌顺序！`
   }
 
+  /**
+   * 推送到店通知
+   */
+  async function sendArrivalNotification(reservations) {
+    try {
+      if (!reservations || reservations.length === 0) return
+
+      const first = reservations[0]
+      const genderLabel = first.gender === 'male' ? '先生' : '女士'
+      const customerInfo = `${first.customerName}${genderLabel}`
+      const teaCount = reservations.length
+
+      // 查询技师信息用于 @提及
+      const staffRes = await collection('staffs').where({ status: 'active' }).limit(200).get()
+      const staffList = staffRes.data || []
+      const staffMap = new Map(staffList.map(s => [s._id, s]))
+
+      const uniqueTechs = new Map()
+      reservations.forEach(r => {
+        const staff = r.technicianId ? staffMap.get(r.technicianId) : null
+        const key = r.technicianId || r.technicianName
+        if (staff && key && !uniqueTechs.has(key)) {
+          uniqueTechs.set(key, { name: staff.name, phone: staff.phone, wechatWorkId: staff.wechatWorkId })
+        }
+      })
+
+      const technicianMentions = Array.from(uniqueTechs.values())
+        .map(t => formatMention(t))
+        .join(' ')
+
+      // 查询老客历史
+      const historyRemark = await buildCustomerHistoryRemark(first.phone, first.date)
+
+      const message = `【🏃 到店通知】\n\n${customerInfo} 已到店\n项目：${first.project}\n请${technicianMentions}准备上钟，工服、口罩穿戴整齐，准备茶点（${teaCount}份）${historyRemark}`
+
+      await sendWechatMessage(message)
+    } catch (error) {
+      console.error('[Push] sendArrivalNotification failed:', error)
+    }
+  }
+
+  /**
+   * 查询顾客历史备注
+   */
+  async function buildCustomerHistoryRemark(phone, today) {
+    if (!phone) return ''
+    try {
+      const res = await collection('consultation')
+        .where({ phone })
+        .orderBy('date', 'desc')
+        .limit(10)
+        .get()
+
+      const records = (res.data || []).filter(r => r.date < today && !r.isVoided)
+      if (records.length === 0) return ''
+
+      const last = records[0]
+      const diffDays = Math.round(
+        (new Date(today).getTime() - new Date(last.date).getTime()) / (1000 * 60 * 60 * 24)
+      )
+
+      const parts = Object.entries(last.selectedParts || {})
+        .filter(([, active]) => active)
+        .map(([key]) => BODY_PART_LABELS[key] || key)
+        .join('、')
+
+      const partsText = parts || '无'
+      return `\n备注：老客，第${records.length + 1}次消费，上次到店：${diffDays}天前，上次需加强部位：${partsText}，上次服务技师：${last.technician || '无'}`
+    } catch {
+      return ''
+    }
+  }
+
   return {
     getReservationTypeText,
     formatMention,
@@ -128,6 +208,8 @@ export function usePush() {
     sendWechatMessage,
     copyToClipboard,
     buildReservationMessage,
+    sendArrivalNotification,
+    buildCustomerHistoryRemark,
     buildRotationMessage
   }
 }

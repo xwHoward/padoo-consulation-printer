@@ -96,35 +96,66 @@ export function useDataLoader(data, setData) {
     }
   }
 
+  /** 5种快速预约组合的静态配置 */
+  const QUICK_GROUPS_CONFIG = [
+    { key: 'oneFemale',        label: '1位女技师', maleCount: 0, femaleCount: 1 },
+    { key: 'oneMale',          label: '1位男技师', maleCount: 1, femaleCount: 0 },
+    { key: 'twoFemale',        label: '2位女技师', maleCount: 0, femaleCount: 2 },
+    { key: 'oneMaleOneFemale', label: '1男1女',    maleCount: 1, femaleCount: 1 },
+    { key: 'twoMale',          label: '2位男技师', maleCount: 2, femaleCount: 0 },
+  ]
+  
+  /** 将云函数返回的原始时段转换为前端 QuickSlot */
+  function convertRawSlots(rawList) {
+    return (rawList || []).map(s => ({
+      ...s,
+      maleStaff: [],
+      femaleStaff: [...(s.staffNames || [])]
+    }))
+  }
+  
   /**
-   * 准备轮牌列表和快速预约时段
+   * 加载轮牌列表和5种快速预约组合
    */
   async function prepareRotationList(date) {
+    const emptyGroups = QUICK_GROUPS_CONFIG.map(cfg => ({
+      key: cfg.key,
+      label: cfg.label,
+      maleCount: cfg.maleCount,
+      femaleCount: cfg.femaleCount,
+      earliestTime: '',
+      slots: [],
+      emptyReason: '暂无数据'
+    }))
     const empty = {
       rotationList: [],
-      quickReservationSlots: {
-        maleCount: 0, femaleCount: 2,
-        earliestTime: '', slots: []
-      }
+      quickReservationGroups: emptyGroups
     }
     try {
       const result = await callFunction('getAvailableTechnicians', {
         mode: 'rotationQuickSlots',
         date
       })
-
+  
       if (result?.code === 0 && result.data) {
-        const defaultSlots = (result.data.quickReservationSlots?.twoFemale || [])
-          .map(s => ({ ...s, maleStaff: [], femaleStaff: [...(s.staffNames || [])] }))
-
+        const raw = result.data.quickReservationSlots || {}
+        const groups = QUICK_GROUPS_CONFIG.map(cfg => {
+          const rawList = (raw[cfg.key] || [])
+          const slots = convertRawSlots(rawList)
+          return {
+            key: cfg.key,
+            label: cfg.label,
+            maleCount: cfg.maleCount,
+            femaleCount: cfg.femaleCount,
+            earliestTime: slots[0]?.time || '',
+            slots,
+            emptyReason: slots.length === 0 ? '暂无可约时段' : undefined
+          }
+        })
+  
         return {
           rotationList: result.data.rotationItems || [],
-          quickReservationSlots: {
-            maleCount: 0,
-            femaleCount: 2,
-            earliestTime: defaultSlots[0]?.time || '',
-            slots: defaultSlots
-          }
+          quickReservationGroups: groups
         }
       }
     } catch (error) {
@@ -215,7 +246,7 @@ export function useDataLoader(data, setData) {
         s => s.status === 'active' && s.role === 'technician'
       )
 
-      const { rotationList, quickReservationSlots } = rotationResult
+      const { rotationList, quickReservationGroups } = rotationResult
 
       return {
         rooms,
@@ -223,7 +254,7 @@ export function useDataLoader(data, setData) {
         dateSelector,
         rotationList,
         rotationOrder: rotationList.map(item => item._id),
-        quickReservationSlots,
+        quickReservationGroups,
         selectedDate: today
       }
     } catch (error) {
@@ -235,7 +266,7 @@ export function useDataLoader(data, setData) {
   /**
    * 刷新时间轴数据
    */
-  async function loadTimelineData(selectedDate, quickReservationSlots) {
+  async function loadTimelineData(selectedDate) {
     const today = selectedDate || getCurrentDate()
 
     try {
@@ -247,22 +278,12 @@ export function useDataLoader(data, setData) {
       }
 
       const rotationResult = await prepareRotationList(today)
-      const qs = quickReservationSlots || { maleCount: 0, femaleCount: 2 }
-      const { earliestTime, slots, emptyReason } = await loadQuickReservationSlots(
-        today, qs.maleCount, qs.femaleCount
-      )
 
       return {
         dateSelector,
         rotationList: rotationResult.rotationList,
         rotationOrder: rotationResult.rotationList.map(item => item._id),
-        quickReservationSlots: {
-          maleCount: qs.maleCount,
-          femaleCount: qs.femaleCount,
-          earliestTime,
-          slots,
-          emptyReason: emptyReason || ''
-        }
+        quickReservationGroups: rotationResult.quickReservationGroups
       }
     } catch (error) {
       console.error('[DataLoader] loadTimelineData failed:', error)
