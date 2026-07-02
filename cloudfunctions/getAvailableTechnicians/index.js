@@ -15,6 +15,9 @@ cloud.init({
 const db = cloud.database()
 const _ = db.command
 
+// 模块级常量：允许首尾重叠的最大分钟数
+const OVERLAP_TOLERANCE = 10
+
 exports.main = async (event, context) => {
     const { date, currentTime, projectDuration, currentReservationIds, currentConsultationId, mode } = event
 
@@ -43,7 +46,6 @@ exports.main = async (event, context) => {
         }
     }
     try {
-        const OVERLAP_TOLERANCE = 10 // 允许首尾10分钟重叠
         const currentMinutes = parseTimeToMinutes(currentTime)
         const proposedEndTimeMinutes = currentMinutes + projectDuration
 
@@ -1018,14 +1020,17 @@ function calculateOverlapMinutes(proposedStart, proposedEnd, staffConsultations,
 
 /**
  * 预约单重排算法（mode: 'rearrange'）
+ * 策略：按预约时间顺序处理，对每个预约进行前瞻模拟，保证：
  * 1. 点钟预约单始终不变
  * 2. 严格按照性别要求匹配技师
- * 3. 轮钟预约按以下优先级分配：
- *    - 优先级1：重叠度越低越优先（0分钟重叠最优，允许≤10分钟的轻微重叠）
- *    - 优先级2：已分配轮钟数越少越优先（均匀分配，数量相同时再按轮牌位置）
- *    - 优先级3：轮牌队列位置越靠前越优先
- *    - 优先级4：空闲时间越多越优先（均匀化微调）
- *    - 超过10分钟重叠的技师不参与分配
+ * 3. 轮钟分配两阶段：
+ *    - 第一阶段：仅分配零重叠的技师，确保有更好选择时绝不允许重叠
+ *    - 第二阶段：对未分配成功的预约，允许≤10分钟重叠
+ * 4. 同阶段内优先级：
+ *    - 轮钟数少的优先（均匀分配）
+ *    - 轮牌位置靠前的优先（轮牌顺序）
+ *    - 多候选人平分时，通过前瞻模拟选择对未来预约影响最小的技师
+ *    - 空闲时间多的优先（均匀化微调）
  * @param {string} date - 日期（YYYY-MM-DD）
  * @returns {{ code: number, message: string, data: { unchanged: Array, rearranged: Array, unassigned: Array } }}
  */
@@ -1098,11 +1103,10 @@ async function rearrangeReservations(date) {
             return parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime)
         })
         
-        nonClockInReservations.forEach(res => {
-            const proposedStart = parseTimeToMinutes(res.startTime)
-            const proposedEnd = parseTimeToMinutes(res.endTime)
-            
-            // 获取技师性别要求（优先使用新增字段，兼容旧数据）
+        /**
+         * 获取预约的性别要求
+         */
+        function getRequiredGenders(res) {
             const requiredGenders = []
             if (res.requirementType === 'gender') {
                 const assignedStaff = staffMap.get(res.technicianId)
@@ -1118,42 +1122,163 @@ async function rearrangeReservations(date) {
             } else {
                 requiredGenders.push(res.gender)
             }
+            return requiredGenders
+        }
+        
+        /**
+         * 前瞻模拟：计算将当前预约分配给某技师后，对后续预约的影响
+         * 返回：分配后该技师与剩余预约的总重叠分钟数（越小越好）
+         */
+        function calculateFutureImpact(staffId, currentRes, remainingReservations) {
+            const staffConsults = staffConsultationsMap.get(staffId) || []
+            const staffResvs = staffReservationsMap.get(staffId) || []
+            // 模拟分配后的占用时段
+            const simulatedResvs = [...staffResvs, currentRes]
             
-            const availableTechnicians = []
+            let totalFutureOverlap = 0
+            let futureBlockedCount = 0
+            
+            for (const futureRes of remainingReservations) {
+                // 只考虑性别匹配的未来预约
+                const futureGenders = getRequiredGenders(futureRes)
+                const staff = onDutyStaff.find(s => s._id === staffId)
+                if (!staff || !futureGenders.includes(staff.gender)) continue
+                
+                const futureStart = parseTimeToMinutes(futureRes.startTime)
+                const futureEnd = parseTimeToMinutes(futureRes.endTime)
+                const overlap = calculateOverlapMinutes(futureStart, futureEnd, staffConsults, simulatedResvs)
+                
+                if (overlap > OVERLAP_TOLERANCE) {
+                    // 分配后该技师将无法服务这个未来预约
+                    futureBlockedCount++
+                } else if (overlap > 0) {
+                    totalFutureOverlap += overlap
+                }
+            }
+            
+            // 综合影响分：完全阻塞的权重更高
+            return futureBlockedCount * 100 + totalFutureOverlap
+        }
+        
+        /**
+         * 两阶段分配单个预约
+         * 第一阶段：仅考虑零重叠候选人
+         * 第二阶段：允许重叠（仅当第一阶段找不到候选人时）
+         */
+        function assignReservation(res, currentIndex) {
+            const proposedStart = parseTimeToMinutes(res.startTime)
+            const proposedEnd = parseTimeToMinutes(res.endTime)
+            const requiredGenders = getRequiredGenders(res)
+            const remainingReservations = nonClockInReservations.slice(currentIndex + 1)
+            
+            // 收集所有符合性别要求的候选技师
+            const zeroOverlapCandidates = []
+            const overlapCandidates = []
             
             onDutyStaff.forEach(staff => {
-                if (!requiredGenders.includes(staff.gender)) {
-                    return
-                }
+                if (!requiredGenders.includes(staff.gender)) return
                 
                 const staffConsults = staffConsultationsMap.get(staff._id) || []
                 const staffResvs = staffReservationsMap.get(staff._id) || []
-                
-                // 计算重叠度（分钟），而非硬判断可用/不可用
                 const overlapMinutes = calculateOverlapMinutes(proposedStart, proposedEnd, staffConsults, staffResvs)
                 
-                // 允许最多10分钟重叠（首尾交接），超过则不分配
-                if (overlapMinutes > OVERLAP_TOLERANCE) {
-                    return
-                }
+                // 超过容差则完全排除
+                if (overlapMinutes > OVERLAP_TOLERANCE) return
                 
                 const schedule = scheduleMap.get(staff._id)
                 const shift = schedule ? schedule.shift : 'evening'
                 const freeMinutes = calculateFreeMinutes(staff, staffConsults, staffResvs, shift)
                 const position = staffPositionMap.has(staff._id) ? staffPositionMap.get(staff._id) : 999
                 const currentRotationCount = staffRotationCount.get(staff._id) || 0
-
-                availableTechnicians.push({
+                
+                const candidate = {
                     staff,
                     position,
                     rotationCount: currentRotationCount,
                     freeMinutes,
-                    overlapMinutes,
-                    reason: overlapMinutes === 0 ? '空闲' : `重叠${overlapMinutes}分钟`
-                })
+                    overlapMinutes
+                }
+                
+                if (overlapMinutes === 0) {
+                    zeroOverlapCandidates.push(candidate)
+                } else {
+                    overlapCandidates.push(candidate)
+                }
             })
             
-            if (availableTechnicians.length === 0) {
+            // 第一阶段：优先分配零重叠的技师
+            if (zeroOverlapCandidates.length > 0) {
+                // 先按 轮钟数 → 轮牌位置 排序
+                zeroOverlapCandidates.sort((a, b) => {
+                    if (a.rotationCount !== b.rotationCount) return a.rotationCount - b.rotationCount
+                    if (a.position !== b.position) return a.position - b.position
+                    return b.freeMinutes - a.freeMinutes
+                })
+                
+                // 找出排名前列的平分候选人（轮钟数和位置相近的）
+                const best = zeroOverlapCandidates[0]
+                const tiedCandidates = zeroOverlapCandidates.filter(c => 
+                    c.rotationCount === best.rotationCount
+                )
+                
+                let chosen = best
+                
+                // 多个平分候选人且有后续预约时，通过前瞻模拟选择影响最小的
+                if (tiedCandidates.length > 1 && remainingReservations.length > 0) {
+                    let minImpact = Infinity
+                    let minImpactCandidate = best
+                    
+                    for (const candidate of tiedCandidates) {
+                        const impact = calculateFutureImpact(candidate.staff._id, res, remainingReservations)
+                        if (impact < minImpact) {
+                            minImpact = impact
+                            minImpactCandidate = candidate
+                        } else if (impact === minImpact) {
+                            // 影响相同时，轮牌位置靠前的优先
+                            if (candidate.position < minImpactCandidate.position) {
+                                minImpactCandidate = candidate
+                            }
+                        }
+                    }
+                    chosen = minImpactCandidate
+                }
+                
+                return {
+                    tech: chosen,
+                    reason: `零重叠，轮牌位${chosen.position + 1}，轮钟数${chosen.rotationCount}，空闲${chosen.freeMinutes}分钟`
+                }
+            }
+            
+            // 第二阶段：无零重叠候选人，允许轻微重叠
+            if (overlapCandidates.length > 0) {
+                overlapCandidates.sort((a, b) => {
+                    // 重叠度越小越优先
+                    if (a.overlapMinutes !== b.overlapMinutes) return a.overlapMinutes - b.overlapMinutes
+                    // 轮钟数少的优先
+                    if (a.rotationCount !== b.rotationCount) return a.rotationCount - b.rotationCount
+                    // 轮牌位置靠前的优先
+                    if (a.position !== b.position) return a.position - b.position
+                    // 空闲时间多的优先
+                    return b.freeMinutes - a.freeMinutes
+                })
+                
+                const chosen = overlapCandidates[0]
+                return {
+                    tech: chosen,
+                    reason: `重叠${chosen.overlapMinutes}分钟，轮牌位${chosen.position + 1}，轮钟数${chosen.rotationCount}，空闲${chosen.freeMinutes}分钟`
+                }
+            }
+            
+            // 无候选人
+            return null
+        }
+        
+        // 执行分配
+        nonClockInReservations.forEach((res, index) => {
+            const assignment = assignReservation(res, index)
+            
+            if (!assignment) {
+                const requiredGenders = getRequiredGenders(res)
                 result.unassigned.push({
                     ...res,
                     originalTechnician: res.technicianName || '未分配',
@@ -1163,32 +1288,13 @@ async function rearrangeReservations(date) {
                 return
             }
             
-            // 排序优先级：重叠度 → 已分配轮钟数 → 轮牌位置 → 空闲时间
-            availableTechnicians.sort((a, b) => {
-                // 优先级1：重叠度，0重叠的绝对优先
-                if (a.overlapMinutes !== b.overlapMinutes) {
-                    return a.overlapMinutes - b.overlapMinutes
-                }
-                // 优先级2：已分配轮钟数少的优先（均匀分配）
-                if (a.rotationCount !== b.rotationCount) {
-                    return a.rotationCount - b.rotationCount
-                }
-                // 优先级3：轮牌队列位置
-                if (a.position !== b.position) {
-                    return a.position - b.position
-                }
-                // 优先级4：空闲时间多的优先
-                return b.freeMinutes - a.freeMinutes
-            })
-            
-            const bestTech = availableTechnicians[0]
-
+            const bestTech = assignment.tech
             result.rearranged.push({
                 ...res,
                 originalTechnician: res.technicianName || '未分配',
                 newTechnician: bestTech.staff.name,
                 newTechnicianId: bestTech.staff._id,
-                reason: `轮牌位${bestTech.position + 1}，重叠${bestTech.overlapMinutes}分钟，轮钟数${bestTech.rotationCount}，空闲${bestTech.freeMinutes}分钟`
+                reason: assignment.reason
             })
 
             // 更新该技师的占用时段（供后续预约冲突检测使用）

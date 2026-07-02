@@ -197,13 +197,25 @@ describe('重排算法测试', () => {
     mockCloud.database.mockReturnValue({
       collection: jest.fn(col => ({
         where: jest.fn(() => ({
+          field: jest.fn(() => ({
+            limit: jest.fn(function() { return this }).mockReturnThis(),
+            get: jest.fn().mockResolvedValue({
+              data: col === 'schedule' ? schedule :
+                    col === 'consultation_records' ? consultations :
+                    col === 'reservations' ? reservations :
+                    col === 'rotation_queue' ? rotationQueue :
+                    col === 'staff' ? staff : []
+            })
+          })),
+          limit: jest.fn(function() { return this }).mockReturnThis(),
           get: jest.fn().mockResolvedValue({
             data: col === 'schedule' ? schedule :
                   col === 'consultation_records' ? consultations :
                   col === 'reservations' ? reservations :
                   col === 'rotation_queue' ? rotationQueue :
                   col === 'staff' ? staff : []
-          })
+          }),
+          update: jest.fn().mockResolvedValue({})
         }))
       })),
       command: {}
@@ -374,5 +386,173 @@ describe('重排算法测试', () => {
     expect(result.code).toBe(0)
     expect(result.data.unassigned).toHaveLength(1)
     expect(result.data.unassigned[0].newTechnician).toBeNull()
+  })
+})
+
+describe('前瞻模拟与重叠最小化测试', () => {
+  const mockStaff = [
+    { _id: 'techA', name: '技师A', gender: 'female', status: 'active' },
+    { _id: 'techB', name: '技师B', gender: 'female', status: 'active' },
+    { _id: 'techC', name: '技师C', gender: 'male', status: 'active' }
+  ]
+
+  const mockSchedule = [
+    { staffId: 'techA', date: '2026-05-06', shift: 'evening' },
+    { staffId: 'techB', date: '2026-05-06', shift: 'evening' },
+    { staffId: 'techC', date: '2026-05-06', shift: 'evening' }
+  ]
+
+  const mockRotation = [{
+    staffList: [
+      { staffId: 'techA', position: 0 },
+      { staffId: 'techB', position: 1 },
+      { staffId: 'techC', position: 2 }
+    ]
+  }]
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    jest.resetModules()
+  })
+
+  const setupMock = (schedule, consultations, reservations, rotationQueue, staff) => {
+    mockCloud.database.mockReturnValue({
+      collection: jest.fn(col => ({
+        where: jest.fn(() => ({
+          field: jest.fn(() => ({
+            limit: jest.fn(function() { return this }).mockReturnThis(),
+            get: jest.fn().mockResolvedValue({
+              data: col === 'schedule' ? schedule :
+                    col === 'consultation_records' ? consultations :
+                    col === 'reservations' ? reservations :
+                    col === 'rotation_queue' ? rotationQueue :
+                    col === 'staff' ? staff : []
+            })
+          })),
+          limit: jest.fn(function() { return this }).mockReturnThis(),
+          get: jest.fn().mockResolvedValue({
+            data: col === 'schedule' ? schedule :
+                  col === 'consultation_records' ? consultations :
+                  col === 'reservations' ? reservations :
+                  col === 'rotation_queue' ? rotationQueue :
+                  col === 'staff' ? staff : []
+          }),
+          update: jest.fn().mockResolvedValue({})
+        }))
+      })),
+      command: {}
+    })
+  }
+
+  test('TC7.1: 前瞻模拟避免前排技师承担重叠 - 两个相邻预约分配给不同技师', async () => {
+    // 场景：R1(14:00-15:30) 和 R2(15:25-16:55) 有5分钟重叠
+    // 两个女技师A(pos0)和B(pos1)都有0重叠、0轮钟数
+    // 如果没有前瞻，A（位置靠前）会拿到R1，然后R2时A有5分钟重叠，B有0重叠→B拿到R2
+    // 期望：A拿R1，B拿R2（无重叠分配）
+    const reservations = [
+      { _id: 'r1', date: '2026-05-06', startTime: '14:00', endTime: '15:30', gender: 'female', isClockIn: false, status: 'active' },
+      { _id: 'r2', date: '2026-05-06', startTime: '15:25', endTime: '16:55', gender: 'female', isClockIn: false, status: 'active' }
+    ]
+
+    setupMock(mockSchedule, [], reservations, mockRotation, mockStaff)
+
+    const { main } = require('./index')
+    const result = await main({ date: '2026-05-06', mode: 'rearrange' })
+
+    expect(result.code).toBe(0)
+    expect(result.data.rearranged).toHaveLength(2)
+    // R1分配给A（轮牌靠前），R2分配给B（避免A产生重叠）
+    const r1Assignment = result.data.rearranged.find(r => r._id === 'r1')
+    const r2Assignment = result.data.rearranged.find(r => r._id === 'r2')
+    expect(r1Assignment.newTechnician).not.toBe(r2Assignment.newTechnician)
+  })
+
+  test('TC7.2: 前瞻模拟 - 选择对未来影响最小的技师', async () => {
+    // 场景：3个预约，R1(14:00-15:30), R2(14:00-15:30), R3(15:25-16:55)
+    // A(pos0)和B(pos1)都是女性
+    // R1和R2同时间→分给不同人，R3与R1/R2有5分钟重叠
+    // 前瞻应该让R3分配时仍有零重叠选择
+    const reservations = [
+      { _id: 'r1', date: '2026-05-06', startTime: '14:00', endTime: '15:30', gender: 'female', isClockIn: false, status: 'active' },
+      { _id: 'r2', date: '2026-05-06', startTime: '14:00', endTime: '15:30', gender: 'female', isClockIn: false, status: 'active' },
+      { _id: 'r3', date: '2026-05-06', startTime: '17:00', endTime: '18:30', gender: 'female', isClockIn: false, status: 'active' }
+    ]
+
+    setupMock(mockSchedule, [], reservations, mockRotation, mockStaff)
+
+    const { main } = require('./index')
+    const result = await main({ date: '2026-05-06', mode: 'rearrange' })
+
+    expect(result.code).toBe(0)
+    expect(result.data.rearranged).toHaveLength(3)
+    // R3（17:00-18:30）与R1/R2（14:00-15:30）无重叠，应该分配成功
+    const r3Assignment = result.data.rearranged.find(r => r._id === 'r3')
+    expect(r3Assignment.newTechnician).toBeTruthy()
+    expect(r3Assignment.reason).toContain('零重叠')
+  })
+
+  test('TC7.3: 两阶段分配 - 无零重叠时才允许重叠', async () => {
+    // 场景：只有2个女技师，3个预约全部在同一时段附近
+    // R1(14:00-15:30), R2(14:00-15:30), R3(15:25-16:55)
+    // R1→A, R2→B（A被占满）, R3只能选有重叠的（A重叠5min，B重叠5min）
+    const reservations = [
+      { _id: 'r1', date: '2026-05-06', startTime: '14:00', endTime: '15:30', gender: 'female', isClockIn: false, status: 'active' },
+      { _id: 'r2', date: '2026-05-06', startTime: '14:00', endTime: '15:30', gender: 'female', isClockIn: false, status: 'active' },
+      { _id: 'r3', date: '2026-05-06', startTime: '15:25', endTime: '16:55', gender: 'female', isClockIn: false, status: 'active' }
+    ]
+
+    setupMock(mockSchedule, [], reservations, mockRotation, mockStaff)
+
+    const { main } = require('./index')
+    const result = await main({ date: '2026-05-06', mode: 'rearrange' })
+
+    expect(result.code).toBe(0)
+    // R3只能选有重叠的候选人，应该进入第二阶段但仍分配成功
+    expect(result.data.rearranged).toHaveLength(3)
+    expect(result.data.unassigned).toHaveLength(0)
+    const r3 = result.data.rearranged.find(r => r._id === 'r3')
+    expect(r3.reason).toContain('重叠')
+  })
+
+  test('TC7.4: 轮钟均匀分配 - 轮钟数少的优先', async () => {
+    // 场景：A已经有1个轮钟预约（点钟占位），B没有
+    // 新来的轮钟预约应该优先分配给B
+    const reservations = [
+      { _id: 'clock-a', date: '2026-05-06', startTime: '14:00', endTime: '15:00', technicianName: '技师A', technicianId: 'techA', gender: 'female', isClockIn: true, status: 'active' },
+      { _id: 'r1', date: '2026-05-06', startTime: '16:00', endTime: '17:30', gender: 'female', isClockIn: false, status: 'active' },
+      { _id: 'r2', date: '2026-05-06', startTime: '18:00', endTime: '19:30', gender: 'female', isClockIn: false, status: 'active' }
+    ]
+
+    setupMock(mockSchedule, [], reservations, mockRotation, mockStaff)
+
+    const { main } = require('./index')
+    const result = await main({ date: '2026-05-06', mode: 'rearrange' })
+
+    expect(result.code).toBe(0)
+    // 两个轮钟预约应该均匀分配：一个给A一个给B（不会全给A）
+    const rearranged = result.data.rearranged
+    expect(rearranged).toHaveLength(2)
+    const assignedToA = rearranged.filter(r => r.newTechnician === '技师A').length
+    const assignedToB = rearranged.filter(r => r.newTechnician === '技师B').length
+    expect(assignedToA).toBe(1)
+    expect(assignedToB).toBe(1)
+  })
+
+  test('TC7.5: 超过10分钟重叠的技师被排除', async () => {
+    // 场景：A有点钟14:00-15:30，轮钟预约14:00-15:30（完全重叠60分钟>10）
+    // 应该分配给B
+    const reservations = [
+      { _id: 'clock-a', date: '2026-05-06', startTime: '14:00', endTime: '15:30', technicianName: '技师A', technicianId: 'techA', gender: 'female', isClockIn: true, status: 'active' },
+      { _id: 'r1', date: '2026-05-06', startTime: '14:00', endTime: '15:30', gender: 'female', isClockIn: false, status: 'active' }
+    ]
+
+    setupMock(mockSchedule, [], reservations, mockRotation, mockStaff)
+
+    const { main } = require('./index')
+    const result = await main({ date: '2026-05-06', mode: 'rearrange' })
+
+    expect(result.code).toBe(0)
+    expect(result.data.rearranged).toHaveLength(1)
+    expect(result.data.rearranged[0].newTechnician).toBe('技师B')
   })
 })

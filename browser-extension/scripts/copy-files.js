@@ -35,6 +35,16 @@ function copyRecursive(src, dest) {
 
 console.log('Copying extension files to dist/...')
 
+// Clean up Vite ES module export from background.js (MV2 doesn't support ES modules)
+const bgPath = path.resolve(DIST_DIR, 'background.js')
+if (fs.existsSync(bgPath)) {
+  let content = fs.readFileSync(bgPath, 'utf-8')
+  // Remove trailing export statement (e.g., "export{I as _};")
+  content = content.replace(/export\{[^}]+\};?\s*$/g, '')
+  fs.writeFileSync(bgPath, content, 'utf-8')
+  console.log('  Cleaned: removed ES module export from background.js')
+}
+
 for (const file of copyFiles) {
   const src = path.resolve(SRC_DIR, file)
   const dest = path.resolve(DIST_DIR, path.basename(file))

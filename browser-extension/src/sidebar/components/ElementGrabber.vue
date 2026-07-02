@@ -110,15 +110,15 @@ function clearResults() {
     }
 
     &:focus {
-      border-color: #4a6cf7;
-      box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.1);
+      border-color: #FF6B00;
+      box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.1);
     }
   }
 
   .grabber-btn {
     padding: 7px 16px;
     border: none;
-    background: #4a6cf7;
+    background: #FF6B00;
     color: #fff;
     font-size: 13px;
     font-weight: 500;
@@ -129,11 +129,11 @@ function clearResults() {
     flex-shrink: 0;
 
     &:hover:not(:disabled) {
-      background: #3b5de7;
+      background: #CC5C00;
     }
 
     &:disabled {
-      background: #a0afef;
+      background: rgba(255, 107, 0, 0.35);
       cursor: not-allowed;
     }
   }
@@ -202,8 +202,8 @@ function clearResults() {
       flex-shrink: 0;
       width: 18px;
       height: 18px;
-      background: #eef1ff;
-      color: #4a6cf7;
+      background: rgba(255, 107, 0, 0.08);
+      color: #FF6B00;
       font-size: 11px;
       font-weight: 600;
       border-radius: 50%;
