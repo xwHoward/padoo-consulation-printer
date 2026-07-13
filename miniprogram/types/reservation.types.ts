@@ -9,6 +9,7 @@ export interface ReserveForm {
 	customerName: string;
 	gender: 'male' | 'female';
 	project: string;
+	projects: string[];
 	phone: string;
 	requirementType: 'specific' | 'gender';
 	selectedTechnicians: Array<{

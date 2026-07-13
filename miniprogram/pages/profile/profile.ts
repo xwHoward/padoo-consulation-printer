@@ -2,13 +2,18 @@ import {
 	calculateEndTime,
 	DEFAULT_PUSH_MODAL,
 	DEFAULT_RESERVE_FORM,
-	getNextHalfHourTime,
+	getNextFiveMinuteTime,
 	ReservationService,
 } from '../../services/reservation.service';
 import type { PushModalState, ReserveForm } from '../../types/reservation.types';
 import { checkLogin } from '../../utils/auth';
 import { cloudDb, Collections } from '../../utils/cloud-db';
 import { earlierThan, getCurrentDate, laterOrEqualTo } from '../../utils/util';
+import {
+	buildProjectCommissionMap,
+	computeConsultationCommission,
+	deduplicateOvertimeByDate,
+} from '../../utils/salary';
 
 interface Room {
 	_id: string
@@ -224,46 +229,35 @@ Page({
 			});
 
 			const allProjects = await app.getProjects();
-			const projectCommissionMap: Record<string, number> = {};
-			allProjects.forEach(project => {
-				projectCommissionMap[project.name] = project.commission || 0;
-			});
+			const commissionMap = buildProjectCommissionMap(allProjects);
 
 			const projectStats: Record<string, { count: number; amount: number }> = {};
 			let totalAmount = 0;
 			let totalCommission = 0;
 			let clockInCount = 0;
-			let overtimeCount = 0;
 			let guashaCount = 0;
+			let extraTimeCount = 0;
 
 			records.forEach(record => {
+				const result = computeConsultationCommission(record, commissionMap);
+
 				const project = record.project;
 				if (!projectStats[project]) {
 					projectStats[project] = { count: 0, amount: 0 };
 				}
 				projectStats[project].count += 1;
+				projectStats[project].amount += result.total;
 
-				let commission = projectCommissionMap[project] || 0;
-				if (record.isClockIn) {
-					clockInCount += 1;
-					commission += 5;
-				}
+				if (record.isClockIn) clockInCount += 1;
+				if (record.guasha) guashaCount += 1;
+				if (record.extraTime) extraTimeCount += record.extraTime;
 
-				if (record.overtime) {
-					overtimeCount += record.overtime;
-					const overtimeCommission = record.overtime * 7.5;
-					commission += overtimeCommission;
-				}
-
-				if (record.guasha) {
-					guashaCount += 1;
-					totalCommission += 10;
-				}
-
-				projectStats[project].amount += commission;
-				totalCommission += commission;
+				totalCommission += result.total;
 				totalAmount += record.settlement?.totalAmount || 0;
 			});
+
+			const overtime = deduplicateOvertimeByDate(records);
+			const overtimeCount = Math.round(overtime * 2); // 按半小时算 → 半小时数
 
 			if (guashaCount > 0) {
 				projectStats['刮痧'] = { count: guashaCount, amount: guashaCount * 10 };
@@ -351,7 +345,7 @@ Page({
 			return;
 		}
 
-		const startTime = getNextHalfHourTime();
+		const startTime = getNextFiveMinuteTime();
 		this.setData({
 			showReservationModal: true,
 			reserveForm: {
@@ -487,7 +481,7 @@ Page({
 		const reserveForm = { ...this.data.reserveForm };
 		const currentCount = reserveForm.genderRequirement[gender as 'male' | 'female'];
 
-		if (action === 'increase' && currentCount < 2) {
+		if (action === 'increase') {
 			reserveForm.genderRequirement[gender as 'male' | 'female'] = currentCount + 1;
 		} else if (action === 'decrease' && currentCount > 0) {
 			reserveForm.genderRequirement[gender as 'male' | 'female'] = currentCount - 1;
@@ -498,9 +492,9 @@ Page({
 	},
 
 	/** 确认预约 */
-	async confirmReservation(e: WechatMiniprogram.CustomEvent) {
-		const { reserveForm, availableMaleCount, availableFemaleCount } = this.data;
-		const validation = ReservationService.validateForm(reserveForm, reserveForm.requirementType, availableMaleCount, availableFemaleCount);
+	async confirmReservation(_e: WechatMiniprogram.CustomEvent) {
+		const { reserveForm } = this.data;
+		const validation = ReservationService.validateForm(reserveForm, reserveForm.requirementType);
 		if (!validation.valid) {
 			wx.showToast({ title: validation.message || '验证失败', icon: 'none' });
 			return;

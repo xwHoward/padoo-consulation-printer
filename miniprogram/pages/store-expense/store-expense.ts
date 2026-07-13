@@ -1,6 +1,14 @@
 import { cloudDb, Collections } from '../../utils/cloud-db';
 import { loadingService, LockKeys } from '../../utils/loading-service';
 import { formatDate } from '../../utils/util';
+import {
+	buildProjectCommissionMap,
+	computeConsultationCommission,
+	deduplicateOvertimeByDate,
+	OVERTIME_RATE,
+	GUASHA_BONUS,
+	formatMonth,
+} from '../../utils/salary';
 
 const app = getApp<IAppOption>();
 
@@ -12,9 +20,6 @@ const EXPENSE_CATEGORIES: { key: ExpenseCategory; name: string; }[] = [
     { key: 'maintenance', name: '维修费' },
     { key: 'other', name: '其他' }
 ];
-
-const OVERTIME_RATE = 7.5;
-const EXTRA_TIME_RATE = 25;
 
 
 
@@ -110,7 +115,7 @@ Page({
 
     async loadExpenseListByMonth() {
         const { selectedYear, selectedMonth } = this.data.monthSelector;
-        const monthStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+        const monthStr = formatMonth(selectedYear, selectedMonth);
 
         const expenses = await cloudDb.find<StoreExpense>(Collections.STORE_EXPENSE, {
             date: cloudDb.getRegExp({ regexp: `^${monthStr}` })
@@ -305,15 +310,11 @@ Page({
 
     async calculateSalaries() {
         const { selectedYear, selectedMonth } = this.data.monthSelector;
-        const monthStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+        const monthStr = formatMonth(selectedYear, selectedMonth);
 
         const staffList = await app.getActiveStaffs();
         const allProjects = await app.getProjects();
-
-        const projectCommissionMap: Record<string, number> = {};
-        allProjects.forEach(p => {
-            projectCommissionMap[p.name] = p.commission || 0;
-        });
+        const commissionMap = buildProjectCommissionMap(allProjects);
 
         const monthStart = new Date(selectedYear, selectedMonth - 1, 1);
         const monthEnd = new Date(selectedYear, selectedMonth, 0);
@@ -408,56 +409,42 @@ Page({
                     }
                 }
             }
-            // 上班天数 = 当月天数 - 请假天数 - 休息天数
             const workDays = daysInMonth - leaveDays - offDays;
 
             let commission = 0;
-            let extraTime = 0; // 加钟
+            let extraTime = 0;
             let guashaCount = 0;
             let projectCount = 0;
-            let clockIn = 0; // 点钟
-            // 按日期记录每天的最大单笔加班，避免同一天多个加班单重复累加
-            const overtimeByDate = new Map<string, number>();
+            let clockIn = 0;
+
             staffConsultations.forEach(c => {
-                let projectCommission = projectCommissionMap[c.project] || 0;
+                const result = computeConsultationCommission(c, commissionMap);
                 projectCount++;
 
-                if (c.overtime && c.overtime > 0) {
-                    const current = overtimeByDate.get(c.date) || 0;
-                    overtimeByDate.set(c.date, Math.max(current, c.overtime));
-                }
-                if (c.isClockIn) {
-                    clockIn += 1;
-                    projectCommission += 5;
-                }
+                if (c.isClockIn) clockIn += 1;
+                if (c.guasha) { guashaCount++; projectCount++; }
                 if (c.extraTime && c.extraTime > 0) {
                     extraTime += c.extraTime;
-                    projectCommission += c.extraTime * EXTRA_TIME_RATE;
                     projectCount += c.extraTime;
                 }
 
-                if (c.guasha) {
-                    guashaCount++;
-                    projectCount++;
-                    projectCommission += 10;
-                }
-                commission += projectCommission;
+                // 排除加班和刮痧（totalSalary 中单独按去重后计算，避免重复累加）
+                commission += result.total - result.overtimeHours * OVERTIME_RATE - result.guashaBonus;
             });
-            // 同一天多个加班单只取最大单笔，不同日期之间正常累加
-            const overtime = Array.from(overtimeByDate.values()).reduce((sum, v) => sum + v, 0);
+
+            const overtime = deduplicateOvertimeByDate(staffConsultations);
 
             let mealAllowance = 0;
             let attendanceBonus = 0;
 
             if (workDays > 0) {
-                // 餐补+全勤 = 上班天数 * 600 / 26 + 200
                 mealAllowance = Math.round(workDays * 600 / 26);
                 attendanceBonus = 200;
             }
 
             const salesCommission = Math.round((salesByStaff[staff._id] || 0) * 0.04);
 
-            const totalSalary = commission + overtime * OVERTIME_RATE + guashaCount * 10 + attendanceBonus + mealAllowance + salesCommission;
+            const totalSalary = commission + overtime * OVERTIME_RATE + guashaCount * GUASHA_BONUS + attendanceBonus + mealAllowance + salesCommission;
 
             salaryList.push({
                 technicianId: staff._id,
