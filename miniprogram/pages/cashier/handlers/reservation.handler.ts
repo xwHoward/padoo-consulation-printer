@@ -624,48 +624,70 @@ export class ReservationHandler {
 			const oldGroupKey = originalRecord?.groupKey || dbRecord?.groupKey;
 
 			if (oldGroupKey) {
-				await ReservationService.cancelGroupReservations(oldGroupKey);
+				// 有分组：重新分配技师后用 updateGroupReservations 直接更新现有记录
+				const {male, female} = reserveForm.genderRequirement;
+				const allocateRes = await ReservationService.allocateTechniciansByGender(
+					reserveForm.date,
+					reserveForm.startTime,
+					projectNames,
+					male,
+					female
+				);
+				if (!allocateRes.success || !allocateRes.technicians) {
+					throw new Error(allocateRes.message || '分配技师失败');
+				}
+
+				const updateRes = await ReservationService.updateGroupReservations(
+					oldGroupKey,
+					reserveForm,
+					resolvedProjects,
+					allocateRes.technicians
+				);
+
+				if (!updateRes.success) {
+					throw new Error(updateRes.message || '更新失败');
+				}
+				wx.showToast({title: `已更新${ updateRes.updatedCount }条预约`, icon: 'success'});
 			} else {
+				// 无分组旧记录：取消旧记录，创建新记录
 				await cloudDb.updateById(Collections.RESERVATIONS, reserveForm._id, {
 					status: 'cancelled',
 					cancelledAt: new Date().toISOString()
 				});
+				await this.createGenderReservationRecords(reserveForm, projectNames);
+				wx.showToast({title: '保存成功', icon: 'success'});
 			}
-
-			await this.createGenderReservationRecords(reserveForm, projectNames);
-			wx.showToast({title: '保存成功', icon: 'success'});
 			this.closeReserveModal();
 			await this.triggerRearrange(reserveForm.date);
 			await this.page.loadTimelineData();
 		} else {
+			// 点钟模式
 			const originalRecord = this.page.data.originalReservation;
 			const originalGroupKey = originalRecord?.groupKey;
 
 			if (originalGroupKey) {
-				await ReservationService.cancelGroupReservations(originalGroupKey);
-
-				const groupKey = reserveForm.selectedTechnicians.length > 1 ? originalGroupKey : undefined;
-				const createResult = await ReservationService.createTimeSeriesReservations(
+				// 有分组：直接更新现有记录
+				const updateRes = await ReservationService.updateGroupReservations(
+					originalGroupKey,
 					reserveForm,
-					reserveForm.selectedTechnicians,
 					resolvedProjects,
-					groupKey
+					reserveForm.selectedTechnicians
 				);
 
-				wx.showToast({
-					title: createResult.successCount === reserveForm.selectedTechnicians.length
-						? '保存成功'
-						: `成功更新${ createResult.successCount }/${ reserveForm.selectedTechnicians.length }条`,
-					icon: 'success'
-				});
+				if (!updateRes.success) {
+					throw new Error(updateRes.message || '更新失败');
+				}
+				wx.showToast({title: `已更新${ updateRes.updatedCount }条预约`, icon: 'success'});
 				this.closeReserveModal();
 				await this.triggerRearrange(reserveForm.date);
 				await this.page.loadTimelineData();
 			} else {
+				// 无分组单条记录
 				const dbRecord = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, reserveForm._id);
 				const effectiveGroupKey = originalRecord?.groupKey || dbRecord?.groupKey;
 
 				if (effectiveGroupKey) {
+					// 数据库中有 groupKey（旧数据可能有）：同步更新所有组成员基本信息
 					const groupMembers = await ReservationService.getGroupReservations(effectiveGroupKey);
 					for (const member of groupMembers) {
 						await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, member._id, {

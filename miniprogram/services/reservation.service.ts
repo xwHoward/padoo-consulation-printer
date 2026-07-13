@@ -497,6 +497,137 @@ export class ReservationService {
 	}
 
 	/**
+	 * 物理删除预约记录（仅当被分组编辑替换时使用）
+	 */
+	static async removeReservation(reserveId: string): Promise<boolean> {
+		return cloudDb.deleteById(Collections.RESERVATIONS, reserveId);
+	}
+
+	/**
+	 * 更新分组预约（直接更新现有记录，不取消重建）
+	 *
+	 * 策略：获取旧组成员 → 计算新时间序列 → 按位置匹配更新
+	 * - 匹配成功的记录直接 updateById
+	 * - 多余的旧记录物理删除（已被替换）
+	 * - 不足时新建记录
+	 */
+	static async updateGroupReservations(
+		oldGroupKey: string,
+		form: ReserveForm,
+		projectNames: string[],
+		newTechnicians: Array<{_id: string; name: string; isClockIn: boolean;}>
+	): Promise<{success: boolean; updatedCount: number; createdCount: number; removedCount: number; message?: string;}> {
+		try {
+			const oldMembers = await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, {
+				groupKey: oldGroupKey,
+				status: 'active',
+			});
+
+			const resolvedProjects = projectNames.length > 0 ? projectNames : ['待定'];
+			const durations = resolvedProjects.map(p => ({name: p, dur: parseProjectDuration(p) || 90}));
+			durations.sort((a, b) => b.dur - a.dur);
+			const projectStr = resolvedProjects.join('&');
+			const {male, female} = form.genderRequirement;
+
+			// 构建新记录数据（不插入，仅用于匹配）
+			const [baseH, baseM] = form.startTime.split(':').map(Number);
+			const baseTotal = baseH * 60 + baseM;
+
+			type NewRecordData = {techIdx: number; durIdx: number; startTime: string; endTime: string; tech: typeof newTechnicians[0];};
+			const newRecords: NewRecordData[] = [];
+			for (let ti = 0; ti < newTechnicians.length; ti++) {
+				let currentStart = baseTotal;
+				for (let di = 0; di < durations.length; di++) {
+					const currentEnd = currentStart + durations[di].dur;
+					const endH = Math.floor(currentEnd / 60);
+					const endM = currentEnd % 60;
+					newRecords.push({
+						techIdx: ti,
+						durIdx: di,
+						startTime: `${ String(Math.floor(currentStart / 60)).padStart(2, '0') }:${ String(currentStart % 60).padStart(2, '0') }`,
+						endTime: `${ String(endH).padStart(2, '0') }:${ String(endM).padStart(2, '0') }`,
+						tech: newTechnicians[ti],
+					});
+					currentStart = currentEnd;
+				}
+			}
+
+			let updatedCount = 0;
+			let createdCount = 0;
+			let removedCount = 0;
+
+			// 对每个新记录，尝试匹配旧记录
+			const matchedOldIds = new Set<string>();
+			for (let i = 0; i < newRecords.length; i++) {
+				const nr = newRecords[i];
+
+				// 优先按技师匹配（同一技师且同日期的记录）
+				const matchedOld = oldMembers.find(m =>
+					!matchedOldIds.has(m._id) && m.technicianId === nr.tech._id
+				);
+
+				if (matchedOld) {
+					matchedOldIds.add(matchedOld._id);
+					await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, matchedOld._id, {
+						date: form.date,
+						customerName: form.customerName || '',
+						gender: form.gender,
+						phone: form.phone,
+						project: projectStr,
+						technicianId: nr.tech._id,
+						technicianName: nr.tech.name,
+						startTime: nr.startTime,
+						endTime: nr.endTime,
+						isClockIn: nr.tech.isClockIn || false,
+						requirementType: form.requirementType,
+						genderRequirement: form.requirementType === 'gender' ? (male > 0 ? 'male' : 'female') : undefined,
+						requiredMaleCount: male,
+						requiredFemaleCount: female,
+						isRenewal: form.isRenewal || false,
+						groupKey: oldGroupKey,
+					});
+					updatedCount++;
+				} else {
+					// 找不到匹配，创建新记录
+					const record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'> = {
+						date: form.date,
+						customerName: form.customerName || '',
+						gender: form.gender,
+						phone: form.phone,
+						project: projectStr,
+						technicianId: nr.tech._id,
+						technicianName: nr.tech.name,
+						startTime: nr.startTime,
+						endTime: nr.endTime,
+						isClockIn: nr.tech.isClockIn || false,
+						status: 'active',
+						requirementType: form.requirementType,
+						genderRequirement: form.requirementType === 'gender' ? (male > 0 ? 'male' : 'female') : undefined,
+						requiredMaleCount: male,
+						requiredFemaleCount: female,
+						isRenewal: form.isRenewal || false,
+						groupKey: oldGroupKey,
+					};
+					await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
+					createdCount++;
+				}
+			}
+
+			// 删除未被匹配的旧记录
+			for (const old of oldMembers) {
+				if (!matchedOldIds.has(old._id)) {
+					await cloudDb.deleteById(Collections.RESERVATIONS, old._id);
+					removedCount++;
+				}
+			}
+
+			return {success: true, updatedCount, createdCount, removedCount};
+		} catch (error) {
+			return {success: false, message: '更新分组失败', updatedCount: 0, createdCount: 0, removedCount: 0};
+		}
+	}
+
+	/**
 	 * 按性别需求分配技师（轮钟模式）
 	 */
 	static async allocateTechniciansByGender(
