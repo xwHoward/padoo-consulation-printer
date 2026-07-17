@@ -28,11 +28,6 @@ type GetAvailableTechniciansResult = CloudFunctionResult<StaffAvailability[]>;
 type MatchCustomerResult = CloudFunctionResult<CustomerRecord>;
 
 /**
- * 发送消息结果 - sendWechatMessage 云函数返回
- */
-type SendWechatMessageResult = CloudFunctionResult<void>;
-
-/**
  * 获取所有数据结果 - getAll 云函数返回
  */
 type GetAllResult<T> = CloudFunctionResult<T[]>;

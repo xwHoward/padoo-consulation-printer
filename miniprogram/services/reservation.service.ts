@@ -5,7 +5,7 @@
 import {cloudDb, Collections} from '../utils/cloud-db';
 import {getCurrentDate, parseProjectDuration} from '../utils/util';
 import {hasButtonPermission} from '../utils/permission';
-import type {ReserveForm, PushModalState} from '../types/reservation.types';
+import type {ReserveForm} from '../types/reservation.types';
 
 const app = getApp<IAppOption>();
 
@@ -52,16 +52,6 @@ export const DEFAULT_RESERVE_FORM: ReserveForm = {
 	technicianId: '',
 	technicianName: '',
 	isRenewal: false,
-};
-
-/** 默认推送弹窗状态 */
-export const DEFAULT_PUSH_MODAL: PushModalState = {
-	show: false,
-	loading: false,
-	type: 'create',
-	message: '',
-	mentions: [],
-	reservationData: null,
 };
 
 /**

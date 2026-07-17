@@ -80,37 +80,11 @@ Page({
         // 顾客匹配
         matchedCustomer: null as CustomerRecord | null,
         matchedCustomerApplied: false,
-        // 预约推送确认弹窗
-        pushModal: {
-            show: false,
-            loading: false,
-            type: 'create' as 'create' | 'cancel' | 'edit',
-            message: '',
-            mentions: [] as Array<{ _id: string; name: string; phone: string; wechatWorkId?: string }>,
-            reservationData: null as {
-                original?: ReservationRecord;
-                updated?: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>;
-                customerName: string;
-                gender: 'male' | 'female';
-                date: string;
-                startTime: string;
-                endTime: string;
-                project: string;
-                technicians: Array<{ _id: string; name: string; phone: string; wechatWorkId: string; isClockIn: boolean }>;
-            } | null
-        },
         pushModalLocked: false,
         // 轮牌推送确认弹窗
         rotationPushModal: {
             show: false,
             loading: false
-        },
-        arrivalConfirmModal: {
-            show: false,
-            reserveId: '',
-            customerName: '',
-            project: '',
-            technicianName: ''
         },
         // 快速预约时段（5种固定组合）
         quickReservationGroups: [] as QuickReservationGroup[],
@@ -175,7 +149,7 @@ Page({
     initHandlers() {
         pushHandler = new PushHandler(this as CashierPage);
         reservationHandler = new ReservationHandler(this as CashierPage);
-        settlementHandler = new SettlementHandler(this as CashierPage, pushHandler);
+        settlementHandler = new SettlementHandler(this as CashierPage);
         dataLoader = new CashierDataLoaderService(this as CashierPage);
     },
 
@@ -548,22 +522,6 @@ Page({
         }
     },
 
-    async onArrivalConfirmPush() {
-        const { reserveId } = this.data.arrivalConfirmModal;
-        this.setData({
-            'arrivalConfirmModal.show': false
-        });
-        if (reservationHandler) await reservationHandler.processArrival(reserveId, true);
-    },
-
-    async onArrivalConfirmSkip() {
-        const { reserveId } = this.data.arrivalConfirmModal;
-        this.setData({
-            'arrivalConfirmModal.show': false
-        });
-        if (reservationHandler) await reservationHandler.processArrival(reserveId, false);
-    },
-
     // ========== 顾客匹配（委托给 utils） ==========
     async searchCustomer() {
         await searchCustomer(this as CashierPage);
@@ -614,14 +572,6 @@ Page({
     getReservationTypeText(technicians: Array<{ _id: string; name: string; phone: string; isClockIn: boolean }>): string {
         if (pushHandler) return pushHandler.getReservationTypeText(technicians);
         return '排钟';
-    },
-
-    onPushModalCancel() {
-        if (pushHandler) pushHandler.onPushModalCancel();
-    },
-
-    async onPushModalConfirm() {
-        if (pushHandler) await pushHandler.onPushModalConfirm();
     },
 
     openRotationPushModal() {
@@ -699,14 +649,6 @@ if(slots === '已满'){
 
     async onRotationPushModalConfirm() {
         if (pushHandler) await pushHandler.onRotationPushModalConfirm();
-    },
-
-    async sendArrivalNotification(reservations: ReservationRecord[]) {
-        if (pushHandler) await pushHandler.sendArrivalNotification(reservations);
-    },
-
-    async sendReservationModificationNotification(original: ReservationRecord | null, updated: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>) {
-        if (pushHandler) await pushHandler.sendReservationModificationNotification(original, updated);
     },
 
     // ========== 时间轴点击操作 ==========

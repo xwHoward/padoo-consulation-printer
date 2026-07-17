@@ -100,10 +100,11 @@ export class CashierDataLoaderService {
 	}
 
 	async loadTimelineData(): Promise<void> {
-		const { pushModalLocked, pushModal } = this.page.data;
+		const { pushModalLocked } = this.page.data;
 
 		// 只有在非推送确认弹窗状态下才显示loading
-		const shouldShowLoading = !pushModalLocked && !pushModal?.show;
+		const shouldShowLoading = !pushModalLocked;
+
 		if (shouldShowLoading) {
 			this.page.setData({ loading: true, loadingText: '加载中...' });
 		}
@@ -136,7 +137,7 @@ export class CashierDataLoaderService {
 	}
 
 	/** 5种快速预约组合的静态配置 */
-	private readonly QUICK_GROUPS_CONFIG: Array<{ key: string; label: string; maleCount: number; femaleCount }> = [
+	private readonly QUICK_GROUPS_CONFIG: Array<{ key: string; label: string; maleCount: number; femaleCount: number }> = [
 		{ key: 'oneFemale',       label: '1位女技师', maleCount: 0, femaleCount: 1 },
 		{ key: 'oneMale',         label: '1位男技师', maleCount: 1, femaleCount: 0 },
 		{ key: 'twoFemale',       label: '2位女技师', maleCount: 0, femaleCount: 2 },

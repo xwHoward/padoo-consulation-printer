@@ -429,7 +429,6 @@ interface IndexPage<D> {
   searchCustomer: () => void;
   doMultiClockIn: (startTimeDate?: Date, editId?: string) => Promise<void>;
   saveConsultation: (consultation: Add<ConsultationInfo>, editId?: string) => Promise<boolean>;
-  sendToWechatWebhook: (content: string) => Promise<boolean>;
   resetForm: () => void;
 }
 
@@ -457,20 +456,6 @@ type CashierPage = WechatMiniprogram.Page.Instance<{
     genderRequirement: { male: number; female: number; };
     technicianId: string;
     technicianName: string;
-  };
-  pushModal: {
-    show: boolean;
-    loading: boolean;
-    type: 'create' | 'cancel';
-    reservationData: Add<ReservationRecord> & {
-      technicians: {
-        _id: string,
-        name: string,
-        phone: string,
-        isClockIn: boolean;
-        wechatWorkId: string;
-      }[]
-    } | null;
   };
   originalReservation: ReservationRecord | null;
   projects: Project[];

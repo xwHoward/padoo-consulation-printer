@@ -769,27 +769,6 @@ Page({
     this.modalHandler?.onClockInModalConfirm();
   },
 
-  // 发送到企业微信机器人
-  async sendToWechatWebhook(content: string): Promise<boolean> {
-
-    try {
-      const res = await wx.cloud.callFunction({
-        name: 'sendWechatMessage',
-        data: {
-          content: content
-        }
-      });
-
-      if (res.result && typeof res.result === 'object') {
-        const result = res.result as { code: number; message?: string };
-        return result.code === 0;
-      }
-
-      return false;
-    } catch (error) {
-      return false;
-    }
-  },
   onPlateReminderConfirm() {
     this.setData({
       'plateReminderModal.show': false,

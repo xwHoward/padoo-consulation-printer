@@ -91,14 +91,6 @@
       @matchClear="onMatchClear"
     />
 
-    <PushModal
-      :show="pushModal.show"
-      :message="pushModal.message"
-      :loading="pushModal.loading"
-      @cancel="onPushCancel"
-      @confirm="onPushConfirm"
-    />
-
     <ExtraTimeModal
       :show="extraTimeModal.show"
       :projects="projects"
@@ -124,18 +116,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
-import DatePicker from './DatePicker.vue'
-import Timeline from './Timeline.vue'
-import RoomGrid from './RoomGrid.vue'
-import ReservationModal from './ReservationModal.vue'
-import PushModal from './PushModal.vue'
-import ExtraTimeModal from './ExtraTimeModal.vue'
-import ArrivalConfirmModal from './ArrivalConfirmModal.vue'
+import { reactive, ref } from 'vue'
 import { useDataLoader } from '../composables/useDataLoader.js'
-import { useReservation } from '../composables/useReservation.js'
 import { usePush } from '../composables/usePush.js'
-import { useCustomerMatch } from '../composables/useCustomerMatch.js'
+import { useReservation } from '../composables/useReservation.js'
 import { callFunction as callCloudFunction, collection } from '../services/cloudbase.js'
 
 // --- State ---
@@ -167,9 +151,6 @@ const reserveForm = reactive({
 const reserveSubmitting = ref(false)
 const editingGroupIds = ref([])
 const originalReservation = ref(null)
-
-// Push
-const pushModal = reactive({ show: false, loading: false, type: 'create', message: '', reservationData: null })
 
 // Extra time
 const extraTimeModal = reactive({
@@ -424,51 +405,6 @@ async function confirmExtraTime() {
 }
 
 // ========== Arrival ==========
-async function handleArrival(reserveId) {
-  loading.value = true
-  loadingText.value = '加载中...'
-  try {
-    const col = collection('reservations')
-    const res = await col.doc(reserveId).get()
-    const record = res.data?.[0]
-    if (!record) {
-      alert('预约不存在')
-      return
-    }
-    if (record.status === 'cancelled') {
-      alert('该预约已取消')
-      return
-    }
-
-    // 查找关联预约（同组或同客户同时段）
-    let reservations = []
-    if (record.groupKey) {
-      const groupRes = await col.where({ groupKey: record.groupKey, status: 'active' }).get()
-      reservations = groupRes.data || []
-    } else {
-      const sameRes = await col.where({
-        date: record.date,
-        customerName: record.customerName,
-        startTime: record.startTime,
-        project: record.project,
-        status: 'active'
-      }).get()
-      reservations = sameRes.data || []
-    }
-    if (reservations.length === 0) reservations = [record]
-
-    arrivalConfirmModal.show = true
-    arrivalConfirmModal.reserveId = reserveId
-    arrivalConfirmModal.customerName = record.customerName + (record.gender === 'male' ? '先生' : '女士')
-    arrivalConfirmModal.project = record.project
-    arrivalConfirmModal.technicianName = record.technicianName || '未指定'
-    arrivalConfirmModal.reservations = reservations
-  } catch (e) {
-    alert('加载失败')
-  } finally {
-    loading.value = false
-  }
-}
 
 async function confirmArrivalWithPush() {
   const reservations = arrivalConfirmModal.reservations || []
@@ -476,16 +412,12 @@ async function confirmArrivalWithPush() {
   loading.value = true
   loadingText.value = '处理中...'
   try {
-    // 推送通知
-    await pushComposable.sendArrivalNotification(reservations)
-
     // 标记到店
     const col = collection('reservations')
     for (const r of reservations) {
       await col.doc(r._id).update({ data: { isFulfilled: true } })
     }
 
-    alert('到店通知已推送')
     await loadInitialData()
   } catch (e) {
     alert('处理失败: ' + (e.message || ''))
@@ -579,35 +511,6 @@ async function onTimelineResetRotation() {
     alert('重置失败: ' + (e.message || ''))
   } finally {
     loading.value = false
-  }
-}
-
-function onTimelinePushRotation() {
-  const message = pushComposable.buildRotationMessage(rotationList.value, selectedDate.value)
-  pushModal.show = true
-  pushModal.message = message
-  pushModal.type = 'create'
-  pushModal.loading = false
-}
-
-function onPushCancel() {
-  pushModal.show = false
-}
-
-async function onPushConfirm() {
-  pushModal.loading = true
-  try {
-    const result = await pushComposable.sendWechatMessage(pushModal.message)
-    if (result?.code === 0) {
-      alert('推送成功')
-      pushModal.show = false
-    } else {
-      throw new Error(result?.message || '推送失败')
-    }
-  } catch (e) {
-    alert(e.message || '推送失败')
-  } finally {
-    pushModal.loading = false
   }
 }
 
