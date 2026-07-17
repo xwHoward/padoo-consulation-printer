@@ -1,0 +1,122 @@
+.museum-container {
+	min-height: 100vh;
+	background: #F7F5F2;
+	padding: 10px 16px;
+}
+
+/* 空状态 */
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding-top: 100px;
+}
+
+.empty-star {
+	font-size: 32px;
+	margin-bottom: 12px;
+}
+
+.empty-text {
+	font-size: 13px;
+	color: #C0C6CC;
+	text-align: center;
+	line-height: 1.6;
+	padding: 0 30px;
+}
+
+/* 列表 */
+.museum-list {
+	padding-bottom: 20px;
+}
+
+.museum-card {
+	display: flex;
+	align-items: center;
+	background: #fff;
+	border-radius: 8px;
+	padding: 14px;
+	margin-bottom: 10px;
+	box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+}
+
+.card-left {
+	margin-right: 10px;
+}
+
+.card-date {
+	font-size: 11px;
+	color: #8B9CAF;
+	white-space: nowrap;
+}
+
+.card-center {
+	flex: 1;
+	min-width: 0;
+}
+
+.card-title {
+	font-size: 15px;
+	color: #2C3E50;
+	font-weight: 500;
+	margin-bottom: 6px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.card-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.badge {
+	font-size: 10px;
+	padding: 2px 6px;
+	border-radius: 3px;
+	white-space: nowrap;
+}
+
+.card-right {
+	margin-left: 8px;
+	flex-shrink: 0;
+}
+
+/* 微型象限图 */
+.mini-quadrant {
+	width: 24px;
+	height: 24px;
+	position: relative;
+	border: 1px solid #E5E9F0;
+	border-radius: 2px;
+	background: #FAFAFA;
+}
+
+.mini-axis-x {
+	position: absolute;
+	top: 50%;
+	left: 0;
+	right: 0;
+	height: 1px;
+	background: #C0C6CC;
+}
+
+.mini-axis-y {
+	position: absolute;
+	left: 50%;
+	top: 0;
+	bottom: 0;
+	width: 1px;
+	background: #C0C6CC;
+}
+
+.mini-dot {
+	position: absolute;
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: #FFD166;
+	transform: translate(-50%, 50%);
+}

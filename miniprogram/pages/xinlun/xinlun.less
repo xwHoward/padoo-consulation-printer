@@ -1,0 +1,288 @@
+.xinlun-container {
+	min-height: 100vh;
+	background: #F7F5F2;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding-top: 10px;
+}
+
+/* 象限图 */
+.quadrant-wrapper {
+	position: relative;
+	width: 90vw;
+	height: 90vw;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-top: 10px;
+}
+
+.quadrant-canvas {
+	width: 88vw;
+	height: 88vw;
+}
+
+/* 空状态 */
+.empty-state {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	text-align: center;
+	pointer-events: none;
+}
+
+.empty-text {
+	font-size: 13px;
+	color: #C0C6CC;
+	display: block;
+}
+
+.empty-arrow {
+	font-size: 20px;
+	color: #C0C6CC;
+	margin-top: 8px;
+	display: block;
+}
+
+/* 悬浮按钮 */
+.fab-btn {
+	position: fixed;
+	bottom: 40px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background: #FFD166;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 2px 8px rgba(255, 209, 102, 0.4);
+	z-index: 100;
+}
+
+.fab-icon {
+	font-size: 24px;
+	color: #fff;
+	font-weight: bold;
+	line-height: 1;
+}
+
+/* 奖杯按钮 */
+.nav-btns {
+	display: flex;
+	align-items: center;
+}
+
+.trophy-btn {
+	padding: 4px 8px;
+}
+
+.trophy-icon {
+	font-size: 18px;
+}
+
+/* 聚合气泡浮层 */
+.bubble-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 200;
+}
+
+.bubble-list {
+	width: 280px;
+	max-height: 300px;
+	background: #fff;
+	border-radius: 12px;
+	padding: 16px;
+}
+
+.bubble-list-title {
+	font-size: 15px;
+	font-weight: bold;
+	color: #2C3E50;
+	margin-bottom: 12px;
+	text-align: center;
+}
+
+.bubble-scroll {
+	max-height: 200px;
+}
+
+.bubble-item {
+	display: flex;
+	align-items: center;
+	padding: 10px 0;
+	border-bottom: 1px solid #F0F0F0;
+}
+
+.bubble-item:last-child {
+	border-bottom: none;
+}
+
+.bubble-item-shape {
+	width: 12px;
+	height: 12px;
+	margin-right: 8px;
+	flex-shrink: 0;
+}
+
+.shape-circle {
+	border-radius: 50%;
+}
+
+.shape-diamond {
+	transform: rotate(45deg);
+	border-radius: 2px;
+}
+
+.bubble-item-title {
+	font-size: 14px;
+	color: #3A4A5C;
+}
+
+.bubble-close {
+	margin-top: 12px;
+	text-align: center;
+	font-size: 14px;
+	color: #8B9CAF;
+	padding: 8px;
+}
+
+/* 捕捉向导面板 */
+.capture-panel {
+	padding: 20px 16px;
+	padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+
+.capture-header {
+	text-align: center;
+	margin-bottom: 16px;
+}
+
+.capture-title {
+	font-size: 17px;
+	font-weight: bold;
+	color: #2C3E50;
+}
+
+.capture-input-wrap {
+	margin-bottom: 16px;
+}
+
+.capture-input {
+	border-bottom: 1px solid #E5E9F0;
+	padding: 8px 0;
+	font-size: 15px;
+	color: #2C3E50;
+}
+
+/* 类型选择 */
+.type-selector {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 18px;
+}
+
+.type-option {
+	flex: 1;
+	padding: 10px;
+	text-align: center;
+	border-radius: 8px;
+	background: #F5F5F5;
+	font-size: 14px;
+	color: #3A4A5C;
+	transition: background 0.2s;
+}
+
+.type-option.active {
+	background: rgba(255, 209, 102, 0.2);
+	font-weight: bold;
+}
+
+/* 滑块 */
+.slider-group {
+	margin-bottom: 12px;
+}
+
+.slider-item {
+	margin-bottom: 12px;
+}
+
+.slider-label {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 13px;
+	color: #3A4A5C;
+	margin-bottom: 4px;
+}
+
+.slider-value {
+	font-weight: bold;
+	color: #2C3E50;
+}
+
+.anxiety-gradient {
+	height: 3px;
+	border-radius: 1.5px;
+	background: linear-gradient(to right, #A0C4D8, #F0C27A, #F08A7E);
+	margin-top: 4px;
+}
+
+/* 心理学引导气泡 */
+.guide-bubble {
+	display: flex;
+	align-items: flex-start;
+	background: #FFF9E6;
+	border-radius: 6px;
+	padding: 10px 12px;
+	margin-bottom: 14px;
+}
+
+.guide-bubble-bar {
+	width: 3px;
+	min-height: 20px;
+	height: 100%;
+	background: #FFD166;
+	border-radius: 1.5px;
+	margin-right: 8px;
+	flex-shrink: 0;
+}
+
+.guide-bubble-text {
+	font-size: 12px;
+	color: #3A4A5C;
+	line-height: 1.6;
+}
+
+/* 确认按钮 */
+.capture-actions {
+	margin-top: 8px;
+}
+
+.capture-confirm-btn {
+	width: 100%;
+	height: 44px;
+	line-height: 44px;
+	background: #FFD166;
+	color: #fff;
+	font-size: 15px;
+	font-weight: bold;
+	border-radius: 22px;
+	border: none;
+}
+
+.capture-confirm-btn[disabled] {
+	background: #E5E9F0;
+	color: #C0C6CC;
+}

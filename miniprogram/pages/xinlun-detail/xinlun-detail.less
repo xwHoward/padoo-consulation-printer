@@ -1,0 +1,280 @@
+.detail-container {
+	min-height: 100vh;
+	background: #F7F5F2;
+	padding: 10px 16px;
+	padding-bottom: calc(60px + env(safe-area-inset-bottom));
+}
+
+/* 演化小图 */
+.evolution-section {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 12px;
+}
+
+.evolution-canvas {
+	width: 50vw;
+	height: 50vw;
+	background: #fff;
+	border-radius: 8px;
+	box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* 时间轴 */
+.timeline-section {
+	margin-bottom: 14px;
+}
+
+.timeline-date {
+	text-align: center;
+	font-size: 12px;
+	color: #8B9CAF;
+	margin-bottom: 8px;
+}
+
+.timeline-scroll {
+	width: 100%;
+	white-space: nowrap;
+}
+
+.timeline-track {
+	display: inline-flex;
+	align-items: center;
+	position: relative;
+	padding: 10px 20px;
+	min-width: 100%;
+	justify-content: center;
+}
+
+.timeline-line {
+	position: absolute;
+	top: 50%;
+	left: 20px;
+	right: 20px;
+	height: 1px;
+	background: #E5E9F0;
+	transform: translateY(-50%);
+}
+
+.timeline-node {
+	position: relative;
+	padding: 8px 12px;
+	z-index: 1;
+}
+
+.node-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #C0C6CC;
+	transition: all 0.2s;
+}
+
+.timeline-node.active .node-dot {
+	width: 12px;
+	height: 12px;
+	background: #fff;
+	border: 2px solid #FFD166;
+	box-shadow: 0 0 4px rgba(255, 209, 102, 0.4);
+}
+
+/* 版本信息卡片 */
+.version-card {
+	background: #fff;
+	border-radius: 8px;
+	padding: 14px;
+	margin-bottom: 12px;
+	box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
+}
+
+.version-metrics {
+	display: flex;
+	justify-content: space-around;
+}
+
+.metric {
+	text-align: center;
+}
+
+.metric-num {
+	display: block;
+	font-size: 18px;
+	font-weight: bold;
+	color: #2C3E50;
+}
+
+.metric-label {
+	display: block;
+	font-size: 12px;
+	color: #3A4A5C;
+	padding: 2px 6px;
+	background: #E5F7ED;
+	border-radius: 4px;
+}
+
+.metric-label.resolved {
+	background: rgba(255, 209, 102, 0.2);
+	color: #B8860B;
+}
+
+.metric-name {
+	display: block;
+	font-size: 11px;
+	color: #8B9CAF;
+	margin-top: 4px;
+}
+
+.change-note {
+	margin-top: 12px;
+	padding: 10px;
+	background: #F8F9FA;
+	border-radius: 6px;
+	border-left: 2px solid #8B9CAF;
+}
+
+.change-note-text {
+	font-size: 12px;
+	color: #5A6B7F;
+	line-height: 1.6;
+}
+
+/* 编辑面板 */
+.edit-panel {
+	background: #fff;
+	border-radius: 8px;
+	padding: 14px;
+	margin-bottom: 12px;
+	box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
+}
+
+.edit-title {
+	font-size: 15px;
+	font-weight: bold;
+	color: #2C3E50;
+	margin-bottom: 12px;
+}
+
+.slider-item {
+	margin-bottom: 10px;
+}
+
+.slider-label {
+	display: flex;
+	justify-content: space-between;
+	font-size: 13px;
+	color: #3A4A5C;
+	margin-bottom: 4px;
+}
+
+.slider-value {
+	font-weight: bold;
+	color: #2C3E50;
+}
+
+.edit-note-wrap {
+	margin-top: 8px;
+}
+
+.edit-note-input {
+	width: 100%;
+	height: 60px;
+	padding: 8px;
+	font-size: 13px;
+	color: #2C3E50;
+	background: #F8F9FA;
+	border-radius: 6px;
+	border: 1px solid #E5E9F0;
+	box-sizing: border-box;
+}
+
+.edit-actions {
+	display: flex;
+	gap: 10px;
+	margin-top: 12px;
+}
+
+.edit-cancel-btn {
+	flex: 1;
+	height: 40px;
+	line-height: 40px;
+	background: #F5F5F5;
+	color: #3A4A5C;
+	font-size: 14px;
+	border-radius: 20px;
+	border: none;
+}
+
+.edit-confirm-btn {
+	flex: 1;
+	height: 40px;
+	line-height: 40px;
+	background: #FFD166;
+	color: #fff;
+	font-size: 14px;
+	font-weight: bold;
+	border-radius: 20px;
+	border: none;
+}
+
+/* 操作按钮 */
+.action-bar {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 12px;
+}
+
+.action-btn {
+	flex: 1;
+	height: 44px;
+	line-height: 44px;
+	font-size: 14px;
+	border-radius: 22px;
+	border: none;
+}
+
+.edit-btn {
+	background: #F5F5F5;
+	color: #3A4A5C;
+}
+
+.resolve-btn {
+	background: #FFD166;
+	color: #fff;
+	font-weight: bold;
+}
+
+.resolved-tag {
+	flex: 1;
+	text-align: center;
+	font-size: 13px;
+	color: #B8860B;
+	background: rgba(255, 209, 102, 0.15);
+	padding: 10px;
+	border-radius: 6px;
+}
+
+/* 删除链接 */
+.delete-link {
+	text-align: center;
+	font-size: 12px;
+	color: #C0C6CC;
+	padding: 10px;
+}
+
+/* Modal 内容 */
+.resolve-modal-content {
+	padding: 8px;
+	text-align: center;
+}
+
+.resolve-modal-content view {
+	display: block;
+	font-size: 14px;
+	color: #3A4A5C;
+}
+
+.resolve-hint {
+	margin-top: 8px;
+	font-size: 12px !important;
+	color: #8B9CAF !important;
+}

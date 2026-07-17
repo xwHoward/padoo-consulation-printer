@@ -1,0 +1,101 @@
+<navigation-bar title="{{focus.title || '焦点详情'}}" back="{{true}}" color="black" background="#F7F5F2" />
+<view class="detail-container">
+		<!-- 上部：演化小图 -->
+		<view class="evolution-section">
+				<canvas type="2d" id="evolutionCanvas" class="evolution-canvas"></canvas>
+		</view>
+		<!-- 下部：时间轴 -->
+		<view class="timeline-section">
+				<view class="timeline-date">{{selectedVersion.displayTime}}</view>
+				<scroll-view scroll-x class="timeline-scroll" enhanced show-scrollbar="{{false}}">
+						<view class="timeline-track">
+								<view class="timeline-line"></view>
+								<view wx:for="{{focus.versions}}" wx:key="index" class="timeline-node {{selectedIndex === index ? 'active' : ''}}" bindtap="selectVersion" data-index="{{index}}">
+										<view class="node-dot"></view>
+								</view>
+						</view>
+				</scroll-view>
+		</view>
+		<!-- 版本信息卡片 -->
+		<view class="version-card" wx:if="{{selectedVersion}}">
+				<view class="version-metrics">
+						<view class="metric">
+								<view class="metric-num">{{selectedVersion.urgency}}</view>
+								<view class="metric-name">紧急性</view>
+						</view>
+						<view class="metric">
+								<view class="metric-num">{{selectedVersion.importance}}</view>
+								<view class="metric-name">重要性</view>
+						</view>
+						<view class="metric">
+								<view class="metric-num">{{selectedVersion.anxietyLevel}}</view>
+								<view class="metric-name">焦虑等级</view>
+						</view>
+						<view class="metric">
+								<view class="metric-label {{focus.status === 'resolved' ? 'resolved' : ''}}">
+										{{focus.status === 'resolved' ? '已化解' : '进行中'}}
+								</view>
+								<view class="metric-name">状态</view>
+						</view>
+				</view>
+				<!-- 修改原因记录 -->
+				<view wx:if="{{selectedVersion.changeNote}}" class="change-note">
+						<view class="change-note-text">当时我想：{{selectedVersion.changeNote}}</view>
+				</view>
+		</view>
+		<!-- 编辑模式 -->
+		<view wx:if="{{editing}}" class="edit-panel">
+				<view class="edit-title">调整评分</view>
+				<view class="slider-item">
+						<view class="slider-label">
+								<view>紧急性</view>
+								<view class="slider-value">{{editUrgency}}</view>
+						</view>
+						<slider min="1" max="5" value="{{editUrgency}}" activeColor="#E89F6E" block-size="20" bindchange="onEditUrgency" />
+				</view>
+				<view class="slider-item">
+						<view class="slider-label">
+								<view>重要性</view>
+								<view class="slider-value">{{editImportance}}</view>
+						</view>
+						<slider min="1" max="5" value="{{editImportance}}" activeColor="#5B8FA8" block-size="20" bindchange="onEditImportance" />
+				</view>
+				<view class="slider-item">
+						<view class="slider-label">
+								<view>焦虑等级</view>
+								<view class="slider-value">{{editAnxiety}}</view>
+						</view>
+						<slider min="1" max="5" value="{{editAnxiety}}" activeColor="#F08A7E" block-size="20" bindchange="onEditAnxiety" />
+				</view>
+				<view class="edit-note-wrap">
+						<textarea class="edit-note-input" placeholder="是什么让你的认知改变了？(可选)" value="{{editNote}}" bindinput="onEditNote" maxlength="200" />
+				</view>
+				<view class="edit-actions">
+						<button class="edit-cancel-btn" bindtap="cancelEdit">取消</button>
+						<button class="edit-confirm-btn" bindtap="confirmEdit">保存新版本</button>
+				</view>
+		</view>
+		<!-- 操作按钮 -->
+		<view class="action-bar" wx:if="{{!editing && focus.status === 'active'}}">
+				<button class="action-btn edit-btn" bindtap="startEdit">编辑评分</button>
+				<button class="action-btn resolve-btn" bindtap="resolveFocus">标记为已化解</button>
+		</view>
+		<view class="action-bar" wx:if="{{focus.status === 'resolved'}}">
+				<view class="resolved-tag">已于 {{focus.resolvedTimeDisplay}} 化解</view>
+		</view>
+		<!-- 删除 -->
+		<view class="delete-link" bindtap="deleteFocus">删除焦点</view>
+</view>
+<!-- 化解确认弹窗 -->
+<modal show="{{showResolveModal}}" title="确认化解" bind:confirm="confirmResolve" bind:cancel="cancelResolve" confirm-text="确认化解" cancel-text="再想想">
+		<view class="resolve-modal-content">
+				<view>确定将「{{focus.title}}」标记为已化解吗？</view>
+				<view class="resolve-hint">化解后将化为一颗守护星，在象限图中陪伴你。</view>
+		</view>
+</modal>
+<!-- 删除确认弹窗 -->
+<modal show="{{showDeleteModal}}" title="确认删除" bind:confirm="confirmDelete" bind:cancel="cancelDelete" confirm-text="删除" cancel-text="取消">
+		<view class="resolve-modal-content">
+				<view>确定删除「{{focus.title}}」吗？此操作不可撤销。</view>
+		</view>
+</modal>

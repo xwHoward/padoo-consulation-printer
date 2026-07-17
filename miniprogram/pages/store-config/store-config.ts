@@ -59,6 +59,10 @@ Page({
 			case 'store-expense':
 				wx.navigateTo({ url: '/pages/store-expense/store-expense' });
 				break;
+			case 'xinlun':
+				wx.navigateTo({ url: '/pages/xinlun/xinlun' });
+				break;
+				
 			default:
 				wx.showToast({ title: '功能开发中', icon: 'none' });
 		}

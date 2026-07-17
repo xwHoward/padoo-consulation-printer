@@ -1,0 +1,92 @@
+<navigation-bar title="心轮" back="{{true}}" color="black" background="#F7F5F2">
+		<view slot="right" class="nav-btns">
+				<view bindtap="goMuseum" class="nav-btn trophy-btn" aria-role="button" aria-label="已化解博物馆">
+						<view class="trophy-icon">🏆</view>
+				</view>
+		</view>
+</navigation-bar>
+<view class="xinlun-container">
+		<!-- 象限图区域 -->
+		<view class="quadrant-wrapper">
+				<canvas type="2d" id="quadrantCanvas" class="quadrant-canvas" bindtouchend="onCanvasTap"></canvas>
+				<!-- 空状态提示 -->
+				<view wx:if="{{activeFocuses.length === 0 && !loading}}" class="empty-state">
+						<view class="empty-text">捕捉你的第一个想法，让它落在纸上</view>
+						<view class="empty-arrow">↓</view>
+				</view>
+		</view>
+		<!-- 悬浮添加按钮 -->
+		<view class="fab-btn" bindtap="openCapture">
+				<view class="fab-icon">+</view>
+		</view>
+		<!-- 聚合气泡浮层 -->
+		<view wx:if="{{showBubbleList}}" class="bubble-overlay" bindtap="closeBubbleList">
+				<view class="bubble-list" catchtap="">
+						<view class="bubble-list-title">{{bubbleQuadrantName}}</view>
+						<scroll-view scroll-y class="bubble-scroll">
+								<view wx:for="{{bubbleItems}}" wx:key="_id" class="bubble-item" bindtap="goDetail" data-id="{{item._id}}">
+										<view class="bubble-item-shape {{item.type === 'task' ? 'shape-circle' : 'shape-diamond'}}" style="background: {{item.color}};"></view>
+										<view class="bubble-item-title">{{item.title}}</view>
+								</view>
+						</scroll-view>
+						<view class="bubble-close" bindtap="closeBubbleList">关闭</view>
+				</view>
+		</view>
+		<!-- 捕捉向导半屏弹窗 -->
+		<page-container show="{{showCapture}}" position="bottom" close-on-slide-down round bind:afterleave="onCaptureClose">
+				<view class="capture-panel">
+						<view class="capture-header">
+								<view class="capture-title">捕捉焦点</view>
+						</view>
+						<!-- 标题输入 -->
+						<view class="capture-input-wrap">
+								<input class="capture-input" placeholder="记录一个任务或担忧…" value="{{captureTitle}}" bindinput="onCaptureInput" focus="{{showCapture}}" />
+						</view>
+						<!-- 类型选择 -->
+						<view class="type-selector">
+								<view class="type-option {{captureType === 'task' ? 'active' : ''}}" bindtap="setCaptureType" data-type="task">
+										<view>待办事项 ○</view>
+								</view>
+								<view class="type-option {{captureType === 'anxiety' ? 'active' : ''}}" bindtap="setCaptureType" data-type="anxiety">
+										<view>焦虑源 ◇</view>
+								</view>
+						</view>
+						<!-- 评分滑块 -->
+						<view class="slider-group">
+								<view class="slider-item">
+										<view class="slider-label">
+												<view>紧急性</view>
+												<view class="slider-value">{{captureUrgency}}</view>
+										</view>
+										<slider min="1" max="5" value="{{captureUrgency}}" activeColor="#E89F6E" block-size="20" bindchange="onUrgencyChange" />
+								</view>
+								<view class="slider-item">
+										<view class="slider-label">
+												<view>重要性</view>
+												<view class="slider-value">{{captureImportance}}</view>
+										</view>
+										<slider min="1" max="5" value="{{captureImportance}}" activeColor="#5B8FA8" block-size="20" bindchange="onImportanceChange" />
+								</view>
+								<view class="slider-item">
+										<view class="slider-label">
+												<view>焦虑等级</view>
+												<view class="slider-value">{{captureAnxiety}}</view>
+										</view>
+										<slider min="1" max="5" value="{{captureAnxiety}}" activeColor="#F08A7E" block-size="20" bindchange="onAnxietyChange" />
+										<view class="anxiety-gradient"></view>
+								</view>
+						</view>
+						<!-- 心理学引导气泡 -->
+						<view wx:if="{{guideBubbleText}}" class="guide-bubble">
+								<view class="guide-bubble-bar"></view>
+								<view class="guide-bubble-text">{{guideBubbleText}}</view>
+						</view>
+						<!-- 确认按钮 -->
+						<view class="capture-actions">
+								<button class="capture-confirm-btn" disabled="{{!captureTitle}}" bindtap="confirmCapture">
+										确认添加
+								</button>
+						</view>
+				</view>
+		</page-container>
+</view>

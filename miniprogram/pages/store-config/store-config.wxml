@@ -65,6 +65,12 @@
         </view>
         <text class="grid-label">门店支出</text>
       </view>
+      <view wx:if="{{hasReportsAuth}}" class="grid-item" bindtap="onModuleTap" data-module="xinlun">
+        <view class="grid-icon store-icon">
+          <text class="icon-text">❤️</text>
+        </view>
+        <text class="grid-label">心轮</text>
+      </view>
     </view>
   </view>
 </scroll-view>

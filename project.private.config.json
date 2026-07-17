@@ -23,11 +23,18 @@
         "miniprogram": {
             "list": [
                 {
-                    "name": "index",
-                    "pathName": "pages/index/index",
+                    "name": "心轮",
+                    "pathName": "pages/xinlun/xinlun",
                     "query": "",
                     "scene": null,
                     "launchMode": "default"
+                },
+                {
+                    "name": "index",
+                    "pathName": "pages/index/index",
+                    "query": "",
+                    "launchMode": "default",
+                    "scene": null
                 },
                 {
                     "name": "project-list",
