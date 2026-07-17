@@ -37,9 +37,7 @@
                 <view class="reserve-btn" wx:if="{{canCreateReservation}}" bindtap="openReserveModal">
                     +预约
                 </view>
-                <view class="push-rotation-btn" wx:if="{{canPushRotation}}" bindtap="onTimelineResetRotation">
-                    重置
-                </view>
+
                 <view class="push-rotation-btn" wx:if="{{canPushRotation && rotationList.length > 0}}" bindtap="onTimelinePushRotation">
                     推送轮牌
                 </view>

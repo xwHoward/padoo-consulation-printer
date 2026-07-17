@@ -626,14 +626,7 @@ if(slots === '已满'){
         if (!selectedDate) return;
 
         await loadingService.withLoading(this, async () => {
-            await wx.cloud.callFunction({
-                name: 'manageRotation',
-                data: {
-                    action: 'init',
-                    date: selectedDate
-                }
-            });
-            await app.loadGlobalData();
+            await app.initRotation(selectedDate);
             await this.loadTimelineData();
             wx.showToast({ title: '重置成功', icon: 'success' });
         }, {

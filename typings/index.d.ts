@@ -282,6 +282,7 @@ interface IAppOption<T extends Record<string, any> = AppGlobalData> {
   getRotationQueue: (date: string) => Promise<RotationQueue | null>;
   serveCustomer: (date: string, staffId: string, isClockIn: boolean) => Promise<void>;
   adjustRotationPosition: (date: string, fromIndex: number, toIndex: number) => Promise<RotationQueue | null>;
+  initRotation: (date: string) => Promise<void>;
   getNextTechnician: (date: string) => Promise<RotationItem | null>;
 }
 

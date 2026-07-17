@@ -169,10 +169,21 @@ export class CashierDataLoaderService {
 		const emptyResult = { rotationList: [] as RotationItem[], quickReservationGroups: empty };
 
 		try {
-			const res = await wx.cloud.callFunction({
+			let res = await wx.cloud.callFunction({
 				name: 'getAvailableTechnicians',
 				data: { mode: 'rotationQuickSlots', date: today }
 			});
+
+			// 若没有轮牌初始化信息，自动调用云函数初始化轮牌
+			const needInit = this.checkNeedRotationInit(res);
+			if (needInit) {
+				await app.initRotation(today);
+				// 重新查询
+				res = await wx.cloud.callFunction({
+					name: 'getAvailableTechnicians',
+					data: { mode: 'rotationQuickSlots', date: today }
+				});
+			}
 
 			if (res.result && typeof res.result === 'object') {
 				const result = res.result as {
@@ -207,6 +218,13 @@ export class CashierDataLoaderService {
 			console.error('prepareRotationList failed:', error);
 		}
 		return emptyResult;
+	}
+
+	/** 检查是否需要初始化轮牌（rotationItems 为空或不存在） */
+	private checkNeedRotationInit(res: any): boolean {
+		if (!res.result || typeof res.result !== 'object') return true;
+		const result = res.result as { code: number; data?: { rotationItems?: unknown[] } };
+		return result.code !== 0 || !result.data || !result.data.rotationItems || result.data.rotationItems.length === 0;
 	}
 
 	// 预加载技师可用性（供预约弹窗使用）
