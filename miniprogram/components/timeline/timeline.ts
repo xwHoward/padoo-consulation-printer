@@ -173,7 +173,7 @@ Component({
 
 				const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
 				const allStaff = await app.getStaffs();
-				const activeStaff = allStaff.filter(s => s.status === 'active'&&s.role === 'technician');
+				const activeStaff = allStaff.filter(s => s.status === 'active'&&(s.role === 'technician'||s.role === 'cashier'));
 				const scheduledStaff = allSchedules.map(s => s.staffId);
 				const activeStaffList = activeStaff.filter(s => scheduledStaff.includes(s._id));
 
