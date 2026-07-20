@@ -1,5 +1,6 @@
 import { authManager } from '../../utils/auth';
 import { hasPagePermission } from '../../utils/permission';
+import { SubscribeMessageService } from '../../services/subscribe-message.service';
 
 Page({
     data: {
@@ -34,6 +35,9 @@ Page({
                     });
                     return;
                 }
+
+                // 自动登录后检测订阅消息授权，未开启则弹窗引导
+                await SubscribeMessageService.ensureAuthorization();
 
                 wx.showToast({
                     title: '登录成功',
@@ -75,6 +79,9 @@ Page({
                     });
                     return;
                 }
+
+                // 登录成功后检测订阅消息授权，未开启则弹窗引导（需在 showToast 之前，避免弹窗冲突）
+                await SubscribeMessageService.ensureAuthorization();
 
                 wx.showToast({
                     title: '登录成功',

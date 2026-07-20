@@ -231,6 +231,7 @@ export class ReservationService {
 
 			const insertResult = await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
 			if (insertResult) {
+				await ReservationService.notifyReservationCreated([insertResult]);
 				return {success: true, recordId: insertResult._id};
 			}
 			return {success: false, message: '创建失败'};
@@ -249,6 +250,7 @@ export class ReservationService {
 		groupKey?: string
 	): Promise<{successCount: number; totalCount: number; recordIds: string[];}> {
 		const recordIds: string[] = [];
+		const createdRecords: ReservationRecord[] = [];
 		let successCount = 0;
 		const {male, female} = form.genderRequirement;
 
@@ -277,9 +279,11 @@ export class ReservationService {
 			if (insertResult) {
 				successCount++;
 				recordIds.push(insertResult._id);
+				createdRecords.push(insertResult);
 			}
 		}
 
+		await ReservationService.notifyReservationCreated(createdRecords);
 		return {successCount, totalCount: technicians.length, recordIds};
 	}
 
@@ -293,6 +297,7 @@ export class ReservationService {
 		groupKey?: string
 	): Promise<{successCount: number; expectedCount: number; recordIds: string[];}> {
 		const recordIds: string[] = [];
+		const createdRecords: ReservationRecord[] = [];
 		let successCount = 0;
 		const {male, female} = form.genderRequirement;
 
@@ -340,11 +345,13 @@ export class ReservationService {
 				if (insertResult) {
 					successCount++;
 					recordIds.push(insertResult._id);
+					createdRecords.push(insertResult);
 				}
 				currentStart = currentEnd;
 			}
 		}
 
+		await ReservationService.notifyReservationCreated(createdRecords);
 		return {successCount, expectedCount, recordIds};
 	}
 
@@ -357,6 +364,7 @@ export class ReservationService {
 		endTime: string
 	): Promise<{success: boolean; message?: string;}> {
 		try {
+			const oldRecord = await cloudDb.findById<ReservationRecord>(Collections.RESERVATIONS, reserveId);
 			let record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>;
 			const {male, female} = form.genderRequirement;
 
@@ -401,6 +409,9 @@ export class ReservationService {
 			}
 
 			const success = await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, reserveId, record);
+			if (success && oldRecord) {
+				await ReservationService.notifyReservationChanged(oldRecord, form);
+			}
 			return {success};
 		} catch (error) {
 			return {success: false, message: '更新失败'};
@@ -445,6 +456,7 @@ export class ReservationService {
 				});
 			}
 
+			await ReservationService.notifyReservationCancelled(toCancel);
 			return {success: true, reservation, relatedReservations: toCancel};
 		} catch (error) {
 			return {success: false};
@@ -548,6 +560,7 @@ export class ReservationService {
 
 			// 对每个新记录，尝试匹配旧记录
 			const matchedOldIds = new Set<string>();
+			const affectedTechnicianIds: string[] = [];
 			for (let i = 0; i < newRecords.length; i++) {
 				const nr = newRecords[i];
 
@@ -577,6 +590,7 @@ export class ReservationService {
 						groupKey: oldGroupKey,
 					});
 					updatedCount++;
+					affectedTechnicianIds.push(nr.tech._id);
 				} else {
 					// 找不到匹配，创建新记录
 					const record: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'> = {
@@ -600,6 +614,7 @@ export class ReservationService {
 					};
 					await cloudDb.insert<ReservationRecord>(Collections.RESERVATIONS, record);
 					createdCount++;
+					affectedTechnicianIds.push(nr.tech._id);
 				}
 			}
 
@@ -609,6 +624,11 @@ export class ReservationService {
 					await cloudDb.deleteById(Collections.RESERVATIONS, old._id);
 					removedCount++;
 				}
+			}
+
+			// 向受影响的技师发送预约变更通知
+			if (oldMembers.length > 0) {
+				await ReservationService.notifyReservationChanged(oldMembers[0], form, affectedTechnicianIds);
 			}
 
 			return {success: true, updatedCount, createdCount, removedCount};
@@ -739,6 +759,133 @@ export class ReservationService {
 			}
 		} catch (error) {
 			console.error("[重排] 调用失败:", error);
+		}
+	}
+
+	// ==================== 订阅消息通知 ====================
+
+	/**
+	 * 调用订阅消息云函数（静默失败，不影响主流程）
+	 */
+	private static async callNotify(
+		type: 'RESERVATION_NEW' | 'RESERVATION_CHANGE' | 'RESERVATION_CANCEL',
+		data: Record<string, string>,
+		technicianId: string,
+		notifyAdmins: boolean
+	): Promise<void> {
+		try {
+			await wx.cloud.callFunction({
+				name: 'sendSubscribeMessage',
+				data: {type, data, technicianId, notifyAdmins},
+			});
+		} catch (error) {
+			console.warn('[Notify] 发送订阅消息失败:', error);
+		}
+	}
+
+	/**
+	 * 构建「新预约」通知数据
+	 * 模板字段：thing3(项目)、date6(时间)、thing14(点钟/轮钟)、thing7(备注)
+	 */
+	private static buildNewReservationData(record: ReservationRecord): Record<string, string> {
+		return {
+			thing3: record.project || '待定',
+			date6: `${ record.date } ${ record.startTime }`,
+			thing14: record.isClockIn ? '点钟' : '轮钟',
+			thing7: record.customerName || '无',
+		};
+	}
+
+	/**
+	 * 发送「新预约」通知给相关技师，并同时推送给 admin
+	 * 按技师 ID 去重，避免分组预约重复推送
+	 */
+	static async notifyReservationCreated(records: ReservationRecord[]): Promise<void> {
+		const notified = new Set<string>();
+		for (const record of records) {
+			const technicianId = record.technicianId;
+			if (!technicianId || notified.has(technicianId)) continue;
+			notified.add(technicianId);
+			await this.callNotify(
+				'RESERVATION_NEW',
+				this.buildNewReservationData(record),
+				technicianId,
+				true
+			);
+		}
+	}
+
+	/**
+	 * 计算预约变更内容描述
+	 * 模板字段：thing15(变更内容)
+	 */
+	private static buildChangeDescription(oldRecord: ReservationRecord, form: ReserveForm): string {
+		const parts: string[] = [];
+		if (oldRecord.date !== form.date) {
+			parts.push(`日期改为${ form.date }`);
+		}
+		if (oldRecord.startTime !== form.startTime) {
+			parts.push(`时间改为${ form.startTime }`);
+		}
+		if ((oldRecord.project || '待定') !== (form.project || '待定')) {
+			parts.push('项目已调整');
+		}
+		const newTechName = form.selectedTechnicians[0]?.name;
+		if (newTechName && oldRecord.technicianName !== newTechName) {
+			parts.push(`技师改为${ newTechName }`);
+		}
+		return parts.length > 0 ? parts.join('；') : '预约信息已更新';
+	}
+
+	/**
+	 * 发送「预约变更」通知给相关技师
+	 * 模板字段：thing1(项目)、thing15(变更内容)、thing19(客户姓名)、thing6(备注)
+	 */
+	static async notifyReservationChanged(
+		oldRecord: ReservationRecord,
+		form: ReserveForm,
+		technicianIds?: string[]
+	): Promise<void> {
+		const ids = technicianIds && technicianIds.length > 0
+			? technicianIds
+			: (oldRecord.technicianId ? [oldRecord.technicianId] : []);
+
+		const data: Record<string, string> = {
+			thing1: form.project || '待定',
+			thing15: this.buildChangeDescription(oldRecord, form),
+			thing19: form.customerName || oldRecord.customerName || '无',
+			thing6: '预约信息已变更',
+		};
+
+		const notified = new Set<string>();
+		for (const id of ids) {
+			if (!id || notified.has(id)) continue;
+			notified.add(id);
+			await this.callNotify('RESERVATION_CHANGE', data, id, false);
+		}
+	}
+
+	/**
+	 * 发送「预约取消」通知给相关技师，并同时推送给 admin
+	 * 模板字段：thing3(客户姓名)、time14(预定时间)、thing5(取消原因)、thing13(备注)
+	 */
+	static async notifyReservationCancelled(
+		records: ReservationRecord[],
+		reason?: string
+	): Promise<void> {
+		const notified = new Set<string>();
+		for (const record of records) {
+			const technicianId = record.technicianId;
+			if (!technicianId || notified.has(technicianId)) continue;
+			notified.add(technicianId);
+
+			const data: Record<string, string> = {
+				thing3: record.customerName || '无',
+				time14: record.startTime,
+				thing5: reason || '客户取消',
+				thing13: '预约已取消',
+			};
+			await this.callNotify('RESERVATION_CANCEL', data, technicianId, true);
 		}
 	}
 }

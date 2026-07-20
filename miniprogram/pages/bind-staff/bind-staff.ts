@@ -1,5 +1,6 @@
 // bind-staff.ts
 import { authManager } from '../../utils/auth';
+import { SubscribeMessageService } from '../../services/subscribe-message.service';
 
 interface BindStaffData {
 	loading: boolean
@@ -110,6 +111,9 @@ Page({
 				});
 
 				await authManager.refreshUserInfo();
+
+				// 绑定成功后检测订阅消息授权，未开启则弹窗引导
+				await SubscribeMessageService.ensureAuthorization();
 			} else {
 				this.setData({ loading: false });
 				wx.showToast({

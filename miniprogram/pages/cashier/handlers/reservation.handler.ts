@@ -666,6 +666,13 @@ export class ReservationHandler {
 							isRenewal: reserveForm.isRenewal || false,
 						});
 					}
+					// 发送预约变更通知给组内技师
+					if (originalRecord) {
+						const techIds = groupMembers
+							.map(m => m.technicianId)
+							.filter((id): id is string => !!id);
+						await ReservationService.notifyReservationChanged(originalRecord, reserveForm, techIds);
+					}
 					wx.showToast({title: `已同步更新${ groupMembers.length }条预约`, icon: 'success'});
 				} else {
 					const updatedForm = {...reserveForm, project: projectStr};

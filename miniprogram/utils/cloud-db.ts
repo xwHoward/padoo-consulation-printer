@@ -416,6 +416,7 @@ export const Collections = {
 	STORE_EXPENSE: 'store_expense',
 	TECHNICIAN_WECHAT: 'technician_wechat',
 	FOCUSES: 'focuses',
+	SUBSCRIBE_TOKENS: 'subscribe_tokens',
 } as const;
 
 export type CollectionName = typeof Collections[keyof typeof Collections];
