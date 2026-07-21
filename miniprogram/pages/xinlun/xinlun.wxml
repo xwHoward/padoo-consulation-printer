@@ -8,9 +8,32 @@
 <view class="xinlun-container">
 		<!-- 象限图区域 -->
 		<view class="quadrant-wrapper">
-				<canvas type="2d" id="quadrantCanvas" class="quadrant-canvas" bindtouchend="onCanvasTap"></canvas>
+				<view class="quadrant-board">
+						<!-- 象限底色 -->
+						<view class="q-bg q1-bg"></view>
+						<view class="q-bg q2-bg"></view>
+						<view class="q-bg q3-bg"></view>
+						<view class="q-bg q4-bg"></view>
+						<!-- 坐标轴 -->
+						<view class="axis axis-x"></view>
+						<view class="axis axis-y"></view>
+						<view class="axis-label axis-label-x">紧急度 →</view>
+						<view class="axis-label axis-label-y">重要性 ↑</view>
+						<!-- 守护星层 -->
+						<view wx:for="{{guardianStars}}" wx:key="id" class="guardian-star" style="left: {{item.leftPct}}%; bottom: {{item.bottomPct}}%; transform: translate(-50%, 50%) rotate({{item.rotate}}deg);">
+								★
+						</view>
+						<!-- 活跃焦点 -->
+						<view wx:for="{{focusNodes}}" wx:key="_id" class="focus-node {{item.type === 'task' ? 'focus-circle' : 'focus-diamond'}} {{item.hasHistory ? 'has-history' : ''}}" style="left: {{item.leftPct}}%; bottom: {{item.bottomPct}}%; background: {{item.color}};" bindtap="onTapFocus" data-id="{{item._id}}">
+								<view wx:if="{{item.hasHistory}}" class="ghost-tail"></view>
+						</view>
+						<!-- 聚合气泡 -->
+						<view wx:for="{{aggregateBubbles}}" wx:key="qKey" class="aggregate-bubble" style="left: {{item.leftPct}}%; bottom: {{item.bottomPct}}%;" bindtap="onTapBubble" data-qkey="{{item.qKey}}">
+								<view class="aggregate-count">{{item.count}}</view>
+						</view>
+				</view>
 				<!-- 空状态提示 -->
-				<view wx:if="{{activeFocuses.length === 0 && !loading}}" class="empty-state">
+				<view wx:if="{{activeCount === 0 && !loading}}" class="empty-state">
 						<view class="empty-text">捕捉你的第一个想法，让它落在纸上</view>
 						<view class="empty-arrow">↓</view>
 				</view>

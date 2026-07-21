@@ -12,12 +12,91 @@
 	margin-bottom: 12px;
 }
 
-.evolution-canvas {
+.evolution-board {
+	position: relative;
 	width: 50vw;
 	height: 50vw;
 	background: #fff;
 	border-radius: 8px;
 	box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
+	overflow: hidden;
+}
+
+.evo-grid {
+	position: absolute;
+	width: 50%;
+	height: 50%;
+}
+
+.evo-grid-q1 {
+	top: 0;
+	right: 0;
+	background: rgba(255, 200, 180, 0.12);
+}
+
+.evo-grid-q2 {
+	top: 0;
+	left: 0;
+	background: rgba(180, 220, 210, 0.12);
+}
+
+.evo-grid-q3 {
+	bottom: 0;
+	left: 0;
+	background: rgba(200, 200, 200, 0.12);
+}
+
+.evo-grid-q4 {
+	bottom: 0;
+	right: 0;
+	background: rgba(250, 230, 170, 0.12);
+}
+
+.evo-axis {
+	position: absolute;
+	background: #E5E9F0;
+}
+
+.evo-axis-x {
+	top: 50%;
+	left: 0;
+	right: 0;
+	height: 1px;
+}
+
+.evo-axis-y {
+	left: 50%;
+	top: 0;
+	bottom: 0;
+	width: 1px;
+}
+
+.evolution-segment {
+	position: absolute;
+	height: 2px;
+	background: linear-gradient(90deg, #C0C6CC, #FFD166);
+	border-radius: 1px;
+	z-index: 1;
+}
+
+.evolution-node {
+	position: absolute;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: #8BB0C4;
+	border: 2px solid #fff;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+	transform: translate(-50%, 50%);
+	z-index: 2;
+	transition: all 0.2s;
+}
+
+.evolution-node.active {
+	width: 16px;
+	height: 16px;
+	background: #FFD166;
+	box-shadow: 0 0 6px rgba(255, 209, 102, 0.6);
 }
 
 /* 时间轴 */

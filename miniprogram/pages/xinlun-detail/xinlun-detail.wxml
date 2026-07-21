@@ -2,7 +2,16 @@
 <view class="detail-container">
 		<!-- 上部：演化小图 -->
 		<view class="evolution-section">
-				<canvas type="2d" id="evolutionCanvas" class="evolution-canvas"></canvas>
+				<view class="evolution-board">
+						<view class="evo-grid evo-grid-q1"></view>
+						<view class="evo-grid evo-grid-q2"></view>
+						<view class="evo-grid evo-grid-q3"></view>
+						<view class="evo-grid evo-grid-q4"></view>
+						<view class="evo-axis evo-axis-x"></view>
+						<view class="evo-axis evo-axis-y"></view>
+						<view wx:for="{{evolutionSegments}}" wx:key="index" class="evolution-segment" style="left: {{item.midLeftPct}}%; bottom: {{item.midBottomPct}}%; width: {{item.lengthPct}}%; transform: translate(-50%, 50%) rotate({{item.angleDeg}}deg);"></view>
+						<view wx:for="{{evolutionNodes}}" wx:key="index" class="evolution-node {{selectedIndex === index ? 'active' : ''}}" style="left: {{item.leftPct}}%; bottom: {{item.bottomPct}}%;" bindtap="selectVersion" data-index="{{index}}"></view>
+				</view>
 		</view>
 		<!-- 下部：时间轴 -->
 		<view class="timeline-section">

@@ -20,10 +20,28 @@ interface Focus {
   versions: FocusVersion[];
 }
 
-interface FocusDisplay extends Focus {
+interface FocusNode {
+  _id: string;
+  title: string;
+  type: string;
   color: string;
-  x: number;
-  y: number;
+  leftPct: number;
+  bottomPct: number;
+  hasHistory: boolean;
+}
+
+interface BubbleNode {
+  qKey: string;
+  count: number;
+  leftPct: number;
+  bottomPct: number;
+}
+
+interface StarNode {
+  id: string;
+  leftPct: number;
+  bottomPct: number;
+  rotate: number;
 }
 
 const ANXIETY_COLORS: Record<number, string> = {
@@ -41,19 +59,36 @@ const QUADRANT_NAMES: Record<string, string> = {
   'q4': '紧急不重要'
 };
 
-Page({
-  canvas: null as any,
-  ctx: null as any,
-  canvasWidth: 0,
-  canvasHeight: 0,
-  canvasLeft: 0,
-  canvasTop: 0,
-  dpr: 1,
+/** 象限几何中心（百分比） */
+const QUADRANT_CENTERS: Record<string, { left: number; bottom: number }> = {
+  'q1': { left: 75, bottom: 75 },
+  'q2': { left: 25, bottom: 75 },
+  'q3': { left: 25, bottom: 25 },
+  'q4': { left: 75, bottom: 25 }
+};
 
+function urgencyToLeftPct(urgency: number): number {
+  return ((urgency - 0.5) / 5) * 100;
+}
+
+function importanceToBottomPct(importance: number): number {
+  return ((importance - 0.5) / 5) * 100;
+}
+
+function getQuadrantKey(urgency: number, importance: number): string {
+  if (urgency >= 3 && importance >= 3) return 'q1';
+  if (urgency < 3 && importance >= 3) return 'q2';
+  if (urgency < 3 && importance < 3) return 'q3';
+  return 'q4';
+}
+
+Page({
   data: {
     loading: false,
-    activeFocuses: [] as FocusDisplay[],
-    resolvedFocuses: [] as Focus[],
+    activeCount: 0,
+    focusNodes: [] as FocusNode[],
+    aggregateBubbles: [] as BubbleNode[],
+    guardianStars: [] as StarNode[],
     showCapture: false,
     captureTitle: '',
     captureType: 'anxiety' as 'task' | 'anxiety',
@@ -63,15 +98,18 @@ Page({
     guideBubbleText: '',
     showBubbleList: false,
     bubbleQuadrantName: '',
-    bubbleItems: [] as FocusDisplay[],
+    bubbleItems: [] as FocusNode[],
   },
+
+  /** 按象限缓存的焦点列表，用于聚合气泡展开 */
+  quadrantGroups: {} as Record<string, FocusNode[]>,
 
   onLoad() {
     this.loadFocuses();
   },
 
   onShow() {
-    if (this.ctx) {
+    if (this.data.activeCount > 0 || this.data.guardianStars.length > 0) {
       this.loadFocuses();
     }
   },
@@ -83,13 +121,58 @@ Page({
       const activeFocuses = allFocuses.filter(f => f.status === 'active');
       const resolvedFocuses = allFocuses.filter(f => f.status === 'resolved');
 
-      const displayFocuses = activeFocuses.map(f => this.toDisplay(f));
-      this.setData({
-        activeFocuses: displayFocuses,
-        resolvedFocuses
+      // 守护星
+      const guardianStars: StarNode[] = resolvedFocuses.map((f, i) => {
+        const latest = f.versions[f.versions.length - 1];
+        return {
+          id: f._id,
+          leftPct: urgencyToLeftPct(latest.urgency),
+          bottomPct: importanceToBottomPct(latest.importance),
+          rotate: (i * 37) % 30 - 15
+        };
       });
 
-      this.initCanvas();
+      // 按象限分组
+      const groups: Record<string, FocusNode[]> = { q1: [], q2: [], q3: [], q4: [] };
+      activeFocuses.forEach(f => {
+        const latest = f.versions[f.versions.length - 1];
+        const node: FocusNode = {
+          _id: f._id,
+          title: f.title,
+          type: f.type,
+          color: ANXIETY_COLORS[latest.anxietyLevel] || ANXIETY_COLORS[3],
+          leftPct: urgencyToLeftPct(latest.urgency),
+          bottomPct: importanceToBottomPct(latest.importance),
+          hasHistory: f.versions.length > 1
+        };
+        groups[getQuadrantKey(latest.urgency, latest.importance)].push(node);
+      });
+      this.quadrantGroups = groups;
+
+      // 超过5个的象限聚合为气泡，其余直接展示
+      const focusNodes: FocusNode[] = [];
+      const aggregateBubbles: BubbleNode[] = [];
+      Object.entries(groups).forEach(([qKey, items]) => {
+        if (items.length === 0) return;
+        if (items.length > 5) {
+          const center = QUADRANT_CENTERS[qKey];
+          aggregateBubbles.push({
+            qKey,
+            count: items.length,
+            leftPct: center.left,
+            bottomPct: center.bottom
+          });
+        } else {
+          focusNodes.push(...items);
+        }
+      });
+
+      this.setData({
+        activeCount: activeFocuses.length,
+        focusNodes,
+        aggregateBubbles,
+        guardianStars
+      });
     } catch (_e) {
       wx.showToast({ title: '加载失败', icon: 'none' });
     } finally {
@@ -97,272 +180,30 @@ Page({
     }
   },
 
-  toDisplay(focus: Focus): FocusDisplay {
-    const latest = focus.versions[focus.versions.length - 1];
-    const color = ANXIETY_COLORS[latest.anxietyLevel] || ANXIETY_COLORS[3];
-    return {
-      ...focus,
-      color,
-      x: latest.urgency,
-      y: latest.importance
-    };
+  // --- 象限图交互 ---
+  onTapFocus(e: WechatMiniprogram.BaseEvent) {
+    const id = e.currentTarget.dataset.id;
+    wx.navigateTo({ url: `/pages/xinlun-detail/xinlun-detail?id=${id}` });
   },
 
-  initCanvas() {
-    const query = this.createSelectorQuery();
-    query.select('#quadrantCanvas')
-      .fields({ node: true, size: true, rect: true })
-      .exec((res) => {
-        if (!res[0]) return;
-        const canvasNode = res[0].node;
-        const ctx = canvasNode.getContext('2d');
-        const dpr = wx.getWindowInfo().pixelRatio;
-        const width = res[0].width;
-        const height = res[0].height;
-
-        canvasNode.width = width * dpr;
-        canvasNode.height = height * dpr;
-        ctx.scale(dpr, dpr);
-
-        this.canvas = canvasNode;
-        this.ctx = ctx;
-        this.canvasWidth = width;
-        this.canvasHeight = height;
-        this.canvasLeft = res[0].left || 0;
-        this.canvasTop = res[0].top || 0;
-        this.dpr = dpr;
-
-        this.drawQuadrant();
-      });
-  },
-
-  drawQuadrant() {
-    const ctx = this.ctx;
-    if (!ctx) return;
-    const w = this.canvasWidth;
-    const h = this.canvasHeight;
-    const padding = 30;
-    const drawW = w - padding * 2;
-    const drawH = h - padding * 2;
-    const cx = padding + drawW / 2;
-    const cy = padding + drawH / 2;
-
-    // Clear
-    ctx.clearRect(0, 0, w, h);
-
-    // Draw quadrant backgrounds
-    // Q1: right-top (urgent + important)
-    ctx.fillStyle = 'rgba(255,200,180,0.15)';
-    ctx.fillRect(cx, padding, drawW / 2, drawH / 2);
-    // Q2: left-top (important, not urgent)
-    ctx.fillStyle = 'rgba(180,220,210,0.15)';
-    ctx.fillRect(padding, padding, drawW / 2, drawH / 2);
-    // Q3: left-bottom (not important, not urgent)
-    ctx.fillStyle = 'rgba(200,200,200,0.15)';
-    ctx.fillRect(padding, cy, drawW / 2, drawH / 2);
-    // Q4: right-bottom (urgent, not important)
-    ctx.fillStyle = 'rgba(250,230,170,0.15)';
-    ctx.fillRect(cx, cy, drawW / 2, drawH / 2);
-
-    // Draw guardian stars (resolved focuses)
-    const { resolvedFocuses } = this.data;
-    resolvedFocuses.forEach(f => {
-      const latest = f.versions[f.versions.length - 1];
-      const sx = this.valueToX(latest.urgency, padding, drawW);
-      const sy = this.valueToY(latest.importance, padding, drawH);
-      this.drawStar(ctx, sx, sy, 3, 'rgba(255,215,0,0.4)');
+  onTapBubble(e: WechatMiniprogram.BaseEvent) {
+    const qKey = e.currentTarget.dataset.qkey;
+    this.setData({
+      showBubbleList: true,
+      bubbleQuadrantName: QUADRANT_NAMES[qKey] || '',
+      bubbleItems: this.quadrantGroups[qKey] || []
     });
-
-    // Draw axes
-    ctx.strokeStyle = '#3A4A5C';
-    ctx.lineWidth = 1;
-    // X axis
-    ctx.beginPath();
-    ctx.moveTo(padding, cy);
-    ctx.lineTo(w - padding, cy);
-    ctx.stroke();
-    // Y axis
-    ctx.beginPath();
-    ctx.moveTo(cx, padding);
-    ctx.lineTo(cx, h - padding);
-    ctx.stroke();
-
-    // Axis labels
-    ctx.fillStyle = '#8B9CAF';
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText('紧急度 →', w - padding, cy + 14);
-    ctx.textAlign = 'left';
-    ctx.fillText('重要性 ↑', cx + 6, padding + 12);
-
-    // Draw active focuses or aggregate bubbles
-    const { activeFocuses } = this.data;
-    const quadrants: Record<string, FocusDisplay[]> = { q1: [], q2: [], q3: [], q4: [] };
-
-    activeFocuses.forEach(f => {
-      const qKey = this.getQuadrantKey(f.x, f.y);
-      quadrants[qKey].push(f);
-    });
-
-    Object.entries(quadrants).forEach(([qKey, items]) => {
-      if (items.length === 0) return;
-      if (items.length > 5) {
-        // Draw aggregate bubble
-        const bx = this.getQuadrantCenter(qKey, padding, drawW, drawH).x;
-        const by = this.getQuadrantCenter(qKey, padding, drawW, drawH).y;
-        const radius = 12 + items.length * 1;
-        ctx.beginPath();
-        ctx.arc(bx, by, radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#FFD166';
-        ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(String(items.length), bx, by);
-      } else {
-        items.forEach(f => {
-          const fx = this.valueToX(f.x, padding, drawW);
-          const fy = this.valueToY(f.y, padding, drawH);
-          this.drawFocusIcon(ctx, fx, fy, f);
-        });
-      }
-    });
-  },
-
-  valueToX(urgency: number, padding: number, drawW: number): number {
-    // urgency 1-5 maps to left-right, center is 3
-    return padding + ((urgency - 0.5) / 5) * drawW;
-  },
-
-  valueToY(importance: number, padding: number, drawH: number): number {
-    // importance 1-5 maps to bottom-top, center is 3
-    return padding + drawH - ((importance - 0.5) / 5) * drawH;
-  },
-
-  getQuadrantKey(urgency: number, importance: number): string {
-    if (urgency >= 3 && importance >= 3) return 'q1';
-    if (urgency < 3 && importance >= 3) return 'q2';
-    if (urgency < 3 && importance < 3) return 'q3';
-    return 'q4';
-  },
-
-  getQuadrantCenter(qKey: string, padding: number, drawW: number, drawH: number) {
-    const cx = padding + drawW / 2;
-    const cy = padding + drawH / 2;
-    switch (qKey) {
-      case 'q1': return { x: cx + drawW / 4, y: padding + drawH / 4 };
-      case 'q2': return { x: padding + drawW / 4, y: padding + drawH / 4 };
-      case 'q3': return { x: padding + drawW / 4, y: cy + drawH / 4 };
-      case 'q4': return { x: cx + drawW / 4, y: cy + drawH / 4 };
-      default: return { x: cx, y: cy };
-    }
-  },
-
-  drawFocusIcon(ctx: any, x: number, y: number, focus: FocusDisplay) {
-    const size = 9;
-    ctx.fillStyle = focus.color;
-
-    if (focus.type === 'task') {
-      // Circle
-      ctx.beginPath();
-      ctx.arc(x, y, size, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      // Diamond
-      ctx.beginPath();
-      ctx.moveTo(x, y - size);
-      ctx.lineTo(x + size, y);
-      ctx.lineTo(x, y + size);
-      ctx.lineTo(x - size, y);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    // Ghost tail indicator for versioned focuses
-    if (focus.versions.length > 1) {
-      ctx.strokeStyle = '#FFD166';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(x + size - 2, y - size + 2, 4, -Math.PI * 0.3, Math.PI * 0.5);
-      ctx.stroke();
-    }
-  },
-
-  drawStar(ctx: any, x: number, y: number, radius: number, color: string) {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    for (let i = 0; i < 5; i++) {
-      const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
-      const px = x + radius * Math.cos(angle);
-      const py = y + radius * Math.sin(angle);
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-    ctx.fill();
-  },
-
-  onCanvasTap(e: WechatMiniprogram.TouchEvent) {
-    // touchend: touches is empty, use changedTouches
-    const touch = e.changedTouches?.[0] || e.touches?.[0];
-    if (!touch) return;
-    // Convert page coordinates to canvas-relative coordinates
-    const x = touch.clientX - this.canvasLeft;
-    const y = touch.clientY - this.canvasTop;
-    const padding = 30;
-    const drawW = this.canvasWidth - padding * 2;
-    const drawH = this.canvasHeight - padding * 2;
-
-    const { activeFocuses } = this.data;
-    const quadrants: Record<string, FocusDisplay[]> = { q1: [], q2: [], q3: [], q4: [] };
-    activeFocuses.forEach(f => {
-      quadrants[this.getQuadrantKey(f.x, f.y)].push(f);
-    });
-
-    // Check aggregate bubble tap
-    for (const [qKey, items] of Object.entries(quadrants)) {
-			if (items.length > 5) {
-				const center = this.getQuadrantCenter(qKey, padding, drawW, drawH);
-        const dist = Math.sqrt((x - center.x) ** 2 + (y - center.y) ** 2);
-        if (dist < 20) {
-          this.setData({
-            showBubbleList: true,
-            bubbleQuadrantName: QUADRANT_NAMES[qKey],
-            bubbleItems: items
-          });
-          return;
-        }
-      } else {
-				// Check individual focus tap
-        for (const f of items) {
-					const fx = this.valueToX(f.x, padding, drawW);
-          const fy = this.valueToY(f.y, padding, drawH);
-          const dist = Math.sqrt((x - fx) ** 2 + (y - fy) ** 2);
-          if (dist < 15) {
-            this.goDetail({ currentTarget: { dataset: { id: f._id } } } as any);
-            return;
-          }
-        }
-      }
-    }
   },
 
   closeBubbleList() {
     this.setData({ showBubbleList: false, bubbleItems: [] });
   },
 
-  goDetail(e: WechatMiniprogram.BaseEvent) {
-		console.log('Go detail', e);
-    const id = e.currentTarget.dataset.id;
-    wx.navigateTo({ url: `/pages/xinlun-detail/xinlun-detail?id=${id}` });
-  },
-
   goMuseum() {
     wx.navigateTo({ url: '/pages/xinlun-museum/xinlun-museum' });
   },
 
-  // --- Capture flow ---
+  // --- 捕捉流程 ---
   openCapture() {
     this.setData({
       showCapture: true,

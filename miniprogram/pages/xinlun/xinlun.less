@@ -12,15 +12,152 @@
 	position: relative;
 	width: 90vw;
 	height: 90vw;
-	display: flex;
-	align-items: center;
-	justify-content: center;
 	margin-top: 10px;
 }
 
-.quadrant-canvas {
-	width: 88vw;
-	height: 88vw;
+.quadrant-board {
+	position: absolute;
+	inset: 0;
+}
+
+/* 象限底色 */
+.q-bg {
+	position: absolute;
+	width: 50%;
+	height: 50%;
+}
+
+.q1-bg {
+	top: 0;
+	right: 0;
+	background: rgba(255, 200, 180, 0.15);
+}
+
+.q2-bg {
+	top: 0;
+	left: 0;
+	background: rgba(180, 220, 210, 0.15);
+}
+
+.q3-bg {
+	bottom: 0;
+	left: 0;
+	background: rgba(200, 200, 200, 0.15);
+}
+
+.q4-bg {
+	bottom: 0;
+	right: 0;
+	background: rgba(250, 230, 170, 0.15);
+}
+
+/* 坐标轴 */
+.axis {
+	position: absolute;
+	background: #3A4A5C;
+}
+
+.axis-x {
+	left: 0;
+	right: 0;
+	top: 50%;
+	height: 1px;
+	transform: translateY(-50%);
+}
+
+.axis-y {
+	top: 0;
+	bottom: 0;
+	left: 50%;
+	width: 1px;
+	transform: translateX(-50%);
+}
+
+.axis-label {
+	position: absolute;
+	font-size: 10px;
+	color: #8B9CAF;
+}
+
+.axis-label-x {
+	right: 2px;
+	top: 50%;
+	margin-top: 4px;
+}
+
+.axis-label-y {
+	left: 50%;
+	top: 2px;
+	margin-left: 6px;
+}
+
+/* 守护星 */
+.guardian-star {
+	position: absolute;
+	font-size: 8px;
+	color: rgba(255, 215, 0, 0.4);
+	line-height: 1;
+	pointer-events: none;
+	z-index: 1;
+}
+
+/* 焦点节点 */
+.focus-node {
+	position: absolute;
+	width: 18px;
+	height: 18px;
+	transform: translate(-50%, 50%);
+	z-index: 3;
+	transition: left 0.3s ease, bottom 0.3s ease;
+}
+
+.focus-circle {
+	border-radius: 50%;
+}
+
+.focus-diamond {
+	width: 15px;
+	height: 15px;
+	border-radius: 2px;
+	transform: translate(-50%, 50%) rotate(45deg);
+}
+
+.ghost-tail {
+	position: absolute;
+	top: -4px;
+	right: -4px;
+	width: 8px;
+	height: 8px;
+	border: 1.5px solid #FFD166;
+	border-bottom-color: transparent;
+	border-left-color: transparent;
+	border-radius: 50%;
+	transform: rotate(-20deg);
+}
+
+.focus-diamond .ghost-tail {
+	transform: rotate(-65deg);
+}
+
+/* 聚合气泡 */
+.aggregate-bubble {
+	position: absolute;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background: #FFD166;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transform: translate(-50%, 50%);
+	z-index: 3;
+	box-shadow: 0 2px 8px rgba(255, 209, 102, 0.45);
+}
+
+.aggregate-count {
+	font-size: 13px;
+	font-weight: bold;
+	color: #fff;
 }
 
 /* 空状态 */

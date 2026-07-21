@@ -22,16 +22,25 @@ interface Focus {
   versions: FocusVersion[];
 }
 
-Page({
-  canvas: null as any,
-  ctx: null as any,
-  canvasWidth: 0,
-  canvasHeight: 0,
+interface EvolutionNode {
+  leftPct: number;
+  bottomPct: number;
+}
 
+interface EvolutionSegment {
+  midLeftPct: number;
+  midBottomPct: number;
+  lengthPct: number;
+  angleDeg: number;
+}
+
+Page({
   data: {
     focus: {} as Focus,
     selectedIndex: 0,
     selectedVersion: null as FocusVersion | null,
+    evolutionNodes: [] as EvolutionNode[],
+    evolutionSegments: [] as EvolutionSegment[],
     editing: false,
     editUrgency: 3,
     editImportance: 3,
@@ -77,7 +86,7 @@ Page({
         selectedVersion: focus.versions[lastIndex]
       });
 
-      this.initEvolutionCanvas();
+      this.buildEvolution(focus.versions);
     } catch (_e) {
       wx.showToast({ title: '加载失败', icon: 'none' });
     }
@@ -92,104 +101,31 @@ Page({
     return `${month}/${day} ${hour}:${min}`;
   },
 
-  initEvolutionCanvas() {
-    const query = this.createSelectorQuery();
-    query.select('#evolutionCanvas')
-      .fields({ node: true, size: true })
-      .exec((res) => {
-        if (!res[0]) return;
-        const canvasNode = res[0].node;
-        const ctx = canvasNode.getContext('2d');
-        const dpr = wx.getWindowInfo().pixelRatio;
-        const width = res[0].width;
-        const height = res[0].height;
+  /**
+   * 根据版本列表计算演化图的节点坐标与轨迹线段
+   */
+  buildEvolution(versions: FocusVersion[]) {
+    const round = (n: number) => Math.round(n * 100) / 100;
+    const nodes: EvolutionNode[] = versions.map(v => ({
+      leftPct: round(((v.urgency - 0.5) / 5) * 100),
+      bottomPct: round(((v.importance - 0.5) / 5) * 100)
+    }));
 
-        canvasNode.width = width * dpr;
-        canvasNode.height = height * dpr;
-        ctx.scale(dpr, dpr);
-
-        this.canvas = canvasNode;
-        this.ctx = ctx;
-        this.canvasWidth = width;
-        this.canvasHeight = height;
-
-        this.drawEvolution();
+    const segments: EvolutionSegment[] = [];
+    for (let i = 0; i < nodes.length - 1; i++) {
+      const a = nodes[i];
+      const b = nodes[i + 1];
+      const dx = b.leftPct - a.leftPct;
+      const dy = b.bottomPct - a.bottomPct;
+      segments.push({
+        midLeftPct: round((a.leftPct + b.leftPct) / 2),
+        midBottomPct: round((a.bottomPct + b.bottomPct) / 2),
+        lengthPct: round(Math.sqrt(dx * dx + dy * dy)),
+        angleDeg: round(Math.atan2(-dy, dx) * 180 / Math.PI)
       });
-  },
-
-  drawEvolution() {
-    const ctx = this.ctx;
-    if (!ctx) return;
-    const w = this.canvasWidth;
-    const h = this.canvasHeight;
-    const { focus, selectedIndex } = this.data;
-    const versions = focus.versions;
-    if (!versions || versions.length === 0) return;
-
-    const padding = 20;
-    const drawW = w - padding * 2;
-    const drawH = h - padding * 2;
-    const cx = padding + drawW / 2;
-    const cy = padding + drawH / 2;
-
-    ctx.clearRect(0, 0, w, h);
-
-    // Draw faint quadrant grid
-    ctx.strokeStyle = '#E5E9F0';
-    ctx.lineWidth = 0.5;
-    // X axis
-    ctx.beginPath();
-    ctx.moveTo(padding, cy);
-    ctx.lineTo(w - padding, cy);
-    ctx.stroke();
-    // Y axis
-    ctx.beginPath();
-    ctx.moveTo(cx, padding);
-    ctx.lineTo(cx, h - padding);
-    ctx.stroke();
-
-    // Draw trajectory path
-    if (versions.length > 1) {
-      ctx.strokeStyle = '#FFD166';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      for (let i = 0; i < versions.length; i++) {
-        const vx = this.vToX(versions[i].urgency, padding, drawW);
-        const vy = this.vToY(versions[i].importance, padding, drawH);
-        if (i === 0) ctx.moveTo(vx, vy);
-        else ctx.lineTo(vx, vy);
-      }
-      ctx.stroke();
     }
 
-    // Draw version nodes
-    versions.forEach((v, i) => {
-      const vx = this.vToX(v.urgency, padding, drawW);
-      const vy = this.vToY(v.importance, padding, drawH);
-      const isSelected = i === selectedIndex;
-
-      ctx.beginPath();
-      ctx.arc(vx, vy, isSelected ? 6 : 4, 0, Math.PI * 2);
-
-      if (isSelected) {
-        ctx.fillStyle = '#fff';
-        ctx.fill();
-        ctx.strokeStyle = '#FFD166';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      } else {
-        ctx.fillStyle = '#FFD166';
-        ctx.fill();
-      }
-    });
-  },
-
-  vToX(urgency: number, padding: number, drawW: number): number {
-    return padding + ((urgency - 0.5) / 5) * drawW;
-  },
-
-  vToY(importance: number, padding: number, drawH: number): number {
-    return padding + drawH - ((importance - 0.5) / 5) * drawH;
+    this.setData({ evolutionNodes: nodes, evolutionSegments: segments });
   },
 
   selectVersion(e: WechatMiniprogram.BaseEvent) {
@@ -199,7 +135,6 @@ Page({
       selectedIndex: index,
       selectedVersion: focus.versions[index]
     });
-    this.drawEvolution();
   },
 
   // --- Edit flow ---
@@ -265,7 +200,7 @@ Page({
         selectedVersion: updatedVersions[lastIndex]
       });
 
-      this.drawEvolution();
+      this.buildEvolution(updatedVersions);
       wx.showToast({ title: '已保存', icon: 'success' });
     } catch (_e) {
       wx.showToast({ title: '保存失败', icon: 'none' });
