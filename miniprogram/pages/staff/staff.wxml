@@ -70,7 +70,7 @@
     </view>
     <!-- 员工列表 -->
     <view class="staff-list" wx:if="{{staffList.length > 0}}">
-      <view class="staff-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{staffList}}" wx:key="_id">
+      <view class="staff-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{staffList}}" wx:key="_id" wx:if="{{isAdmin||item.status === 'active'}}">
         <view class="staff-avatar">
           <image class="avatar-img" src="{{item.avatar || '/assets/default-avatar.jpg'}}" mode="aspectFill" />
         </view>
@@ -83,12 +83,8 @@
               {{item.role === 'cashier' ? '店长' : '技师'}}
             </view>
           </view>
-          <view class="staff-gender">{{item.gender === 'male' ? '先生' : '女士'}}</view>
-          <view class="staff-status {{item.status}}">
-            {{item.status === 'active' ? '正常' : '禁用'}}
-          </view>
         </view>
-        <view class="staff-actions">
+        <view wx:if="{{isAdmin}}" class="staff-actions">
           <view class="action-btn toggle-btn" bindtap="onToggleStatus" data-id="{{item._id}}">
             <view>{{item.status === 'active' ? '禁用' : '启用'}}</view>
           </view>

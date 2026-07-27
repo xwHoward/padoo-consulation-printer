@@ -171,7 +171,7 @@ Component({
 					cancelledReservations = (await cloudDb.find<ReservationRecord>(Collections.RESERVATIONS, { date: today, status: 'cancelled' }));
 				}
 
-				const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE);
+				const allSchedules = await cloudDb.getAll<ScheduleRecord>(Collections.SCHEDULE, { date: today });
 				const allStaff = await app.getStaffs();
 				const activeStaff = allStaff.filter(s => s.status === 'active'&&(s.role === 'technician'||s.role === 'cashier'));
 				const scheduledStaff = allSchedules.map(s => s.staffId);
@@ -181,7 +181,7 @@ Component({
 
 				for (const staff of activeStaffList) {
 					const schedule = allSchedules.find(s => s.date === today && s.staffId === staff._id);
-					const shift = schedule ? schedule.shift : 'morning';
+					const shift = schedule ? schedule.shift : 'evening';
 
 					if (shift !== 'morning' && shift !== 'evening' && shift !== 'overtime') {
 						continue;

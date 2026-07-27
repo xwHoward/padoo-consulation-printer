@@ -1,7 +1,7 @@
 const STORAGE_KEY_USER = 'currentUser';
 const STORAGE_KEY_TOKEN = 'authToken';
 
-export class AuthManager {
+class AuthManager {
 	private static instance: AuthManager;
 	private currentUser: UserRecord | null = null;
 	private token: string | null = null;

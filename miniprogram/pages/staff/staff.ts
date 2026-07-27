@@ -2,6 +2,7 @@
 import { cloudDb, Collections } from '../../utils/cloud-db';
 import { SHIFT_NAMES, SHIFT_TYPES } from '../../utils/constants';
 import { formatDate } from '../../utils/util';
+import { authManager } from '../../utils/auth';
 
 interface DateInfo {
 	date: string; dayNum: number; weekDay: string; isToday: boolean;
@@ -38,7 +39,8 @@ Page({
 		initScheduleDaysIndex: 2,
 		initScheduleDaysOptions: [1, 3, 7, 14, 30],
 		initScheduleShiftIndex: 1,
-		initScheduleLoading: false
+		initScheduleLoading: false,
+		isAdmin: authManager.isAdmin(),
 	},
 
 	onShow() {
@@ -175,6 +177,7 @@ Page({
 
 			this.setData({ scheduleMap });
 
+			await app.initRotation(today);
 			wx.showToast({
 				title: '已更新',
 				icon: 'success',
@@ -232,6 +235,7 @@ Page({
 
 	// 编辑员工
 	async onEditStaff(e: WechatMiniprogram.TouchEvent) {
+		if (!authManager.isAdmin()) return;
 		try {
 			const _id = e.currentTarget.dataset.id as string;
 			this.setData({ loading: true });
@@ -277,6 +281,7 @@ Page({
 
 				await this.loadStaffList();
 				await this.initSchedule();
+				await app.initRotation(this.data.today);
 
 				this.setData({ loading: false });
 
@@ -405,6 +410,7 @@ Page({
 			});
 
 			await this.initSchedule();
+			await app.initRotation(today);
 
 			wx.showToast({
 				title: `新增${insertedCount}条，跳过${skippedCount}条`,

@@ -34,12 +34,17 @@ export class ClockInUtils {
       const [endHour, endMin] = endTime.split(":").map(Number);
       const [shiftStartHour] = shiftStartTime.split(":").map(Number);
       const [shiftEndHour] = shiftEndTime.split(":").map(Number);
+      // 单据本身时长（分钟），上班前加班不得超过该时长
+      let recordDurationMins = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+      if (recordDurationMins < 0) recordDurationMins += 24 * 60;
+
       let totalOvertimeMins = 0;
       if (startHour <= endHour) {
         if (endHour < 6) {
           totalOvertimeMins += endHour * 60 + endMin;
         } else if (startHour < shiftStartHour) {
-          totalOvertimeMins += (shiftStartHour - startHour) * 60 - startMin;
+          const beforeShiftMins = (shiftStartHour - startHour) * 60 - startMin;
+          totalOvertimeMins += Math.min(beforeShiftMins, recordDurationMins);
         } else if (endHour >= shiftEndHour) {
           totalOvertimeMins += (endHour - shiftEndHour) * 60 + endMin;
         }
@@ -70,6 +75,9 @@ export class ClockInUtils {
     }
 
     const startTime = formatTime(actualStartTime, false);
+    // 以实际开始时间（含用户在日期选择器中选择的日期）为准生成记录日期，
+    // 避免多人模式下仍使用 consultationInfo.date（默认当天）导致所选日期不生效
+    const recordDate = formatDate(actualStartTime);
     const extraTimeMinutes = (consultationInfo.extraTime || 0) * 30;
 
     const infos: Add<ConsultationInfo>[] = guestInfos.map(guest => {
@@ -92,13 +100,10 @@ export class ClockInUtils {
         remarks: guest.remarks,
         couponCode: guest.couponCode,
         couponPlatform: guest.couponPlatform,
+        date: recordDate,
         startTime,
         endTime,
       };
-
-      if (editId) {
-        info.date = consultationInfo.date || formatDate(new Date());
-      }
 
       return info;
     });

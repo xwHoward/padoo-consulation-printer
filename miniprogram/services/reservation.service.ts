@@ -792,7 +792,7 @@ export class ReservationService {
 			thing3: record.project || '待定',
 			date6: `${ record.date } ${ record.startTime }`,
 			thing14: record.isClockIn ? '点钟' : '轮钟',
-			thing7: record.customerName || '无',
+			thing7: `${ record.customerName || '无' }（${ record.technicianName || '' }）`,
 		};
 	}
 

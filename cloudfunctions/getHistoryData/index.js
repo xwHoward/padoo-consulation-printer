@@ -285,7 +285,7 @@ exports.main = async (event) => {
               guashaCount: 0,
               shift: ''
             };
-            technicianTimes[technician] = { firstStartMins: Infinity, lastEndMins: -Infinity };
+            technicianTimes[technician] = { firstStartMins: Infinity, firstStartEndMins: Infinity, lastEndMins: -Infinity };
           }
 
           if (!technicianStats[technician].projects[record.project]) {
@@ -321,9 +321,10 @@ exports.main = async (event) => {
               endMins += 24 * 60;
             }
 
-            technicianTimes[technician].firstStartMins = Math.min(
-              technicianTimes[technician].firstStartMins, startMins
-            );
+            if (startMins < technicianTimes[technician].firstStartMins) {
+              technicianTimes[technician].firstStartMins = startMins;
+              technicianTimes[technician].firstStartEndMins = endMins;
+            }
             technicianTimes[technician].lastEndMins = Math.max(
               technicianTimes[technician].lastEndMins, endMins
             );
@@ -362,7 +363,9 @@ exports.main = async (event) => {
           let overtimeMins = 0;
 
           if (times.firstStartMins < boundary.start) {
-            overtimeMins += boundary.start - times.firstStartMins;
+            // 上班前加班不得超过第一笔单据本身的时长
+            const firstRecordDuration = times.firstStartEndMins - times.firstStartMins;
+            overtimeMins += Math.min(boundary.start - times.firstStartMins, firstRecordDuration);
           }
           if (times.lastEndMins > boundary.end) {
             overtimeMins += times.lastEndMins - boundary.end;

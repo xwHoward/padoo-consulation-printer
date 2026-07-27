@@ -116,7 +116,7 @@ Page({
         const today = getCurrentDate();
         this.setData({ selectedDate: today });
         this.loadProjects();
-        
+
         // 首次加载在onLoad中执行，避免与onShow重复
         this.setData({
             canCreateReservation: hasButtonPermission('createReservation'),
@@ -257,7 +257,7 @@ Page({
             errorText: '调整失败'
         });
     },
-    
+
     // ========== 时间轴轮牌事件（来自 timeline 组件） ==========
     async onTimelineAdjustRotation(e: WechatMiniprogram.CustomEvent) {
         const { index, direction } = e.detail;
@@ -280,8 +280,8 @@ Page({
             if (result) {
                 [list[fromIndex], list[toIndex]] = [list[toIndex], list[fromIndex]];
                 const rotationOrder = list.map(item => item._id);
-                this.setData({ 
-                    rotationList: list, 
+                this.setData({
+                    rotationList: list,
                     rotationOrder,
                     timelineRefreshTrigger: this.data.timelineRefreshTrigger + 1
                 });
@@ -299,7 +299,7 @@ Page({
 
     onTimelineCopySlot(e: WechatMiniprogram.CustomEvent) {
         const { staffName, slots } = e.detail;
-        
+
         if (slots === '已满') {
             wx.setClipboardData({
                 data: `您好，${staffName}老师今日预约已满，无法预约了哦`,
@@ -312,9 +312,9 @@ Page({
             });
             return;
         }
-        
+
         const message = `您好，目前${staffName}老师可预约时段为${slots}哦，您可以告诉小趴到店时间，小趴给您保留预约哦~`;
-        
+
         wx.setClipboardData({
             data: message,
             success: () => {
@@ -336,13 +336,13 @@ Page({
             wx.showToast({ title: '暂无轮牌数据', icon: 'none' });
             return;
         }
-        
+
         const rotationLines = rotationList.map((staff, idx) =>
             `${idx + 1}. ${staff.name} (${staff.shift === 'morning' ? '早班' : '晚班'})`
         ).join('\n');
-        
+
         const message = `【今日轮牌】\n\n日期：${selectedDate}\n\n${rotationLines}\n\n请各位同事确认今日轮牌顺序，有问题与店长沟通！`;
-        
+
         wx.setClipboardData({
             data: message,
             success: () => {
@@ -580,26 +580,26 @@ Page({
 
     async copyTechnicianSlot(e: WechatMiniprogram.CustomEvent) {
         const { name, slots } = e.currentTarget.dataset;
-if(slots === '已满'){
-        wx.setClipboardData({
-            data: `您好，${name}老师今日预约已满，无法预约了哦`,
-            success: () => {
-                wx.showToast({
-                    title: '已复制到剪贴板',
-                    icon: 'success',
-                    duration: 2000
-                });
-            },
-            fail: () => {
-                wx.showToast({
-                    title: '复制失败',
-                    icon: 'error',
-                    duration: 2000
-                });
-            }
-        });
-        return;
-}
+        if (slots === '已满') {
+            wx.setClipboardData({
+                data: `您好，${name}老师今日预约已满，无法预约了哦`,
+                success: () => {
+                    wx.showToast({
+                        title: '已复制到剪贴板',
+                        icon: 'success',
+                        duration: 2000
+                    });
+                },
+                fail: () => {
+                    wx.showToast({
+                        title: '复制失败',
+                        icon: 'error',
+                        duration: 2000
+                    });
+                }
+            });
+            return;
+        }
         const message = `您好，目前${name}老师可预约时段为${slots}哦，您可以告诉小趴到店时间，小趴给您保留预约哦~`;
 
         wx.setClipboardData({
