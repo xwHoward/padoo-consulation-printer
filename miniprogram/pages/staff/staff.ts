@@ -26,6 +26,9 @@ Page({
 		inputWechatWorkId: '',
 		// 排班相关
 		today: '',
+		currentYear: 0,
+		currentMonth: 0,
+		monthLabel: '',
 		dates: [] as DateInfo[],
 		scheduleMap: {} as Record<string, Record<string, { label: string; type: ShiftType; index: number }>>,
 		shiftNames: Object.values(SHIFT_NAMES),
@@ -54,9 +57,17 @@ Page({
 		try {
 			const now = new Date();
 			const todayStr = formatDate(now);
-			const dates = this.generateDateRange(now);
+			const { currentYear, currentMonth } = this.data;
+			const year = currentYear || now.getFullYear();
+			const month = currentMonth || now.getMonth() + 1;
+			const dates = this.generateDateRange(year, month);
 
-			this.setData({ loading: true });
+			this.setData({
+				loading: true,
+				currentYear: year,
+				currentMonth: month,
+				monthLabel: `${year}年${month}月`,
+			});
 
 			const staffList = await app.getActiveStaffs();
 
@@ -111,24 +122,73 @@ Page({
 		}
 	},
 
-	// 生成前后7天的日期
-	generateDateRange(centerDate: Date) {
-		const dates = [];
+	// 生成当月全部日期（含前后各3天上下文）
+	generateDateRange(year: number, month: number) {
+		const dates: DateInfo[] = [];
 		const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
 		const todayStr = formatDate(new Date());
 
-		for (let i = -7; i <= 7; i++) {
-			const d = new Date(centerDate);
-			d.setDate(centerDate.getDate() + i);
-			const dateStr = formatDate(d);
+		// 当月第一天和最后一天
+		const firstDay = new Date(year, month - 1, 1);
+		const lastDay = new Date(year, month, 0);
+
+		// 从当月第一天前3天开始，到最后一天后3天结束
+		const startDate = new Date(firstDay);
+		startDate.setDate(startDate.getDate() - 3);
+		const endDate = new Date(lastDay);
+		endDate.setDate(endDate.getDate() + 3);
+
+		const current = new Date(startDate);
+		while (current <= endDate) {
+			const dateStr = formatDate(current);
 			dates.push({
 				date: dateStr,
-				dayNum: d.getDate(),
-				weekDay: weekDays[d.getDay()],
+				dayNum: current.getDate(),
+				weekDay: weekDays[current.getDay()],
 				isToday: dateStr === todayStr,
 			});
+			current.setDate(current.getDate() + 1);
 		}
 		return dates;
+	},
+
+	// 切换到上个月
+	onPrevMonth() {
+		let { currentYear, currentMonth } = this.data;
+		if (currentMonth === 1) {
+			currentYear--;
+			currentMonth = 12;
+		} else {
+			currentMonth--;
+		}
+		this.setData({ currentYear, currentMonth });
+		this.initSchedule();
+	},
+
+	// 切换到下个月
+	onNextMonth() {
+		let { currentYear, currentMonth } = this.data;
+		if (currentMonth === 12) {
+			currentYear++;
+			currentMonth = 1;
+		} else {
+			currentMonth++;
+		}
+		this.setData({ currentYear, currentMonth });
+		this.initSchedule();
+	},
+
+	// 回到当月
+	onCurrentMonth() {
+		const now = new Date();
+		if (this.data.currentYear === now.getFullYear() && this.data.currentMonth === now.getMonth() + 1) {
+			return;
+		}
+		this.setData({
+			currentYear: now.getFullYear(),
+			currentMonth: now.getMonth() + 1,
+		});
+		this.initSchedule();
 	},
 
 	// 排班变更

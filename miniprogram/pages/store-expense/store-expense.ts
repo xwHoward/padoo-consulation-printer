@@ -32,6 +32,13 @@ interface ExpenseGroup {
     items: StoreExpense[];
 }
 
+interface OvertimeRow {
+    technicianId: string;
+    technicianName: string;
+    cells: { day: number; text: string; }[];
+    total: string;
+}
+
 Page({
     data: {
         loading: false,
@@ -55,6 +62,8 @@ Page({
         },
         expenseCategories: EXPENSE_CATEGORIES,
         salaryList: [] as TechnicianSalary[],
+        overtimeDays: [] as number[],
+        overtimeTable: [] as OvertimeRow[],
         totalExpense: 0,
         totalSalary: 0,
         totalPerformanceBonus: 0
@@ -474,11 +483,52 @@ Page({
 
         const totalPerformanceBonus = enrichedSalaryList.reduce((sum, s) => sum + (s.totalPerformanceBonus || 0), 0);
 
+        const overtimeDays: number[] = [];
+        for (let day = 1; day <= daysInMonth; day++) {
+            overtimeDays.push(day);
+        }
+
+        const overtimeTable: OvertimeRow[] = staffList.map(staff => {
+            const byDate = new Map<string, number>();
+            (consultationByStaff[staff._id] || []).forEach(c => {
+                if (c.overtime && c.overtime > 0) {
+                    const current = byDate.get(c.date) || 0;
+                    byDate.set(c.date, Math.max(current, c.overtime));
+                }
+            });
+
+            const cells: { day: number; text: string; }[] = [];
+            let totalUnits = 0;
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const units = byDate.get(dateStr) || 0;
+                totalUnits += units;
+                cells.push({ day, text: this.formatOvertimeHours(units) });
+            }
+
+            const totalText = totalUnits > 0 ? `${this.formatOvertimeHours(totalUnits)}h` : '';
+
+            return {
+                technicianId: staff._id,
+                technicianName: staff.name,
+                cells,
+                total: totalText
+            };
+        });
+
         this.setData({
             salaryList: enrichedSalaryList,
+            overtimeDays,
+            overtimeTable,
             totalSalary,
             totalPerformanceBonus
         });
+    },
+
+    formatOvertimeHours(units: number): string {
+        if (!units || units <= 0) return '';
+        const hours = units / 2;
+        return Number.isInteger(hours) ? String(hours) : hours.toFixed(1);
     },
 
     async enrichWithPerformance(salaryList: TechnicianSalary[]): Promise<TechnicianSalary[]> {

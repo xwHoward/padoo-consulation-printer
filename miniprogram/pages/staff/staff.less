@@ -46,6 +46,43 @@
 	color: @text-color-secondary;
 }
 
+/* 月份导航 */
+.month-nav {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 10px 15px;
+	background-color: @bg-color-light;
+	border-bottom: 1px solid @border-color-light;
+	gap: 20px;
+
+	.month-nav-arrow {
+		font-size: 14px;
+		color: @primary-color;
+		padding: 6px 12px;
+		border-radius: 6px;
+		background-color: rgba(255, 107, 0, 0.05);
+
+		&:active {
+			background-color: rgba(255, 107, 0, 0.15);
+		}
+	}
+
+	.month-nav-label {
+		font-size: 16px;
+		font-weight: 700;
+		color: @text-color;
+		min-width: 100px;
+		text-align: center;
+		padding: 4px 12px;
+		border-radius: 6px;
+
+		&:active {
+			background-color: rgba(0, 0, 0, 0.05);
+		}
+	}
+}
+
 .table-scroll-view {
 	width: 100%;
 	overflow-x: auto;

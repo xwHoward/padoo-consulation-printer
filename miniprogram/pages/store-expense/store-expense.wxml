@@ -112,6 +112,34 @@
         <view>暂无技师数据</view>
       </view>
     </view>
+    <view class="section">
+      <view class="section-header">
+        <view class="section-title">加班表</view>
+      </view>
+      <view class="salary-table-wrapper" wx:if="{{overtimeTable.length > 0}}">
+        <scroll-view class="table-scroll-view" scroll-x="{{true}}" scroll-y="{{false}}">
+          <view class="salary-table">
+            <view class="table-header">
+              <view class="table-row">
+                <view class="table-cell name-cell sticky-col">技师</view>
+                <view class="table-cell day-cell" wx:for="{{overtimeDays}}" wx:key="*this">{{item}}</view>
+                <view class="table-cell total-cell">合计</view>
+              </view>
+            </view>
+            <view class="table-body">
+              <view class="table-row" wx:for="{{overtimeTable}}" wx:key="technicianId">
+                <view class="table-cell name-cell sticky-col">{{item.technicianName}}</view>
+                <view class="table-cell day-cell" wx:for="{{item.cells}}" wx:for-item="cell" wx:key="day">{{cell.text}}</view>
+                <view class="table-cell total-cell">{{item.total}}</view>
+              </view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+      <view class="empty-hint" wx:else>
+        <view>暂无加班记录</view>
+      </view>
+    </view>
   </view>
 </scroll-view>
 <view class="loading-mask" wx:if="{{loading}}">

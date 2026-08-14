@@ -18,6 +18,12 @@
           <view class="btn-text">推送排班</view>
         </view>
       </view>
+      <!-- 月份导航 -->
+      <view class="month-nav">
+        <view class="month-nav-arrow" bindtap="onPrevMonth">◀</view>
+        <view class="month-nav-label" bindtap="onCurrentMonth">{{monthLabel}}</view>
+        <view class="month-nav-arrow" bindtap="onNextMonth">▶</view>
+      </view>
       <scroll-view class="table-scroll-view" scroll-x="{{true}}" scroll-y="{{false}}">
         <view class="schedule-table">
           <!-- 表头: 日期 -->
