@@ -77,7 +77,6 @@ typings/           # 全局 .d.ts — 所有领域类型定义在此
 | `saveConsultationTransaction` | 事务性咨询插入，含重复检测 |
 | `getAvailableTechnicians` | 复杂可用性检查（预约 + 咨询），预约重排 |
 | `manageRotation` | 轮牌队列增删改查、服务客户、位置调整 |
-| `sendWechatMessage` | 企业微信 webhook 消息推送 |
 | `getReportStatistics` | 工资/佣金报表 |
 | `getAnalytics` | 数据分析聚合 |
 | `getHistoryData` | 历史数据查询 |

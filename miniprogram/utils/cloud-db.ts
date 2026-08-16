@@ -115,11 +115,11 @@ class CloudDatabase {
 	/**
 	 * 获取集合所有数据
 	 */
-	async getAll<T extends BaseRecord>(collection: string): Promise<T[]> {
+	async getAll<T extends BaseRecord>(collection: string, condition?: QueryCondition<T>): Promise<T[]> {
 		try {
 			const res = await wx.cloud.callFunction({
 				name: 'getAll',
-				data: { collection }
+				data: { collection, condition }
 			});
 
 			if (!res.result || typeof res.result !== 'object') {
@@ -415,6 +415,8 @@ export const Collections = {
 	LOTTERY_PRIZES: 'lottery_prizes',
 	STORE_EXPENSE: 'store_expense',
 	TECHNICIAN_WECHAT: 'technician_wechat',
+	FOCUSES: 'focuses',
+	SUBSCRIBE_TOKENS: 'subscribe_tokens',
 } as const;
 
 export type CollectionName = typeof Collections[keyof typeof Collections];

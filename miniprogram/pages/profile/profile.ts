@@ -1,19 +1,18 @@
 import {
 	calculateEndTime,
-	DEFAULT_PUSH_MODAL,
 	DEFAULT_RESERVE_FORM,
 	getNextFiveMinuteTime,
-	ReservationService,
+	ReservationService
 } from '../../services/reservation.service';
-import type { PushModalState, ReserveForm } from '../../types/reservation.types';
+import type { ReserveForm } from '../../types/reservation.types';
 import { checkLogin } from '../../utils/auth';
 import { cloudDb, Collections } from '../../utils/cloud-db';
-import { earlierThan, getCurrentDate, laterOrEqualTo } from '../../utils/util';
 import {
 	buildProjectCommissionMap,
 	computeConsultationCommission,
 	deduplicateOvertimeByDate,
 } from '../../utils/salary';
+import { earlierThan, getCurrentDate, laterOrEqualTo } from '../../utils/util';
 
 interface Room {
 	_id: string
@@ -53,7 +52,6 @@ interface ProfileData {
 	availableFemaleCount: number
 	matchedCustomer: CustomerRecord | null
 	matchedCustomerApplied: boolean
-	pushModal: PushModalState
 }
 
 const app = getApp<IAppOption>();
@@ -101,7 +99,6 @@ Page({
 		availableFemaleCount: 0,
 		matchedCustomer: null,
 		matchedCustomerApplied: false,
-		pushModal: { ...DEFAULT_PUSH_MODAL }
 	} as ProfileData,
 
 	async onShow() {
@@ -571,39 +568,5 @@ Page({
 			wx.showToast({ title: `成功创建${createResult.successCount}/${createResult.totalCount}条预约`, icon: 'none' });
 			this.closeReservationModal();
 		}
-	},
-
-	/** 推送弹窗取消 */
-	onPushModalCancel() {
-		this.setData({
-			'pushModal.show': false,
-			'pushModal.loading': false,
-		});
-	},
-
-	/** 推送弹窗确认 */
-	async onPushModalConfirm() {
-		const { pushModal } = this.data;
-		if (!pushModal.message) return;
-
-		this.setData({ 'pushModal.loading': true });
-
-		try {
-			await wx.cloud.callFunction({
-				name: 'sendWechatMessage',
-				data: { content: pushModal.message },
-			});
-			wx.showToast({ title: '推送成功', icon: 'success', duration: 2000 });
-			setTimeout(() => this.onPushModalCancel(), 1500);
-		} catch (error) {
-			wx.showToast({ title: '推送失败', icon: 'none' });
-		} finally {
-			this.setData({ 'pushModal.loading': false });
-		}
-	},
-
-	/** 推送消息变更 */
-	onPushMessageChange(e: WechatMiniprogram.CustomEvent) {
-		this.setData({ 'pushModal.message': e.detail.value });
 	},
 });

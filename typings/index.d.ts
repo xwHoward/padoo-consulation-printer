@@ -76,17 +76,28 @@ interface GuestInfo extends GuestInfoFields {
 
 // 定义带ID的咨询单数据结构（用于历史记录）
 interface ConsultationRecord extends ConsultationInfo {
-  isVoided: boolean; // 是否作废
-  extraTime: number; // 加钟数（单位：半小时）
-  overtime: number; // 加班数（单位：半小时）
-  guasha: boolean; // 是否刮痧
-  guashaTime?: number; // 刮痧时长（单位：分钟）
-  startTime: string; // 报钟时间（格式 HH:MM）
-  endTime: string; // 结束时间（格式 HH:MM）
-  settlement?: SettlementInfo; // 结算信息（选填）
-  amount?: number;
-  date: string; // YYYY-MM-DD
-  isExtraTime?: boolean; // 是否为加钟单据
+  /** 是否作废 */
+  isVoided: boolean;
+  /** 加钟数（单位：半小时） */
+  extraTime: number;
+  /** 加班数（单位：半小时） */
+  overtime: number; 
+  /** 是否刮痧 */
+  guasha: boolean; 
+  /** 刮痧时长（单位：分钟） */
+  guashaTime?: number; 
+  /** 报钟时间（格式 HH:MM） */
+  startTime: string;
+  /** 结束时间（格式 HH:MM） */
+  endTime: string; 
+  /** 结算信息（选填） */
+  settlement?: SettlementInfo; 
+  /** 结算金额（选填） */
+  amount?: number; 
+  /** 日期（格式 YYYY-MM-DD） */
+  date: string; 
+  /** 是否为加钟单据 */
+  isExtraTime?: boolean; 
 }
 
 // 员工状态类型
@@ -282,6 +293,7 @@ interface IAppOption<T extends Record<string, any> = AppGlobalData> {
   getRotationQueue: (date: string) => Promise<RotationQueue | null>;
   serveCustomer: (date: string, staffId: string, isClockIn: boolean) => Promise<void>;
   adjustRotationPosition: (date: string, fromIndex: number, toIndex: number) => Promise<RotationQueue | null>;
+  initRotation: (date: string) => Promise<void>;
   getNextTechnician: (date: string) => Promise<RotationItem | null>;
 }
 
@@ -429,7 +441,6 @@ interface IndexPage<D> {
   searchCustomer: () => void;
   doMultiClockIn: (startTimeDate?: Date, editId?: string) => Promise<void>;
   saveConsultation: (consultation: Add<ConsultationInfo>, editId?: string) => Promise<boolean>;
-  sendToWechatWebhook: (content: string) => Promise<boolean>;
   resetForm: () => void;
 }
 
@@ -457,20 +468,6 @@ type CashierPage = WechatMiniprogram.Page.Instance<{
     genderRequirement: { male: number; female: number; };
     technicianId: string;
     technicianName: string;
-  };
-  pushModal: {
-    show: boolean;
-    loading: boolean;
-    type: 'create' | 'cancel';
-    reservationData: Add<ReservationRecord> & {
-      technicians: {
-        _id: string,
-        name: string,
-        phone: string,
-        isClockIn: boolean;
-        wechatWorkId: string;
-      }[]
-    } | null;
   };
   originalReservation: ReservationRecord | null;
   projects: Project[];

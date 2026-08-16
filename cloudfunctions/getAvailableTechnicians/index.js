@@ -155,7 +155,7 @@ exports.main = async (event, context) => {
             const staffRes = await db.collection('staff').where({
                 status: 'active',
                 _id: _.in(scheduledStaffIds)
-            }).field({ _id: true, name: true, nameEn: true, gender: true, phone: true, wechatWorkId: true }).limit(1000).limit(1000).get()
+            }).field({ _id: true, name: true, nameEn: true, gender: true, phone: true, wechatWorkId: true }).limit(1000).get()
             activeStaff = staffRes.data || []
         }
 
@@ -521,10 +521,10 @@ async function getRotationQuickSlots(date) {
 
         // 并行获取所有所需数据（含 field 投影减少数据传输）
         const [scheduleRes, consultationsRes, reservationsRes, rotationRes] = await Promise.all([
-            db.collection('schedule').where({ date }).field({ staffId: true, shift: true }).limit(1000).limit(1000).get(),
-            db.collection('consultation_records').where({ date, isVoided: false }).field({ _id: true, technician: true, startTime: true, endTime: true }).limit(1000).limit(1000).get(),
-            db.collection('reservations').where({ date, status: 'active' }).field({ _id: true, technicianId: true, technicianName: true, startTime: true, endTime: true, isClockIn: true }).limit(1000).limit(1000).get(),
-            db.collection('rotation_queue').where({ date }).field({ staffList: true }).limit(1000).limit(1000).get()
+            db.collection('schedule').where({ date }).field({ staffId: true, shift: true }).limit(1000).get(),
+            db.collection('consultation_records').where({ date, isVoided: false }).field({ _id: true, technician: true, startTime: true, endTime: true }).limit(1000).get(),
+            db.collection('reservations').where({ date, status: 'active' }).field({ _id: true, technicianId: true, technicianName: true, startTime: true, endTime: true, isClockIn: true }).limit(1000).get(),
+            db.collection('rotation_queue').where({ date }).field({ staffList: true }).limit(1000).get()
         ])
 
         const schedules = scheduleRes.data || []
@@ -564,7 +564,7 @@ async function getRotationQuickSlots(date) {
         const staffRes = await db.collection('staff').where({
             status: 'active',
             _id: _.in(onDutyStaffIds)
-        }).field({ _id: true, name: true, nameEn: true, gender: true, avatar: true }).limit(1000).limit(1000).get()
+        }).field({ _id: true, name: true, nameEn: true, gender: true, avatar: true }).limit(1000).get()
         const staffList = staffRes.data || []
         const staffMap = new Map(staffList.map(s => [s._id, s]))
 
@@ -923,10 +923,10 @@ async function getTechnicianAvailability(date) {
 
         // 并行获取所有所需数据（含 field 投影减少数据传输）
         const [scheduleRes, consultationsRes, reservationsRes, rotationRes] = await Promise.all([
-            db.collection('schedule').where({ date }).field({ staffId: true, shift: true }).limit(1000).limit(1000).get(),
-            db.collection('consultation_records').where({ date, isVoided: false }).field({ _id: true, technician: true, startTime: true, endTime: true }).limit(1000).limit(1000).get(),
-            db.collection('reservations').where({ date, status: 'active' }).field({ _id: true, technicianName: true, startTime: true, endTime: true }).limit(1000).limit(1000).get(),
-            db.collection('rotation_queue').where({ date }).field({ staffList: true }).limit(1000).limit(1000).get()
+            db.collection('schedule').where({ date }).field({ staffId: true, shift: true }).limit(1000).get(),
+            db.collection('consultation_records').where({ date, isVoided: false }).field({ _id: true, technician: true, startTime: true, endTime: true }).limit(1000).get(),
+            db.collection('reservations').where({ date, status: 'active' }).field({ _id: true, technicianName: true, startTime: true, endTime: true }).limit(1000).get(),
+            db.collection('rotation_queue').where({ date }).field({ staffList: true }).limit(1000).get()
         ])
 
         const schedules = scheduleRes.data || []
@@ -944,7 +944,7 @@ async function getTechnicianAvailability(date) {
         const staffRes = await db.collection('staff').where({
             status: 'active',
             _id: _.in(onDutyStaffIds)
-        }).field({ _id: true, name: true, nameEn: true, gender: true, avatar: true, phone: true, wechatWorkId: true }).limit(1000).limit(1000).get()
+        }).field({ _id: true, name: true, nameEn: true, gender: true, avatar: true, phone: true, wechatWorkId: true }).limit(1000).get()
         const onDutyStaff = staffRes.data || []
 
         const rotationData = rotationRes.data && rotationRes.data.length > 0 ? rotationRes.data[0] : null
@@ -1079,11 +1079,11 @@ function calculateOverlapMinutes(proposedStart, proposedEnd, staffConsultations,
 async function rearrangeReservations(date) {
     try {
         const [scheduleRes, consultationsRes, reservationsRes, rotationRes, staffRes] = await Promise.all([
-            db.collection('schedule').where({ date }).field({ staffId: true, shift: true }).limit(1000).limit(1000).get(),
-            db.collection('consultation_records').where({ date, isVoided: false }).field({ _id: true, technician: true, startTime: true, endTime: true }).limit(1000).limit(1000).get(),
-            db.collection('reservations').where({ date, status: 'active' }).limit(1000).limit(1000).get(),
-            db.collection('rotation_queue').where({ date }).field({ staffList: true }).limit(1000).limit(1000).get(),
-            db.collection('staff').where({ status: 'active' }).field({ _id: true, name: true, nameEn: true, gender: true }).limit(1000).limit(1000).get()
+            db.collection('schedule').where({ date }).field({ staffId: true, shift: true }).limit(1000).get(),
+            db.collection('consultation_records').where({ date, isVoided: false }).field({ _id: true, technician: true, startTime: true, endTime: true }).limit(1000).get(),
+            db.collection('reservations').where({ date, status: 'active' }).limit(1000).get(),
+            db.collection('rotation_queue').where({ date }).field({ staffList: true }).limit(1000).get(),
+            db.collection('staff').where({ status: 'active' }).field({ _id: true, name: true, nameEn: true, gender: true }).limit(1000).get()
         ])
 
         const schedules = scheduleRes.data || []

@@ -20,7 +20,7 @@
     <view wx:for="{{customerList}}" wx:key="phone" class="customer-card">
       <view class="customer-header">
         <view class="customer-info">
-          <view class="customer-name">{{item.name}}{{item.gender === 'male' ? '先生' : '女士'}}</view>
+          <view class="customer-name">{{item.name}}</view>
           <view wx:if="{{item.phone}}" class="customer-phone">{{item.phone}}</view>
           <view class="customer-meta">
             <view wx:if="{{item.responsibleTechnician}}" class="meta-item">

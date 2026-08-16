@@ -155,43 +155,35 @@ export class ModalHandler {
   }
 
   async onClockInModalConfirm() {
-    const {content} = this.page.data.clockInModal;
     const {editId, licensePlate, currentReservationIds} = this.page.data;
 
     this.page.setData({'clockInModal.loading': true});
 
     try {
-      const success = await this.page.sendToWechatWebhook(content);
+      wx.showToast({ title: t('pushSuccess'), icon: 'success' });
 
-      this.page.setData({'clockInModal.loading': false});
+      setTimeout(() => {
+        this.page.setData({
+          'clockInModal.loading': false,
+          'clockInModal.show': false,
+          'clockInModal.content': '',
+          clockInSubmitting: false
+        });
 
-      if (success) {
-        wx.showToast({ title: t('pushSuccess'), icon: 'success' });
-
-        setTimeout(() => {
+        // 如果是新增且有车牌号，显示车牌号录入提醒
+        if (!editId && licensePlate && licensePlate.trim()) {
           this.page.setData({
-            'clockInModal.show': false,
-            'clockInModal.content': '',
-            clockInSubmitting: false
+            'plateReminderModal.show': true,
+            'plateReminderModal.licensePlate': licensePlate
           });
-
-          // 如果是新增且有车牌号，显示车牌号录入提醒
-          if (!editId && licensePlate && licensePlate.trim()) {
-            this.page.setData({
-              'plateReminderModal.show': true,
-              'plateReminderModal.licensePlate': licensePlate
-            });
+        } else {
+          if (editId || currentReservationIds.length > 0) {
+            wx.navigateBack();
           } else {
-            if (editId || currentReservationIds.length > 0) {
-              wx.navigateBack();
-            } else {
-              this.page.resetForm();
-            }
+            this.page.resetForm();
           }
-        }, 1500);
-      } else {
-        wx.showToast({ title: t('pushFailed'), icon: 'error' });
-      }
+        }
+      }, 1500);
     } catch (error) {
       this.page.setData({ 'clockInModal.loading': false });
       wx.showToast({ title: t('pushFailed'), icon: 'error' });

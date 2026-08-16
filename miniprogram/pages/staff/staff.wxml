@@ -18,6 +18,12 @@
           <view class="btn-text">推送排班</view>
         </view>
       </view>
+      <!-- 月份导航 -->
+      <view class="month-nav">
+        <view class="month-nav-arrow" bindtap="onPrevMonth">◀</view>
+        <view class="month-nav-label" bindtap="onCurrentMonth">{{monthLabel}}</view>
+        <view class="month-nav-arrow" bindtap="onNextMonth">▶</view>
+      </view>
       <scroll-view class="table-scroll-view" scroll-x="{{true}}" scroll-y="{{false}}">
         <view class="schedule-table">
           <!-- 表头: 日期 -->
@@ -70,7 +76,7 @@
     </view>
     <!-- 员工列表 -->
     <view class="staff-list" wx:if="{{staffList.length > 0}}">
-      <view class="staff-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{staffList}}" wx:key="_id">
+      <view class="staff-item {{item.status === 'disabled' ? 'disabled' : ''}}" wx:for="{{staffList}}" wx:key="_id" wx:if="{{isAdmin||item.status === 'active'}}">
         <view class="staff-avatar">
           <image class="avatar-img" src="{{item.avatar || '/assets/default-avatar.jpg'}}" mode="aspectFill" />
         </view>
@@ -80,15 +86,11 @@
               {{item.name}}{{item.nameEn ? ' (' + item.nameEn + ')' : ''}}
             </view>
             <view class="staff-role-tag {{item.role || 'technician'}}">
-              {{item.role === 'cashier' ? '收银员' : '技师'}}
+              {{item.role === 'cashier' ? '店长' : '技师'}}
             </view>
           </view>
-          <view class="staff-gender">{{item.gender === 'male' ? '先生' : '女士'}}</view>
-          <view class="staff-status {{item.status}}">
-            {{item.status === 'active' ? '正常' : '禁用'}}
-          </view>
         </view>
-        <view class="staff-actions">
+        <view wx:if="{{isAdmin}}" class="staff-actions">
           <view class="action-btn toggle-btn" bindtap="onToggleStatus" data-id="{{item._id}}">
             <view>{{item.status === 'active' ? '禁用' : '启用'}}</view>
           </view>
@@ -132,17 +134,17 @@
       </view>
     </view>
   </view>
-  <view class="form-item">
+  <!-- <view class="form-item">
     <view class="form-label">角色</view>
     <view class="gender-selector">
       <view class="gender-option {{inputRole === 'technician' ? 'selected' : ''}}" bindtap="onRoleSelect" data-role="technician">
         <view>技师</view>
       </view>
       <view class="gender-option {{inputRole === 'cashier' ? 'selected' : ''}}" bindtap="onRoleSelect" data-role="cashier">
-        <view>收银员</view>
+        <view>店长</view>
       </view>
     </view>
-  </view>
+  </view> -->
   <view class="form-item">
     <view class="form-label">手机号 *</view>
     <input class="form-input" placeholder="请输入手机号" value="{{inputPhone}}" bindinput="onPhoneInput" type="number" maxlength="11" />

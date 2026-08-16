@@ -245,5 +245,18 @@ App<IAppOption<AppGlobalData>>({
 			console.error('[App] adjustRotationPosition 失败:', error);
 			return null;
 		}
+	},
+
+	async initRotation(date: string) {
+		try {
+			await wx.cloud.callFunction({
+				name: 'manageRotation',
+				data: { action: 'init', date }
+			});
+			await this.loadGlobalData();
+		} catch (error) {
+			console.error('[App] initRotation 失败:', error);
+			throw error;
+		}
 	}
 });

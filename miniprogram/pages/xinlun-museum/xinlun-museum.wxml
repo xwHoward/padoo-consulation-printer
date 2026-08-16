@@ -1,0 +1,32 @@
+<navigation-bar title="已化解博物馆" back="{{true}}" color="black" background="#F7F5F2" />
+<scroll-view class="museum-container" scroll-y type="list" refresher-enabled bindrefresherrefresh="onRefresh" refresher-triggered="{{refreshing}}">
+		<!-- 空状态 -->
+		<view wx:if="{{resolvedFocuses.length === 0 && !loading}}" class="empty-state">
+				<view class="empty-star">⭐</view>
+				<view class="empty-text">这里还空着。每一个被你安然放下的担忧，都会化作这里的星星。</view>
+		</view>
+		<!-- 已化解列表 -->
+		<view class="museum-list" wx:if="{{resolvedFocuses.length > 0}}">
+				<view wx:for="{{resolvedFocuses}}" wx:key="_id" class="museum-card" bindtap="goDetail" data-id="{{item._id}}">
+						<view class="card-left">
+								<view class="card-date">{{item.resolvedDateDisplay}}</view>
+						</view>
+						<view class="card-center">
+								<view class="card-title">{{item.title}}</view>
+								<view class="card-tags">
+										<view wx:for="{{item.badges}}" wx:for-item="badge" wx:key="*this" class="badge" style="background: {{badge.bg}}; color: {{badge.color}};">
+												{{badge.label}}
+										</view>
+								</view>
+						</view>
+						<view class="card-right">
+								<!-- 微型象限位置图 -->
+								<view class="mini-quadrant">
+										<view class="mini-axis-x"></view>
+										<view class="mini-axis-y"></view>
+										<view class="mini-dot" style="left: {{item.dotLeft}}%; bottom: {{item.dotBottom}}%;"></view>
+								</view>
+						</view>
+				</view>
+		</view>
+</scroll-view>

@@ -9,7 +9,7 @@
 		<view wx:if="{{isLoggedIn && userInfo}}" class="user-info">
 			<image class="avatar" src="{{userInfo.avatarUrl || '/assets/default-avatar.jpg'}}" mode="aspectFill"></image>
 			<view class="nickname">{{userInfo.nickName || '用户'}}</view>
-			<view class="role">{{userInfo.role === 'admin' ? '管理员' : userInfo.role === 'cashier' ? '收银员' : userInfo.role === 'technician' ? '技师' : '查看者'}}</view>
+			<view class="role">{{userInfo.role === 'admin' ? '管理员' : userInfo.role === 'cashier' ? '店长' : userInfo.role === 'technician' ? '技师' : '查看者'}}</view>
 			<view wx:if="{{userInfo.phone}}" class="phone">{{userInfo.phone}}</view>
 		</view>
 

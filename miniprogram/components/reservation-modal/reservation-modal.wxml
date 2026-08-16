@@ -33,7 +33,7 @@
 						<view class="match-info">
 								<view class="match-label">匹配顾客：</view>
 								<view class="match-name">
-										{{matchedCustomer.name}}{{matchedCustomer.gender === 'male' ? '先生' : '女士'}}
+										{{matchedCustomer.name}}
 								</view>
 								<view class="match-phone">{{matchedCustomer.phone || '无手机号'}}</view>
 								<view class="match-tech" wx:if="{{matchedCustomer.responsibleTechnician}}">

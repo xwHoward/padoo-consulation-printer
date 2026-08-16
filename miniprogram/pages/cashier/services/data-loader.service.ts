@@ -100,10 +100,11 @@ export class CashierDataLoaderService {
 	}
 
 	async loadTimelineData(): Promise<void> {
-		const { pushModalLocked, pushModal } = this.page.data;
+		const { pushModalLocked } = this.page.data;
 
 		// 只有在非推送确认弹窗状态下才显示loading
-		const shouldShowLoading = !pushModalLocked && !pushModal?.show;
+		const shouldShowLoading = !pushModalLocked;
+
 		if (shouldShowLoading) {
 			this.page.setData({ loading: true, loadingText: '加载中...' });
 		}
@@ -136,7 +137,7 @@ export class CashierDataLoaderService {
 	}
 
 	/** 5种快速预约组合的静态配置 */
-	private readonly QUICK_GROUPS_CONFIG: Array<{ key: string; label: string; maleCount: number; femaleCount }> = [
+	private readonly QUICK_GROUPS_CONFIG: Array<{ key: string; label: string; maleCount: number; femaleCount: number }> = [
 		{ key: 'oneFemale',       label: '1位女技师', maleCount: 0, femaleCount: 1 },
 		{ key: 'oneMale',         label: '1位男技师', maleCount: 1, femaleCount: 0 },
 		{ key: 'twoFemale',       label: '2位女技师', maleCount: 0, femaleCount: 2 },
@@ -168,10 +169,21 @@ export class CashierDataLoaderService {
 		const emptyResult = { rotationList: [] as RotationItem[], quickReservationGroups: empty };
 
 		try {
-			const res = await wx.cloud.callFunction({
+			let res = await wx.cloud.callFunction({
 				name: 'getAvailableTechnicians',
 				data: { mode: 'rotationQuickSlots', date: today }
 			});
+
+			// 若没有轮牌初始化信息，自动调用云函数初始化轮牌
+			const needInit = this.checkNeedRotationInit(res);
+			if (needInit) {
+				await app.initRotation(today);
+				// 重新查询
+				res = await wx.cloud.callFunction({
+					name: 'getAvailableTechnicians',
+					data: { mode: 'rotationQuickSlots', date: today }
+				});
+			}
 
 			if (res.result && typeof res.result === 'object') {
 				const result = res.result as {
@@ -206,6 +218,13 @@ export class CashierDataLoaderService {
 			console.error('prepareRotationList failed:', error);
 		}
 		return emptyResult;
+	}
+
+	/** 检查是否需要初始化轮牌（rotationItems 为空或不存在） */
+	private checkNeedRotationInit(res: any): boolean {
+		if (!res.result || typeof res.result !== 'object') return true;
+		const result = res.result as { code: number; data?: { rotationItems?: unknown[] } };
+		return result.code !== 0 || !result.data || !result.data.rotationItems || result.data.rotationItems.length === 0;
 	}
 
 	// 预加载技师可用性（供预约弹窗使用）

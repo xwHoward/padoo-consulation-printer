@@ -53,36 +53,9 @@ export interface ReserveForm {
 	isRenewal?: boolean;
 }
 
-export interface PushModalState {
-	show: boolean;
-	loading: boolean;
-	type: 'create' | 'cancel' | 'edit';
-	message: string;
-	mentions: Array<{ _id: string; name: string; phone: string; wechatWorkId?: string }>;
-	reservationData: {
-		original?: ReservationRecord;
-		updated?: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>;
-		customerName: string;
-		gender: 'male' | 'female';
-		date: string;
-		startTime: string;
-		endTime: string;
-		project: string;
-		technicians: Array<{ _id: string; name: string; phone: string; wechatWorkId: string; isClockIn: boolean }>;
-	} | null;
-}
-
 export interface RotationPushModalState {
 	show: boolean;
 	loading: boolean;
-}
-
-export interface ArrivalConfirmModalState {
-	show: boolean;
-	reserveId: string;
-	customerName: string;
-	project: string;
-	technicianName: string;
 }
 
 export interface CashierPageData {
@@ -116,10 +89,8 @@ export interface CashierPageData {
 	loadingText: string;
 	matchedCustomer: CustomerRecord | null;
 	matchedCustomerApplied: boolean;
-	pushModal: PushModalState;
 	rotationPushModal: RotationPushModalState;
 	pushModalLocked: boolean;
-	arrivalConfirmModal: ArrivalConfirmModalState;
 	/** 快速预约——5种固定组合的时段数据 */
 	quickReservationGroups: QuickReservationGroup[];
 	quickReservationLoading: boolean;
@@ -142,6 +113,4 @@ export interface CashierPage {
 	closeSettlementModal: () => void;
 	// 推送方法
 	getReservationTypeText: (technicians: Array<{ _id: string; name: string; phone: string; wechatWorkId: string; isClockIn: boolean }>) => string;
-	// 辅助方法
-	sendReservationModificationNotification: (original: ReservationRecord | null, updated: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
 }

@@ -7,7 +7,7 @@ const db = cloud.database()
 const MAX_LIMIT = 1000
 
 exports.main = async (event, context) => {
-  const { collection } = event
+  const { collection, condition } = event
   
   if (!collection) {
     return {
@@ -24,6 +24,9 @@ exports.main = async (event, context) => {
 
     while (hasMore) {
       let query = db.collection(collection).limit(MAX_LIMIT)
+      if (condition) {
+        query = query.where(condition)
+      }
       
       if (lastId) {
         query = query.where({

@@ -41,7 +41,6 @@ src/
     composables/
       useDataLoader.js    → 数据加载（房间/员工/轮牌/快速预约）
       useReservation.js   → 预约逻辑（表单/可用性/保存/取消）
-      usePush.js          → 推送逻辑（消息构建/企微推送/剪贴板）
       useCustomerMatch.js → 顾客匹配
       useEnvironment.js   → CloudBase 环境配置注入
     components/
@@ -56,7 +55,6 @@ src/
       Timeline.vue            → 排钟轮牌列表
       RoomGrid.vue            → 房间占用状态
       ReservationModal.vue    → 预约表单弹窗（含顾客匹配）
-      PushModal.vue           → 推送确认弹窗
       ExtraTimeModal.vue      → 加钟弹窗
       ArrivalConfirmModal.vue → 到店确认弹窗
 
@@ -76,7 +74,7 @@ npm run dev            # vite dev server
   1. 在宿主页面设置 `window.__CLOUDBASE_ENV_ID__`
   2. 或在 `services/cloudbase.js` 中修改 `defaultConfig.env`
 - 数据库集合: consultation, reservations, customers, projects, staffs, rooms, rotation
-- 云函数: getAvailableTechnicians, saveReservation, cancelReservation, sendWechatMessage
+- 云函数: getAvailableTechnicians, saveReservation, cancelReservation
 
 ## === 当前状态 ===
 ### 已完成
@@ -84,7 +82,7 @@ npm run dev            # vite dev server
 - [x] ElementGrabber: CSS 选择器抓取
 - [x] CashierPage: 排钟/快速预约/房间/推送（除结算外全部功能）
 - [x] Vue 组件库: Modal/DatePicker/GenderSelector/ProjectSelector/TechnicianSelector
-- [x] Composables: useDataLoader/useReservation/usePush/useCustomerMatch
+- [x] Composables: useDataLoader/useReservation/useCustomerMatch
 - [x] CloudBase SDK 集成
 - [x] 双 Tab 切换：「抓取」「收银」
 - [x] 构建验证通过
@@ -103,7 +101,6 @@ npm run dev            # vite dev server
 ## === 注意事项 ===
 - content.js 已 792KB (含 CloudBase SDK)，首次加载可能较慢
 - 修改 `services/cloudbase.js` 中的 `defaultConfig.env` 配置你的 CloudBase 环境
-- `usePush.js` 中动态 import cloudbase 会导致 warning，但不影响功能
 - 当前超长分块 >500KB 是 CloudBase SDK 自身体积，非业务代码问题
 
 ## === 对话历史摘要 ===

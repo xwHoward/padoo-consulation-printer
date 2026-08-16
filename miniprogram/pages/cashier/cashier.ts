@@ -80,37 +80,11 @@ Page({
         // 顾客匹配
         matchedCustomer: null as CustomerRecord | null,
         matchedCustomerApplied: false,
-        // 预约推送确认弹窗
-        pushModal: {
-            show: false,
-            loading: false,
-            type: 'create' as 'create' | 'cancel' | 'edit',
-            message: '',
-            mentions: [] as Array<{ _id: string; name: string; phone: string; wechatWorkId?: string }>,
-            reservationData: null as {
-                original?: ReservationRecord;
-                updated?: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>;
-                customerName: string;
-                gender: 'male' | 'female';
-                date: string;
-                startTime: string;
-                endTime: string;
-                project: string;
-                technicians: Array<{ _id: string; name: string; phone: string; wechatWorkId: string; isClockIn: boolean }>;
-            } | null
-        },
         pushModalLocked: false,
         // 轮牌推送确认弹窗
         rotationPushModal: {
             show: false,
             loading: false
-        },
-        arrivalConfirmModal: {
-            show: false,
-            reserveId: '',
-            customerName: '',
-            project: '',
-            technicianName: ''
         },
         // 快速预约时段（5种固定组合）
         quickReservationGroups: [] as QuickReservationGroup[],
@@ -142,7 +116,7 @@ Page({
         const today = getCurrentDate();
         this.setData({ selectedDate: today });
         this.loadProjects();
-        
+
         // 首次加载在onLoad中执行，避免与onShow重复
         this.setData({
             canCreateReservation: hasButtonPermission('createReservation'),
@@ -175,7 +149,7 @@ Page({
     initHandlers() {
         pushHandler = new PushHandler(this as CashierPage);
         reservationHandler = new ReservationHandler(this as CashierPage);
-        settlementHandler = new SettlementHandler(this as CashierPage, pushHandler);
+        settlementHandler = new SettlementHandler(this as CashierPage);
         dataLoader = new CashierDataLoaderService(this as CashierPage);
     },
 
@@ -283,7 +257,7 @@ Page({
             errorText: '调整失败'
         });
     },
-    
+
     // ========== 时间轴轮牌事件（来自 timeline 组件） ==========
     async onTimelineAdjustRotation(e: WechatMiniprogram.CustomEvent) {
         const { index, direction } = e.detail;
@@ -306,8 +280,8 @@ Page({
             if (result) {
                 [list[fromIndex], list[toIndex]] = [list[toIndex], list[fromIndex]];
                 const rotationOrder = list.map(item => item._id);
-                this.setData({ 
-                    rotationList: list, 
+                this.setData({
+                    rotationList: list,
                     rotationOrder,
                     timelineRefreshTrigger: this.data.timelineRefreshTrigger + 1
                 });
@@ -325,7 +299,7 @@ Page({
 
     onTimelineCopySlot(e: WechatMiniprogram.CustomEvent) {
         const { staffName, slots } = e.detail;
-        
+
         if (slots === '已满') {
             wx.setClipboardData({
                 data: `您好，${staffName}老师今日预约已满，无法预约了哦`,
@@ -338,9 +312,9 @@ Page({
             });
             return;
         }
-        
+
         const message = `您好，目前${staffName}老师可预约时段为${slots}哦，您可以告诉小趴到店时间，小趴给您保留预约哦~`;
-        
+
         wx.setClipboardData({
             data: message,
             success: () => {
@@ -362,13 +336,13 @@ Page({
             wx.showToast({ title: '暂无轮牌数据', icon: 'none' });
             return;
         }
-        
+
         const rotationLines = rotationList.map((staff, idx) =>
             `${idx + 1}. ${staff.name} (${staff.shift === 'morning' ? '早班' : '晚班'})`
         ).join('\n');
-        
+
         const message = `【今日轮牌】\n\n日期：${selectedDate}\n\n${rotationLines}\n\n请各位同事确认今日轮牌顺序，有问题与店长沟通！`;
-        
+
         wx.setClipboardData({
             data: message,
             success: () => {
@@ -548,22 +522,6 @@ Page({
         }
     },
 
-    async onArrivalConfirmPush() {
-        const { reserveId } = this.data.arrivalConfirmModal;
-        this.setData({
-            'arrivalConfirmModal.show': false
-        });
-        if (reservationHandler) await reservationHandler.processArrival(reserveId, true);
-    },
-
-    async onArrivalConfirmSkip() {
-        const { reserveId } = this.data.arrivalConfirmModal;
-        this.setData({
-            'arrivalConfirmModal.show': false
-        });
-        if (reservationHandler) await reservationHandler.processArrival(reserveId, false);
-    },
-
     // ========== 顾客匹配（委托给 utils） ==========
     async searchCustomer() {
         await searchCustomer(this as CashierPage);
@@ -616,40 +574,32 @@ Page({
         return '排钟';
     },
 
-    onPushModalCancel() {
-        if (pushHandler) pushHandler.onPushModalCancel();
-    },
-
-    async onPushModalConfirm() {
-        if (pushHandler) await pushHandler.onPushModalConfirm();
-    },
-
     openRotationPushModal() {
         if (pushHandler) pushHandler.openRotationPushModal();
     },
 
     async copyTechnicianSlot(e: WechatMiniprogram.CustomEvent) {
         const { name, slots } = e.currentTarget.dataset;
-if(slots === '已满'){
-        wx.setClipboardData({
-            data: `您好，${name}老师今日预约已满，无法预约了哦`,
-            success: () => {
-                wx.showToast({
-                    title: '已复制到剪贴板',
-                    icon: 'success',
-                    duration: 2000
-                });
-            },
-            fail: () => {
-                wx.showToast({
-                    title: '复制失败',
-                    icon: 'error',
-                    duration: 2000
-                });
-            }
-        });
-        return;
-}
+        if (slots === '已满') {
+            wx.setClipboardData({
+                data: `您好，${name}老师今日预约已满，无法预约了哦`,
+                success: () => {
+                    wx.showToast({
+                        title: '已复制到剪贴板',
+                        icon: 'success',
+                        duration: 2000
+                    });
+                },
+                fail: () => {
+                    wx.showToast({
+                        title: '复制失败',
+                        icon: 'error',
+                        duration: 2000
+                    });
+                }
+            });
+            return;
+        }
         const message = `您好，目前${name}老师可预约时段为${slots}哦，您可以告诉小趴到店时间，小趴给您保留预约哦~`;
 
         wx.setClipboardData({
@@ -676,14 +626,7 @@ if(slots === '已满'){
         if (!selectedDate) return;
 
         await loadingService.withLoading(this, async () => {
-            await wx.cloud.callFunction({
-                name: 'manageRotation',
-                data: {
-                    action: 'init',
-                    date: selectedDate
-                }
-            });
-            await app.loadGlobalData();
+            await app.initRotation(selectedDate);
             await this.loadTimelineData();
             wx.showToast({ title: '重置成功', icon: 'success' });
         }, {
@@ -699,14 +642,6 @@ if(slots === '已满'){
 
     async onRotationPushModalConfirm() {
         if (pushHandler) await pushHandler.onRotationPushModalConfirm();
-    },
-
-    async sendArrivalNotification(reservations: ReservationRecord[]) {
-        if (pushHandler) await pushHandler.sendArrivalNotification(reservations);
-    },
-
-    async sendReservationModificationNotification(original: ReservationRecord | null, updated: Omit<ReservationRecord, '_id' | 'createdAt' | 'updatedAt'>) {
-        if (pushHandler) await pushHandler.sendReservationModificationNotification(original, updated);
     },
 
     // ========== 时间轴点击操作 ==========

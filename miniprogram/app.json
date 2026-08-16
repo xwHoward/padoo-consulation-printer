@@ -16,7 +16,10 @@
     "pages/screensaver/screensaver",
     "pages/analytics/analytics",
     "pages/calculator/index",
-    "pages/store-expense/store-expense"
+    "pages/store-expense/store-expense",
+    "pages/xinlun/xinlun",
+    "pages/xinlun-detail/xinlun-detail",
+    "pages/xinlun-museum/xinlun-museum"
   ],
   "window": {
     "navigationBarTextStyle": "black",

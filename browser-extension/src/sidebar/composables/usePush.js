@@ -57,19 +57,6 @@ export function usePush() {
   }
 
   /**
-   * 发送微信消息推送
-   */
-  async function sendWechatMessage(content) {
-    try {
-      const res = await callFunction('sendWechatMessage', { content })
-      return res
-    } catch (error) {
-      console.error('[Push] sendWechatMessage failed:', error)
-      throw error
-    }
-  }
-
-  /**
    * 复制到剪贴板
    */
   async function copyToClipboard(text) {
@@ -129,47 +116,6 @@ export function usePush() {
   }
 
   /**
-   * 推送到店通知
-   */
-  async function sendArrivalNotification(reservations) {
-    try {
-      if (!reservations || reservations.length === 0) return
-
-      const first = reservations[0]
-      const genderLabel = first.gender === 'male' ? '先生' : '女士'
-      const customerInfo = `${first.customerName}${genderLabel}`
-      const teaCount = reservations.length
-
-      // 查询技师信息用于 @提及
-      const staffRes = await collection('staffs').where({ status: 'active' }).limit(200).get()
-      const staffList = staffRes.data || []
-      const staffMap = new Map(staffList.map(s => [s._id, s]))
-
-      const uniqueTechs = new Map()
-      reservations.forEach(r => {
-        const staff = r.technicianId ? staffMap.get(r.technicianId) : null
-        const key = r.technicianId || r.technicianName
-        if (staff && key && !uniqueTechs.has(key)) {
-          uniqueTechs.set(key, { name: staff.name, phone: staff.phone, wechatWorkId: staff.wechatWorkId })
-        }
-      })
-
-      const technicianMentions = Array.from(uniqueTechs.values())
-        .map(t => formatMention(t))
-        .join(' ')
-
-      // 查询老客历史
-      const historyRemark = await buildCustomerHistoryRemark(first.phone, first.date)
-
-      const message = `【🏃 到店通知】\n\n${customerInfo} 已到店\n项目：${first.project}\n请${technicianMentions}准备上钟，工服、口罩穿戴整齐，准备茶点（${teaCount}份）${historyRemark}`
-
-      await sendWechatMessage(message)
-    } catch (error) {
-      console.error('[Push] sendArrivalNotification failed:', error)
-    }
-  }
-
-  /**
    * 查询顾客历史备注
    */
   async function buildCustomerHistoryRemark(phone, today) {
@@ -205,10 +151,8 @@ export function usePush() {
     getReservationTypeText,
     formatMention,
     buildCustomerHistoryRemark,
-    sendWechatMessage,
     copyToClipboard,
     buildReservationMessage,
-    sendArrivalNotification,
     buildCustomerHistoryRemark,
     buildRotationMessage
   }
