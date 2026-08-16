@@ -7,7 +7,9 @@ import { authManager } from '../../utils/auth';
 const app = getApp<IAppOption>();
 
 const TIMELINE_HOUR_WIDTH = 90;
-const SPARE_TIME = 20; // 20休息时间;
+const REDUNDANT_TIME = 20; // 单据结束后冗余时间
+const MIN_SLOT_MINUTES = 45;       // 可预约时段最少时长
+const RESERVATION_BEFORE_GAP = MIN_SLOT_MINUTES + REDUNDANT_TIME; // 预约前需保留最小项目时间
 
 interface TimelineData {
 	timeLabels: string[]
@@ -378,34 +380,22 @@ Component({
 
 		calculateAvailableSlotsBetweenBlocks(blocks: TimeBlock[], shift: ShiftType): AvailableSlot[] {
 			const availableSlots: AvailableSlot[] = [];
-			const RESERVE_GAP_MINUTES = 60; // 可预约时段与下一个预约之间至少保留60分钟（用于排钟）
 
-			/**
-			 * 记录一个可预约时段
-			 * @param startTimelineMinutes 时段起点（timeline 分钟）
-			 * @param rawEndTimelineMinutes 时段原始结束点（下一个 block 起点或班次结束）
-			 * @param isShiftEnd 时段结束是否为班次结束（是则不扣减间隔）
-			 */
-			const pushSlot = (startTimelineMinutes: number, rawEndTimelineMinutes: number, isShiftEnd: boolean): void => {
-				// 非班次结束：为下一个预约留出排钟间隔
-				const effectiveEnd = isShiftEnd
-					? rawEndTimelineMinutes
-					: rawEndTimelineMinutes - RESERVE_GAP_MINUTES;
+			const pushSlot = (startMinutes: number, endMinutes: number): void => {
+				const gap = endMinutes - startMinutes;
+				if (gap < MIN_SLOT_MINUTES) return;
 
-				const gapMinutes = effectiveEnd - startTimelineMinutes;
-				if (gapMinutes <= 45) return;
-
-				const startTime = this.timelineMinutesToTime(startTimelineMinutes);
-				const endTime = this.timelineMinutesToTime(effectiveEnd);
-				const left = (startTimelineMinutes / this.data.timeLabels.length / 60 * 100) + '%';
-				const width = (gapMinutes / this.data.timeLabels.length / 60 * 100) + '%';
+				const startTime = this.timelineMinutesToTime(startMinutes);
+				const endTime = this.timelineMinutesToTime(endMinutes);
+				const left = (startMinutes / this.data.timeLabels.length / 60 * 100) + '%';
+				const width = (gap / this.data.timeLabels.length / 60 * 100) + '%';
 				availableSlots.push({
 					left,
 					width,
 					startTime,
 					endTime,
 					displayText: `${startTime}-${endTime}`,
-					durationMinutes: gapMinutes
+					durationMinutes: gap
 				});
 			};
 
@@ -413,62 +403,94 @@ Component({
 			const todayStr = getCurrentDate();
 			const selectedDate = this.properties.selectedDate;
 			const isToday = selectedDate === todayStr;
-
 			const nowTimelineMinutes = this.toMinutesFromTimelineStart(now.getHours(), now.getMinutes());
 
 			const shiftStartTime = SHIFT_START_TIME[shift];
 			const shiftEndTime = SHIFT_END_TIME[shift];
-
-			if (!shiftStartTime || !shiftEndTime) {
-				return availableSlots;
-			}
+			if (!shiftStartTime || !shiftEndTime) return availableSlots;
 
 			const [shiftStartH, shiftStartM] = shiftStartTime.split(':').map(Number);
 			const [shiftEndH, shiftEndM] = shiftEndTime.split(':').map(Number);
-			const shiftStartTimelineMinutes = this.toMinutesFromTimelineStart(shiftStartH, shiftStartM);
-			const shiftEndTimelineMinutes = this.toMinutesFromTimelineStart(shiftEndH, shiftEndM);
+			const shiftStartTM = this.toMinutesFromTimelineStart(shiftStartH, shiftStartM);
+			const shiftEndTM = this.toMinutesFromTimelineStart(shiftEndH, shiftEndM);
 
-			// --- 统一算法：收集所有时间点，划分区间，过滤占用区间 ---
-			// 1. 收集所有 block 的 start/end + 班次起止
-			const timePointsSet = new Set<number>([shiftStartTimelineMinutes, shiftEndTimelineMinutes]);
-			for (const block of blocks) {
-				const [sH, sM] = block.startTime.split(':').map(Number);
-				const [eH, eM] = block.endTime.split(':').map(Number);
-				const sTM = this.toMinutesFromTimelineStart(sH, sM);
-				const eTM = this.toMinutesFromTimelineStart(eH, eM);
-				// clamp 到班次范围
-				if (sTM >= shiftStartTimelineMinutes && sTM <= shiftEndTimelineMinutes) timePointsSet.add(sTM);
-				if (eTM >= shiftStartTimelineMinutes && eTM <= shiftEndTimelineMinutes) timePointsSet.add(eTM);
-			}
-			const sortedPoints = [...timePointsSet].sort((a, b) => a - b);
+			// 将 blocks 转为带 timeline 分钟数，并按开始时间排序
+			// 注意：不过滤跨班次边界的 block（如预约跨越下班时间），它们仍然占用班次内的时段
+			const timedBlocks = blocks
+				.map(b => {
+					const [sH, sM] = b.startTime.split(':').map(Number);
+					const [eH, eM] = b.endTime.split(':').map(Number);
+					return {
+						...b,
+						startTM: this.toMinutesFromTimelineStart(sH, sM),
+						endTM: this.toMinutesFromTimelineStart(eH, eM),
+					};
+				})
+				.filter(b => b.startTM < shiftEndTM && b.endTM > shiftStartTM)
+				.sort((a, b) => a.startTM - b.startTM);
 
-			// 2. 遍历区间，标记被占用区间
+			// 收集所有边界点（限班次范围内）
+			const points = new Set<number>([shiftStartTM, shiftEndTM]);
+			timedBlocks.forEach(b => {
+				if (b.startTM >= shiftStartTM && b.startTM <= shiftEndTM) points.add(b.startTM);
+				if (b.endTM >= shiftStartTM && b.endTM <= shiftEndTM) points.add(b.endTM);
+			});
+			const sortedPoints = [...points].sort((a, b) => a - b);
+
+			// 遍历每个区间
 			for (let i = 1; i < sortedPoints.length; i++) {
 				const segStart = sortedPoints[i - 1];
 				const segEnd = sortedPoints[i];
+
+				// 区间完全在某个 block 内 → 被占用，跳过
 				let occupied = false;
-				for (const block of blocks) {
-					const [sH, sM] = block.startTime.split(':').map(Number);
-					const [eH, eM] = block.endTime.split(':').map(Number);
-					const bStart = this.toMinutesFromTimelineStart(sH, sM);
-					const bEnd = this.toMinutesFromTimelineStart(eH, eM);
-					// 区间完全在 block 内则为占用
-					if (segStart >= bStart && segEnd <= bEnd) { occupied = true; break; }
+				for (const b of timedBlocks) {
+					if (segStart >= b.startTM && segEnd <= b.endTM) {
+						occupied = true;
+						break;
+					}
 				}
-
 				if (occupied) continue;
-				const gapMinutes = segEnd - segStart;
-				if (gapMinutes <= 0) continue;
 
-				// 今天：跳过已结束的区间
+				// 今天：跳过已过期的区间
 				if (isToday && segEnd <= nowTimelineMinutes) continue;
 
-				// 今天：区间起点修正为 now（不晚于 now）
-				const effectiveStart = isToday ? Math.max(segStart, nowTimelineMinutes) : segStart;
+				// === 最早可预约时间 ===
+				// segStart 是某个 block 的 endTime（或班次开始）
+				const blocksEndingAtStart = timedBlocks.filter(b => b.endTM === segStart);
+				let effectiveStart = segStart;
 
-				// 判断是否是班次结束（最后一个点 = 下班时间）
-				const isShiftEnd = segEnd === shiftEndTimelineMinutes;
-				pushSlot(effectiveStart+SPARE_TIME, segEnd, isShiftEnd);
+				if (blocksEndingAtStart.length > 0) {
+					// segStart 处有结束的 block
+					const hasConsultation = blocksEndingAtStart.some(b => !b.isReservation);
+					if (hasConsultation) {
+						// 单据结束 → 需空20分钟
+						effectiveStart = segStart + REDUNDANT_TIME;
+					}
+					// 预约结束 → 不加间隔（预约已含冗余时间）
+				}
+
+				// 今天：不早于当前时间
+				if (isToday) {
+					effectiveStart = Math.max(effectiveStart, nowTimelineMinutes);
+				}
+
+				// === 最晚可预约时间 ===
+				// segEnd 是某个 block 的 startTime（或班次结束）
+				const blocksStartingAtEnd = timedBlocks.filter(b => b.startTM === segEnd);
+				let effectiveEnd = segEnd;
+
+				const isShiftEnd = segEnd === shiftEndTM;
+				if (!isShiftEnd && blocksStartingAtEnd.length > 0) {
+					const hasFollowingReservation = blocksStartingAtEnd.some(b => b.isReservation);
+					if (hasFollowingReservation) {
+						// 后续是预约 → 预留60分钟
+						effectiveEnd = segEnd - RESERVATION_BEFORE_GAP;
+					}
+					// 后续是单据 → 不扣减（单据不需要为预约留空）
+				}
+
+				pushSlot(effectiveStart, effectiveEnd);
 			}
 
 			return availableSlots;

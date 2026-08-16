@@ -8,6 +8,78 @@ const {
     mergeTimeRanges
 } = require('./shared-utils')
 
+/** 单据结束后需空出的间隔（分钟） */
+const CONSULTATION_AFTER_GAP = 20
+/** 预约开始前需保留的时长（分钟），保证新预约至少 1 小时 */
+const RESERVATION_BEFORE_GAP = 60
+/** 可预约时段最少时长（分钟） */
+const MIN_SLOT_MINUTES = 60
+
+/**
+ * 计算可预约时段（统一算法，与前端 timeline 组件保持一致）
+ *
+ * 规则：
+ * - 单据结束点 → 有效开始 = 单据结束 + 20 分钟
+ * - 预约结束点 → 有效开始 = 预约结束（预约已含冗余时间）
+ * - 后续是预约 → 有效结束 = 预约开始 - 60 分钟
+ * - 后续是单据 → 有效结束 = 单据开始（不扣减）
+ * - 班次结束   → 有效结束 = 下班时间
+ *
+ * @param {Array}   taggedSlots  - [{ start, end, isReservation }] 已排序的合并占用时段
+ * @param {number}  shiftStartMins
+ * @param {number}  shiftEndMins
+ * @param {number}  searchStartMins - 搜索起点（今天为当前时间，否则为班次开始）
+ * @returns {Array} [{ start, end, duration }]
+ */
+function calculateAvailableGapSlots(taggedSlots, shiftStartMins, shiftEndMins, searchStartMins) {
+    const availableSlots = []
+    let cur = Math.max(searchStartMins, shiftStartMins)
+
+    while (cur < shiftEndMins) {
+        // 找到包含 cur 的占用时段
+        const activeOccupied = taggedSlots.find(slot => slot.start <= cur && cur < slot.end)
+        if (activeOccupied) {
+            cur = activeOccupied.end
+            // 单据结束后空 20 分钟
+            if (!activeOccupied.isReservation) {
+                cur += CONSULTATION_AFTER_GAP
+            }
+            continue
+        }
+
+        // 找到下一个占用时段
+        const nextOccupied = taggedSlots.find(slot => slot.start > cur && slot.start < shiftEndMins)
+        let slotEnd = shiftEndMins
+
+        if (nextOccupied) {
+            if (nextOccupied.isReservation) {
+                // 预约前保留 60 分钟
+                slotEnd = nextOccupied.start - RESERVATION_BEFORE_GAP
+            } else {
+                // 单据前不扣减
+                slotEnd = nextOccupied.start
+            }
+        }
+
+        const duration = slotEnd - cur
+        if (duration >= MIN_SLOT_MINUTES) {
+            availableSlots.push({ start: cur, end: slotEnd, duration })
+        }
+
+        // 跳过下一个占用时段到其结束（单据需额外空20分钟）
+        if (nextOccupied) {
+            cur = nextOccupied.end
+            if (!nextOccupied.isReservation) {
+                cur += CONSULTATION_AFTER_GAP
+            }
+        } else {
+            cur = shiftEndMins
+        }
+    }
+
+    return availableSlots
+}
+
 cloud.init({
     env: cloud.DYNAMIC_CURRENT_ENV
 })
@@ -203,14 +275,42 @@ function calculateAvailableSlotsText(staffConsultations, staffReservations, shif
         if (currentHour >= shiftEndHour) return '已下班'
     }
 
-    // 已占用时段：合并咨询单与预约
-    const allRecords = [...staffConsultations, ...staffReservations]
-    const occupiedSlots = allRecords
-        .filter(r => r.startTime && r.endTime && r.startTime < shiftEnd && r.endTime > shiftStart)
-        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+    const shiftStartMins = parseTimeToMinutes(shiftStart)
+    const shiftEndMins = parseTimeToMinutes(shiftEnd)
 
-    // 计算搜索起始时间（向上取整到下一个5分钟）
-    let startTime = shiftStart
+    // 构建带标记的合并占用时段
+    const rawSlots = []
+    staffConsultations.forEach(c => {
+        if (c.startTime && c.endTime) {
+            rawSlots.push({ start: parseTimeToMinutes(c.startTime), end: parseTimeToMinutes(c.endTime), isReservation: false })
+        }
+    })
+    staffReservations.forEach(r => {
+        if (r.startTime && r.endTime) {
+            rawSlots.push({ start: parseTimeToMinutes(r.startTime), end: parseTimeToMinutes(r.endTime), isReservation: true })
+        }
+    })
+    rawSlots.sort((a, b) => a.start - b.start)
+
+    // 合并重叠时段，保留 isReservation 标记
+    const taggedSlots = []
+    if (rawSlots.length > 0) {
+        let cur = { ...rawSlots[0] }
+        for (let i = 1; i < rawSlots.length; i++) {
+            const next = rawSlots[i]
+            if (next.start <= cur.end) {
+                cur.end = Math.max(cur.end, next.end)
+                cur.isReservation = cur.isReservation || next.isReservation
+            } else {
+                taggedSlots.push({ ...cur })
+                cur = { ...next }
+            }
+        }
+        taggedSlots.push({ ...cur })
+    }
+
+    // 搜索起点
+    let searchStartMins = shiftStartMins
     if (isToday) {
         const shiftStartHour = parseInt(shiftStart.substring(0, 2))
         const shiftStartMinute = parseInt(shiftStart.substring(3))
@@ -218,34 +318,14 @@ function calculateAvailableSlotsText(staffConsultations, staffReservations, shif
             const nextMinute = Math.ceil(currentMinute / 5) * 5
             const nextHour = nextMinute === 60 ? currentHour + 1 : currentHour
             const displayMinute = nextMinute === 60 ? 0 : nextMinute
-            startTime = `${String(nextHour).padStart(2, '0')}:${String(displayMinute).padStart(2, '0')}`
+            searchStartMins = parseTimeToMinutes(`${String(nextHour).padStart(2, '0')}:${String(displayMinute).padStart(2, '0')}`)
         }
     }
 
-    if (occupiedSlots.length === 0) {
-        if (startTime >= shiftEnd) return '已满'
-        return `${startTime}-${shiftEnd}`
-    }
+    const availableSlots = calculateAvailableGapSlots(taggedSlots, shiftStartMins, shiftEndMins, searchStartMins)
 
-    const availableSlots = []
-    for (let i = 0; i <= occupiedSlots.length; i++) {
-        const slotEnd = i === 0 ? startTime : occupiedSlots[i - 1].endTime
-        const slotStart = i === occupiedSlots.length ? shiftEnd : occupiedSlots[i].startTime
-
-        if (slotEnd >= shiftEnd) break
-
-        const actualStart = slotEnd < startTime ? startTime : slotEnd
-        const actualEnd = slotStart > shiftEnd ? shiftEnd : slotStart
-
-        if (actualStart >= actualEnd) continue
-
-        const gap = parseTimeToMinutes(actualEnd) - parseTimeToMinutes(actualStart)
-        if (gap >= 60) {
-            availableSlots.push(`${actualStart}-${actualEnd}`)
-        }
-    }
-
-    return availableSlots.length === 0 ? '已满' : availableSlots.join(', ')
+    if (availableSlots.length === 0) return '已满'
+    return availableSlots.map(s => `${formatMinutesToTime(s.start)}-${formatMinutesToTime(s.end)}`).join(', ')
 }
 
 /**
@@ -281,12 +361,12 @@ function buildQuickReservationSlots(rotationItems, allConsultations, allReservat
         const rawSlots = []
         staffConsultations.forEach(record => {
             if (record.startTime && record.endTime) {
-                rawSlots.push({ start: parseTimeToMinutes(record.startTime), end: parseTimeToMinutes(record.endTime) })
+                rawSlots.push({ start: parseTimeToMinutes(record.startTime), end: parseTimeToMinutes(record.endTime), isReservation: false })
             }
         })
         staffReservations.forEach(reservation => {
             if (reservation.startTime && reservation.endTime) {
-                rawSlots.push({ start: parseTimeToMinutes(reservation.startTime), end: parseTimeToMinutes(reservation.endTime) })
+                rawSlots.push({ start: parseTimeToMinutes(reservation.startTime), end: parseTimeToMinutes(reservation.endTime), isReservation: true })
             }
         })
 
@@ -299,6 +379,7 @@ function buildQuickReservationSlots(rotationItems, allConsultations, allReservat
                 const next = rawSlots[i]
                 if (next.start <= cur.end) {
                     cur.end = Math.max(cur.end, next.end)
+                    cur.isReservation = cur.isReservation || next.isReservation
                 } else {
                     mergedSlots.push({ ...cur })
                     cur = { ...next }
@@ -330,29 +411,8 @@ function buildQuickReservationSlots(rotationItems, allConsultations, allReservat
                 searchStart = Math.max(currentMins, shiftStartMins)
             }
 
-            const occupiedSlots = staffOccupiedSlots.get(staff._id) || []
-            const availableSlots = []
-            let cur = searchStart
-
-            while (cur < shiftEndMins) {
-                const activeOccupied = occupiedSlots.find(slot => slot.start <= cur && cur < slot.end)
-                if (activeOccupied) {
-                    cur = activeOccupied.end
-                    continue
-                }
-
-                const nextOccupied = occupiedSlots.find(slot => slot.start > cur && slot.start < shiftEndMins)
-                let slotEnd = shiftEndMins
-                if (nextOccupied) slotEnd = Math.min(shiftEndMins, nextOccupied.start)
-
-                const duration = slotEnd - cur
-                if (duration >= 60) {
-                    availableSlots.push({ start: cur, end: slotEnd, duration })
-                }
-
-                cur = slotEnd
-                if (nextOccupied) cur = nextOccupied.end
-            }
+            const taggedOccupiedSlots = staffOccupiedSlots.get(staff._id) || []
+            const availableSlots = calculateAvailableGapSlots(taggedOccupiedSlots, shiftStartMins, shiftEndMins, searchStart)
 
             map.set(staff._id, availableSlots)
         })
@@ -650,52 +710,34 @@ async function getQuickSlots(date, maleCount, femaleCount) {
                     searchStart = Math.max(currentMins, shiftStartMins)
                 }
 
-                // 收集占用区间
+                // 收集带标记的占用区间，合并重叠并保留 isReservation
                 const staffConsultations = consultations.filter(c => c.technician === staff.name)
                 const staffReservations = reservations.filter(r => r.technicianId === staff._id || r.technicianName === staff.name)
                 const rawSlots = []
                 staffConsultations.forEach(r => {
-                    if (r.startTime && r.endTime) rawSlots.push({ start: parseTimeToMinutes(r.startTime), end: parseTimeToMinutes(r.endTime) })
+                    if (r.startTime && r.endTime) rawSlots.push({ start: parseTimeToMinutes(r.startTime), end: parseTimeToMinutes(r.endTime), isReservation: false })
                 })
                 staffReservations.forEach(r => {
-                    if (r.startTime && r.endTime) rawSlots.push({ start: parseTimeToMinutes(r.startTime), end: parseTimeToMinutes(r.endTime) })
+                    if (r.startTime && r.endTime) rawSlots.push({ start: parseTimeToMinutes(r.startTime), end: parseTimeToMinutes(r.endTime), isReservation: true })
                 })
                 rawSlots.sort((a, b) => a.start - b.start)
 
-                // 合并重叠占用
-                const occupiedSlots = []
+                const taggedSlots = []
                 if (rawSlots.length > 0) {
                     let cur = { ...rawSlots[0] }
                     for (let i = 1; i < rawSlots.length; i++) {
                         if (rawSlots[i].start <= cur.end) {
                             cur.end = Math.max(cur.end, rawSlots[i].end)
+                            cur.isReservation = cur.isReservation || rawSlots[i].isReservation
                         } else {
-                            occupiedSlots.push({ ...cur })
+                            taggedSlots.push({ ...cur })
                             cur = { ...rawSlots[i] }
                         }
                     }
-                    occupiedSlots.push({ ...cur })
+                    taggedSlots.push({ ...cur })
                 }
 
-                // 从占用间隙中提取可用时段
-                const availableSlots = []
-                let cur = searchStart
-                for (const occ of occupiedSlots) {
-                    if (cur < occ.start) {
-                        const duration = occ.start - cur
-                        if (duration >= 60) {
-                            availableSlots.push({ start: cur, end: occ.start, duration })
-                        }
-                    }
-                    cur = Math.max(cur, occ.end)
-                }
-                if (cur < shiftEndMins) {
-                    const duration = shiftEndMins - cur
-                    if (duration >= 60) {
-                        availableSlots.push({ start: cur, end: shiftEndMins, duration })
-                    }
-                }
-
+                const availableSlots = calculateAvailableGapSlots(taggedSlots, shiftStartMins, shiftEndMins, searchStart)
                 staffSlots.set(staff._id, availableSlots)
             })
             return staffSlots

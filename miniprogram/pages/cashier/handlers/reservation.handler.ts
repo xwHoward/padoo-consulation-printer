@@ -8,6 +8,7 @@ import {
 	getNextFiveMinuteTime,
 	calcTotalDuration,
 	generateGroupKey,
+	calculateEndTime,
 } from '../../../services/reservation.service';
 
 const app = getApp<IAppOption>();
@@ -688,6 +689,7 @@ export class ReservationHandler {
 
 				if (effectiveGroupKey) {
 					// 数据库中有 groupKey（旧数据可能有）：同步更新所有组成员基本信息
+					const groupEndTime = calculateEndTime(reserveForm.startTime, resolvedProjects);
 					const groupMembers = await ReservationService.getGroupReservations(effectiveGroupKey);
 					for (const member of groupMembers) {
 						await cloudDb.updateById<ReservationRecord>(Collections.RESERVATIONS, member._id, {
@@ -697,13 +699,15 @@ export class ReservationHandler {
 							phone: reserveForm.phone,
 							project: projectStr,
 							startTime: reserveForm.startTime,
+							endTime: groupEndTime,
 							isRenewal: reserveForm.isRenewal || false,
 						});
 					}
 					wx.showToast({title: `已同步更新${ groupMembers.length }条预约`, icon: 'success'});
 				} else {
+					const endTime = calculateEndTime(reserveForm.startTime, resolvedProjects);
 					const updatedForm = {...reserveForm, project: projectStr};
-					const success = await ReservationService.updateReservation(reserveForm._id, updatedForm, '');
+					const success = await ReservationService.updateReservation(reserveForm._id, updatedForm, endTime);
 					if (!success) {
 						wx.showToast({title: '保存失败', icon: 'none'});
 						return;
